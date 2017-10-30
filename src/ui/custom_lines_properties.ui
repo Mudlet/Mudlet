@@ -39,9 +39,6 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="toolTip">
-      <string>Select Style, Color and whether to end the line with an arrow head.</string>
-     </property>
      <property name="title">
       <string>Line Settings:</string>
      </property>

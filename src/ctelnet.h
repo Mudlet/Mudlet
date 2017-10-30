@@ -117,10 +117,7 @@ public:
     const QString & getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QString &, const bool isToStore = true);
     void postMessage(QString);
-    const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
-    const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
-    const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding();
+    const QStringList & getEncodingsList() const { return csmAcceptableEncodings; }
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -146,6 +143,7 @@ public slots:
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
+    void slot_guiLanguageChange();
 
 
 private:
@@ -210,8 +208,15 @@ private:
     bool enableChannel102;
     QStringList messageStack;
     bool loadingReplay;
-    QStringList mAcceptableEncodings;
-    QStringList mFriendlyEncodings;
+    QStringList csmAcceptableEncodings;
+    // The amount to crop off the first line of a "[ XXXX ] - xxxxx" message to
+    // capture the "[ XXXX ] - " part:
+    quint8 mPrefixLength;
+    // Used in conjunction with a string that is NOT to be translated to detect
+    // whether extra steps should be taken to work on "[ XXX ] -" messages that
+    // have an extra marker at the front because the translation for the language
+    // in use is not finished!
+    QString mUntranslatedPrefix;
 };
 
 #endif // MUDLET_CTELNET_H

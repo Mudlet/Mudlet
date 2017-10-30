@@ -225,7 +225,7 @@ public:
     static int expandAlias(lua_State *L);
     static int sendRaw(lua_State* L);
     static int Echo(lua_State* L);
-    static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
+    static int selectString(lua_State* L);
     static int getMainConsoleWidth(lua_State* L);
     static int selectSection(lua_State* L);
     static int replace(lua_State* L);
@@ -410,6 +410,7 @@ public:
     static int getServerEncoding(lua_State *);
     static int getServerEncodingsList(lua_State *);
     static int alert(lua_State* L);
+    static int getGuiLanguageCode(lua_State*);
 // PLACEMARKER: End of Lua functions declarations
 
 public slots:

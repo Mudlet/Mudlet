@@ -103,7 +103,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -243,7 +243,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -383,7 +383,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -523,7 +523,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -666,7 +666,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -869,11 +869,11 @@
          </item>
          <item row="1" column="0" colspan="2">
           <widget class="QSpinBox" name="weight_e">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <property name="maximum">
             <number>9999</number>
-           </property>
-           <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>
@@ -1010,7 +1010,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1168,7 +1168,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1308,7 +1308,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1448,7 +1448,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1588,7 +1588,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1728,7 +1728,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1883,7 +1883,7 @@
             </font>
            </property>
            <property name="specialValueText">
-            <string>Exit Weight (0=No overide)</string>
+            <string>Exit Weight (0=No override)</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -2063,13 +2063,13 @@ Route</string>
 Weight</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive integer value to overide the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to override the default (of the &lt;i&gt;destination room&lt;/i&gt;) weight for using this exit, a zero value uses that default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </column>
         <column>
          <property name="text">
-          <string>Door
-None</string>
+          <string>No
+door</string>
          </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -2077,8 +2077,8 @@ None</string>
         </column>
         <column>
          <property name="text">
-          <string>Door
-Open</string>
+          <string>Open
+door</string>
          </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -2086,8 +2086,8 @@ Open</string>
         </column>
         <column>
          <property name="text">
-          <string>Door
-Closed</string>
+          <string>Closed
+door</string>
          </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -2095,8 +2095,8 @@ Closed</string>
         </column>
         <column>
          <property name="text">
-          <string>Door
-Locked</string>
+          <string>Locked
+door</string>
          </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

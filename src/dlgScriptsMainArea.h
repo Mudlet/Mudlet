@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,11 +36,14 @@ class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area
 
 public:
     dlgScriptsMainArea(QWidget*);
-
     // public function allow to trim even when QLineEdit::editingFinished()
     // is not raised. Example: When the user saves without leaving the LineEdit
     void trimName();
     void trimEventHandlerName();
+
+public slots:
+    void slot_guiLanguageChange();
+
 private slots:
     void slot_editing_name_finished();
     void slot_editing_event_name_finished();

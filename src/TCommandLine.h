@@ -92,7 +92,6 @@ signals:
 
 public slots:
     void slot_textChanged(const QString&);
-    void slot_sendCommand(const char* pS);
     void slot_popupMenu();
 };
 

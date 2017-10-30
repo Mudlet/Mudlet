@@ -126,7 +126,7 @@ public:
                    QMap<QString, int>&,
                    QMap<QString, QList<QPointF>>&,
                    QMap<QString, QList<int>>&,
-                   QMap<QString, QString>&,
+                   QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
                    const QHash<int, int>);
     const QString dirCodeToDisplayName(const int dirCode);
@@ -150,7 +150,10 @@ public:
     QList<int> exitLocks;
     QMap<QString, QList<QPointF>> customLines;
     QMap<QString, QList<int>> customLinesColor;
-    QMap<QString, QString> customLinesStyle;
+    // In version 19 replaced a QString describing the line style with
+    // a value from the enum Qt::PenStyle - which works better in a
+    // multi User Language application:
+    QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
     bool highlight;
     QColor highlightColor;

@@ -82,6 +82,11 @@ public:
     void setDefaultHostClient(bool isDefaultClient) { mIsDefaultIrcClient = isDefaultClient; }
     bool isDefaultHostClient() { return mIsDefaultIrcClient; }
 
+
+public slots:
+    void slot_guiLanguageChange();
+
+
 private slots:
     void slot_onConnected();
     void slot_onConnecting();

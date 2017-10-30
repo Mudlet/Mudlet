@@ -109,7 +109,7 @@ public:
 
     QRectF mMultiRect;
     bool mPopupMenu;
-    QSet<int> mMultiSelectionSet; // was mMultiSelectList
+    QSet<int> mMultiSelectionSet;
     QPoint mOldMousePos;
     bool mNewMoveAction;
     QRectF mMapInfoRect;
@@ -132,7 +132,7 @@ public:
     int mCustomLinesRoomTo;
     QString mCustomLinesRoomExit;
     QComboBox* mpCurrentLineStyle;
-    QString mCurrentLineStyle;
+    Qt::PenStyle mCurrentLineStyle;
     QPushButton* mpCurrentLineColor;
     QColor mCurrentLineColor;
     QCheckBox* mpCurrentLineArrow;
@@ -196,6 +196,7 @@ public slots:
     void slot_customLineAddPoint();
     void slot_customLineRemovePoint();
     void slot_cancelCustomLineDialog();
+    void slot_guiLanguageChange();
 
 private:
     void resizeMultiSelectionWidget();

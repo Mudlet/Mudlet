@@ -21,7 +21,7 @@
       </font>
      </property>
      <property name="text">
-      <string>unpacking please wait ...</string>
+      <string notr="true">unpacking please wait ...</string>
      </property>
      <property name="scaledContents">
       <bool>true</bool>

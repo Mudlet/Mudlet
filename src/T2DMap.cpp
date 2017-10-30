@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,6 +24,7 @@
 
 
 #include "Host.h"
+#include "mudlet.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -94,12 +95,13 @@ T2DMap::T2DMap(QWidget* parent)
     QStringList headerLabels;
     headerLabels << tr("Room Id") << tr("Room Name");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
-    mMultiSelectionListWidget.setToolTip(
-            tr("<html><head/><body><p>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the "
-               "relevant header to sort by that method.  Note that the name column willl only show if at least one of the rooms has a name.</p></body></html>"));
+    mMultiSelectionListWidget.setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.</p>"
+                                                 "<p>Click on the relevant header to sort by that method.</p>"
+                                                 "<p><i>Note that the name column willl only show if <b>at least one</b> of the rooms has a name.</i></p>")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
-    mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection
+    mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection);
     mMultiSelectionListWidget.setRootIsDecorated(false);
     QSizePolicy multiSelectionSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
     mMultiSelectionListWidget.setSizePolicy(multiSelectionSizePolicy);
@@ -146,6 +148,8 @@ T2DMap::T2DMap(QWidget* parent)
     isCenterViewCall = false;
     mCurrentLineColor = QColor(255, 255, 100);
     //setFocusPolicy( Qt::ClickFocus);
+
+    connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()));
 }
 
 void T2DMap::init()
@@ -184,7 +188,7 @@ void T2DMap::init()
     }
     mCurrentLineArrow = true;
     mCurrentLineColor = QColor("red");
-    mCurrentLineStyle = QString("solid line"); // Configure custom line drawing starting points here
+    mCurrentLineStyle = Qt::SolidLine; // Configure custom line drawing starting points here
 }
 
 QColor T2DMap::_getColor(int id)
@@ -610,8 +614,14 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QList<int> oneWayExits;
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
     if (!pPlayerRoom) {
-        p.drawText(_w / 2, _h / 2, "No map or no valid position.");
-
+        p.save();
+        p.setPen(Qt::yellow);
+        p.fillRect(0, 0, width(), height(), Qt::darkRed);
+        QFont font(p.font());
+        font.setPointSize(20);
+        p.setFont(font);
+        p.drawText( 0, 0, _w, _h, Qt::AlignCenter|Qt::TextWordWrap, tr("No map or no valid position."));
+        p.restore();
         return;
     }
 
@@ -982,7 +992,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         _color = QColor(Qt::red);
                     }
                     bool _arrow = pR->customLinesArrow[itk.key()];
-                    QString _style = pR->customLinesStyle[itk.key()];
                     QPointF _cstartP;
                     float ex = pR->x * tx + _rx;
                     float ey = pR->y * ty * -1 + _ry;
@@ -1011,18 +1020,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     customLinePen.setColor(_color);
                     customLinePen.setCapStyle(Qt::RoundCap);
                     customLinePen.setJoinStyle(Qt::RoundJoin);
-
-                    if (_style == "solid line") {
-                        customLinePen.setStyle(Qt::SolidLine);
-                    } else if (_style == "dot line") {
-                        customLinePen.setStyle(Qt::DotLine);
-                    } else if (_style == "dash line") {
-                        customLinePen.setStyle(Qt::DashLine);
-                    } else if (_style == "dash dot line") {
-                        customLinePen.setStyle(Qt::DashDotLine);
-                    } else {
-                        customLinePen.setStyle(Qt::DashDotDotLine);
-                    }
+                    customLinePen.setStyle(pR->customLinesStyle.value(itk.key(), Qt::SolidLine));
 
                     QList<QPointF> _pL = itk.value();
                     if (_pL.size() > 0) {
@@ -1325,7 +1323,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         int currentAreaRoom = itRoom.next();
         TRoom* pR = mpMap->mpRoomDB->getRoom(currentAreaRoom);
         if (!pR) {
-            continue; // Was missing this safety step to skip missing rooms
+            continue;
         }
         float rx = pR->x * tx + _rx;
         float ry = pR->y * -1 * ty + _ry;
@@ -1445,7 +1443,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
                         mpHost->startSpeedWalk();
                     } else {
-                        QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                        // Wrap in a QStringLiteral to hide needed LF from translators
+                        QString msg = QStringLiteral("%1\n")
+                                .arg(tr("Mapper: Cannot find a path to this room using known exits."));
                         mpHost->mpConsole->printSystemMessage(msg);
                     }
                 }
@@ -1650,7 +1650,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
                             mpHost->startSpeedWalk();
                         } else {
-                            QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                            // Wrap in a QStringLiteral to hide needed LF from translators
+                            QString msg = QStringLiteral("%1\n")
+                                    .arg(tr("Mapper: Cannot find a path to this room using known exits."));
                             mpHost->mpConsole->printSystemMessage(msg);
                         }
                     }
@@ -1690,7 +1692,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
                             mpMap->mpHost->startSpeedWalk();
                         } else {
-                            QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                            // Wrap in a QStringLiteral to hide needed LF from translators
+                            QString msg = QStringLiteral("%1\n")
+                                    .arg(tr("Mapper: Cannot find a path to this room using known exits."));
                             mpHost->mpConsole->printSystemMessage(msg);
                         }
                     }
@@ -1839,7 +1843,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
             TArea* _paid = mpMap->mpRoomDB->getArea(_iaid);
             QString _paid_name = mpMap->mpRoomDB->getAreaNamesMap().value(_iaid);
             if (_paid) {
-                infoText = tr("Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n")
+                // Wrapped in a QStringLiteral to hide the needed LF from
+                // translators...!
+                infoText = QStringLiteral("%1\n")
+                        .arg(tr("Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8")
                                    .arg(_paid_name,
                                         QString::number(_iaid),
                                         QString::number(_paid->min_x),
@@ -1847,13 +1854,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
                                         QString::number(_paid->min_y),
                                         QString::number(_paid->max_y),
                                         QString::number(_paid->min_z),
-                                        QString::number((_paid->max_z)));
+                                        QString::number(_paid->max_z)));
             } else {
                 infoText = QStringLiteral("\n");
             }
 
             if (!_prid->name.isEmpty()) {
-                infoText.append(tr("Room Name: %1\n").arg(_prid->name));
+                // Wrapped in a QStringLiteral to hide the needed LF from
+                // translators...!
+                infoText.append(QStringLiteral("%1\n")
+                                .arg(tr("Room Name: %1").arg(_prid->name)));
             }
 
             uint selectionSize = mMultiSelectionSet.size();
@@ -1867,7 +1877,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
             // If one or more rooms are selected - make the text slightly orange.
             switch (selectionSize) {
             case 0:
-                infoText.append(tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
+                // Wrapped in a QStringLiteral to hide the needed LF from
+                // translators...!
+                infoText.append(QStringLiteral("%1\n")
+                                .arg(tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)")
+                                     .arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z))));
                 if (playerArea != mAID) {
                     f.setItalic(true);
                 } else {
@@ -1875,8 +1889,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
                 break;
             case 1:
-                infoText.append(
-                        tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
+                // This has an identical string to the multi-case one so that
+                // the correct plural forms can be used for all values
+                infoText.append(QStringLiteral("%1\n")
+                                .arg(tr("Room ID: %1 (%n Selected) Position on Map: (%2,%3,%4)", "", 1)
+                                     .arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z))));
                 f.setBold(true);
                 if (infoColor.lightness() > 127) {
                     infoColor = QColor(255, 223, 191); // Slightly orange white
@@ -1885,8 +1902,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
                 break;
             default:
-                infoText.append(tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n")
-                                        .arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z), QString::number(selectionSize)));
+                infoText.append(QStringLiteral("%1\n")
+                                .arg(tr("Room ID: %1 (%n Selected) Position on Map: (%2,%3,%4)", "", selectionSize)
+                                        .arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z))));
                 f.setBold(true);
                 if (infoColor.lightness() > 127) {
                     infoColor = QColor(255, 223, 191); // Slightly orange white
@@ -1897,6 +1915,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         }
 
+        // TODO: Hide this information in release version?
         infoText.append(tr("render time: %1S mO: (%2,%3,%4)").arg(__time.nsecsElapsed() * 1.0e-9, 0, 'f', 3).arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
 
         uint infoLeftSideAvoid = 10;                 // Left margin for info widget
@@ -1990,26 +2009,26 @@ void T2DMap::createLabel(QRectF labelRect)
     mHelpMsg.clear();
 
     QMessageBox msgBox;
-    msgBox.setText("Text label or image label?");
+    msgBox.setText(tr("Type of label?"));
     QPushButton* textButton = msgBox.addButton(tr("Text Label"), QMessageBox::ActionRole);
     QPushButton* imageButton = msgBox.addButton(tr("Image Label"), QMessageBox::ActionRole);
     msgBox.setStandardButtons(QMessageBox::Cancel);
     msgBox.exec();
     if (msgBox.clickedButton() == textButton) {
-        QString title = "Enter label text.";
+        QString title = tr("Enter label text.");
         _font = QFontDialog::getFont(nullptr);
         t = QInputDialog::getText(nullptr, title, title);
         if (t.length() < 1) {
             t = "no text";
         }
         label.text = t;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, "Background color");
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, "Foreground color");
+        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color"));
+        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color"));
     } else if (msgBox.clickedButton() == imageButton) {
         label.bgColor = QColor(50, 50, 150, 100);
         label.fgColor = QColor(255, 255, 50, 255);
         label.text = "";
-        imagePath = QFileDialog::getOpenFileName(nullptr, "Select image");
+        imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"));
     } else {
         return;
     }
@@ -2017,13 +2036,13 @@ void T2DMap::createLabel(QRectF labelRect)
     QMessageBox msgBox2;
     msgBox2.setStandardButtons(QMessageBox::Cancel);
     msgBox2.setText("Draw label as background or on top of everything?");
-    QPushButton* textButton2 = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
-    QPushButton* imageButton2 = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
+    QPushButton* backgroundButton = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
+    QPushButton* foregroundButton = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
     msgBox2.exec();
     bool showOnTop = false;
-    if (msgBox2.clickedButton() == textButton2) {
+    if (msgBox2.clickedButton() == backgroundButton) {
         showOnTop = false;
-    } else if (msgBox2.clickedButton() == imageButton2) {
+    } else if (msgBox2.clickedButton() == foregroundButton) {
         showOnTop = true;
     } else {
         return;
@@ -2127,7 +2146,24 @@ bool T2DMap::event(QEvent* event)
     } else if (event->type() == QEvent::Resize) { // Tweak the room selection widget to fit
         resizeMultiSelectionWidget();
     }
+
     return QWidget::event(event);
+}
+
+void T2DMap::slot_guiLanguageChange()
+{
+    // PLACEMARKER: Redefine GUI Texts
+    // There is no persistent underlying form/dialog for this class that would
+    // need a retranslateUi(this) call but in case there is any other things
+    // that we manually need to update, they can be put here
+
+    QStringList headerLabels;
+    headerLabels << tr("Room Id") << tr("Room Name");
+    mMultiSelectionListWidget.setHeaderLabels(headerLabels);
+    mMultiSelectionListWidget.setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.</p>"
+                                                 "<p>Click on the relevant header to sort by that method.</p>"
+                                                 "<p><i>Note that the name column willl only show if <b>at least one</b> of the rooms has a name.</i></p>")));
 }
 
 void T2DMap::mousePressEvent(QMouseEvent* event)
@@ -2409,21 +2445,23 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (pR) {
-                QAction* action = new QAction("undo", this);
-                action->setToolTip(tr("Undo last point"));
+                QAction* action = new QAction(tr("undo","the last added point on a custom exit line"), this);
+                action->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>Undo last point.</p>")));
                 if (pR->customLines.value(mCustomLinesRoomExit).count() > 1) {
                     connect(action, SIGNAL(triggered()), this, SLOT(slot_undoCustomLineLastPoint()));
                 } else {
                     action->setEnabled(false);
                 }
 
-                QAction* action2 = new QAction("properties", this);
-                action2->setText("properties...");
-                action2->setToolTip(tr("Change the properties of this line"));
+                QAction* action2 = new QAction(tr("properties...","of a custom exit line"), this);
+                action2->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                    .arg(tr("<p>Change the properties of this line.</p>")));
                 connect(action2, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
-                QAction* action3 = new QAction("finish", this);
-                action3->setToolTip(tr("Finish drawing this line"));
+                QAction* action3 = new QAction(tr("finish","drawing a custom exit line"), this);
+                action3->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                    .arg(tr("<p>Finish drawing this line.</p>")));
                 connect(action3, SIGNAL(triggered()), this, SLOT(slot_doneCustomLine()));
 
                 mPopupMenu = true;
@@ -2440,50 +2478,63 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
 
         if (!mLabelHilite && mCustomLineSelectedRoom == 0) {
-            QAction* action = new QAction("move", this);
-            action->setToolTip(tr("Move room"));
+            QAction* action = new QAction(tr("move", "one (or more) rooms"), this);
+            action->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>Move room.</p>","one (or more) rooms")));
             connect(action, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
-            QAction* action2 = new QAction("delete", this);
-            action2->setToolTip(tr("Delete room"));
+
+            QAction* action2 = new QAction(tr("delete", "one (or more) rooms"), this);
+            action2->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Delete room.</p>")));
             connect(action2, SIGNAL(triggered()), this, SLOT(slot_deleteRoom()));
-            QAction* action3 = new QAction("color", this);
-            action3->setToolTip(tr("Change room color"));
+
+            QAction* action3 = new QAction(tr("color", "one (or more) rooms"), this);
+            action3->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Change room color.</p>")));
             connect(action3, SIGNAL(triggered()), this, SLOT(slot_changeColor()));
-            QAction* action4 = new QAction("spread", this);
-            action4->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms"));
+
+            QAction* action4 = new QAction(tr("spread", "multiple rooms apart"), this);
+            action4->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Increase map X-Y spacing for the selected group of rooms.</p>")));
             connect(action4, SIGNAL(triggered()), this, SLOT(slot_spread()));
-            QAction* action9 = new QAction("shrink", this);
-            action9->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms"));
+            QAction* action9 = new QAction(tr("shrink", "multiple rooms closer together"), this);
+            action9->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Decrease map X-Y spacing for the selected group of rooms.</p>")));
             connect(action9, SIGNAL(triggered()), this, SLOT(slot_shrink()));
 
-            //QAction * action5 = new QAction("user data", this );
-            //action5->setToolTip(tr("Set user data"));
-            //connect( action5, SIGNAL(triggered()), this, SLOT(slot_setUserData()));
-            QAction* action6 = new QAction("lock", this);
-            action6->setToolTip(tr("Lock room for speed walks"));
+            QAction* action6 = new QAction(tr("lock", "prevent one or more rooms from being used in speedwalking"), this);
+            action6->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Lock room for speed walks (route-finding).</p>")));
             connect(action6, SIGNAL(triggered()), this, SLOT(slot_lockRoom()));
-            QAction* action17 = new QAction("unlock", this);
-            action17->setToolTip(tr("Unlock room for speed walks"));
-            connect(action17, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
-            QAction* action7 = new QAction("weight", this);
-            action7->setToolTip(tr("Set room weight"));
-            connect(action7, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
-            QAction* action8 = new QAction("exits", this);
-            action8->setToolTip(tr("Set room exits"));
-            connect(action8, SIGNAL(triggered()), this, SLOT(slot_setExits()));
-            QAction* action10 = new QAction("letter", this);
-            action10->setToolTip(tr("Set a letter to mark special rooms"));
-            connect(action10, SIGNAL(triggered()), this, SLOT(slot_setCharacter()));
-            //        QAction * action11 = new QAction("image", this );
-            //        action11->setToolTip(tr("Set an image to mark special rooms"));
-            //        connect( action11, SIGNAL(triggered()), this, SLOT(slot_setImage()));
 
-            QAction* action12 = new QAction("move to", this);
-            action12->setToolTip(tr("Move selected group to a given position"));
+            QAction* action17 = new QAction(tr("unlock", "allow one or more rooms from being used in speedwalking"), this);
+            action17->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>Unlock room for speed walks (route-finding).</p>")));
+            connect(action17, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
+
+            QAction* action7 = new QAction(tr("weight", "set weighting of one or more rooms for speedwalking"), this);
+            action7->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Set room weight (for route-finding).</p>")));
+            connect(action7, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
+
+            QAction* action8 = new QAction(tr("exits", "manage the exits from a room"), this);
+            action8->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Set room exits (allows modification of destination room numbers, visible door marks on 2D map, route-finding weighting/locking to control/prevent use of particular exits, stub marks to indicate unknown exits).</p>")));
+            connect(action8, SIGNAL(triggered()), this, SLOT(slot_setExits()));
+
+            QAction* action10 = new QAction(tr("letter", "set a single character symbol on one (or more) rooms"), this);
+            action10->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>Set a letter to mark special rooms on 2D maps.</p>")));
+            connect(action10, SIGNAL(triggered()), this, SLOT(slot_setCharacter()));
+
+            QAction* action12 = new QAction(tr("move to","moves all the selected rooms to a new position maintaining their relative position to each other"), this);
+            action12->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>Move <i>selected</i> rooms to a given position maintaining their relative placement.</p>")));
             connect(action12, SIGNAL(triggered()), this, SLOT(slot_movePosition()));
 
-            QAction* action13 = new QAction("area", this);
-            action13->setToolTip(tr("Set room area ID"));
+            QAction* action13 = new QAction(tr("area","moves all the selected rooms to a new area"), this);
+            action13->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>Set a different area for one (or more) rooms.</p>")));
             connect(action13, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
             QAction* action14 = new QAction("custom exit lines", this);
@@ -2492,24 +2543,29 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 return;
             }
             if (pArea->gridMode) { // Disable custom exit lines in grid mode as they aren't visible anyway
-                action14->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode"));
+                action14->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>Custom exit lines are not shown and are not editable in grid mode.</p>")));
                 action14->setEnabled(false);
             } else {
-                action14->setToolTip(tr("Replace an exit line with a custom line"));
+                action14->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>Replace an exit line with a custom line.</p>")));
                 connect(action14, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
             }
 
             QAction* action15 = new QAction("create Label", this);
-            action15->setToolTip(tr("Create labels to show text or images."));
+            action15->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>Create labels to show text or images.</p>")));
             connect(action15, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
 
             QAction* action16 = new QAction("set location", this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
-                action16->setToolTip(tr("Set player current location to here"));
+                action16->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>Set player current location to here.</p>")));
                 connect(action16, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
             } else {
                 action16->setEnabled(false);
-                action16->setToolTip(tr("Cannot set location when not exactly one room selected"));
+                action16->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>Cannot set location when there is <b>not exactly one</b> room selected.</p>")));
             }
 
             mPopupMenu = true;
@@ -2536,11 +2592,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             popup->popup(mapToGlobal(event->pos()));
         } else if (mLabelHilite) {
-            QAction* action = new QAction("move", this);
-            action->setToolTip(tr("Move label"));
+            QAction* action = new QAction(tr("move","one (or more?) map labels"), this);
+            action->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>Move the selected label or labels.</p>")));
             connect(action, SIGNAL(triggered()), this, SLOT(slot_moveLabel()));
-            QAction* action2 = new QAction("delete", this);
-            action2->setToolTip(tr("Delete label"));
+            QAction* action2 = new QAction(tr("delete","one (or more ?) map labels"), this);
+            action2->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Delete the selected label or labels.</p>")));
             connect(action2, SIGNAL(triggered()), this, SLOT(slot_deleteLabel()));
             mPopupMenu = true;
             popup->addAction(action);
@@ -2555,17 +2613,18 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (mCustomLineSelectedRoom > 0) {
                 TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
                 if (pR) {
-                    QAction* action = new QAction("add point", this);
-                    if (mCustomLineSelectedPoint > -1)
-                    // The first user manipulable point IS zero - line is
-                    // drawn to it from a point around room symbol dependent
-                    // on the exit direction - and we can now add even to it
-                    {
+                    QAction* action = new QAction(tr("add point","to the currently selected custom exit line"), this);
+                    if (mCustomLineSelectedPoint > -1) {
+                        // The first user manipulable point IS zero - line is
+                        // drawn to it from a point around room symbol dependent
+                        // on the exit direction - and we can now add even to it
                         connect(action, SIGNAL(triggered()), this, SLOT(slot_customLineAddPoint()));
-                        action->setToolTip(tr("Divide segment by adding a new point mid-way along"));
+                        action->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                           .arg(tr("<p>Divide line segment by adding a new point mid-way along it.</p>")));
                     } else {
                         action->setEnabled(false);
-                        action->setToolTip(tr("Select a point first, then add a new point mid-way along the segment towards room"));
+                        action->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                           .arg(tr("<p>Select a point first, then add a new point mid-way along the segment towards room.</p>")));
                     }
 
                     QAction* action2 = new QAction("remove point", this);
@@ -2574,26 +2633,31 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         if (pR->customLines.value(mCustomLineSelectedExit).count() > 1) {
                             connect(action2, SIGNAL(triggered()), this, SLOT(slot_customLineRemovePoint()));
                             if ((mCustomLineSelectedPoint + 1) < pR->customLines.value(mCustomLineSelectedExit).count()) {
-                                action2->setToolTip(tr("Merge pair of segments by removing this point"));
+                                action2->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                    .arg(tr("<p>Merge a pair of adjoining segments by removing this point.</p>")));
                             } else {
-                                action2->setToolTip(tr("Remove last segment by removing this point"));
+                                action2->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                    .arg(tr("<p>Remove the last segment of the line by removing this point.</p>")));
                             }
                         } else {
                             action2->setEnabled(false);
-                            action2->setToolTip(tr(R"(use "delete line" to remove the only segment ending in an editable point)"));
+                            action2->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                .arg(tr("<p>Only one line segment present - use <i>delete line</i> to remove the entire line.</p>")));
                         }
                     } else {
                         action2->setEnabled(false);
-                        action2->setToolTip(tr("Select a point first, then remove it"));
+                        action2->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                            .arg(tr("<p>No point select, you must select a point first before you can remove it!</p>")));
                     }
 
-                    QAction* action3 = new QAction("properties", this);
-                    action3->setText("properties...");
-                    action3->setToolTip(tr("Change the properties of this custom line"));
+                    QAction* action3 = new QAction(tr("properties...", "of (an existing) custom exit line"), this);
+                    action3->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg(tr("<p>Access, and possibly change, the properties of this custom line.</p>")));
                     connect(action3, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
-                    QAction* action4 = new QAction("delete line", this);
-                    action4->setToolTip(tr("Delete all of this custom line"));
+                    QAction* action4 = new QAction(tr("delete line", "removes all of the selected line"), this);
+                    action4->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg(tr("<p>Delete all of this custom line.</p>")));
                     connect(action4, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
 
                     mPopupMenu = true;
@@ -2682,6 +2746,7 @@ void T2DMap::slot_customLineProperties()
                 return;
             }
             d->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_custom_exit_properties.png")));
+            QGroupBox * pGroupBox_settings = d->findChild<QGroupBox*>(QStringLiteral("groupBox_settings"));
             QLineEdit* le_toId = d->findChild<QLineEdit*>("toId");
             QLineEdit* le_fromId = d->findChild<QLineEdit*>("fromId");
             QLineEdit* le_cmd = d->findChild<QLineEdit*>("cmd");
@@ -2693,6 +2758,9 @@ void T2DMap::slot_customLineProperties()
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to find an element in the dialog!");
                 return;
             }
+
+            pGroupBox_settings->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                           .arg(tr("<p>Select <i>Style</i>, <i>Color</i> and <i>whether to end the line with an arrow head</i>.</p>")));
             le_cmd->setText(exit);
             le_fromId->setText(QString::number(pR->getId()));
             if (exit == "NW") {
@@ -2742,15 +2810,18 @@ void T2DMap::slot_customLineProperties()
                 }
             }
 
-            QStringList _lineStyles;
-            _lineStyles << "solid line"
-                        << "dot line"
-                        << "dash line"
-                        << "dash dot line"
-                        << "dash dot dot line";
-            mpCurrentLineStyle->addItems(_lineStyles);
-            QString _lineStyle = pR->customLinesStyle.value(exit);
-            mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findText(_lineStyle));
+            // In Qt 5.x they have made it a little tricky to extract the value
+            // to use as a UserData role - but we can go back to the C way of
+            // enum handling and explictly cast the enum to the underlying int type:
+            if (! mpCurrentLineStyle->count()) {
+                mpCurrentLineStyle->addItem(QIcon(":/icons/solid-line.png"), tr("solid line"), static_cast<int>(Qt::SolidLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dot-line.png"), tr("dot line"), static_cast<int>(Qt::DotLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dash-line.png"), tr("dash line"), static_cast<int>(Qt::DashLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot line"), static_cast<int>(Qt::DashDotLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot dot line"), static_cast<int>(Qt::DashDotDotLine));
+            }
+
+            mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(pR->customLinesStyle.value(exit, Qt::SolidLine))));
 
             mpCurrentLineArrow->setChecked(pR->customLinesArrow.value(exit));
             mCurrentLineColor.setRed(pR->customLinesColor.value(exit).at(0));
@@ -2763,8 +2834,8 @@ void T2DMap::slot_customLineProperties()
 
             if (d->exec() == QDialog::Accepted) {
                 // Make the changes
-                pR->customLinesStyle[exit] = mpCurrentLineStyle->currentText();
-                mCurrentLineStyle = mpCurrentLineStyle->currentText();
+                mCurrentLineStyle = Qt::PenStyle(mpCurrentLineStyle->currentData().toInt());
+                pR->customLinesStyle[exit] = mCurrentLineStyle;
 
                 pR->customLinesColor[exit][0] = mCurrentLineColor.red();
                 pR->customLinesColor[exit][1] = mCurrentLineColor.green();
@@ -2940,7 +3011,7 @@ void T2DMap::slot_editLabel()
 void T2DMap::slot_setPlayerLocation()
 {
     if (mMultiSelectionSet.size() != 1) {
-        return; // Was <= 1 but that can't be right, and >1 doesn't seem right either
+        return;
     }
 
     int _newRoomId = *(mMultiSelectionSet.constBegin());
@@ -3114,8 +3185,8 @@ void T2DMap::slot_setCharacter()
         if (usedLetters.isEmpty()) {
             newLetterText = QInputDialog::getText(this,                    // QWidget * parent
                                                   tr("Enter room marker"), // const QString & title
-                                                  tr("Enter new (not space)\n"
-                                                     "marker letter:"), // const QString & label
+                                                  tr("<p>Enter new (not space)<br>"
+                                                     "marker letter:</p>"), // const QString & label
                                                   QLineEdit::Normal,    // QLineEdit::EchoMode mode = QLineEdit::Normal
                                                   QString(),            // const QString & text = QString()
                                                   &isOk,                // bool * ok = 0
@@ -3124,9 +3195,9 @@ void T2DMap::slot_setCharacter()
         } else {
             newLetterText = QInputDialog::getText(this,
                                                   tr("Enter room marker"),
-                                                  tr("Delete the existing, or\n"
-                                                     "enter a new (non-space),\n"
-                                                     "marker letter:"),
+                                                  tr("<p>Delete the existing, or<br>"
+                                                     "enter a new (non-space),<br>"
+                                                     "marker letter:</p>"),
                                                   QLineEdit::Normal,
                                                   usedLetters.keys().first(),
                                                   &isOk,
@@ -3137,8 +3208,8 @@ void T2DMap::slot_setCharacter()
         if (usedLetters.isEmpty()) {
             newLetterText = QInputDialog::getText(this,
                                                   tr("Enter room marker"),
-                                                  tr("Enter new (not space)\n"
-                                                     "marker letter:"),
+                                                  tr("<p>Enter new (not space)<br>n"
+                                                     "marker letter:</p>"),
                                                   QLineEdit::Normal,
                                                   QString(),
                                                   &isOk,
@@ -3147,11 +3218,11 @@ void T2DMap::slot_setCharacter()
         } else if (usedLetters.size() == 1) {
             newLetterText = QInputDialog::getText(this,
                                                   tr("Enter room marker"),
-                                                  tr("Delete the (only)\n"
-                                                     "existing (in some rooms),\n"
-                                                     "or enter a new (not\n"
-                                                     "space) marker letter for\n"
-                                                     "all selected rooms:"),
+                                                  tr("<p>Delete the (only)<br>"
+                                                     "existing (in some rooms),<br>"
+                                                     "or enter a new (not<br>"
+                                                     "space) marker letter for<br>"
+                                                     "all selected rooms:<br></p>"),
                                                   QLineEdit::Normal,
                                                   usedLetters.keys().first(),
                                                   &isOk,
@@ -3180,13 +3251,13 @@ void T2DMap::slot_setCharacter()
             }
             newLetterText = QInputDialog::getItem(this,                    // QWidget * parent
                                                   tr("Enter room marker"), // const QString & title
-                                                  tr("Choose an existing marker\n"
-                                                     "letter) from the list\n"
-                                                     "(sorted by most commonly\n"
-                                                     "used first) or enter a\n"
-                                                     "new single ASCII\n"
-                                                     "character (not space) for\n"
-                                                     "all selected rooms:",
+                                                  tr("<p>Choose an existing marker<br>"
+                                                     "letter) from the list<br>"
+                                                     "(sorted by most commonly<br>"
+                                                     "used first) or enter a<br>"
+                                                     "new single ASCII<br>"
+                                                     "character (not space) for<br>"
+                                                     "all selected rooms:</p>",
                                                      // Intentional comment to separate two strings!
                                                      "Use line feeds to format text into a reasonable rectangle."), // const QString & label
                                                   displayStrings,                                                   // QStringList & items
@@ -3354,11 +3425,11 @@ void T2DMap::slot_spread()
     bool isOk = false;
     int spread = QInputDialog::getInt(this,
                                       tr("Spread out rooms"),
-                                      tr("Increase the spacing of\n"
-                                         "the selected rooms,\n"
-                                         "centered on the\n"
-                                         "highlighted room by a\n"
-                                         "factor of:"),
+                                      tr("<p>Increase the spacing of<br>"
+                                         "the selected rooms,<br>"
+                                         "centered on the<br>"
+                                         "highlighted room by a<br>"
+                                         "factor of:</p>"),
                                       5,          // Initial value
                                       1,          // Minimum value
                                       2147483647, // Maximum value
@@ -3416,11 +3487,11 @@ void T2DMap::slot_shrink()
     bool isOk = false;
     int spread = QInputDialog::getInt(this,
                                       tr("Shrink in rooms"),
-                                      tr("Decrease the spacing of\n"
-                                         "the selected rooms,\n"
-                                         "centered on the\n"
-                                         "highlighted room by a\n"
-                                         "factor of:"),
+                                      tr("<p>Decrease the spacing of<br>"
+                                         "the selected rooms,<br>"
+                                         "centered on the<br>"
+                                         "highlighted room by a<br>"
+                                         "factor of:</p>"),
                                       5,          // Initial value
                                       1,          // Minimum value
                                       2147483647, // Maximum value
@@ -3547,10 +3618,10 @@ void T2DMap::slot_setRoomWeight()
     if (mMultiSelectionSet.size() == 1) { // Just one room selected
         newWeight = QInputDialog::getInt(this,
                                          tr("Enter room weight"),
-                                         tr("Enter new roomweight\n"
-                                            "(= travel time), mimimum\n"
-                                            "(and default) is 1:",
-                                            "Use line feeds to format text into a reasonable rectangle."),
+                                         tr("<p>Enter new roomweight<br>"
+                                            "(= travel time), mimimum<br>"
+                                            "(and default) is 1:</p>",
+                                            "Use HTML line break tags <br> to format text into a reasonable rectangle."),
                                          usedWeights.keys().first(),
                                          1,
                                          2147483647,
@@ -3560,13 +3631,13 @@ void T2DMap::slot_setRoomWeight()
         if (usedWeights.size() == 1) {
             newWeight = QInputDialog::getInt(this,
                                              tr("Enter room weight"),
-                                             tr("Enter new roomweight\n"
-                                                "(= travel time) for all\n"
-                                                "selected rooms, mimimum\n"
-                                                "(and default) is 1 and\n"
-                                                "the only current value\n"
-                                                "used is:",
-                                                "Use line feeds to format text into a reasonable rectangle."),
+                                             tr("<p>Enter new roomweight<br>"
+                                                "(= travel time) for all<br>"
+                                                "selected rooms, mimimum<br>"
+                                                "(and default) is 1 and<br>"
+                                                "the only current value<br>"
+                                                "used is:</p>",
+                                                "Use HTML line break tags <br> to format text into a reasonable rectangle."),
                                              usedWeights.keys().first(),
                                              1,
                                              2147483647,
@@ -3605,15 +3676,15 @@ void T2DMap::slot_setRoomWeight()
             }
             QString newWeightText = QInputDialog::getItem(this,                    // QWidget * parent
                                                           tr("Enter room weight"), // const QString & title
-                                                          tr("Choose an existing\n"
-                                                             "roomweight (= travel\n"
-                                                             "time) from the list\n"
-                                                             "(sorted by most commonly\n"
-                                                             "used first) or enter a\n"
-                                                             "new (positive) integer\n"
-                                                             "value for all selected\n"
-                                                             "rooms:",
-                                                             "Use line feeds to format text into a reasonable rectangle."), // const QString & label
+                                                          tr("<p>Choose an existing<br>"
+                                                             "roomweight (= travel<br>"
+                                                             "time) from the list<br>"
+                                                             "(sorted by most commonly<br>"
+                                                             "used first) or enter a<br>"
+                                                             "new (positive) integer<br>"
+                                                             "value for all selected<br>"
+                                                             "rooms:</p>",
+                                                             "Use HTML line break tags <br> to format text into a reasonable rectangle."),
                                                           displayStrings,                                                   // QStringList & items
                                                           0,                                                                // int current = 0, last value in list
                                                           true,                                                             // bool editable = true
@@ -4137,12 +4208,12 @@ void T2DMap::slot_setCustomLine()
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit = "";
+
     QPushButton* b_ = d->findChild<QPushButton*>("nw");
-    QTreeWidget* specialExits = d->findChild<QTreeWidget*>("specialExits");
     mpCurrentLineStyle = d->findChild<QComboBox*>("lineStyle");
     mpCurrentLineColor = d->findChild<QPushButton*>("lineColor");
     mpCurrentLineArrow = d->findChild<QCheckBox*>("arrow");
-    if (!b_ || !specialExits || !mpCurrentLineColor || !mpCurrentLineStyle || !mpCurrentLineArrow) {
+    if (!b_ || !mpCurrentLineColor || !mpCurrentLineStyle || !mpCurrentLineArrow) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "nw" exit line button or another element of the dialog!)");
         return;
     } else if (pR->getNorthwest() <= 0) {
@@ -4297,6 +4368,21 @@ void T2DMap::slot_setCustomLine()
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
+    b_ = d->findChild<QPushButton*>(QStringLiteral("button_cancel"));
+    if (!b_) {
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "cancel" button!)");
+        return;
+    }
+    b_->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                   .arg(tr("<p>To remove a custom line, cancel this dialog, select the line and right-click to obtain a \"<i>delete</i>\" option.</p>")));
+    connect(b_, SIGNAL(clicked()), d, SLOT(reject()));
+
+    QTreeWidget* pTreeWidget_specialExits = d->findChild<QTreeWidget*>(QStringLiteral("specialExits"));
+    if (!pTreeWidget_specialExits) {
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find treeWidget item!");
+        return;
+    }
+
     QMapIterator<int, QString> it(pR->getOtherMap());
     while (it.hasNext()) {
         it.next();
@@ -4307,7 +4393,7 @@ void T2DMap::slot_setCustomLine()
                 dir = dir.mid(1);
             }
         }
-        auto pI = new QTreeWidgetItem(specialExits);
+        auto pI = new QTreeWidgetItem(pTreeWidget_specialExits);
         if (pR->customLines.contains(dir)) {
             pI->setCheckState(0, Qt::Checked);
         } else {
@@ -4320,25 +4406,50 @@ void T2DMap::slot_setCustomLine()
         pI->setTextAlignment(2, Qt::AlignLeft);
     }
 
-    b_ = d->findChild<QPushButton*>("button_cancel");
-    if (!b_) {
-        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "cancel" button!)");
+    QGroupBox *pGroupBox_setting = d->findChild<QGroupBox*>(QStringLiteral("groupBox_settings"));
+    QGroupBox *pGroupBox_normalExits = d->findChild<QGroupBox*>(QStringLiteral("groupBox_normalExits"));
+    QGroupBox *pGroupBox_specialExits = d->findChild<QGroupBox*>(QStringLiteral("groupBox_specialExits"));
+
+    if (!pGroupBox_setting || !pGroupBox_normalExits || !pGroupBox_specialExits) {
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find a groupBox item!");
         return;
     }
-    connect(b_, SIGNAL(clicked()), d, SLOT(reject()));
+
+    QTreeWidgetItem * pTreeWidgetItem_header = pTreeWidget_specialExits->headerItem();
+
+    pTreeWidgetItem_header->setToolTip(0, QStringLiteral("<html><head/><body>%1</body></html>")
+                                       .arg(tr("<p>Indicates if there is already a custom line for this special exit, which will be <b>replaced</b> if the exit is selected.</p>")));
+    pTreeWidgetItem_header->setToolTip(1, QStringLiteral("<html><head/><body>%1</body></html>")
+                                       .arg(tr("<p>The room this special exit leads <b>to</b>.</p>")));
+    pTreeWidgetItem_header->setToolTip(2, QStringLiteral("<html><head/><body>%1</body></html>")
+                                       .arg(tr("<p>The command or Lua script that goes to the given room.</p>"
+                                               "<p>Mudlet will use this command in walking through this exit (when requested to find a route through the map); it can be something simple as a direction or something more capable like a Lua script.</p>")));
+
+    pGroupBox_setting->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>Select <i>Style</i>, <i>Color</i> and <i>whether to end the line with an arrow head</i> <b>before</b> then choosing the exit to draw the line for...</p>")));
+    pGroupBox_normalExits->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                      .arg(tr("<p>Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not an exit in that direction.</p>"
+                                              "<p>If there is already a custom exit line for the exit then it will be <b>replaced</b> if the exit is selected.</p>")));
+    pGroupBox_specialExits->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                       .arg(tr("<p>Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.</p>")));
+
+
     connect(d, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
 
-    QStringList _lineStyles;
-    _lineStyles << "solid line"
-                << "dot line"
-                << "dash line"
-                << "dash dot line"
-                << "dash dot dot line";
-    mpCurrentLineStyle->addItems(_lineStyles);
-    mpCurrentLineStyle->setCurrentText(mCurrentLineStyle);
+
+    if (! mpCurrentLineStyle->count()) {
+        mpCurrentLineStyle->addItem(QIcon(":/icons/solid-line.png"), tr("solid line"), static_cast<int>(Qt::SolidLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dot-line.png"), tr("dot line"), static_cast<int>(Qt::DotLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dash-line.png"), tr("dash line"), static_cast<int>(Qt::DashLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot line"), static_cast<int>(Qt::DashDotLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot dot line"), static_cast<int>(Qt::DashDotDotLine));
+    }
+
+    mpCurrentLineStyle->setCurrentIndex(mCurrentLineStyle);
+
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
     mpCurrentLineColor->setStyleSheet("background-color:" + mCurrentLineColor.name());
-    connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
+    connect(pTreeWidget_specialExits, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
     connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
     mpCustomLinesDialog = d; // Don't assign the pointer value to the class memeber until ready to go
     mpCustomLinesDialog->show();
@@ -4438,6 +4549,7 @@ void T2DMap::slot_setCustomLine2()
 	 *            mCurrentLineColor.green(),
 	 *            mCurrentLineColor.blue() );
 	 */
+    mCurrentLineStyle = Qt::PenStyle(mpCurrentLineStyle->currentData().toInt());
     pR->customLinesStyle[exit] = mCurrentLineStyle;
     //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
     pR->customLinesArrow[exit] = mCurrentLineArrow;
@@ -4457,7 +4569,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     QString exit = special_exit->text(2);
     mpCustomLinesDialog->hide(); // Hide but don't delete until done the custom line
     mCustomLinesRoomExit = exit;
-    mCustomLinesRoomTo = special_exit->text(1).toInt(); // Wasn't being set !
+    mCustomLinesRoomTo = special_exit->text(1).toInt();
     mDialogLock = false;
     TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
     if (!pR) {
@@ -4475,6 +4587,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
 	 *            mCurrentLineColor.green(),
 	 *            mCurrentLineColor.blue() );
 	 */
+    mCurrentLineStyle = Qt::PenStyle(mpCurrentLineStyle->currentData().toInt());
     pR->customLinesStyle[exit] = mCurrentLineStyle;
     //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
     pR->customLinesArrow[exit] = mCurrentLineArrow;

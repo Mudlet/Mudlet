@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2017 The Communi Project                           *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmeida.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,16 +19,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "ircmessageformatter.h"
 
+#include "mudlet.h"
+
+// CHECK: should IrcTextFormat be inside the MSVC guards
 #include "pre_guard.h"
 #include <IrcTextFormat>
+#include <QLocale>
+#include <QStringList>
 #include "post_guard.h"
 
 QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
 {
     QString formatted;
-    QString color = "#f29010";
+    QString color = QLatin1String("#f29010");
 
     IrcNumericMessage* nMsg;
 
@@ -70,7 +77,7 @@ QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
         break;
     case IrcMessage::Topic:
         formatted = formatTopicMessage(static_cast<IrcTopicMessage*>(message), isForLua);
-        color = "#3283bc";
+        color = QLatin1String("#3283bc");
         break;
     case IrcMessage::Whois:
         formatted = formatWhoisMessage(static_cast<IrcWhoisMessage*>(message), isForLua);
@@ -83,7 +90,7 @@ QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
         break;
     case IrcMessage::Error:
         formatted = formatErrorMessage(static_cast<IrcErrorMessage*>(message), isForLua);
-        color = "indianred";
+        color = QLatin1String("indianred");
         break;
     case IrcMessage::Unknown:
         formatted = formatUnknownMessage(message, isForLua);
@@ -92,8 +99,8 @@ QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
         nMsg = static_cast<IrcNumericMessage*>(message);
         formatted = formatNumericMessage(nMsg, isForLua);
         // if you change this, change formatErrorMessage too
-        if (Irc::codeToString(nMsg->code()).startsWith("ERR_")) {
-            color = "indianred";
+        if (Irc::codeToString(nMsg->code()).startsWith(QLatin1String("ERR_"))) {
+            color = QLatin1String("indianred");
         }
         break;
     default:
@@ -109,19 +116,16 @@ QString IrcMessageFormatter::formatMessage(const QString& message, QString color
             return message;
         }
 
-        QString formatted = QString("[%1] %2").arg(QTime::currentTime().toString(), message);
+        QString formatted = QStringLiteral("[%1] %2").arg(QTime::currentTime().toString(), message);
 
-        if (message.startsWith("!"))
-            formatted = QString("<font color='gray'>%1</font>").arg(formatted);
-        else if (message.startsWith("*"))
-            formatted = QString("<font color='maroon'>%1</font>").arg(formatted);
-        else if (message.startsWith("$"))
-            formatted = QString("<font color='#3cc46e'>%1</font>").arg(formatted);
-        else if (message.startsWith("[")) {
-            if (color.isEmpty()) {
-                color = "#f29010";
-            }
-            formatted = QString("<font color='%2'>%1</font>").arg(formatted, color);
+        if (message.startsWith(QLatin1String("!"))) {
+            formatted = QStringLiteral("<font color='gray'>%1</font>").arg(formatted);
+        } else if (message.startsWith(QLatin1String("*"))) {
+            formatted = QStringLiteral("<font color='maroon'>%1</font>").arg(formatted);
+        } else if (message.startsWith(QLatin1String("$"))) {
+            formatted = QStringLiteral("<font color='#3cc46e'>%1</font>").arg(formatted);
+        } else if (message.startsWith(QLatin1String("["))) {
+            formatted = QStringLiteral("<font color='%2'>%1</font>").arg(formatted, (color.isEmpty() ? QLatin1String("#f29010") : color ));
         }
         return formatted;
     }
@@ -137,57 +141,98 @@ QString IrcMessageFormatter::formatAwayMessage(IrcAwayMessage* message, bool isF
         content = IrcTextFormat().toHtml(message->content());
     }
 
-    if (message->flags() & IrcMessage::Own)
-        return QObject::tr("! %1").arg(content);
-    else if (!message->content().isEmpty())
-        return QObject::tr("! %1 is away (%2)").arg(message->nick(), content);
-    return QObject::tr("! %1 is back").arg(message->nick());
+    if (message->flags() & IrcMessage::Own) {
+        return QStringLiteral("! %1").arg(content);
+    } else if (!message->content().isEmpty()) {
+        if (isForLua) {
+            return QStringLiteral("! %1 is away (%2)").arg(message->nick(), content);
+        } else {
+            return tr("! %1 is away (%2)", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), content);
+        }
+    }
+
+    if (isForLua) {
+        return QStringLiteral("! %1 is back").arg(message->nick());
+    } else {
+        return tr("! %1 is back", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick());
+    }
 }
 
 QString IrcMessageFormatter::formatInviteMessage(IrcInviteMessage* message, bool isForLua)
 {
-    if (message->isReply())
-        return QObject::tr("! invited %1 to %2").arg(message->user(), message->channel());
-
-    return QObject::tr("! %2 invited to %3").arg(message->nick(), message->channel());
+    if (message->isReply()) {
+        if (isForLua) {
+            return QStringLiteral("! invited %1 to %2").arg(message->user(), message->channel());
+        } else {
+            return tr("! invited %1 to %2", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->user(), message->channel());
+        }
+    } else {
+        if (isForLua) {
+            return QStringLiteral("! %1 invited to %2").arg(message->nick(), message->channel());
+        } else {
+            return tr("! %1 invited to %2", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), message->channel());
+        }
+    }
 }
 
 QString IrcMessageFormatter::formatJoinMessage(IrcJoinMessage* message, bool isForLua)
 {
-    if (message->flags() & IrcMessage::Own)
-        return QObject::tr("! You have joined %1 as %2").arg(message->channel(), message->nick());
-    else
-        return QObject::tr("! %1 has joined %2").arg(message->nick(), message->channel());
+    if (message->flags() & IrcMessage::Own) {
+        if (isForLua) {
+            return QStringLiteral("! You have joined %1 as %2").arg(message->channel(), message->nick());
+        } else {
+            return tr("! You have joined %1 as %2", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->channel(), message->nick());
+        }
+    } else {
+        if (isForLua) {
+            return QStringLiteral("! %1 has joined %2").arg(message->nick(), message->channel());
+        } else {
+            return tr("! %1 has joined %2", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), message->channel());
+        }
+    }
 }
 
 QString IrcMessageFormatter::formatKickMessage(IrcKickMessage* message, bool isForLua)
 {
-    return QObject::tr("! %1 kicked %2").arg(message->nick(), message->user());
+    if (isForLua) {
+        return QStringLiteral("! %1 kicked %2").arg(message->nick(), message->user());
+    } else {
+        return tr("! %1 kicked %2", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), message->user());
+    }
 }
 
 QString IrcMessageFormatter::formatModeMessage(IrcModeMessage* message, bool isForLua)
 {
-    QString args = message->arguments().join(" ");
-    if (message->isReply())
-        return QObject::tr("! %1 mode is %2 %3").arg(message->target(), message->mode(), args);
-    else
-        return QObject::tr("! %1 sets mode %2 %3 %4").arg(message->nick(), message->target(), message->mode(), args);
+    QString args = message->arguments().join(QChar::Space);
+    if (message->isReply()) {
+        if (isForLua) {
+            return QStringLiteral("! %1 mode is %2 %3").arg(message->target(), message->mode(), args);
+        } else {
+            return tr("! %1 mode is %2 %3","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->target(), message->mode(), args);
+        }
+    } else {
+        if (isForLua) {
+            return QStringLiteral("! %1 sets mode %2 %3 %4").arg(message->nick(), message->target(), message->mode(), args);
+        } else {
+            return tr("! %1 sets mode %2 %3 %4","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), message->target(), message->mode(), args);
+        }
+    }
 }
 
 QString IrcMessageFormatter::formatMotdMessage(IrcMotdMessage* message, bool isForLua)
 {
     QString motdData;
     foreach (const QString& line, message->lines()) {
-        QString content, lineEnd;
         if (isForLua) {
-            lineEnd = "\n";
-            content = IrcTextFormat().toPlainText(line);
+            motdData += QStringLiteral("[MOTD] %1\n").arg(IrcTextFormat().toPlainText(line));
         } else {
-            lineEnd = "<br />\n";
-            content = IrcTextFormat().toHtml(line);
+            // <br /> was being used but that is XML, NOT valid HTML...!
+            // Using a tr(...) as an argument to a QStringLiteral(...) to hide
+            // HTML from translators...
+            motdData += QStringLiteral("%1<br>\n")
+                    .arg(tr("[MOTD] %1", "MOTD is an initialism for 'Message of the Day' and may need to be replaced with a language specific replacement.")
+                         .arg(IrcTextFormat().toHtml(line)));
         }
-
-        motdData += QObject::tr("[MOTD] %1%2").arg(content, lineEnd);
     }
     return motdData;
 }
@@ -198,136 +243,171 @@ QString IrcMessageFormatter::formatNamesMessage(IrcNamesMessage* message, bool i
     if (isForLua) {
         // lua actually needs the names for parsing, since getting a names
         // list from the UI userModel alone would be limiting to the IRC commands.
-        QString nameList = message->names().join(" ");
-        return QObject::tr("! %1 has %2 users: %3").arg(message->channel(), count, nameList);
+        return QStringLiteral("! %1 has %2 users: %3").arg(message->channel(), count, message->names().join(QChar::Space));
     } else {
-        return QObject::tr("! %1 has %2 users").arg(message->channel(), count);
+        return tr("! %1 has %n users","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!", message->names().count())
+                .arg(message->channel(), count);
     }
 }
 
 QString IrcMessageFormatter::formatNickMessage(IrcNickMessage* message, bool isForLua)
 {
-    return QObject::tr("! %1 has changed nick to %2").arg(message->oldNick(), message->newNick());
+    return tr("! %1 has changed nick to %2", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->oldNick(), message->newNick());
 }
 
 QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool isForLua)
 {
     if (message->isReply()) {
-        const QStringList params = message->content().split(" ", QString::SkipEmptyParts);
+        const QStringList params = message->content().split(QChar::Space, QString::SkipEmptyParts);
         const QString cmd = params.value(0);
-        if (cmd.toUpper() == "PING") {
+        if (!cmd.compare(QLatin1String("PING"), Qt::CaseInsensitive)) {
             const QString secs = formatSeconds(params.value(1).toInt());
-            return QObject::tr("! %1 replied in %2").arg(message->nick(), secs);
-        } else if (cmd.toUpper() == "TIME") {
-            const QString rest = QStringList(params.mid(1)).join(" ");
-            return QObject::tr("! %1 time is %2").arg(message->nick(), rest);
-        } else if (cmd.toUpper() == "VERSION") {
-            const QString rest = QStringList(params.mid(1)).join(" ");
-            return QObject::tr("! %1 version is %2").arg(message->nick(), rest);
+            if (isForLua) {
+                return QStringLiteral("! %1 replied in %2").arg(message->nick(), secs);
+            } else {
+                return tr("! %1 replied in %2","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), secs);
+            }
+        } else if (!cmd.compare(QLatin1String("TIME"), Qt::CaseInsensitive)) {
+            const QString rest = QStringList(params.mid(1)).join(QChar::Space);
+            if (isForLua) {
+                return QStringLiteral("! %1 time is %2").arg(message->nick(), rest);
+            } else {
+                return tr("! %1 time is %2","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), rest);
+            }
+        } else if (!cmd.compare(QLatin1String("VERSION"), Qt::CaseInsensitive)) {
+            const QString rest = QStringList(params.mid(1)).join(QChar::Space);
+            if (isForLua) {
+                return QStringLiteral("! %1 version is %2").arg(message->nick(), rest);
+            } else {
+                return tr("! %1 version is %2","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), rest);
+            }
         }
     }
 
     QString pfx = message->statusPrefix();
-    if (!pfx.isEmpty())
-        pfx = ":" + pfx;
-
-    if (message->isPrivate()) {
-        QString content;
-        if (isForLua) {
-            content = IrcTextFormat().toPlainText(message->content());
-        } else {
-            content = IrcTextFormat().toHtml(message->content());
-        }
-        return QObject::tr("[%1%2] %3").arg(message->nick(), pfx, content);
+    if (!pfx.isEmpty()) {
+        pfx.prepend(QLatin1String(":"));
     }
 
-    if (isForLua) {
-        // lua only needs the message text.
-        return IrcTextFormat().toPlainText(message->content());
+    if (message->isPrivate()) {
+        if (isForLua) {
+            return QStringLiteral("[%1%2] %3").arg(message->nick(), pfx,IrcTextFormat().toPlainText(message->content()));
+        } else {
+            return tr("[%1%2] %3", "%1 is nickname, %2 is a status prefix, %3 is message.").arg(message->nick(), pfx, IrcTextFormat().toHtml(message->content()));
+        }
     } else {
-        QString content = IrcTextFormat().toHtml(message->content());
-        return QObject::tr("&lt;%1%2&gt; [%3] %4").arg(message->nick(), pfx, message->target(), content);
+        if (isForLua) {
+            // lua only needs the message text.
+            return IrcTextFormat().toPlainText(message->content());
+        } else {
+            return tr("&lt;%1%2&gt; [%3] %4", "%1 is nickname, %2 is a status prefix, %3 is target of message, %4 is message; please preserve HTML entities (the '%lt;' and '%gt;' that get converted to '<' and '>' and NOT the markers around an HTML tag).")
+                    .arg(message->nick(), pfx, message->target(), IrcTextFormat().toHtml(message->content()));
+        }
     }
 }
 
 QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bool isForLua)
 {
+    // CHECK: Why 300?
     if (message->code() < 300) {
-        const QString info = QStringList(message->parameters().mid(1)).join(" ");
-        QString content;
+        const QString info = QStringList(message->parameters().mid(1)).join(QChar::Space);
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            return QStringLiteral("[INFO] %1").arg(IrcTextFormat().toPlainText(info));
         } else {
-            content = IrcTextFormat().toHtml(info);
+            return tr("[INFO] %1").arg(IrcTextFormat().toHtml(info));
         }
-        return QObject::tr("[INFO] %1").arg(info);
     }
 
     switch (message->code()) {
     case Irc::RPL_VERSION:
-        return QObject::tr("! %1 version is %2").arg(message->nick(), message->parameters().value(1));
+        if (isForLua) {
+            return QStringLiteral("! %1 version is %2").arg(message->nick(), message->parameters().value(1));
+        } else {
+            return tr("! %1 version is %2","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), message->parameters().value(1));
+        }
+        // break is not needed as both branches lead to a return...!
 
     case Irc::RPL_TIME:
-        return QObject::tr("! %1 time is %2").arg(message->parameters().value(1), message->parameters().value(2));
+        if (isForLua) {
+            return QStringLiteral("! %1 time is %2").arg(message->parameters().value(1), message->parameters().value(2));
+        } else {
+            return tr("! %1 time is %2","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->parameters().value(1), message->parameters().value(2));
+        }
+        // break is not needed as both branches lead to a return...!
 
     default:
         break;
     }
 
-    if (message->isComposed() || message->flags() & IrcMessage::Implicit)
+    if (message->isComposed() || message->flags() & IrcMessage::Implicit) {
         return QString();
+    }
+
+    const QString info = QStringList(message->parameters().mid(1)).join(QChar::Space);
 
     // if you change this, change formatErrorMessage too
-    if (Irc::codeToString(message->code()).startsWith("ERR_")) {
-        const QString info = QStringList(message->parameters().mid(1)).join(" ");
-        QString content;
+    if (Irc::codeToString(message->code()).startsWith(QLatin1String("ERR_"))) {
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            return QStringLiteral("[ERROR] %1").arg(IrcTextFormat().toPlainText(info));
         } else {
-            content = IrcTextFormat().toHtml(info);
+            //: This is not going through cTelnet::postMessage(...) !
+            return tr("[ERROR] %1").arg(IrcTextFormat().toHtml(info));
         }
-        return QObject::tr("[ERROR] %1").arg(content);
-    }
-    if (message->code() == Irc::RPL_CHANNEL_URL) {
-        const QString info = QStringList(message->parameters().mid(1)).join(" ");
-        QString content;
+    } else  if (message->code() == Irc::RPL_CHANNEL_URL) {
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            return QStringLiteral("[Channel URL] %1").arg(IrcTextFormat().toPlainText(info));
         } else {
-            content = IrcTextFormat().toHtml(info);
+            return tr("[Channel URL] %1").arg(IrcTextFormat().toHtml(info));
         }
-        return QObject::tr("[Channel URL] %1").arg(content);
-    }
-    const QString info = QStringList(message->parameters().mid(1)).join(" ");
-    QString content;
-    if (isForLua) {
-        content = IrcTextFormat().toPlainText(info);
     } else {
-        content = IrcTextFormat().toHtml(info);
+        if (isForLua) {
+            return QStringLiteral("[%1] %2").arg(QString::number(message->code()), IrcTextFormat().toPlainText(info));
+        } else {
+            return tr("[%1] %2", "Not obvious that any translation is actually required for this").arg(QString::number(message->code()), IrcTextFormat().toHtml(info));
+        }
     }
-    return QObject::tr("[%1] %2").arg(QString::number(message->code()), content);
 }
 
 QString IrcMessageFormatter::formatErrorMessage(IrcErrorMessage* message, bool isForLua)
 {
     // if you change this, change ERR_ in formatNumericMessage too
-    return QObject::tr("[ERROR] %1").arg(message->error());
+    if (isForLua) {
+        return QStringLiteral("[ERROR] %1").arg(message->error());
+    } else {
+        // This does not go through cTelnet::postMessage(...) so does not
+        // need a '-' after the "[ERROR] "!
+        return tr("[ERROR] %1").arg(message->error());
+    }
 }
 
 QString IrcMessageFormatter::formatPartMessage(IrcPartMessage* message, bool isForLua)
 {
-    if (message->reason().isEmpty())
-        return QObject::tr("! %1 has left %2").arg(message->nick(), message->channel());
-    else
-        return QObject::tr("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), message->reason());
+    if (message->reason().isEmpty()) {
+        if (isForLua) {
+            return QStringLiteral("! %1 has left %2").arg(message->nick(), message->channel());
+        } else {
+            return tr("! %1 has left %2","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), message->channel());
+        }
+    } else {
+        if (isForLua) {
+            return QStringLiteral("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), message->reason());
+        } else {
+            return tr("! %1 has left %2 (%3)","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick(), message->channel(), message->reason());
+        }
+    }
 }
 
 QString IrcMessageFormatter::formatPongMessage(IrcPongMessage* message, bool isForLua)
 {
     quint64 msec = message->timeStamp().toMSecsSinceEpoch();
     quint64 dms = (QDateTime::currentMSecsSinceEpoch() - msec);
-    const QString secs = QString().sprintf("%04.3f", (float)((float)dms / (float)1000));
-    return QObject::tr("! %1 replied in %2 seconds").arg(message->nick(), secs);
+    // QString::sprintf(...) was/is OBSOLETE...!
+    if (isForLua) {
+        return QStringLiteral("! %1 replied in %n seconds").arg(message->nick(), QString::number(dms / 1000.0, 'f', 3));
+    } else {
+        return tr("! %1 replied in %2 seconds","The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!; the seconds value (%2) is a decimal value not an integer one and will be formatted as per specified locale, which makes handling pluralization moot...")
+                .arg(message->nick(), QLocale(mudlet::self()->getGuiLanguage()).toString(static_cast<double>(dms / 1000.0), 'f', 3));
+    }
 }
 
 // Normal messages sent to channels are processed by our client as if they are private messages.
@@ -341,107 +421,172 @@ QString IrcMessageFormatter::formatPrivateMessage(IrcPrivateMessage* message, bo
     }
 
     if (message->isAction()) {
-        return QObject::tr("* %1 %2").arg(message->nick(), content);
+        if (isForLua) {
+            return QStringLiteral("* %1 %2").arg(message->nick(), content);
+        } else {
+            return tr("* %1 %2","").arg(message->nick(), content);
+        }
     } else {
         if (isForLua) {
             // lua only needs the message text here.  Nick and target are sent as arguments to postIrcMessage()
             return content;
         } else {
-            return QObject::tr("<b>&lt;%1&gt;</b> %2").arg(message->nick(), content);
+            return tr("<b>&lt;%1&gt;</b> %2").arg(message->nick(), content);
         }
     }
 }
 
 QString IrcMessageFormatter::formatQuitMessage(IrcQuitMessage* message, bool isForLua)
 {
-    if (message->reason().isEmpty())
-        return QObject::tr("! %1 has quit").arg(message->nick());
-    else
-        return QObject::tr("! %1 has quit (%2)").arg(message->nick(), message->reason());
+    if (message->reason().isEmpty()) {
+        if (isForLua) {
+            return QStringLiteral("! %1 has quit").arg(message->nick());
+        } else {
+            return tr("! %1 has quit").arg(message->nick());
+        }
+    } else {
+        if (isForLua) {
+            return QStringLiteral("! %1 has quit (%2)").arg(message->nick(), message->reason());
+        } else {
+            return tr("! %1 has quit (%2)").arg(message->nick(), message->reason());
+        }
+    }
 }
 
 QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool isForLua)
 {
     if (message->isReply()) {
-        if (message->topic().isEmpty())
-            return QObject::tr("! no topic");
-
-        QString topic;
-        if (isForLua) {
-            topic = IrcTextFormat().toPlainText(message->topic());
+        if (message->topic().isEmpty()) {
+            if (isForLua) {
+                return QLatin1String("! no topic");
+            } else {
+                return tr("! no topic", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!");
+            }
         } else {
-            topic = IrcTextFormat().toHtml(message->topic());
+            if (isForLua) {
+                return QStringLiteral("[TOPIC] %1").arg(IrcTextFormat().toPlainText(message->topic()));
+            } else {
+                return tr("[TOPIC] %1", "Not sure how the expression [TOPIC] should be translated").arg(IrcTextFormat().toHtml(message->topic()));
+            }
         }
-        return QObject::tr("[TOPIC] %1").arg(topic);
+    } else {
+        if (message->topic().isEmpty()) {
+            if (isForLua) {
+                return QStringLiteral("! %1 cleared topic").arg(message->nick());
+            } else {
+                return tr("! %1 cleared topic", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick());
+            }
+        } else {
+            if (isForLua) {
+                return QStringLiteral("! %1 changed topic").arg(message->nick());
+            } else {
+                return tr("! %1 changed topic", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(message->nick());
+            }
+        }
     }
-
-    if (message->topic().isEmpty())
-        return QObject::tr("! %2 cleared topic").arg(message->nick());
-
-    return QObject::tr("! %2 changed topic").arg(message->nick());
 }
 
 QString IrcMessageFormatter::formatUnknownMessage(IrcMessage* message, bool isForLua)
 {
-    return QObject::tr("? %2 %3 %4").arg(message->nick(), message->command(), message->parameters().join(" "));
+    if (isForLua) {
+        return QStringLiteral("? %1 %2 %3").arg(message->nick(), message->command(), message->parameters().join(QChar::Space));
+    } else {
+        return tr("? %1 %2 %3", "The leading ? is a special status marker used programmatically - not an actual question mark - leave unchanged!").arg(message->nick(), message->command(), message->parameters().join(QChar::Space));
+    }
 }
 
 QString IrcMessageFormatter::formatWhoisMessage(IrcWhoisMessage* message, bool isForLua)
 {
-    QString wData;
-    wData = QObject::tr("[WHOIS] %1 is %2@%3 (%4)").arg(message->nick(), message->ident(), message->host(), message->realName());
-    wData += QObject::tr("[WHOIS] %1 is connected via %2 (%3)").arg(message->nick(), message->server(), message->info());
-    wData += QObject::tr("[WHOIS] %1 is connected since %2 (idle %3)").arg(message->nick(), message->since().toString(), formatDuration(message->idle()));
-    if (!message->awayReason().isEmpty())
-        wData += QObject::tr("[WHOIS] %1 is away: %2").arg(message->nick(), message->awayReason());
-    if (!message->account().isEmpty())
-        wData += QObject::tr("[WHOIS] %1 is logged in as %2").arg(message->nick(), message->account());
-    if (!message->address().isEmpty())
-        wData += QObject::tr("[WHOIS] %1 is connected from %2").arg(message->nick(), message->address());
-    if (message->isSecure())
-        wData += QObject::tr("[WHOIS] %1 is using a secure connection").arg(message->nick());
-    if (!message->channels().isEmpty())
-        wData += QObject::tr("[WHOIS] %1 is on %2").arg(message->nick(), message->channels().join(" "));
-    return wData;
+    if (isForLua) {
+        // CHECK: Are linefeeds not required here?
+        // Can only have up to 10 arguments in (earlier ?) Qt 5.x versions
+        QString result = QStringLiteral("[WHOIS] %1 is %2@%3 (%4)"
+                                        "[WHOIS] %1 is connected via %5 (%6)")
+                .arg(message->nick(), message->ident(), message->host(), message->realName(),
+                     message->server(), message->info());
+        result.append(QStringLiteral("[WHOIS] %1 is connected since %2 (idle %3)%4%5%6%7%8")
+                      .arg(message->nick(), message->since().toString(), formatDuration(message->idle()),
+                           (message->awayReason().isEmpty() ? QString() : QStringLiteral("[WHOIS] %1 is away: %2").arg(message->nick(), message->awayReason())),
+                           (message->account().isEmpty() ? QString() : QStringLiteral("[WHOIS] %1 is logged in as %2").arg(message->nick(), message->account())),
+                           (message->address().isEmpty() ? QString() : QStringLiteral("[WHOIS] %1 is connected from %2").arg(message->nick(), message->address())),
+                           (message->isSecure() ? QStringLiteral("[WHOIS] %1 is using a secure connection").arg(message->nick()) : QString()),
+                           (message->channels().isEmpty() ? QString() : QStringLiteral("[WHOIS] %1 is on %2").arg(message->nick(), message->channels().join(QChar::Space)))));
+        return result;
+    } else {
+        // CHECK: Are linefeeds not required here?
+        QString result = tr("[WHOIS] %1 is %2@%3 (%4)n"
+                            "[WHOIS] %1 is connected via %5 (%6)n")
+                .arg(message->nick(), message->ident(), message->host(), message->realName(),
+                     message->server(), message->info());
+
+        result.append(tr("[WHOIS] %1 is connected since %7 (idle %8)%9%10%11%12%13")
+                      .arg(message->nick(), message->since().toString(), formatDuration(message->idle()),
+                           (message->awayReason().isEmpty() ? QString() : tr("[WHOIS] %1 is away: %2").arg(message->nick(), message->awayReason())),
+                           (message->address().isEmpty() ? QString() : tr("[WHOIS] %1 is connected from %2").arg(message->nick(), message->address())),
+                           (message->account().isEmpty() ? QString() : tr("[WHOIS] %1 is logged in as %2").arg(message->nick(), message->account())),
+                           (message->isSecure() ? tr("[WHOIS] %1 is using a secure connection").arg(message->nick()) : QString()),
+                           (message->channels().isEmpty() ? QString() : tr("[WHOIS] %1 is on %2").arg(message->nick(), message->channels().join(QChar::Space)))));
+        return result;
+    }
 }
 
 QString IrcMessageFormatter::formatWhowasMessage(IrcWhowasMessage* message, bool isForLua)
 {
-    QString wData;
-    wData = QObject::tr("[WHOWAS] %1 was %2@%3 (%4)").arg(message->nick(), message->ident(), message->host(), message->realName());
-    wData += QObject::tr("[WHOWAS] %1 was connected via %2 (%3)").arg(message->nick(), message->server(), message->info());
-    if (!message->account().isEmpty())
-        wData += QObject::tr("[WHOWAS] %1 was logged in as %2").arg(message->nick(), message->account());
-    return wData;
+    if (isForLua) {
+        // CHECK: Are linefeeds not required here?
+        return QStringLiteral("[WHOWAS] %1 was %2@%3 (%4)"
+                              "[WHOWAS] %1 was connected via %5 (%6)%7")
+                .arg(message->nick(),
+                     message->ident(),
+                     message->host(),
+                     message->realName(),
+                     message->server(),
+                     message->info(),
+                     ( message->account().isEmpty() ? QString() : QStringLiteral("\n[WHOWAS] %1 was logged in as %2")
+                                                      .arg(message->nick(), message->account())));
+    } else {
+        // CHECK: Are linefeeds not required here?
+        return tr("[WHOWAS] %1 was %2@%3 (%4)"
+                  "[WHOWAS] %1 was connected via %5 (%6)%7")
+                .arg(message->nick(),
+                     message->ident(),
+                     message->host(),
+                     message->realName(),
+                     message->server(),
+                     message->info(),
+                     ( message->account().isEmpty() ? QString() : tr("[WHOWAS] %1 was logged in as %2")
+                                                      .arg(message->nick(), message->account())));
+    }
 }
 
 QString IrcMessageFormatter::formatWhoReplyMessage(IrcWhoReplyMessage* message, bool isForLua)
 {
-    QString format = QObject::tr("[WHO] %1 (%2)").arg(message->nick(), message->realName());
-    if (message->isAway())
-        format += QObject::tr(" - away");
-    if (message->isServOp())
-        format += QObject::tr(" - server operator");
-    return format;
+    if (isForLua) {
+        return QStringLiteral("[WHO] %1 (%2) %3 %4").arg(message->nick(), message->realName(), (message->isAway() ? QLatin1String(" - away") : QString()), ( message->isServOp() ? QLatin1String(" - server operator") : QString()));
+    } else {
+        return tr("[WHO] %1 (%2) %3 %4").arg(message->nick(), message->realName(), (message->isAway() ? tr(" - away") : QString()), ( message->isServOp() ? tr(" - server operator") : QString()));
+    }
 }
 
 QString IrcMessageFormatter::formatSeconds(int secs)
 {
-    const QDateTime time = QDateTime::fromTime_t(secs);
-    return QObject::tr("%1s").arg(time.secsTo(QDateTime::currentDateTime()));
+    return tr("%1s").arg(QDateTime::fromTime_t(secs).secsTo(QDateTime::currentDateTime()));
 }
 
 QString IrcMessageFormatter::formatDuration(int secs)
 {
     QStringList idle;
-    if (int days = secs / 86400)
-        idle += QObject::tr("%1 days").arg(days);
+    if (int days = secs / 86400) {
+        idle += tr("%n days","",days).arg(days);
+    }
     secs %= 86400;
-    if (int hours = secs / 3600)
-        idle += QObject::tr("%1 hours").arg(hours);
+    if (int hours = secs / 3600) {
+        idle += tr("%n hours","",hours).arg(hours);
+    }
     secs %= 3600;
-    if (int mins = secs / 60)
-        idle += QObject::tr("%1 mins").arg(mins);
-    idle += QObject::tr("%1 secs").arg(secs % 60);
-    return idle.join(" ");
+    if (int mins = secs / 60) {
+        idle += tr("%n minutes","",mins).arg(mins);
+    }
+    idle += tr("%n seconds","",secs % 60).arg(secs % 60);
+    return idle.join(QChar::Space);
 }

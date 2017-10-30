@@ -53,9 +53,6 @@
        <height>21</height>
       </size>
      </property>
-     <property name="toolTip">
-      <string>choose a unique name for your alias; it will show in the tree and is needed for scripting.</string>
-     </property>
     </widget>
    </item>
    <item row="1" column="0">
@@ -98,9 +95,6 @@
       <font>
        <pointsize>9</pointsize>
       </font>
-     </property>
-     <property name="toolTip">
-      <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
      </property>
     </widget>
    </item>
@@ -171,9 +165,6 @@
       <font>
        <pointsize>9</pointsize>
       </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in one or more commands you want the alias to send directly to the MUD if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the MUD Server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>

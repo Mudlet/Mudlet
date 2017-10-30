@@ -154,6 +154,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
 public:
     dlgTriggerEditor(Host*);
+    bool event(QEvent*) Q_DECL_OVERRIDE;
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
 
@@ -261,7 +262,6 @@ public slots:
     void slot_script_main_area_add_handler();
     void slot_script_main_area_edit_handler(QListWidgetItem*);
     void slot_grab_key();
-    bool event(QEvent* event) override;
     void grab_key_callback(int key, int modifier);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
@@ -270,6 +270,7 @@ public slots:
     void slot_color_trigger_bg();
 
     void slot_updateStatusBar( const QString statusText); // For the source code editor
+    void slot_guiLanguageChange();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -441,6 +442,40 @@ private:
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
     void clearEditorNotification() const;
+
+    // Automatics from the constructor made into members so we can reaccess them
+    // to put in new text on GUI language change:
+    QAction* mpActionViewAliases;
+    QAction* mpActionViewButtons;
+    QAction* mpActionViewKeys;
+    QAction* mpActionViewScripts;
+    QAction* mpActionViewTriggers;
+    QAction* mpActionViewTimers;
+    QAction* mpActionViewVariables;
+    QAction* mpActionToggleActive;
+    QAction* mpActionAddItem;
+    QAction* mpActionAddGroup;
+    QAction* mpActionCopy;
+    QAction* mpActionDeleteItem;
+    QAction* mpActionImport;
+    QAction* mpActionExport;
+    QAction* mpActionPaste;
+    QAction* mpActionSaveItem;
+    QAction* mpActionSaveProfile;
+    QAction* mpActionSaveProfileAs;
+    QAction* mpActionGenerateStatistics;
+    QAction* mpActionToggleErrorConsole;
+    QAction* mpActionToggleCentralDebugConsole;
+
+    QMenu* mpMenu_searchOptions;
+
+    QString mMsgInfoAddAlias;
+    QString mMsgInfoAddTrigger;
+    QString mMsgInfoAddScript;
+    QString mMsgInfoAddTimer;
+    QString mMsgInfoAddButton;
+    QString mMsgInfoAddKey;
+    QString mMsgInfoAddVar;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

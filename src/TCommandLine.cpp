@@ -322,7 +322,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_C:
             if (ke->modifiers() & Qt::ControlModifier) {
                 if (mpConsole->console->mSelectedRegion != QRegion(0, 0, 0, 0)) {
-                    mpConsole->console->copySelectionToClipboard();
+                    mpConsole->console->slot_copySelectionToClipboard();
                     ke->accept();
                     return true;
                 }
@@ -501,11 +501,6 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         selectAll();
     }
     adjustHeight();
-}
-
-void TCommandLine::slot_sendCommand(const char* pS)
-{
-    mpHost->sendRaw(QString(pS));
 }
 
 // TAB completion mode gets turned on by the tab key.

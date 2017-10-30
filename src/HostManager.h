@@ -49,7 +49,7 @@ public:
     void postInterHostEvent(const Host*, const TEvent&);
 
 private:
-    QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access
+    QReadWriteLock mPoolReadWriteLock;
     QMap<QString, QSharedPointer<Host>> mHostPool;
 };
 

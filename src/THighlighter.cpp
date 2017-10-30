@@ -74,7 +74,7 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
     highlightingRules.append(rule);
 
     quotationFormat.setForeground(Qt::darkGreen);
-    rule.pattern = QRegularExpression(QStringLiteral(R"("[^"]*")"));
+    rule.pattern = QRegularExpression(QStringLiteral("\"[^\\\"]*\")"));
     rule.format = quotationFormat;
     highlightingRules.append(rule);
 

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>632</width>
+    <width>652</width>
     <height>436</height>
    </rect>
   </property>
@@ -55,9 +55,6 @@
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-        <property name="toolTip">
-         <string>Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...</string>
         </property>
         <property name="title">
          <string>Line Settings:</string>
@@ -182,9 +179,6 @@
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-        <property name="toolTip">
-         <string>Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.</string>
         </property>
         <property name="title">
          <string>Normal Exits:</string>
@@ -440,9 +434,6 @@
           <height>140</height>
          </size>
         </property>
-        <property name="toolTip">
-         <string>Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.</string>
-        </property>
         <property name="title">
          <string>Special Exits:</string>
         </property>
@@ -499,9 +490,6 @@
              <string>Has
 custom line?</string>
             </property>
-            <property name="toolTip">
-             <string>Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.</string>
-            </property>
             <property name="textAlignment">
              <set>AlignCenter</set>
             </property>
@@ -510,19 +498,13 @@ custom line?</string>
             <property name="text">
              <string> Destination </string>
             </property>
-            <property name="toolTip">
-             <string>The room this special exit leads to.</string>
-            </property>
             <property name="textAlignment">
-             <set>AlignRight|AlignVCenter</set>
+             <set>AlignTrailing|AlignVCenter</set>
             </property>
            </column>
            <column>
             <property name="text">
              <string> Command</string>
-            </property>
-            <property name="toolTip">
-             <string>The command or LUA script that goes to the given room.</string>
             </property>
            </column>
           </widget>
@@ -556,10 +538,6 @@ custom line?</string>
           <width>85</width>
           <height>27</height>
          </size>
-        </property>
-        <property name="toolTip">
-         <string>To remove a custom line, cancel this dialog,
-select the line and right-click to obtain a &quot;delete&quot; option.</string>
         </property>
         <property name="layoutDirection">
          <enum>Qt::RightToLeft</enum>

@@ -37,6 +37,7 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QObject>
 #include <QPointer>
 #include <QTextStream>
 #include "post_guard.h"
@@ -59,6 +60,8 @@ class TMap;
 
 class Host : public QObject
 {
+    Q_OBJECT
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -176,6 +179,11 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
+
+
+public slots:
+    void slot_guiLanguageChange(const QString&, const QString&);
+
 
 public:
     cTelnet mTelnet;

@@ -50,9 +50,13 @@ int dlgIRC::DefaultHostPort = 6667;
 QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
 QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
 
-dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(false), mReadyForSending(false), mConnectedHostName()
+dlgIRC::dlgIRC(Host* pHost)
+: mpHost(pHost)
+, mInputHistoryMax(8)
+, mIrcStarted(false)
+, mReadyForSending(false)
+, mConnectedHostName()
 {
-    mInputHistoryMax = 8;
 
     setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_irc.png")));
@@ -100,6 +104,9 @@ dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(fa
 
     // set the title here to pick up the previously loaded nick and host values.
     setClientWindowTitle();
+
+    slot_guiLanguageChange();
+    connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()), Qt::UniqueConnection);
 }
 
 dlgIRC::~dlgIRC()
@@ -196,7 +203,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
 void dlgIRC::ircRestart(bool reloadConfigs)
 {
     QString msg = tr("Restarting IRC Client");
-    ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(msg));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! %1.", "The leading ! is a special status marker used programmatically - not an actual exclamination mark - leave unchanged!").arg(msg)));
 
     // issue a quit message to the network if we're connected.
     if (connection->isConnected()) {
@@ -770,4 +777,15 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& channels)
 {
     return pH->writeProfileData(dlgIRC::ChannelsCfgItem, channels.join(QStringLiteral(" ")));
+}
+
+void dlgIRC::slot_guiLanguageChange()
+{
+    // PLACEMARKER: Redefine GUI Texts
+    retranslateUi(this);
+
+    // TODO: Regenerate text elements that we manufactured ourselves with
+    // calls to tr() with the new translation loaded...
+
+    setClientWindowTitle();
 }

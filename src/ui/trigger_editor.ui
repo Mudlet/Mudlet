@@ -149,7 +149,7 @@
           </property>
           <column>
            <property name="text">
-            <string>1</string>
+            <string notr="true">1</string>
            </property>
           </column>
          </widget>
@@ -197,7 +197,7 @@
           </property>
           <column>
            <property name="text">
-            <string>1</string>
+            <string notr="true">1</string>
            </property>
           </column>
          </widget>
@@ -242,7 +242,7 @@
           </property>
           <column>
            <property name="text">
-            <string>1</string>
+            <string notr="true">1</string>
            </property>
           </column>
          </widget>
@@ -287,7 +287,7 @@
           </property>
           <column>
            <property name="text">
-            <string>1</string>
+            <string notr="true">1</string>
            </property>
           </column>
          </widget>
@@ -332,7 +332,7 @@
           </property>
           <column>
            <property name="text">
-            <string>1</string>
+            <string notr="true">1</string>
            </property>
           </column>
          </widget>
@@ -377,7 +377,7 @@
           </property>
           <column>
            <property name="text">
-            <string>1</string>
+            <string notr="true">1</string>
            </property>
           </column>
          </widget>
@@ -425,7 +425,7 @@
           </property>
           <column>
            <property name="text">
-            <string>1</string>
+            <string notr="true">1</string>
            </property>
           </column>
          </widget>
@@ -646,9 +646,6 @@
                      <height>32</height>
                     </size>
                    </property>
-                   <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -680,6 +677,9 @@
              <property name="midLineWidth">
               <number>4</number>
              </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QAbstractScrollArea::AdjustToContents</enum>
+             </property>
              <property name="alternatingRowColors">
               <bool>false</bool>
              </property>
@@ -708,7 +708,7 @@
               <bool>false</bool>
              </property>
              <property name="columnCount">
-              <number>3</number>
+              <number>4</number>
              </property>
              <attribute name="headerVisible">
               <bool>true</bool>
@@ -721,7 +721,7 @@
              </attribute>
              <column>
               <property name="text">
-               <string>1</string>
+               <string notr="true">1</string>
               </property>
              </column>
              <column>
@@ -732,6 +732,11 @@
              <column>
               <property name="text">
                <string notr="true">3</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string notr="true">4</string>
               </property>
              </column>
             </widget>
@@ -993,91 +998,6 @@
     </size>
    </property>
   </widget>
-  <action name="actionAlias">
-   <property name="text">
-    <string>Alias</string>
-   </property>
-  </action>
-  <action name="toolButton_add_trigger_menu">
-   <property name="text">
-    <string>Trigger</string>
-   </property>
-  </action>
-  <action name="actionVariable">
-   <property name="text">
-    <string>Variable</string>
-   </property>
-  </action>
-  <action name="actionAlias_2">
-   <property name="text">
-    <string>Alias</string>
-   </property>
-  </action>
-  <action name="toolButton_delete_trigger_menu">
-   <property name="text">
-    <string>Trigger</string>
-   </property>
-  </action>
-  <action name="actionVariable_2">
-   <property name="text">
-    <string>Variable</string>
-   </property>
-  </action>
-  <action name="toolButton_add_trigger_group_menu">
-   <property name="text">
-    <string>Group</string>
-   </property>
-  </action>
-  <action name="actionGroup">
-   <property name="text">
-    <string>Group</string>
-   </property>
-  </action>
-  <action name="actionAliases">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Aliases</string>
-   </property>
-  </action>
-  <action name="actionTriggers">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Triggers</string>
-   </property>
-  </action>
-  <action name="actionVariables">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Variables</string>
-   </property>
-  </action>
-  <action name="actionScript_options">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Script options</string>
-   </property>
-  </action>
-  <action name="toolButton_search_area_2_menu">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Search results</string>
-   </property>
-  </action>
-  <action name="actionExpert_mode_menu">
-   <property name="text">
-    <string>Expert mode</string>
-   </property>
-  </action>
  </widget>
  <customwidgets>
   <customwidget>

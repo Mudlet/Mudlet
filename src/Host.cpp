@@ -190,6 +190,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
+
+    if (mudlet::self()) {
+        // CHECK: mudlet::self() is null during start-up at this point for the
+        // "default_host" case - it is not clear that this will be an issue...
+        connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange(const QString&, const QString&)));
+    }
 }
 
 Host::~Host()
@@ -260,8 +266,15 @@ void Host::saveModules(int sync)
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
             QTime t;
             t.start();
-            //            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
-            int err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
+            //  Might want to include ZIP_FL_OVERWRITE flag to later version:
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+            int err = zip_file_add(zipFile, QStringLiteral("%1.xml").arg(moduleName).toStdString().c_str(), s, ZIP_FL_ENC_UTF_8);
+#else
+            // We were using zip_add(...) but that is obsolete (and does not necessarily
+            // support UTF-8 encoded file-names)...
+            int err = zip_add(zipFile, QStringLiteral("%1.xml").arg(moduleName).toStdString().c_str(), s);
+#endif
+
             //FIXME: error checking
             if (zipFile) {
                 err = zip_close(zipFile);
@@ -1127,4 +1140,19 @@ QString Host::readProfileData(const QString& item)
     }
 
     return ret;
+}
+
+void Host::slot_guiLanguageChange(const QString& newLanguageCode, const QString& oldLanguageCode)
+{
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysGuiLanguageChange"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    event.mArgumentList.append(newLanguageCode);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    event.mArgumentList.append(oldLanguageCode);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    raiseEvent(event);
 }

@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,8 +24,10 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QMap>
 #include <QMutex>
+#include <QObject>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -35,8 +38,10 @@ class Host;
 class TKey;
 
 
-class KeyUnit
+class KeyUnit : public QObject
 {
+    Q_OBJECT
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -61,7 +66,6 @@ public:
     QString assembleReport();
     int getNewID();
     QString getKeyName(int keyCode, int modifier);
-    void setupKeyNames();
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
     bool processDataStream(int, int);
@@ -80,6 +84,11 @@ public:
     int statsTempKeysCreated;
     int statsTempKeysKilled;
     QList<TKey*> uninstallList;
+
+
+public slots:
+    void slot_guiLanguageChange();
+
 
 private:
     KeyUnit() {}

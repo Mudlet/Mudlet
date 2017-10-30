@@ -88,7 +88,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpMapper(nullptr)
 , mpButtonMainLayer(nullptr)
 , mpScrollBar(new QScrollBar)
-
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -371,44 +370,40 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     layoutButtonMainLayer->addWidget(buttonLayerSpacer);
     layoutButtonMainLayer->addWidget(buttonLayer);
 
-    auto timeStampButton = new QToolButton;
-    timeStampButton->setCheckable(true);
-    timeStampButton->setMinimumSize(QSize(30, 30));
-    timeStampButton->setMaximumSize(QSize(30, 30));
-    timeStampButton->setSizePolicy(sizePolicy5);
-    timeStampButton->setFocusPolicy(Qt::NoFocus);
-    timeStampButton->setToolTip(tr("<html><head/><body><p>Show Time Stamps.</p></body></html>"));
-    timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
+    mTimeStampButton = new QToolButton;
+    mTimeStampButton->setCheckable(true);
+    mTimeStampButton->setMinimumSize(QSize(30, 30));
+    mTimeStampButton->setMaximumSize(QSize(30, 30));
+    mTimeStampButton->setSizePolicy(sizePolicy5);
+    mTimeStampButton->setFocusPolicy(Qt::NoFocus);
+    mTimeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
+    connect(mTimeStampButton, SIGNAL(pressed()), this, SLOT(slot_toggleTimeStamps()));
 
-    auto replayButton = new QToolButton;
-    replayButton->setCheckable(true);
-    replayButton->setMinimumSize(QSize(30, 30));
-    replayButton->setMaximumSize(QSize(30, 30));
-    replayButton->setSizePolicy(sizePolicy5);
-    replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setToolTip(tr("<html><head/><body><p>Record a replay.</p></body></html>"));
-    replayButton->setIcon(QIcon(QStringLiteral(":/icons/media-tape.png")));
-    connect(replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
+    mRecordButton = new QToolButton;
+    mRecordButton->setCheckable(true);
+    mRecordButton->setMinimumSize(QSize(30, 30));
+    mRecordButton->setMaximumSize(QSize(30, 30));
+    mRecordButton->setSizePolicy(sizePolicy5);
+    mRecordButton->setFocusPolicy(Qt::NoFocus);
 
-    logButton = new QToolButton;
-    logButton->setMinimumSize(QSize(30, 30));
-    logButton->setMaximumSize(QSize(30, 30));
-    logButton->setCheckable(true);
-    logButton->setSizePolicy(sizePolicy5);
-    logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>"));
+    mRecordButton->setIcon(QIcon(QStringLiteral(":/icons/media-tape.png")));
+    connect(mRecordButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
+
+    mLogButton = new QToolButton;
+    mLogButton->setMinimumSize(QSize(30, 30));
+    mLogButton->setMaximumSize(QSize(30, 30));
+    mLogButton->setCheckable(true);
+    mLogButton->setSizePolicy(sizePolicy5);
+    mLogButton->setFocusPolicy(Qt::NoFocus);
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
-    logButton->setIcon(logIcon);
-    connect(logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
+    mLogButton->setIcon(logIcon);
+    connect(mLogButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
     networkLatency->setReadOnly(true);
     networkLatency->setSizePolicy(sizePolicy4);
     networkLatency->setFocusPolicy(Qt::NoFocus);
-    networkLatency->setToolTip(tr("<html><head/><body><p><i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your "
-                                  "triggers took to process the last line(s).</p></body></html>"));
     networkLatency->setMaximumSize(120, 30);
     networkLatency->setMinimumSize(120, 30);
     networkLatency->setAutoFillBackground(true);
@@ -444,7 +439,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
-    emergencyStop->setToolTip(tr("<html><head/><body><p>Emergency Stop. Stops all timers and triggers.</p></body></html>"));
     connect(emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers(bool)));
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
@@ -452,7 +446,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
-    mpBufferSearchBox->setPlaceholderText("Search ...");
     QPalette __pal;
     __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
     __pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -460,14 +453,12 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     __pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette(__pal);
-    mpBufferSearchBox->setToolTip(tr("<html><head/><body><p>Search buffer.</p></body></html>"));
     connect(mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
 
 
     mpBufferSearchUp->setMinimumSize(QSize(30, 30));
     mpBufferSearchUp->setMaximumSize(QSize(30, 30));
     mpBufferSearchUp->setSizePolicy(sizePolicy5);
-    mpBufferSearchUp->setToolTip(tr("<html><head/><body><p>Earlier search result.</p></body></html>"));
     mpBufferSearchUp->setFocusPolicy(Qt::NoFocus);
     mpBufferSearchUp->setIcon(QIcon(QStringLiteral(":/icons/export.png")));
     connect(mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
@@ -477,7 +468,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpBufferSearchDown->setMaximumSize(QSize(30, 30));
     mpBufferSearchDown->setSizePolicy(sizePolicy5);
     mpBufferSearchDown->setFocusPolicy(Qt::NoFocus);
-    mpBufferSearchDown->setToolTip(tr("<html><head/><body><p>Later search result.</p></body></html>"));
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
@@ -486,9 +476,9 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
     layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
     layoutButtonLayer->addWidget(mpBufferSearchDown, 0, 6);
-    layoutButtonLayer->addWidget(timeStampButton, 0, 7);
-    layoutButtonLayer->addWidget(replayButton, 0, 8);
-    layoutButtonLayer->addWidget(logButton, 0, 9);
+    layoutButtonLayer->addWidget(mTimeStampButton, 0, 7);
+    layoutButtonLayer->addWidget(mRecordButton, 0, 8);
+    layoutButtonLayer->addWidget(mLogButton, 0, 9);
     layoutButtonLayer->addWidget(emergencyStop, 0, 10);
     layoutButtonLayer->addWidget(networkLatency, 0, 11);
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
@@ -572,11 +562,69 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
     }
+
+    slot_guiLanguageChange();
+    if (mudlet::self()) {
+        // This will not be executed for the "default host" main console as
+        // mudlet::self() is null during instantiation of the mudlet singleton
+        connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()), Qt::UniqueConnection);
+    }
 }
 
 Host* TConsole::getHost()
 {
     return mpHost;
+}
+
+void TConsole::slot_guiLanguageChange()
+{
+    // PLACEMARKER: Redefine GUI Texts
+    // There is no persistent underlying form/dialog for this class that would
+    // need a retranslateUi(this) call but there are other things that we
+    // manually need to update:
+
+    if (console->mShowTimeStamps) {
+        mTimeStampButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                    .arg(tr("<p>Hide Time Stamps.</p>")));
+    } else {
+        mTimeStampButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                    .arg(tr("<p>Show Time Stamps.</p>")));
+    }
+
+    if (mRecordReplay) {
+        mRecordButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>End the recording of the current replay.</p>")));
+    } else {
+        mRecordButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>Start Recording a file that can be played back later to simulate MUD server output for testing scripts/packages/modules or just so you can re-live an epic <i>Mudding</i> moment!</p>"
+                                          "<p>The contents of the file are not something that anything other than Mudlet can understand, if you want record a transcript that you can use outside of Mudlet you will want the <i>Log</i> button adjacent to this one.")));
+    }
+
+    if (mLogToLogFile) {
+        mLogButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                              .arg(tr("<p>Stop logging MUD output to log file.</p>")));
+    } else {
+        mLogButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                              .arg(tr("<p>Start logging MUD output to log file.</p>")));
+    }
+
+    networkLatency->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p><i>N:</i> is the latency of the MUD server and network (aka ping, in seconds).</p>"
+                                       "<p><i>S:</i> is the system processing time - how long your triggers took to process the last line or lines.</p>")));
+
+    emergencyStop->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                              .arg(tr("<p>Emergency Stop. Stops all timers, triggers etc. ...</p>")));
+
+    mpBufferSearchBox->setPlaceholderText(tr("Search ..."));
+    mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>Search buffer.</p>")));
+
+    mpBufferSearchUp->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>Next earlier search result.</p>")));
+
+    mpBufferSearchDown->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>Next later search result.</p>")));
+
 }
 
 void TConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
@@ -755,7 +803,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (profile_name != "default_host" && !mUserAgreedToCloseConsole) {
     ASK:
-        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(profile_name), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile \"%1\"?").arg(profile_name), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->setAccepted(false);
             event->ignore();
@@ -768,7 +816,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             std::tuple<bool, QString, QString> result = mpHost->saveProfile();
 
             if (std::get<0>(result) == false) {
-                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
+                QMessageBox::critical(this, tr("Could not save profile"), tr("Sorry, could not save your profile - the following error was found:\n%1.").arg(std::get<2>(result)));
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
@@ -899,7 +947,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             // strict HTML 4 as we do not use <p></p>s or anything else
             mLogFile.flush();
         }
-        logButton->setToolTip(tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>"));
+        mLogButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                              .arg(tr("<p>Stop logging MUD output to log file.</p>")));
     } else {
         buffer.logRemainingOutput();
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
@@ -908,7 +957,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         }
         mLogFile.flush();
         mLogFile.close();
-        logButton->setToolTip(tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>"));
+        mLogButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                              .arg(tr("<p>Start logging MUD output to log file.</p>")));
     }
 }
 
@@ -933,6 +983,7 @@ void TConsole::slot_toggleReplayRecording()
         return;
     }
     mRecordReplay = !mRecordReplay;
+    QString message;
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (5 of 6)
@@ -946,13 +997,17 @@ void TConsole::slot_toggleReplayRecording()
         mReplayFile.open(QIODevice::WriteOnly);
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
-        QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName() + "\n";
-        printSystemMessage(message);
+        mRecordButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>End the recording of the current replay.</p>")));
+        message = tr("Replay recording has started. File: %1.").arg(mReplayFile.fileName());
     } else {
         mReplayFile.close();
-        QString message = QString("Replay recording has been stopped. File: ") + mReplayFile.fileName() + "\n";
-        printSystemMessage(message);
+        mRecordButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>Start Recording a file that can be played back later to simulate MUD server output for testing scripts/packages/modules or just so you can re-live an epic <i>Mudding</i> moment!</p>"
+                                          "<p>The contents of the file are not something that anything other than Mudlet can understand, if you want record a transcript that you can use outside of Mudlet you will want the <i>Log</i> button adjacent to this one.")));
+        message = tr("Replay recording has been stopped. File: %1.").arg(mReplayFile.fileName());
     }
+    printSystemMessage(message);
 }
 
 void TConsole::changeColors()
@@ -1514,7 +1569,7 @@ bool TConsole::loadMap(const QString& location)
     if (location.isEmpty()) {
         pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
     } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
+        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) \"%1\" at %2 report").arg(location, now.toString(Qt::ISODate)), true);
     }
 
     return result;
@@ -1535,7 +1590,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
         // in later software versions and is a weak pointer until used
         // (I think - Slysven ?)
         if (errMsg) {
-            *errMsg = tr("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
+            *errMsg = QLatin1String("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
         }
         return false;
     }
@@ -1548,7 +1603,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
         // And that failed so give up
         if (errMsg) {
-            *errMsg = tr("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
+            *errMsg = QLatin1String("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
         }
         return false;
     }
@@ -1579,37 +1634,37 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     QFile file(filePathNameString);
     if (!file.exists()) {
         if (!errMsg) {
-            QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
+            QString infoMsg = tr("[ ERROR ] - Map file not found, path and name used was:\n"
                                  "%1.")
-                                      .arg(filePathNameString);
+                              .arg(filePathNameString);
             pHost->postMessage(infoMsg);
         } else {
             // error message for lua loadMap()
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" was not found).")
-                              .arg(filePathNameString);
+            *errMsg = QStringLiteral("loadMap: bad argument #1 value (filename used: \n"
+                                     "\"%1\" was not found).")
+                    .arg(filePathNameString);
         }
         return false;
     }
 
     if (file.open(QFile::ReadOnly | QFile::Text)) {
         if (!errMsg) {
-            QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
+            QString infoMsg = tr("[ INFO ] - Map file located and opened, now parsing it...");
             pHost->postMessage(infoMsg);
         }
 
         result = pHost->mpMap->importMap(file, errMsg);
 
         file.close();
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
+        pHost->mpMap->pushErrorMessagesToFile(tr("Importing map(1) \"%1\" at %2 report").arg(location, now.toString(Qt::ISODate)));
     } else {
         if (!errMsg) {
-            QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
+            QString infoMsg = tr("[ INFO ] - Map file located but it could not opened, please check permissions on:\"%1\".").arg(filePathNameString);
             pHost->postMessage(infoMsg);
         } else {
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" could not be opened for reading).")
-                              .arg(filePathNameString);
+            *errMsg = QStringLiteral("loadMap: bad argument #1 value (filename used: \n"
+                                     "\"%1\" could not be opened for reading).")
+                    .arg(filePathNameString);
         }
         return false;
     }
@@ -2659,15 +2714,27 @@ void TConsole::slot_reloadMap(QList<QString> profilesList)
         return;
     }
 
-    QString infoMsg = tr("[ INFO ]  - Map reload request received from system...");
+    QString infoMsg = tr("[ INFO ] - Map reload request received from system...");
     pHost->postMessage(infoMsg);
 
     QString outcomeMsg;
     if (loadMap(QString())) {
-        outcomeMsg = tr("[  OK  ]  - ... System Map reload request completed.");
+        outcomeMsg = tr("[ OK ] - ... System Map reload request completed.");
     } else {
-        outcomeMsg = tr("[ WARN ]  - ... System Map reload request failed.");
+        outcomeMsg = tr("[ WARN ] - ... System Map reload request failed.");
     }
 
     pHost->postMessage(outcomeMsg);
+}
+
+void TConsole::slot_toggleTimeStamps()
+{
+    if (console->toggleTimeStamps()) {
+        mTimeStampButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                    .arg(tr("<p>Hide Time Stamps.</p>")));
+    } else {
+        mTimeStampButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                    .arg(tr("<p>Show Time Stamps.</p>")));
+    }
+
 }
