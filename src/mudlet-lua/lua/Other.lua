@@ -732,7 +732,7 @@ do
     end
     return functionExists
   end
-  
+
   function registerAnonymousEventHandler(event, func, isOneShot)
     if type(event) ~= "string" then
       error(
@@ -756,7 +756,7 @@ do
     if type(func) == "string" then
       local functionString = string.format("return %s(...)", func)
       local functionExists = findStringEventHandler(existinghandlers, functionString)
-      
+
       if not functionExists then
         func = assert(loadstring(functionString))
       else
@@ -767,7 +767,7 @@ do
           end
         end
       end
-      
+
     end
 
     local eventHandlerId
@@ -833,44 +833,67 @@ do
   end
 end
 
-local timeframeTable = {}
+local timeframetable = {}
 
-function timeframe(vname, timerlist)
-	-- timerlist contains data in format: {time, fn}
-	-- reset potentially active timeframe
-	killTimeframe(vname)
+function timeframe(vname, true_time, nil_time, ...)
+  assert(type(true_time) == "number" or type(true_time) == "table", "Timeframe requires a number or table argument as first parameter")
+  assert(type(nil_time) == "nil" or type(nil_time) == "number" or type(nil_time) == "table", "Timeframe requires a number or table if providing a second parameter")
 
-	-- initialise empty timeframe
-	timeframeTable[vname] = {}
+  local format = string.format
+	local vtype = type(vname)
+	-- aggregate timerlist data
+  local timerlist = {
+    {0, nil},
+    type(true_time) == "number" and {true_time, true},
+    type(nil_time) == "number" and {nil_time, nil},
+    type(true_time) == "table" and true_time,
+    type(nil_time) == "table" and nil_time,
+    ...
+  }
 
-	-- run through timerlist data to set timeframe timers
-	local maxtime = 0
-	for step, data in ipairs(timerlist) do
-		local time, fn = data[1], data[2]
+	-- reinitialise timeframe for vname
+	killtimeframe(vname)
+  timeframetable[vname] = {}
 
-		assert(type(time) == "number", "timeframe: time([1]) expected a number, got " .. type(time))
-		assert(type(fn) == "function", "timeframe: fn([2]) expected a function, got " .. type(fn))
+	-- loop through timerlist and create tempTimers
+  local maxtime = 0
+  for step, data in ipairs(timerlist) do
+    assert(type(data) == "table", "Wrong data type... Table required, got " .. type(data))
+    local time, value = data[1], data[2]
 
-		maxtime = (time > maxtime) and time or maxtime
-		-- include instant function call as tempTimer(0) only executes after all other scripts have run
-		if time <= 0 then
-			fn()
-		else
-			timeframeTable[vname][step] = tempTimer(time, fn)
-		end
-	end
+    maxtime = (time > maxtime) and time or maxtime
 
-	-- final step/timer to kill the timeframe
-	timeframeTable[vname][#timeframeTable[vname] + 1] = tempTimer(maxtime + 0.1, function()
-		killTimeframe(vname)
-	end)
+    local fun
+    if vtype == "function" then
+      fun = function()
+        local s,m = pcall(vname, value)
+        if not s then display(m) end
+      end
+    else
+      fun = assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))
+    end
+
+    if time <= 0 then
+      fun()
+    else
+      timeframetable[vname][step] = tempTimer(time, fun)
+    end
+  end
+
+	-- add final tempTimer to kill the timeframe
+	timeframetable[vname][#timeframetable[vname] + 1] = tempTimer(maxtime + 0.1, function()
+    killtimeframe(vname)
+  end)
+
+	-- return vname as id
+  return vname
 end
 
-function killTimeframe(vname)
-	if timeframeTable[vname] then
-		for _, step in ipairs(timeframeTable[vname]) do
-			killTimer(step); _G["Timer" .. step] = nil
-		end
-		timeframeTable[vname] = nil
-	end
+function killtimeframe(vname)
+  if timeframetable[vname] then
+    for _, step in ipairs(timeframetable[vname]) do
+      killTimer(step); _G["Timer" .. step] = nil
+    end
+    timeframetable[vname] = nil
+  end
 end
