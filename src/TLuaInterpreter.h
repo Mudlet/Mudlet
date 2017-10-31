@@ -113,9 +113,10 @@ public:
     int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
-    int startPermKey(QString&, QString&, int &, int &, QString&);
+    int startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
@@ -412,6 +413,7 @@ public:
     static int getServerEncodingsList(lua_State*);
     static int alert(lua_State* L);
     static int tempPromptTrigger(lua_State* L);
+    static int permPromptTrigger(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 public slots:

@@ -6306,6 +6306,36 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::permPromptTrigger(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    int triggerID;
+    QString triggerName, parentName, luaFunction;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "permPromptTrigger: bad argument #1 type (trigger name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    triggerName = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "permPromptTrigger: bad argument #2 type (parent trigger name as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    parentName = QString::fromUtf8(lua_tostring(L, 2));
+
+    if (!lua_isstring(L, 3)) {
+        lua_pushfstring(L, "permPromptTrigger: bad argument #3 type (code to run as string expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    luaFunction = QString::fromUtf8(lua_tostring(L, 3));
+
+    triggerID = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
+    lua_pushnumber(L, triggerID);
+    return 1;
+}
+
 int TLuaInterpreter::permKey(lua_State* L)
 {
     uint_fast8_t argIndex = 0;
@@ -12086,6 +12116,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
     lua_register(pGlobalLua, "alert", TLuaInterpreter::alert);
     lua_register(pGlobalLua, "tempPromptTrigger", TLuaInterpreter::tempPromptTrigger);
+    lua_register(pGlobalLua, "permPromptTrigger", TLuaInterpreter::permPromptTrigger);
 
 // PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
@@ -12440,10 +12471,8 @@ int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& funct
 int TLuaInterpreter::startTempPromptTrigger(const QString& function)
 {
     TTrigger* pT;
-    QStringList sList;
-    sList << QString();
-    QList<int> propertyList;
-    propertyList << REGEX_PROMPT;
+    QStringList sList = {QString()};
+    QList<int> propertyList = {REGEX_PROMPT};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -12600,6 +12629,33 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
     //return 1;
+    return id;
+}
+
+int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& parent, const QString& function)
+{
+    TTrigger* pT;
+    QList<int> propertyList = {REGEX_PROMPT};
+    QStringList regexList = {QString()};
+
+    if (parent.isEmpty()) {
+        pT = new TTrigger("a", regexList, propertyList, false, mpHost);
+    } else {
+        TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
+        if (!pP) {
+            return -1; //parent not found
+        }
+        pT = new TTrigger(pP, mpHost);
+        pT->setRegexCodeList(regexList, propertyList);
+    }
+    pT->setIsFolder(false);
+    pT->setIsActive(true);
+    pT->setTemporary(false);
+    pT->registerTrigger();
+    pT->setScript(function);
+    int id = pT->getID();
+    pT->setName(name);
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
     return id;
 }
 
