@@ -160,7 +160,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     bool state = true;
 
     for (int i = 0; i < regexList.size(); i++) {
-        if (regexList[i].isEmpty() && propertyList.at(i) != REGEX_PROMPT) {
+        if (regexList.at(i).isEmpty() && propertyList.at(i) != REGEX_PROMPT) {
             continue;
         }
 
