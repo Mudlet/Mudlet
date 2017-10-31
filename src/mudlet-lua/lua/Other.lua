@@ -545,32 +545,6 @@ function getColorWildcard(color)
         return results[1] and results or false
 end
 
-
-do
-	local oldsetExit = setExit
-
-	local exitmap = {
-	  n = 1,
-	  ne = 2,
-	  nw = 3,
-	  e = 4,
-	  w = 5,
-	  s = 6,
-	  se = 7,
-	  sw = 8,
-	  u = 9,
-	  d = 10,
-	  ["in"] = 11,
-	  out = 12
-	}
-
-	function setExit(from, to, direction)
-	  if type(direction) == "string" and not exitmap[direction] then return false end
-
-	  return oldsetExit(from, to, type(direction) == "string" and exitmap[direction] or direction)
-	end
-end
-
 do
 	local oldlockExit = lockExit
 	local oldhasExitLock = hasExitLock
@@ -844,10 +818,8 @@ function timeframe(vname, true_time, nil_time, ...)
 	-- aggregate timerlist data
   local timerlist = {
     {0, nil},
-    type(true_time) == "number" and {true_time, true},
-    type(nil_time) == "number" and {nil_time, nil},
-    type(true_time) == "table" and true_time,
-    type(nil_time) == "table" and nil_time,
+    type(true_time) == "number" and {true_time, true} or type(true_time) == "table" and true_time,
+    type(nil_time) == "number" and {nil_time, nil} or type(nil_time) == "table" and nil_time,
     ...
   }
 
