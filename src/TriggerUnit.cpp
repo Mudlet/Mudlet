@@ -125,9 +125,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
-        if (pChild) {
-            pChild->setParent(pNewParent);
-        }
+        pChild->setParent(pNewParent);
     } else {
         pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
