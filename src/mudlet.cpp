@@ -460,6 +460,7 @@ mudlet::mudlet()
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
 #elif defined(Q_OS_MACOS)
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+#endif
 #endif // INCLUDE_UPDATER
 
 #ifdef QT_GAMEPAD_LIB

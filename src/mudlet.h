@@ -332,7 +332,7 @@ public slots:
     void slot_module_manager();
     void layoutModules();
     void slot_help_module();
-#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+#if defined (INCLUDE_UPDATER)
     void slot_check_manual_update();
 #endif
 
