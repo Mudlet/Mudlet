@@ -450,7 +450,7 @@ void dlgProfilePreferences::loadSpecialSettingsTab()
     groupBox_updates->hide();
 #else
 //    if (mudlet::self()->onDevelopmentVersion()) {
-    if (true) {
+    if (false) {
         // tick the box and make it be untickable as automatic updates are disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
