@@ -22,7 +22,7 @@ public:
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
-    void setAutomaticUpdates(const bool state);
+    void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
 
 private:
