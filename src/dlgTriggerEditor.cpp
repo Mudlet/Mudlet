@@ -4929,7 +4929,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pItem->pushButton_bgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->bgR, pT->mColorPatternList[i]->bgG, pT->mColorPatternList[i]->bgB).name()));
                 break;
             case REGEX_PROMPT:
-                palette.setColor(QPalette::Text, QColor(Qt::gray));
+                palette.setColor(QPalette::Text, QColor(Qt::black));
                 pBox->setCurrentIndex(7);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
