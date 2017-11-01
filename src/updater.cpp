@@ -42,11 +42,12 @@ void Updater::checkUpdatesOnStart()
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
-    if (!updateAutomatically()) {
-        return;
-    }
-
-    msparkleUpdater->checkForUpdates();
+// Sparkle should do this on its own
+//    if (!updateAutomatically()) {
+//        return;
+//    }
+//
+//    msparkleUpdater->checkForUpdates();
 }
 #endif
 
