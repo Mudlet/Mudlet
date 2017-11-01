@@ -17,7 +17,7 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdat
 
 #if defined(Q_OS_MACOS)
     CocoaInitializer initializer;
-    msparkleUpdater = new SparkleAutoUpdater();
+    msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
 #endif
 }
 
