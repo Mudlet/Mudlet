@@ -423,8 +423,7 @@ mudlet::mudlet()
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-#if defined(Q_OS_MACOS) || !defined (INCLUDE_UPDATER)
-    // hide About->Update on macOS as Sparkle will add its own menu
+#if !defined (INCLUDE_UPDATER)
     dactionUpdate->setVisible(false);
 #endif
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
@@ -454,12 +453,13 @@ mudlet::mudlet()
     settings = getQSettings();
     readSettings(*settings);
 
-#if defined (INCLUDE_UPDATER)
+#if defined(INCLUDE_UPDATER)
     updater = new Updater(this, settings);
-#if defined (Q_OS_LINUX)
+#if defined(Q_OS_LINUX)
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
-#endif // Q_OS_LINUX
+#elif defined(Q_OS_MACOS)
+    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
 #endif // INCLUDE_UPDATER
 
 #ifdef QT_GAMEPAD_LIB

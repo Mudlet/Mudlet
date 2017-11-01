@@ -137,7 +137,11 @@ void Updater::updateBinaryOnLinux()
 
 void Updater::manuallyCheckUpdates()
 {
+#if defined(Q_OS_LINUX)
     updateDialog->show();
+#elif defined(Q_OS_MACOS)
+    msparkleUpdater->checkForUpdates();
+#endif
 }
 
 void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
