@@ -135,15 +135,6 @@ void Updater::updateBinaryOnLinux()
     emit updateInstalled();
 }
 
-void Updater::manuallyCheckUpdates()
-{
-#if defined(Q_OS_LINUX)
-    updateDialog->show();
-#elif defined(Q_OS_MACOS)
-    msparkleUpdater->checkForUpdates();
-#endif
-}
-
 void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 {
     // if the update is already installed, then the button says 'Restart' - do so
@@ -220,5 +211,14 @@ bool Updater::updateAutomatically() const
 #elif defined(Q_OS_MACOS)
     qDebug() << "updateAutomatically called:" << msparkleUpdater->automaticallyDownloadsUpdates();
     return msparkleUpdater->automaticallyDownloadsUpdates();
+#endif
+}
+
+void Updater::manuallyCheckUpdates()
+{
+#if defined(Q_OS_LINUX)
+    updateDialog->show();
+#elif defined(Q_OS_MACOS)
+    msparkleUpdater->checkForUpdates();
 #endif
 }
