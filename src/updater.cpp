@@ -209,7 +209,7 @@ void Updater::setAutomaticUpdates(const bool state)
 
 bool Updater::updateAutomatically() const
 {
-    qDebug() << "updateAutomatically called";
+    qDebug() << "updateAutomatically called:" << msparkleUpdater->automaticallyChecksForUpdates();
 #if defined(Q_OS_LINUX)
     return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
 #elif defined(Q_OS_MACOS)
