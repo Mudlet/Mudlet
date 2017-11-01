@@ -4812,6 +4812,13 @@ void dlgTriggerEditor::slot_set_pattern_type_color(int type)
         pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        if (mpHost->mTelnet.mGA_Driver) {
+            pItem->pushButton_prompt->setText(tr("match on the prompt line"));
+            pItem->pushButton_prompt->setToolTip(QString());
+        } else {
+            pItem->pushButton_prompt->setText(tr("match on the prompt line (disabled)"));
+            pItem->pushButton_prompt->setToolTip(tr("A Go-Ahead (GA) signal from the game is required to make this feature work"));
+        }
         pItem->pushButton_prompt->show();
         break;
     }
@@ -4933,7 +4940,14 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(7);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
-                pItem->pushButton_prompt->show();
+                    if (mpHost->mTelnet.mGA_Driver) {
+                        pItem->pushButton_prompt->setText(tr("match on the prompt line"));
+                        pItem->pushButton_prompt->setToolTip(QString());
+                    } else {
+                        pItem->pushButton_prompt->setText(tr("match on the prompt line (disabled)"));
+                        pItem->pushButton_prompt->setToolTip(tr("A Go-Ahead (GA) signal from the game is required to make this feature work"));
+                    }
+                    pItem->pushButton_prompt->show();
                 pItem->lineEdit_pattern->hide();
                 break;
             }
