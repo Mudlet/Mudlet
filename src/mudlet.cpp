@@ -3302,6 +3302,11 @@ void mudlet::checkUpdatesOnStart() {
     updater->checkUpdatesOnStart();
 }
 
+void mudlet::slot_check_manual_update()
+{
+    updater->manuallyCheckUpdates();
+}
+
 #if defined(Q_OS_LINUX)
 void mudlet::slot_update_installed()
 {
@@ -3314,11 +3319,6 @@ void mudlet::slot_update_installed()
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
     dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
-}
-
-void mudlet::slot_check_manual_update()
-{
-    updater->manuallyCheckUpdates();
 }
 
 // returns true if Mudlet was updated automatically and a changelog should be shown
