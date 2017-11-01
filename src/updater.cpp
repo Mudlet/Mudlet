@@ -18,7 +18,6 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdat
 #if defined(Q_OS_MACOS)
     CocoaInitializer initializer;
     msparkleUpdater = new SparkleAutoUpdater();
-    qDebug() << "msparkleUpdater created";
 #endif
 }
 
@@ -200,6 +199,7 @@ void Updater::showChangelog() const
 
 void Updater::setAutomaticUpdates(const bool state)
 {
+    qDebug() << "setAutomaticUpdates:" << state;
 #if defined(Q_OS_LINUX)
     return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);
 #elif defined(Q_OS_MACOS)
@@ -209,10 +209,10 @@ void Updater::setAutomaticUpdates(const bool state)
 
 bool Updater::updateAutomatically() const
 {
-    qDebug() << "updateAutomatically called:" << msparkleUpdater->automaticallyChecksForUpdates();
 #if defined(Q_OS_LINUX)
     return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
 #elif defined(Q_OS_MACOS)
+    qDebug() << "updateAutomatically called:" << msparkleUpdater->automaticallyChecksForUpdates();
     return msparkleUpdater->automaticallyChecksForUpdates();
 #endif
 }
