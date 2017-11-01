@@ -460,6 +460,8 @@ mudlet::mudlet()
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
 #elif defined(Q_OS_MACOS)
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+    // ensure that 'Check for updates' is under the Applications menu per convention
+    dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
 #endif
 #endif // INCLUDE_UPDATER
 
