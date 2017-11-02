@@ -467,7 +467,8 @@ IF(APPLE)
   TARGET_LINK_LIBRARIES(mudlet cocoa-qt-glue)
   target_link_libraries(mudlet
           "-framework Sparkle"
-          "-framework AppKit")
+          "-framework AppKit"
+          "-F${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/sparkle")
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)
