@@ -160,7 +160,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     bool state = true;
 
     for (int i = 0; i < regexList.size(); i++) {
-        if (regexList[i].size() < 1) {
+        if (regexList.at(i).isEmpty() && propertyList.at(i) != REGEX_PROMPT) {
             continue;
         }
 
@@ -750,6 +750,24 @@ bool TTrigger::match_lua_code(int regexNumber)
     return false;
 }
 
+bool TTrigger::match_prompt(int patternNumber)
+{
+    if (mpHost->mpConsole->mIsPromptLine) {
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::yellow), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> 0;
+        }
+        if (mIsMultiline) {
+            std::list<std::string> captureList;
+            std::list<int> posList;
+            updateMultistates(patternNumber, captureList, posList);
+            return true;
+        }
+        execute();
+        return true;
+    }
+    return false;
+}
+
 bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, int regexNumber, int posOffset)
 {
     QString text = toMatch;
@@ -837,38 +855,42 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         }
 
         int size = mRegexCodePropertyList.size();
-        for (int i = 0;; i++) {
-            if (i >= size) {
+        for (int patternNumber = 0;; patternNumber++) {
+            if (patternNumber >= size) {
                 break;
             }
             ret = false;
-            switch (mRegexCodePropertyList.value(i)) {
+            switch (mRegexCodePropertyList.value(patternNumber)) {
             case REGEX_SUBSTRING:
-                ret = match_substring(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_substring(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_PERL:
-                ret = match_perl(subject, toMatch, i, posOffset);
+                ret = match_perl(subject, toMatch, patternNumber, posOffset);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                ret = match_begin_of_line_substring(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_begin_of_line_substring(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_EXACT_MATCH:
-                ret = match_exact_match(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_exact_match(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_LUA_CODE:
-                ret = match_lua_code(i);
+                ret = match_lua_code(patternNumber);
                 break;
 
             case REGEX_LINE_SPACER:
-                ret = match_line_spacer(i);
+                ret = match_line_spacer(patternNumber);
                 break;
 
             case REGEX_COLOR_PATTERN:
-                ret = match_color_pattern(line, i);
+                ret = match_color_pattern(line, patternNumber);
+                break;
+
+            case REGEX_PROMPT:
+                ret = match_prompt(patternNumber);
                 break;
             }
             // policy: one match is enough to fire on OR-trigger, but in the case of
@@ -880,7 +902,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                     break;
                 }
             } else {
-                if ((!ret) && (i >= highestCondition)) {
+                if ((!ret) && (patternNumber >= highestCondition)) {
                     break;
                 }
             }
