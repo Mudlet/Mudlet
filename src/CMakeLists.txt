@@ -465,6 +465,9 @@ ENDIF()
 IF(APPLE)
   TARGET_LINK_LIBRARIES(mudlet luazip)
   TARGET_LINK_LIBRARIES(mudlet cocoa-qt-glue)
+  target_link_libraries(mudlet
+          "-framework Sparkle"
+          "-framework AppKit")
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)
@@ -472,3 +475,5 @@ IF(PC_HUNSPELL_FOUND)
 ELSE()
   TARGET_LINK_LIBRARIES(mudlet ${HUNSPELL_LIBRARIES})
 ENDIF()
+
+set(CMAKE_VERBOSE_MAKEFILE ON)
