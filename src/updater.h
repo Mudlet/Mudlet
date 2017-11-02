@@ -52,12 +52,14 @@ private:
     QSettings* settings;
 
     void setupOnLinux();
-    void untarOnLinux(const QString& fileName) const;
-    void writeUpdateNote() const;
+    void untarOnLinux(const QString& fileName);
+    void recordUpdateTime() const;
 
 #if defined(Q_OS_MACOS)
     AutoUpdater* msparkleUpdater;
     void setupOnMacOS();
+#elif defined(Q_OS_LINUX)
+    QString unzippedBinaryName;
 #endif
 
 

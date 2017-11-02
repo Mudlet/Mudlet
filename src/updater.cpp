@@ -33,11 +33,6 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdat
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
-
-#if defined(Q_OS_MACOS)
-    CocoaInitializer initializer;
-    msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
-#endif
 }
 
 // start the update process and figure out what needs to be done
@@ -58,25 +53,50 @@ void Updater::checkUpdatesOnStart()
 #endif
 }
 
+void Updater::setAutomaticUpdates(const bool state)
+{
+#if defined(Q_OS_LINUX)
+    return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);
+#elif defined(Q_OS_MACOS)
+    msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
+#endif
+}
+
+bool Updater::updateAutomatically() const
+{
+#if defined(Q_OS_LINUX)
+    return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
+#elif defined(Q_OS_MACOS)
+    return msparkleUpdater->automaticallyDownloadsUpdates();
+#endif
+}
+
+void Updater::manuallyCheckUpdates()
+{
+#if defined(Q_OS_LINUX)
+    updateDialog->show();
+#elif defined(Q_OS_MACOS)
+    msparkleUpdater->checkForUpdates();
+#endif
+}
+
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
-// Sparkle should do this on its own
-//    if (!updateAutomatically()) {
-//        return;
-//    }
-//
-//    msparkleUpdater->checkForUpdates();
+    CocoaInitializer initializer;
+    msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
+    // don't need to explicitly check for updates - sparkle will do so on its own
 }
 #endif
 
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
+    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("release"));
 
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
 
+    // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
         if (!updateAutomatically()) {
             return;
@@ -89,6 +109,7 @@ void Updater::setupOnLinux()
         feed->downloadRelease(updates.first());
     });
 
+    // Setup to unzip and replace old binary when the download is done
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
@@ -103,14 +124,14 @@ void Updater::setupOnLinux()
         watcher->setFuture(future);
     });
 
-    // constructing the UpdateDialog triggers the update check
+    // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
     installOrRestartButton = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(installOrRestartButton);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
 }
 
-void Updater::untarOnLinux(const QString& fileName) const
+void Updater::untarOnLinux(const QString& fileName)
 {
     Q_ASSERT_X(QThread::currentThread() != QCoreApplication::instance()->thread(), "untarOnLinux", "method should not be called in the main GUI thread to avoid a degradation in UX");
 
@@ -122,14 +143,14 @@ void Updater::untarOnLinux(const QString& fileName) const
     if (!tar.waitForFinished()) {
         qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
-        qDebug() << "Tar output:" << tar.readAll().trimmed();
+        unzippedBinaryName = tar.readAll().trimmed();
     }
 }
 
 void Updater::updateBinaryOnLinux()
 {
     // FIXME don't hardcode name in case we want to change it
-    QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/Mudlet.AppImage");
+    QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
     QString installedBinaryPath(QCoreApplication::applicationFilePath());
 
     auto executablePermissions = unzippedBinary.permissions();
@@ -149,7 +170,7 @@ void Updater::updateBinaryOnLinux()
     }
 
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
-    writeUpdateNote();
+    recordUpdateTime();
     mUpdateInstalled = true;
     emit updateInstalled();
 }
@@ -191,7 +212,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 // the window with the new features. The idea is that if you manually update (thus see the
 // changelog already) and restart, you shouldn't see it again, and if you automatically
 // updated, then you do want to see the changelog.
-void Updater::writeUpdateNote() const
+void Updater::recordUpdateTime() const
 {
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
@@ -210,31 +231,4 @@ void Updater::showChangelog() const
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
     changelogDialog->show();
 }
-#endif
-
-void Updater::setAutomaticUpdates(const bool state)
-{
-#if defined(Q_OS_LINUX)
-    return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);
-#elif defined(Q_OS_MACOS)
-    msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
-#endif
-}
-
-bool Updater::updateAutomatically() const
-{
-#if defined(Q_OS_LINUX)
-    return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
-#elif defined(Q_OS_MACOS)
-    return msparkleUpdater->automaticallyDownloadsUpdates();
-#endif
-}
-
-void Updater::manuallyCheckUpdates()
-{
-#if defined(Q_OS_LINUX)
-    updateDialog->show();
-#elif defined(Q_OS_MACOS)
-    msparkleUpdater->checkForUpdates();
-#endif
-}
+#endif // Q_OS_LINUX
