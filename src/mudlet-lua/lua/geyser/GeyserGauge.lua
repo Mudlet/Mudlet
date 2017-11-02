@@ -15,10 +15,10 @@
 --                    vertical but fills from top to bottom.
 -- @field color Color base for this gauge.  Default is #808080
 Geyser.Gauge = Geyser.Container:new({
-      name = "GaugeClass",
-      value = 100, -- ranges from 0 to 100
-      color = "#808080",
-      orientation = "horizontal"})
+  name = "GaugeClass",
+  value = 100, -- ranges from 0 to 100
+  color = "#808080",
+  orientation = "horizontal" })
 
 --- Sets the gauge amount.
 -- @param currentValue Current numeric value, or if maxValue is ommitted, then
@@ -27,34 +27,34 @@ Geyser.Gauge = Geyser.Container:new({
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.
 -- @param text The text to display on the gauge, it is optional.
 function Geyser.Gauge:setValue (currentValue, maxValue, text)
-   -- Use sensible defaults for missing parameters.
-   if currentValue < 0 then
-      currentValue = 0
-   end
-   if maxValue then
-      self.value = currentValue/maxValue * 100
-   else
-      self.value = currentValue
-   end
+  -- Use sensible defaults for missing parameters.
+  if currentValue < 0 then
+    currentValue = 0
+  end
+  if maxValue then
+    self.value = currentValue / maxValue * 100
+  else
+    self.value = currentValue
+  end
 
-   -- Update gauge in the requested orientation
-   local shift = tostring(self.value) .. "%"
-   if self.orientation == "horizontal" then
-      self.front:resize(shift, "100%")
-   elseif self.orientation == "vertical" then
-      self.front:move("0px", "-" .. shift)
-      self.front:resize("100%", "-0px") -- bind to bottom container border
-   elseif self.orientation == "goofy" then
-      self.front:move("-" .. shift, "0px")
-      self.front:resize("-0px", "100%") -- bind to right container border
-   else -- batty
-      self.front:resize("100%", shift)
-   end
-   
-   if text then
-      self.front:echo(text)
-      self.back:echo(text)
-   end
+  -- Update gauge in the requested orientation
+  local shift = tostring(self.value) .. "%"
+  if self.orientation == "horizontal" then
+    self.front:resize(shift, "100%")
+  elseif self.orientation == "vertical" then
+    self.front:move("0px", "-" .. shift)
+    self.front:resize("100%", "-0px") -- bind to bottom container border
+  elseif self.orientation == "goofy" then
+    self.front:move("-" .. shift, "0px")
+    self.front:resize("-0px", "100%") -- bind to right container border
+  else -- batty
+    self.front:resize("100%", shift)
+  end
+
+  if text then
+    self.front:echo(text)
+    self.back:echo(text)
+  end
 end
 
 --- Sets the gauge color.
@@ -63,20 +63,20 @@ end
 -- @param b the blue component, or nil if using a named color.
 -- @param text The text to display on the gauge, it is optional.
 function Geyser.Gauge:setColor (r, g, b, text)
-   r,g,b = Geyser.Color.parse(r,g,b)
-   self.front:setColor(r,g,b)
-   self.back:setColor(r,g,b,100)
-   if text then
-      self.text:echo(text)
-   end
+  r, g, b = Geyser.Color.parse(r, g, b)
+  self.front:setColor(r, g, b)
+  self.back:setColor(r, g, b, 100)
+  if text then
+    self.text:echo(text)
+  end
 end
 
 --- Sets the text on the gauge.
 -- @param text The text to set.
 function Geyser.Gauge:setText (text)
-   if text then
-      self.text:echo(text)
-   end
+  if text then
+    self.text:echo(text)
+  end
 end
 
 -- Sets the style sheet for the gauge
@@ -84,8 +84,8 @@ end
 -- @param cssback Style sheet for the back label
 -- @param cssText Style sheet for the text label
 function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
-        self.front:setStyleSheet(css)
-        self.back:setStyleSheet(cssback or css)
+  self.front:setStyleSheet(css)
+  self.back:setStyleSheet(cssback or css)
   if cssText ~= nil then
     self.text:setStyleSheet(cssText)
   end
@@ -96,48 +96,47 @@ Geyser.Gauge.parent = Geyser.Container
 
 -- Overridden constructor
 function Geyser.Gauge:new (cons, container)
-   -- Initiate and set gauge specific things
-   cons = cons or {}
-   cons.type = cons.type or "gauge"
+  -- Initiate and set gauge specific things
+  cons = cons or {}
+  cons.type = cons.type or "gauge"
 
-   -- Call parent's constructor
-   local me = self.parent:new(cons, container)
+  -- Call parent's constructor
+  local me = self.parent:new(cons, container)
 
-   -- Set the metatable.
-   setmetatable(me, self)
-   self.__index = self
+  -- Set the metatable.
+  setmetatable(me, self)
+  self.__index = self
 
-   -----------------------------------------------------------
-   -- Now create the Gauge using primitives and tastey classes
+  -----------------------------------------------------------
+  -- Now create the Gauge using primitives and tastey classes
 
-   -- Set up the constraints for the front label, the label that changes size to
-   -- indicated levels in the gauges.
-   local front = Geyser.copyTable(cons)
-   front.name = me.name .. "_front"
-   front.color = me.color
-   front.x, front.y, front.width, front.height = 0,0,"100%","100%"
+  -- Set up the constraints for the front label, the label that changes size to
+  -- indicated levels in the gauges.
+  local front = Geyser.copyTable(cons)
+  front.name = me.name .. "_front"
+  front.color = me.color
+  front.x, front.y, front.width, front.height = 0, 0, "100%", "100%"
 
-   -- Set up the constraints for the back label, which is always the size of the gauge.
-   local back = Geyser.copyTable(front)
-   back.name = me.name .. "_back"
-   local br, bg, bb = Geyser.Color.parse(me.color)
-   back.color = Geyser.Color.hexa(br,bg,bb,100)
-   
-   -- Set up the constraints for the text label, which is also always the size of the gauge.
-   -- We also set this label's color to 0,0,0,0 so it's black and full transparent. 
-   local text = Geyser.copyTable(front)
-   text.name = me.name .. "_text"
-   text.fillBg = 0
-   text.color = Geyser.Color.hexa(0,0,0,0)
-   
-   
+  -- Set up the constraints for the back label, which is always the size of the gauge.
+  local back = Geyser.copyTable(front)
+  back.name = me.name .. "_back"
+  local br, bg, bb = Geyser.Color.parse(me.color)
+  back.color = Geyser.Color.hexa(br, bg, bb, 100)
 
-   -- Create back first so that the labels are stacked correctly.
-   me.back = Geyser.Label:new(back, me)
-   me.front = Geyser.Label:new(front, me)
-   me.text = Geyser.Label:new(text, me)
-   
-   --print("  New in " .. self.name .. " : " .. me.name)
-   return me
+  -- Set up the constraints for the text label, which is also always the size of the gauge.
+  -- We also set this label's color to 0,0,0,0 so it's black and full transparent.
+  local text = Geyser.copyTable(front)
+  text.name = me.name .. "_text"
+  text.fillBg = 0
+  text.color = Geyser.Color.hexa(0, 0, 0, 0)
+
+
+
+  -- Create back first so that the labels are stacked correctly.
+  me.back = Geyser.Label:new(back, me)
+  me.front = Geyser.Label:new(front, me)
+  me.text = Geyser.Label:new(text, me)
+
+  --print("  New in " .. self.name .. " : " .. me.name)
+  return me
 end
-

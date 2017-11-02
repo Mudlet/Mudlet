@@ -14,7 +14,9 @@
 ---   end
 ---   </pre>
 function table.is_empty(tbl)
-	if next(tbl) == nil then return true else return false end
+  if next(tbl) == nil then
+    return true else return false
+  end
 end
 
 
@@ -24,11 +26,11 @@ end
 ---
 --- @see display
 function printTable( map )
-	echo("-------------------------------------------------------\n");
-	for k, v in pairs( map ) do
-		echo( "key=" .. k .. " value=" .. v .. "\n" )
-	end
-	echo("-------------------------------------------------------\n");
+  echo("-------------------------------------------------------\n");
+  for k, v in pairs( map ) do
+    echo( "key=" .. k .. " value=" .. v .. "\n" )
+  end
+  echo("-------------------------------------------------------\n");
 end
 
 
@@ -36,7 +38,7 @@ end
 -- NOT LUADOC
 -- This is supporting function for printTable().
 function __printTable( k, v )
-	insertText ("\nkey = " .. tostring (k) .. " value = " .. tostring( v )  )
+  insertText("\nkey = " .. tostring(k) .. " value = " .. tostring( v )  )
 end
 
 
@@ -47,29 +49,29 @@ end
 --- @see display
 --- @see printTable
 function listPrint( map )
-	echo("-------------------------------------------------------\n");
-	for k,v in ipairs( map ) do
-		echo( k .. ". ) "..v .. "\n" );
-	end
-	echo("-------------------------------------------------------\n");
+  echo("-------------------------------------------------------\n");
+  for k, v in ipairs( map ) do
+    echo( k .. ". ) " .. v .. "\n" );
+  end
+  echo("-------------------------------------------------------\n");
 end
 
 
 
 --- <b><u>TODO</u></b> listAdd( list, what )
 function listAdd( list, what )
-	table.insert( list, what );
+  table.insert( list, what );
 end
 
 
 
 --- <b><u>TODO</u></b> listRemove( list, what )
 function listRemove( list, what )
-	for k,v in ipairs( list ) do
-		if v == what then
-			table.remove( list, k )
-		end
-	end
+  for k, v in ipairs( list ) do
+    if v == what then
+      table.remove( list, k )
+    end
+  end
 end
 
 
@@ -84,32 +86,36 @@ end
 ---   myTableSize = # myTable
 ---   </pre>
 function table.size(t)
-	if not t then
-		return 0
-	end
-	local i = 0
-	for k, v in pairs(t) do
-		i = i + 1
-	end
-	return i
+  if not t then
+    return 0
+  end
+  local i = 0
+  for k, v in pairs(t) do
+    i = i + 1
+  end
+  return i
 end
 
 
 
 --- Determines if a table contains a value as a key or as a value (recursive).
 function table.contains(t, value)
-	if type(t) ~= "table" then return nil, "first parameter passed isn't a table" end
+  if type(t) ~= "table" then
+    return nil, "first parameter passed isn't a table"
+  end
 
-	for k, v in pairs(t) do
-		if v == value then
-			return true
-		elseif k == value then
-			return true
-		elseif type(v) == "table" then
-			if table.contains(v, value) then return true end
-		end
-	end
-	return false
+  for k, v in pairs(t) do
+    if v == value then
+      return true
+    elseif k == value then
+      return true
+    elseif type(v) == "table" then
+      if table.contains(v, value) then
+        return true
+      end
+    end
+  end
+  return false
 end
 
 
@@ -155,24 +161,24 @@ end
 ---   }
 ---   </pre>
 function table.union(...)
-	local sets = {...}
-	local union = {}
+  local sets = { ... }
+  local union = {}
 
-	for _, set in ipairs(sets) do
-		for key, val in pairs(set) do
-			if union[key] and union[key] ~= val then
-				if type(union[key]) == 'table' then
-					table.insert(union[key], val)
-				else
-					union[key] = { union[key], val }
-				end
-			else
-				union[key] = val
-			end
-		end
-	end
+  for _, set in ipairs(sets) do
+    for key, val in pairs(set) do
+      if union[key] and union[key] ~= val then
+        if type(union[key]) == 'table' then
+          table.insert(union[key], val)
+        else
+          union[key] = { union[key], val }
+        end
+      else
+        union[key] = val
+      end
+    end
+  end
 
-	return union
+  return union
 end
 
 
@@ -182,20 +188,20 @@ end
 --- @return Returns a numerically indexed table that is the union of the provided tables. This is
 ---   a union of unique values. The order and keys of the input tables are not preserved.
 function table.n_union(...)
-	local sets = {...}
-	local union = {}
-	local union_keys = {}
+  local sets = { ... }
+  local union = {}
+  local union_keys = {}
 
-	for _, set in ipairs(sets) do
-		for key, val in pairs(set) do
-			if not union_keys[val] then
-				union_keys[val] = true
-				table.insert(union, val)
-			end
-		end
-	end
+  for _, set in ipairs(sets) do
+    for key, val in pairs(set) do
+      if not union_keys[val] then
+        union_keys[val] = true
+        table.insert(union, val)
+      end
+    end
+  end
 
-	return union
+  return union
 end
 
 
@@ -239,30 +245,34 @@ end
 ---   }
 ---   </pre>
 function table.intersection(...)
-	sets = {...}
-	if #sets < 2 then return false end
+  sets = { ... }
+  if #sets < 2 then
+    return false
+  end
 
-	local intersection = {}
+  local intersection = {}
 
-	local function intersect(set1, set2)
-		local result = {}
-		for key, val in pairs(set1) do
-			if set2[key] then
-				if _comp(val, set2[key]) then result[key] = val end
-			end
-		end
-		return result
-	end
+  local function intersect(set1, set2)
+    local result = {}
+    for key, val in pairs(set1) do
+      if set2[key] then
+        if _comp(val, set2[key]) then
+          result[key] = val
+        end
+      end
+    end
+    return result
+  end
 
-	intersection = intersect(sets[1], sets[2])
+  intersection = intersect(sets[1], sets[2])
 
-	for i, _ in ipairs(sets) do
-		if i > 2 then
-			intersection = intersect(intersection, sets[i])
-		end
-	end
+  for i, _ in ipairs(sets) do
+    if i > 2 then
+      intersection = intersect(intersection, sets[i])
+    end
+  end
 
-	return intersection
+  return intersection
 end
 
 
@@ -273,34 +283,36 @@ end
 ---   This is an intersection of unique values. The order and keys of the input tables are
 ---   not preserved.
 function table.n_intersection(...)
-	sets = {...}
-	if #sets < 2 then return false end
+  sets = { ... }
+  if #sets < 2 then
+    return false
+  end
 
-	local intersection = {}
+  local intersection = {}
 
-	local function intersect(set1, set2)
-		local intersection_keys = {}
-		local result = {}
-		for _, val1 in pairs(set1) do
-			for _, val2 in pairs(set2) do
-				if _comp(val1, val2) and not intersection_keys[val1] then
-					table.insert(result, val1)
-					intersection_keys[val1] = true
-				end
-			end
-		end
-		return result
-	end
+  local function intersect(set1, set2)
+    local intersection_keys = {}
+    local result = {}
+    for _, val1 in pairs(set1) do
+      for _, val2 in pairs(set2) do
+        if _comp(val1, val2) and not intersection_keys[val1] then
+          table.insert(result, val1)
+          intersection_keys[val1] = true
+        end
+      end
+    end
+    return result
+  end
 
-	intersection = intersect(sets[1], sets[2])
+  intersection = intersect(sets[1], sets[2])
 
-	for i, _ in ipairs(sets) do
-		if i > 2 then
-			intersection = intersect(intersection, sets[i])
-		end
-	end
+  for i, _ in ipairs(sets) do
+    if i > 2 then
+      intersection = intersect(intersection, sets[i])
+    end
+  end
 
-	return intersection
+  return intersection
 end
 
 
@@ -310,17 +322,21 @@ end
 --- @return Returns a table that is the relative complement of the first table with respect to
 ---   the second table. Returns a complement of key/value pairs.
 function table.complement(set1, set2)
-	if not set1 and set2 then return false end
-	if type(set1) ~= 'table' or type(set2) ~= 'table' then return false end
+  if not set1 and set2 then
+    return false
+  end
+  if type(set1) ~= 'table' or type(set2) ~= 'table' then
+    return false
+  end
 
-	local complement = {}
+  local complement = {}
 
-	for key, val in pairs(set1) do
-		if not _comp(set2[key], val) then
-			complement[key] = val
-		end
-	end
-	return complement
+  for key, val in pairs(set1) do
+    if not _comp(set2[key], val) then
+      complement[key] = val
+    end
+  end
+  return complement
 end
 
 
@@ -330,37 +346,41 @@ end
 --- @return Returns a table that is the relative complement of the first table with respect to
 ---   the second table. Returns a complement of values.
 function table.n_complement(set1, set2)
-	if not set1 and set2 then return false end
+  if not set1 and set2 then
+    return false
+  end
 
-	local complement = {}
+  local complement = {}
 
-	for _, val1 in pairs(set1) do
-		local insert = true
-		for _, val2 in pairs(set2) do
-			if _comp(val1, val2) then
-				insert = false
-			end
-		end
-		if insert then table.insert(complement, val1) end
-	end
+  for _, val1 in pairs(set1) do
+    local insert = true
+    for _, val2 in pairs(set2) do
+      if _comp(val1, val2) then
+        insert = false
+      end
+    end
+    if insert then
+      table.insert(complement, val1)
+    end
+  end
 
-	return complement
+  return complement
 end
 
 
 function table.update(t1, t2)
-        local tbl = {}
-        for k,v in pairs(t1) do
-                tbl[k] = v
-        end
-        for k,v in pairs(t2) do
-                if type(v) == "table" then
-                        tbl[k] = table.update(tbl[k] or {}, v)
-                else
-                        tbl[k] = v
-                end
-        end
-        return tbl
+  local tbl = {}
+  for k, v in pairs(t1) do
+    tbl[k] = v
+  end
+  for k, v in pairs(t2) do
+    if type(v) == "table" then
+      tbl[k] = table.update(tbl[k] or {}, v)
+    else
+      tbl[k] = v
+    end
+  end
+  return tbl
 end
 
 ---Returns the index of the value in a table
@@ -375,15 +395,17 @@ end
 
 -- returns a deep copy of the table with the metatable intact. Credit to Steve Donovan of Penlight.
 function table.deepcopy(t)
-    if type(t) ~= 'table' then return t end
-    local mt = getmetatable(t)
-    local res = {}
-    for k,v in pairs(t) do
-        if type(v) == 'table' then
-            v = table.deepcopy(v)
-        end
-        res[k] = v
+  if type(t) ~= 'table' then
+    return t
+  end
+  local mt = getmetatable(t)
+  local res = {}
+  for k, v in pairs(t) do
+    if type(v) == 'table' then
+      v = table.deepcopy(v)
     end
-    setmetatable(res,mt)
-    return res
+    res[k] = v
+  end
+  setmetatable(res, mt)
+  return res
 end
