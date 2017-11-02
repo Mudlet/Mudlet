@@ -105,9 +105,7 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
-        if (pChild) {
-            pChild->setParent(pNewParent);
-        }
+        pChild->setParent(pNewParent);
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     } else {
