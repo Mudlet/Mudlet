@@ -354,8 +354,8 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mEditorThemeFile", pHost->mEditorThemeFile);
     writeAttribute("mThemePreviewItemID", QString::number(pHost->mThemePreviewItemID));
     writeAttribute("mThemePreviewType", pHost->mThemePreviewType);
-    writeAttribute("mSearchEngineName", pHost->mSearchEngine.first);
-    writeAttribute("mSearchEngineURL", pHost->mSearchEngine.second);
+    writeAttribute("mSearchEngineName", pHost->mSearchEngineName);
+
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
