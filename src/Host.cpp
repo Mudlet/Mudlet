@@ -192,9 +192,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mDoubleClickIgnore.insert('\'');
 
     // search engine load entries
-    mSearchEngineData.insert("Bing", "https://www.bing.com/search?q=");
-    mSearchEngineData.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
-    mSearchEngineData.insert("Google", "https://www.google.com/search?q=");
+    mSearchEngineData = QMap<QString, QString>(
+    {
+                    {"Bing",       "https://www.bing.com/search?q="},
+                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
+                    {"Google",     "https://www.google.com/search?q="}
+    });
 }
 
 Host::~Host()
@@ -463,11 +466,11 @@ void Host::reenableAllTriggers()
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    QPair<QString, QString> ret = QPair<QString, QString>();
+    auto ret = QPair<QString, QString>();
     ret.first = QString("Google");
     ret.second = mSearchEngineData[ret.first];
 
-    auto iterator = mSearchEngineData.find(mSearchEngineName);
+    auto iterator = mSearchEngineData.constFind(mSearchEngineName);
     if(iterator != mSearchEngineData.end())
     {
         ret.first = iterator.key();
