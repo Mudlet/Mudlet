@@ -2119,10 +2119,10 @@ void mudlet::readSettings()
     }
 }
 
-void mudlet::setToolBarIconSize(const unsigned int s)
+void mudlet::setToolBarIconSize(const int s)
 {
 
-    if (mToolbarIconSize == s) {
+    if (mToolbarIconSize == s || s <= 0) {
         return;
     }
 
@@ -2141,9 +2141,9 @@ void mudlet::setToolBarIconSize(const unsigned int s)
     emit signal_setToolBarIconSize(s);
 }
 
-void mudlet::setEditorTreeWidgetIconSize(const unsigned int s)
+void mudlet::setEditorTreeWidgetIconSize(const int s)
 {
-    if (mEditorTreeWidgetIconSize == s) {
+    if (mEditorTreeWidgetIconSize == s || s <= 0) {
         return;
     }
 

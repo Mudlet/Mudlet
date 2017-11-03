@@ -659,8 +659,12 @@ void dlgTriggerEditor::slot_viewErrorsAction()
 }
 
 
-void dlgTriggerEditor::slot_setToolBarIconSize(const unsigned int s)
+void dlgTriggerEditor::slot_setToolBarIconSize(const int s)
 {
+    if (s <= 0) {
+        return;
+    }
+
     if (s > 2) {
         toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -674,8 +678,12 @@ void dlgTriggerEditor::slot_setToolBarIconSize(const unsigned int s)
     toolBar2->setIconSize(newSize);
 }
 
-void dlgTriggerEditor::slot_setTreeWidgetIconSize(const unsigned int s)
+void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
 {
+    if (s <= 0) {
+        return;
+    }
+
     QSize newSize(s * 8, s * 8);
     treeWidget_triggers->setIconSize(newSize);
     treeWidget_aliases->setIconSize(newSize);
