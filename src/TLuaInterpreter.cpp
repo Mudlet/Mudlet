@@ -5670,7 +5670,6 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     bool multiLine, matchAll, highlight, playSound, filter, colorTrigger;
     int fireLength, lineDelta;
     QString fgColor, bgColor;

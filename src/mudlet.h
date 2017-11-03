@@ -76,9 +76,8 @@ class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(mudlet)
-
 public:
+    Q_DISABLE_COPY(mudlet)
     mudlet();
     ~mudlet();
     static mudlet* self();
@@ -424,9 +423,8 @@ class TConsoleMonitor : public QObject
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TConsoleMonitor)
-
 public:
+    Q_DISABLE_COPY(TConsoleMonitor)
     TConsoleMonitor(QObject* parent) : QObject(parent) {}
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;

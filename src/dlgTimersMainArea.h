@@ -31,9 +31,8 @@ class dlgTimersMainArea : public QWidget, public Ui::timers_main_area
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgTimersMainArea)
-
 public:
+    Q_DISABLE_COPY(dlgTimersMainArea)
     dlgTimersMainArea(QWidget*);
 
     // public function allow to trim even when QLineEdit::editingFinished()

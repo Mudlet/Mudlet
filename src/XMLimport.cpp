@@ -563,27 +563,27 @@ pair<int, int> XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                objectType = dlgTriggerEditor::cmTriggerView;
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTriggerView);
                 rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                objectType = dlgTriggerEditor::cmTimerView;
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTimerView);
                 rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
-                objectType = dlgTriggerEditor::cmAliasView;
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmAliasView);
                 rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
-                objectType = dlgTriggerEditor::cmActionView;
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmActionView);
                 rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
-                objectType = dlgTriggerEditor::cmScriptView;
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmScriptView);
                 rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
-                objectType = dlgTriggerEditor::cmKeysView;
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmKeysView);
                 rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
-                objectType = dlgTriggerEditor::cmVarsView;
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmVarsView);
                 readVariablePackage();
             } else {
                 readUnknownPackage();

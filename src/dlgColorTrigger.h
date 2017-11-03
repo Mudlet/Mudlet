@@ -34,9 +34,8 @@ class dlgColorTrigger : public QDialog, public Ui::color_trigger
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgColorTrigger)
-
 public:
+    Q_DISABLE_COPY(dlgColorTrigger)
     dlgColorTrigger(QWidget*, TTrigger*, int);
 
 public slots:

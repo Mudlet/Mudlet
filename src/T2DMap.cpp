@@ -2638,6 +2638,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             } else if (userMenus.contains(actionInfo[1])) {
                 userMenus[actionInfo[1]]->addAction(action);
             } else {
+                delete action;
                 continue;
             }
             mapper->setMapping(action, it2.key());

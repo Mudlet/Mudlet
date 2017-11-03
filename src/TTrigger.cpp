@@ -445,7 +445,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
     if (toMatch.startsWith(regex)) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(regex.toLatin1().data());
+        captureList.emplace_back(regex.toLatin1().data());
         posList.push_back(0 + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -545,11 +545,11 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
     if (where != -1) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(regex.toLatin1().data());
+        captureList.emplace_back(regex.toLatin1().data());
         posList.push_back(where + posOffset);
         if (mPerlSlashGOption) {
             while ((where = toMatch.indexOf(regex, where + 1)) != -1) {
-                captureList.push_back(regex.toLatin1().data());
+                captureList.emplace_back(regex.toLatin1().data());
                 posList.push_back(where + posOffset);
             }
         }
@@ -759,7 +759,7 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
     if (text == line) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(line.toLatin1().data());
+        captureList.emplace_back(line.toLatin1().data());
         posList.push_back(0 + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::yellow), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
