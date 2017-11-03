@@ -33,6 +33,8 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdat
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
+
+    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("release"));
 }
 
 // start the update process and figure out what needs to be done
@@ -105,8 +107,6 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("release"));
-
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
 
     // Setup to automatically download the new release when an update is available
