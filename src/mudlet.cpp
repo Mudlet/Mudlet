@@ -2089,9 +2089,9 @@ void mudlet::readSettings()
     // a netbook or not before this gets called so only change if there is a
     // setting stored:
     if (settings.contains("mainiconsize")) {
-        setToolBarIconSize(settings.value("mainiconsize").toUInt());
+        setToolBarIconSize(settings.value("mainiconsize").toInt());
     }
-    setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toUInt());
+    setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     setMenuBarVisible(settings.value("showMenuBar", QVariant(false)).toBool());
     setToolBarVisible(settings.value("showToolbar", QVariant(true)).toBool());
     mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
