@@ -145,7 +145,7 @@ cTelnet::cTelnet(Host* pH)
 void cTelnet::reset()
 {
     //prepare option variables
-    for (int i = 0; i < 256; i++) {
+    for (const int i = 0; i < 256; i++) {
         myOptionState[i] = false;
         hisOptionState[i] = false;
         announcedState[i] = false;
@@ -555,7 +555,7 @@ void cTelnet::processTelnetCommand(const string& command)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         option = command[2];
-        int idxOption = static_cast<int>(option);
+        const auto idxOption = static_cast<int>(option);
 
         if (option == static_cast<char>(25)) //EOR support (END OF RECORD=TN_GA
         {
@@ -1000,7 +1000,7 @@ void cTelnet::processTelnetCommand(const string& command)
                     cmd += TN_SB;
                     cmd += OPT_STATUS;
                     cmd += TNSB_IS;
-                    for (short i = 0; i < 256; i++) {
+                    for (const short i = 0; i < 256; i++) {
                         if (myOptionState[i]) {
                             cmd += TN_WILL;
                             cmd += i;

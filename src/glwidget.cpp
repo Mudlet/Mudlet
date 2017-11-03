@@ -558,8 +558,7 @@ void GLWidget::paintGL()
             exitList.push_back(pR->getUp());
             exitList.push_back(pR->getDown());
             int e = pR->z;
-            int ef;
-            ef = abs(e % 26);
+            const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 1);
             glDisable(GL_DEPTH_TEST);
@@ -1402,7 +1401,7 @@ void GLWidget::paintGL()
             }
 
             int e = pR->z;
-            int ef = abs(e % 26);
+            const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 36); //gut:96
 
@@ -2091,9 +2090,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         glMatrixMode(GL_PROJECTION);
         glPopMatrix();
         hits = glRenderMode(GL_RENDER);
-        int i;
 
-        for (i = 0; i < hits; i++) {
+        for (const int i = 0; i < hits; i++) {
             mTarget = buff[i * 4 + 3];
             //TODO: Mehrfachbelegungen
             //            unsigned int minZ = buff[i * 4 + 1];
