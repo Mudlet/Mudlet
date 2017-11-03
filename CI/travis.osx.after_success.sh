@@ -8,14 +8,17 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
 
-  # setup macOS keychain for code signing
-  KEYCHAIN=build.keychain
-  security create-keychain -p travis $KEYCHAIN
-  security default-keychain -s $KEYCHAIN
-  security unlock-keychain -p travis $KEYCHAIN
-  security set-keychain-settings -t 3600 -u $KEYCHAIN
-  security import Certificates.p12 -k $KEYCHAIN -P "$CERT_PW" -T /usr/bin/codesign
-  IDENTITY="Developer ID Application: Vadim Peretokin (65HQ5H22TH)"
+  # setup macOS keychain for code signing on development builds only,
+  # as Travis does not allow signing on usual PR builds
+  if [ ! -z "$CERT_PW" ]; then
+    KEYCHAIN=build.keychain
+    security create-keychain -p travis $KEYCHAIN
+    security default-keychain -s $KEYCHAIN
+    security unlock-keychain -p travis $KEYCHAIN
+    security set-keychain-settings -t 3600 -u $KEYCHAIN
+    security import Certificates.p12 -k $KEYCHAIN -P "$CERT_PW" -T /usr/bin/codesign
+    IDENTITY="Developer ID Application: Vadim Peretokin (65HQ5H22TH)"
+  fi
 
   ln -s "${TRAVIS_BUILD_DIR}" source
 
@@ -24,10 +27,16 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
     mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
 
     # codesign will recursively sign everything but the embedded .App
-    codesign --deep -s "$IDENTITY" "source/build/${appBaseName}.app/Contents/Frameworks/Sparkle.framework/Resources/Autoupdate.app/"
-    codesign --deep -s "$IDENTITY" "source/build/${appBaseName}.app"
+    if [ ! -z "$CERT_PW" ]; then
+      codesign --deep -s "$IDENTITY" "source/build/${appBaseName}.app/Contents/Frameworks/Sparkle.framework/Resources/Autoupdate.app/"
+      codesign --deep -s "$IDENTITY" "source/build/${appBaseName}.app"
+    fi
+
     bash make-installer.sh "${appBaseName}.app"
-    codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
+
+    if [ ! -z "$CERT_PW" ]; then
+      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
+    fi
 
     DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://transfer.sh/${appBaseName}.dmg" -O - -q)
   else
@@ -40,10 +49,16 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
     chmod 600 /tmp/mudlet-deploy-key
     ssh-add /tmp/mudlet-deploy-key
 
-    codesign --deep -s "$IDENTITY" "source/build/Mudlet.app/Contents/Frameworks/Sparkle.framework/Resources/Autoupdate.app/"
-    codesign --deep -s "$IDENTITY" "source/build/Mudlet.app"
+    if [ ! -z "$CERT_PW" ]; then
+      codesign --deep -s "$IDENTITY" "source/build/Mudlet.app/Contents/Frameworks/Sparkle.framework/Resources/Autoupdate.app/"
+      codesign --deep -s "$IDENTITY" "source/build/Mudlet.app"
+    fi
+
     bash make-installer.sh -r "${VERSION}" source/build/Mudlet.app
-    codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+
+    if [ ! -z "$CERT_PW" ]; then
+      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+    fi
 
     mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
 
