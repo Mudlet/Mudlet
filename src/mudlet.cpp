@@ -138,6 +138,8 @@ mudlet::mudlet()
 : QMainWindow()
 , mShowMenuBar(false)
 , mShowToolbar(true)
+, mToolbarIconSize(0)
+, mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
 , mReplaySpeed(1)
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
@@ -205,13 +207,6 @@ mudlet::mudlet()
         mAutolog = false;
     }
 
-    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-    if (file_use_smallscreen.exists()) {
-        mpMainToolBar->setIconSize(QSize(16, 16));
-    } else {
-        mpMainToolBar->setIconSize(QSize(32, 32));
-        mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    }
     QAction* actionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
     actionConnect->setToolTip(tr("Connect to a MUD"));
     mpMainToolBar->addAction(actionConnect);
@@ -355,8 +350,9 @@ mudlet::mudlet()
     mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
     mpDebugArea->hide();
     QFont mainFont;
+    mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (file_use_smallscreen.exists()) {
-        mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
         showFullScreen();
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
@@ -364,8 +360,6 @@ mudlet::mudlet()
         actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
-    } else {
-        mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     }
     QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 6, QFont::Normal);
     setFont(mainFont);
@@ -447,7 +441,19 @@ mudlet::mudlet()
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
+    // mToolbarIconSize has been set to 0 in the initialisation list so either
+    // value will be accepted:
+    setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+
     readSettings();
+
+    // Recover from a save in a state when both are hidden so that the toolbar
+    // is shown
+    // TODO: Provide a main console context menu item to restore at least one
+    // of them - if both are hidden.
+    if (!(mShowMenuBar || mShowToolbar)) {
+        setToolBarVisible(true);
+    }
 
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
@@ -2068,28 +2074,32 @@ void mudlet::forceClose()
 
 void mudlet::readSettings()
 {
-    /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-	   Furthermore, we skip the version from the application name to follow the convention.
-	   For compatibility with older settings, if no config is loaded
-	   from the config directory "mudlet", application "Mudlet", we try to load from the config
-	   directory "Mudlet", application "Mudlet 1.0". */
+    /* In case sensitive environments, two different config directories
+       were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+       Furthermore, we skip the version from the application name to follow the convention.
+       For compatibility with older settings, if no config is loaded
+       from the config directory "mudlet", application "Mudlet", we try to load from the config
+       directory "Mudlet", application "Mudlet 1.0". */
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
-    mMainIconSize = settings.value("mainiconsize", QVariant(3)).toInt();
-    mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(3)).toInt();
-    mShowMenuBar = settings.value("showMenuBar", QVariant(0)).toBool();
-    mShowToolbar = settings.value("showToolbar", QVariant(0)).toBool();
+    // A sensible default has already been set up according to whether we are on
+    // a netbook or not before this gets called so only change if there is a
+    // setting stored:
+    if (settings.contains("mainiconsize")) {
+        setToolBarIconSize(settings.value("mainiconsize").toUInt());
+    }
+    setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toUInt());
+    setMenuBarVisible(settings.value("showMenuBar", QVariant(false)).toBool());
+    setToolBarVisible(settings.value("showToolbar", QVariant(true)).toBool());
     mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     resize(size);
     move(pos);
-    setIcoSize(mMainIconSize);
     if (mShowMenuBar) {
         MenuBar->show();
     } else {
@@ -2109,14 +2119,42 @@ void mudlet::readSettings()
     }
 }
 
-void mudlet::setIcoSize(int s)
+void mudlet::setToolBarIconSize(const unsigned int s)
 {
+
+    if (mToolbarIconSize == s) {
+        return;
+    }
+
+    mToolbarIconSize = s;
     mpMainToolBar->setIconSize(QSize(s * 8, s * 8));
-    if (mMainIconSize > 2) {
+    if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
+
+    if(replayToolBar) {
+        replayToolBar->setIconSize(mpMainToolBar->iconSize());
+        replayToolBar->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+    }
+    emit signal_setToolBarIconSize(s);
+}
+
+void mudlet::setEditorTreeWidgetIconSize(const unsigned int s)
+{
+    if (mEditorTreeWidgetIconSize == s) {
+        return;
+    }
+
+    mEditorTreeWidgetIconSize = s;
+    emit signal_setTreeIconSize(s);
+}
+
+void mudlet::setMenuBarVisible(const bool state)
+{
+    mShowMenuBar == state;
+
     if (mShowMenuBar) {
         menuBar()->show();
     } else {
@@ -2124,16 +2162,27 @@ void mudlet::setIcoSize(int s)
     }
 }
 
+void mudlet::setToolBarVisible(const bool state)
+{
+    mShowToolbar == state;
+
+    if (mShowToolbar) {
+        mpMainToolBar->show();
+    } else {
+        mpMainToolBar->hide();
+    }
+}
+
 void mudlet::writeSettings()
 {
     /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
-	   Furthermore, we skip the version from the application name to follow the convention.*/
+      were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
+      Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
-    settings.setValue("mainiconsize", mMainIconSize);
-    settings.setValue("tefoldericonsize", mTEFolderIconSize);
+    settings.setValue("mainiconsize", mToolbarIconSize);
+    settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("showMenuBar", mShowMenuBar);
     settings.setValue("showToolbar", mShowToolbar);
     settings.setValue("maximized", isMaximized());
@@ -2739,7 +2788,7 @@ void mudlet::replayStart()
     replayTime = new QLabel(this);
     actionReplayTime = replayToolBar->addWidget(replayTime);
 
-    replayToolBar->setIconSize(QSize(8 * mMainIconSize, 8 * mMainIconSize));
+    replayToolBar->setIconSize(mpMainToolBar->iconSize());
     replayToolBar->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
 
     actionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);

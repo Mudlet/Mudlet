@@ -157,9 +157,12 @@ public:
     bool mShowMenuBar;
     bool mShowToolbar;
     bool isGoingDown() { return mIsGoingDown; }
-    int mMainIconSize;
-    int mTEFolderIconSize;
-    void setIcoSize(int s);
+    unsigned int mToolbarIconSize;
+    unsigned int mEditorTreeWidgetIconSize;
+    void setToolBarIconSize(const unsigned int);
+    void setEditorTreeWidgetIconSize(const unsigned int);
+    void setToolBarVisible(const bool);
+    void setMenuBarVisible(const bool);
     void replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
     void replayOver();
@@ -325,6 +328,8 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
+    void signal_setToolBarIconSize(const unsigned int);
+    void signal_setTreeIconSize(const unsigned int);
 
 private slots:
     void slot_close_profile();

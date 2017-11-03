@@ -264,7 +264,8 @@ public slots:
     void grab_key_callback(int key, int modifier);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
-    void setTBIconSize(int);
+    void slot_setToolBarIconSize(const unsigned int);
+    void slot_setTreeWidgetIconSize(const unsigned int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
 
