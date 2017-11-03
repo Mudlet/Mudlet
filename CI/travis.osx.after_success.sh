@@ -67,7 +67,10 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
   fi
 
   # delete keychain just in case
-  security delete-keychain $KEYCHAIN
+  if [ ! -z "$CERT_PW" ]; then
+    security delete-keychain $KEYCHAIN
+  fi
+
   export DEPLOY_URL
 fi
 
