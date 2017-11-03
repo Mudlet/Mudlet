@@ -2091,7 +2091,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         glPopMatrix();
         hits = glRenderMode(GL_RENDER);
 
-        for (const int i = 0; i < hits; i++) {
+        for (int i = 0; i < hits; i++) {
             mTarget = buff[i * 4 + 3];
             //TODO: Mehrfachbelegungen
             //            unsigned int minZ = buff[i * 4 + 1];
