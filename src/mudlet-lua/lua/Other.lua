@@ -812,7 +812,7 @@ local timeframetable = {}
 function timeframe(vname, true_time, nil_time, ...)
   local format = string.format
 
-	assert(type(true_time) == "number" or type(true_time) == "table", format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!", type(true_time)))
+  assert(type(true_time) == "number" or type(true_time) == "table", format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!", type(true_time)))
   assert(type(nil_time) == "nil" or type(nil_time) == "number" or type(nil_time) == "table", format("timeframe: bad argument #3 type (nil time as a number or table expected, got %s!", type(nil_time)))
 
   -- aggregate timerlist data
@@ -829,7 +829,7 @@ function timeframe(vname, true_time, nil_time, ...)
 
   local vtype = type(vname)
 
-	-- loop through timerlist and create tempTimers
+  -- loop through timerlist and create tempTimers
   local maxtime = 0
   for step, data in ipairs(timerlist) do
     assert(type(data) == "table", format("timeframe: bad argument #4 type (timerlist data as a table expected, got %s!", type(data)))
@@ -843,8 +843,8 @@ function timeframe(vname, true_time, nil_time, ...)
         local s,m = pcall(vname, value)
         if not s then error(m) end
       end
-		else
-			assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #4 type (timerlist data argument #2 expects a string, number or boolean value; got %s!", type(value)))
+    else
+      assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #4 type (timerlist data argument #2 expects a string, number or boolean value; got %s!", type(value)))
       fun = assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))
     end
 
