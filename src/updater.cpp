@@ -89,15 +89,9 @@ void Updater::setupOnMacOS()
 
     qDebug() << "1 launched from update?" << msparkleUpdater->justUpdated();
 
-    QTimer::singleShot(0, this, [this] {
-        qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated();
-    });
-    QTimer::singleShot(1000, this, [this] {
-        qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated();
-    });
-    QTimer::singleShot(5000, this, [this] {
-        qDebug() << "3 launched from update?" << msparkleUpdater->justUpdated();
-    });
+    QTimer::singleShot(0, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
+    QTimer::singleShot(1000, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
+    QTimer::singleShot(5000, this, [this] { qDebug() << "3 launched from update?" << msparkleUpdater->justUpdated(); });
 }
 #endif
 
