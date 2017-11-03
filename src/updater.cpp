@@ -80,6 +80,12 @@ void Updater::manuallyCheckUpdates()
 #endif
 }
 
+void Updater::showChangelog() const
+{
+    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->show();
+}
+
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
@@ -92,6 +98,7 @@ void Updater::setupOnMacOS()
     QTimer::singleShot(0, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
     QTimer::singleShot(1000, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
     QTimer::singleShot(5000, this, [this] { qDebug() << "3 launched from update?" << msparkleUpdater->justUpdated(); });
+    showChangelog();
 }
 #endif
 
@@ -230,11 +237,5 @@ void Updater::recordUpdateTime() const
     QDataStream ifs(&file);
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     file.close();
-}
-
-void Updater::showChangelog() const
-{
-    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
-    changelogDialog->show();
 }
 #endif // Q_OS_LINUX
