@@ -97,9 +97,9 @@ void Updater::setupOnMacOS()
 
     QProcess().start("logger", QStringList() << "1 launched from update?" << QString::number(msparkleUpdater->justUpdated()));
 
-    QTimer::singleShot(0, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated()); });
-    QTimer::singleShot(1000, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated()); });
-    QTimer::singleShot(5000, this, [this] { QProcess().start("logger", QStringList() << "3 launched from update?" << QString::number(msparkleUpdater->justUpdated()); });
+    QTimer::singleShot(0, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
+    QTimer::singleShot(1000, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
+    QTimer::singleShot(5000, this, [this] { QProcess().start("logger", QStringList() << "3 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
     showChangelog();
 }
 #endif
