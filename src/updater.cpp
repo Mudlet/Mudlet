@@ -108,6 +108,7 @@ void Updater::setupOnMacOS()
     QProcess().start("/usr/bin/logger", QStringList() << "0 launched from update?");
     QProcess().start("syslog", QStringList() << "-s -l notice This message should show up in with a Facility of syslog.");
     SYSLOG("IT WORKED");
+    qDebug() << "prints should have happened by now";
 
     QTimer::singleShot(0, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
     QTimer::singleShot(1000, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
