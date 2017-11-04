@@ -1129,7 +1129,6 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[7]->setEnabled(false);
     mpMainToolBar->actions()[9]->setEnabled(false);
     mpMainToolBar->actions()[10]->setEnabled(false);
-    mpMainToolBar->actions()[11]->setEnabled(false);
     mpMainToolBar->actions()[12]->setEnabled(false);
     mpMainToolBar->actions()[13]->setEnabled(false);
     mpMainToolBar->actions()[14]->setEnabled(false);
@@ -1146,7 +1145,6 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[7]->setEnabled(true);
     mpMainToolBar->actions()[9]->setEnabled(true);
     mpMainToolBar->actions()[10]->setEnabled(true);
-    mpMainToolBar->actions()[11]->setEnabled(true);
     mpMainToolBar->actions()[12]->setEnabled(true);
     mpMainToolBar->actions()[13]->setEnabled(true);
     mpMainToolBar->actions()[14]->setEnabled(true);
@@ -2310,9 +2308,6 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog()
 {
     Host* pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
 
     if (!mpProfilePreferencesDlg) {
         mpProfilePreferencesDlg = new dlgProfilePreferences(this, pHost);

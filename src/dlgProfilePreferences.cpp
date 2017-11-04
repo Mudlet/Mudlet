@@ -53,43 +53,67 @@
 #include "post_guard.h"
 
 
-dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF), mFontSize(10), mpHost(pH)
+dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
+: QDialog(pF)
+, mFontSize(10)
+, mpHost(pHost)
 {
     // init generated dialog
     setupUi(this);
 
-    // This is currently empty so can be hidden until needed, but provides a
-    // location on the last (Special Options) tab where temporary/development
-    // /testing controls can be placed if needed...
-    groupBox_Debug->hide();
+    // These are currently empty so can be hidden until needed, but provides
+    // locations on the first (General) and last (Special Options) tabs where
+    // temporary/development/testing controls can be placed if needed...
+    groupBox_debugApplication->hide();
+    groupBox_debugProfile->hide();
 
-    loadEditorTab();
-
-    mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
-    mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
-    acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
-
-    ircHostName->setText(dlgIRC::readIrcHostName(mpHost));
-    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(mpHost)));
-    ircChannels->setText(dlgIRC::readIrcChannels(mpHost).join(" "));
-    ircNick->setText(dlgIRC::readIrcNickName(mpHost));
-
-    dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    enableSpellCheck->setChecked(pH->mEnableSpellCheck);
-    checkBox_echoLuaErrors->setChecked(pH->mEchoLuaErrors);
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+
+    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
+    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
+
+    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
+
+    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
+
+    MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
+    TEFolderIconSize->setValue(mudlet::self()->mEditorTreeWidgetIconSize);
+    showMenuBar->setChecked(mudlet::self()->mShowMenuBar);
+    if (!showMenuBar->isChecked()) {
+        showToolbar->setChecked(true);
+    } else {
+        showToolbar->setChecked(mudlet::self()->mShowToolbar);
+    }
+
+    QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+    checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
+
+    if (pHost) {
+        // The following code is miss indented to make it easier to see the changes
+    loadEditorTab();
+
+    mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
+    mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
+    acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
+
+    ircHostName->setText(dlgIRC::readIrcHostName(pHost));
+    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
+    ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
+    ircNick->setText(dlgIRC::readIrcNickName(pHost));
+
+    dictList->setSelectionMode(QAbstractItemView::SingleSelection);
+    groupBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     // As we reflect the state of the above two checkboxes in the preview widget
     // on another tab we have to track their changes in state and update that
     // edbee widget straight away - however we do not need to update any open
     // widgets of the same sort in use in ANY profile's editor until we hit
     // the save button...
-    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
-    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
 
     QString path;
 #ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + mpHost->mSpellDic + ".aff")) {
+    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
         path = "/usr/share/hunspell/";
     } else {
         path = "./";
@@ -101,7 +125,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 #endif
 
     QDir dir(path);
-
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
     entries = entries.filter(rex);
@@ -109,46 +132,46 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         QString n = entries[i].replace(QStringLiteral(".dic"), "");
         auto item = new QListWidgetItem(entries[i]);
         dictList->addItem(item);
-        if (entries[i] == mpHost->mSpellDic) {
+        if (entries[i] == pHost->mSpellDic) {
             item->setSelected(true);
         }
     }
 
-    if (pH->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || pH->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-        || pH->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-        || pH->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+    if (pHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+     || pHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+     || pHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
+     || pHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+
         downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
     } else {
         downloadMapOptions->setVisible(false);
     }
 
-    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
+    pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
+    pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
 
-    pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
-    pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
+    pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
+    pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
+    pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
+    pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
+    pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
+    pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
+    pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
+    pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
+    pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
+    pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
+    pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
+    pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
+    pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
+    pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
+    pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
+    pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
 
-    pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlack.name()));
-    pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlack.name()));
-    pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mGreen.name()));
-    pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightGreen.name()));
-    pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mRed.name()));
-    pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightRed.name()));
-    pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlue.name()));
-    pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlue.name()));
-    pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mYellow.name()));
-    pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightYellow.name()));
-    pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCyan.name()));
-    pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightCyan.name()));
-    pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mMagenta.name()));
-    pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightMagenta.name()));
-    pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mWhite.name()));
-    pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightWhite.name()));
-
-    pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mFgColor.name()));
-    pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBgColor.name()));
-    pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandFgColor.name()));
-    pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandBgColor.name()));
+    pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
+    pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
+    pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
+    pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
 
     connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
     connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
@@ -218,10 +241,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
     connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
 
-    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
-    Host* pHost = mpHost;
-    if (pHost) {
-        mFontSize = pHost->mDisplayFont.pointSize();
+    // Indentation resumed at correct amount
         fontComboBox->setCurrentFont(pHost->mDisplayFont);
         if (mFontSize < 0) {
             mFontSize = 10;
@@ -253,21 +273,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
         checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
         USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
-        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-        checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
         topBorderHeight->setValue(pHost->mBorderTopHeight);
         bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
         leftBorderWidth->setValue(pHost->mBorderLeftWidth);
-        qDebug() << "loading: left border width:" << pHost->mBorderLeftWidth;
         rightBorderWidth->setValue(pHost->mBorderRightWidth);
-        MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
-        TEFolderIconSize->setValue(mudlet::self()->mEditorTreeWidgetIconSize);
-        showMenuBar->setChecked(mudlet::self()->mShowMenuBar);
-        if (!showMenuBar->isChecked()) {
-            showToolbar->setChecked(true);
-        } else {
-            showToolbar->setChecked(mudlet::self()->mShowToolbar);
-        }
         mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
         mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
         commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
@@ -366,11 +375,51 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
             comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
         }
         connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
+
+        // search engine, loading of the entries was moved from loadEditorTab,
+        // but this still may not be the best place!
+        mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
+        mSearchEngineMap.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
+        mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
+
+        // populate combobox
+        for (auto engineText : mSearchEngineMap.keys()) {
+            search_engine_combobox->addItem(engineText);
+        }
+
+        connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
+
+        // set to saved value or default to Google
+        int savedText = search_engine_combobox->findText(pHost->mSearchEngine.first);
+        search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
+        setSearchEngine(search_engine_combobox->currentText());
+
+    } else {
+        // pHost is a nullptr
+        // CHECKME: It may be better to use removeTab(n) instead...!
+        tabWidgeta->setTabBarAutoHide(true);
+        tabWidgeta->setTabEnabled(1, false); // Input Line
+        tabWidgeta->setTabEnabled(2, false); // Main Display
+        tabWidgeta->setTabEnabled(3, false); // Editor
+        tabWidgeta->setTabEnabled(4, false); // Color view
+        tabWidgeta->setTabEnabled(5, false); // Mapper
+        tabWidgeta->setTabEnabled(6, false); // Mapper colors
+        tabWidgeta->setTabEnabled(7, false); // Profile Special options
     }
+
+    // Enforce selection of the first tab - despite any cock-ups when using the
+    // Qt Designer utility when the dialog was saved with a different one
+    // on top! 8-)
+    tabWidgeta->setCurrentIndex(0);
 }
 
 void dlgProfilePreferences::loadEditorTab()
 {
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
     connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
 
     auto config = edbeePreviewWidget->config();
@@ -378,23 +427,23 @@ void dlgProfilePreferences::loadEditorTab()
     config->setSmartTab(true);
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
-    config->setThemeName(mpHost->mEditorTheme);
+    config->setThemeName(pHost->mEditorTheme);
     config->setCaretWidth(1);
     config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->setFont(mpHost->mDisplayFont);
+    config->setFont(pHost->mDisplayFont);
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
     populateThemesList();
-    mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(pHost->mEditorTheme, pHost->mEditorThemeFile);
     populateScriptsList();
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
-    auto themeIndex = code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme);
+    auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->mEditorTheme);
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_theme_selected(themeIndex);
 
@@ -403,7 +452,7 @@ void dlgProfilePreferences::loadEditorTab()
 
     // pre-select the last shown script to preview
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
-    auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(mpHost->mThemePreviewType, mpHost->mThemePreviewItemID)));
+    auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(pHost->mThemePreviewType, pHost->mThemePreviewItemID)));
     script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
     slot_script_selected(scriptIndex == -1 ? 1 : scriptIndex);
 
@@ -423,30 +472,14 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidgeta->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
-
-    // search engine load
-    // insert might be (/should?) moved elsewhere
-    mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
-    mSearchEngineMap.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
-    mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
-
-    // populate combobox
-    for(auto engineText : mSearchEngineMap.keys())
-    {
-        search_engine_combobox->addItem(engineText);
-    }
-
-    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
-
-    // set to saved value or default to Google
-    int savedText = search_engine_combobox->findText(mpHost->mSearchEngine.first);
-    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
-    setSearchEngine(search_engine_combobox->currentText());
 }
 
 void dlgProfilePreferences::setSearchEngine(const QString &text)
 {
-    mpHost->mSearchEngine = QPair<QString, QString>(text, mSearchEngineMap[text]);
+    Host* pHost = mpHost;
+    if (pHost) {
+        pHost->mSearchEngine = QPair<QString, QString>(text, mSearchEngineMap[text]);
+    }
 }
 
 void dlgProfilePreferences::slot_search_engine_edited(const QString &text)
@@ -480,10 +513,10 @@ void dlgProfilePreferences::setColors()
     pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
     pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
 
-    pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
-    pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
-    pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandFgColor.name()));
-    pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandBgColor.name()));
+    pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
+    pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
+    pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
+    pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
 }
 
 void dlgProfilePreferences::setColors2()
@@ -493,25 +526,25 @@ void dlgProfilePreferences::setColors2()
         return;
     }
 
-    pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlack_2.name()));
-    pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlack_2.name()));
-    pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mGreen_2.name()));
-    pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightGreen_2.name()));
-    pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mRed_2.name()));
-    pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightRed_2.name()));
-    pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlue_2.name()));
-    pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlue_2.name()));
-    pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mYellow_2.name()));
-    pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightYellow_2.name()));
-    pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCyan_2.name()));
-    pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightCyan_2.name()));
-    pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mMagenta_2.name()));
-    pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightMagenta_2.name()));
-    pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mWhite_2.name()));
-    pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightWhite_2.name()));
+    pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack_2.name()));
+    pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack_2.name()));
+    pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen_2.name()));
+    pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen_2.name()));
+    pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed_2.name()));
+    pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed_2.name()));
+    pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue_2.name()));
+    pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue_2.name()));
+    pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow_2.name()));
+    pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow_2.name()));
+    pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan_2.name()));
+    pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan_2.name()));
+    pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta_2.name()));
+    pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta_2.name()));
+    pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite_2.name()));
+    pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite_2.name()));
 
-    pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mFgColor_2.name()));
-    pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBgColor_2.name()));
+    pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
+    pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
 }
 
 void dlgProfilePreferences::resetColors()
@@ -1276,23 +1309,20 @@ void dlgProfilePreferences::copyMap()
 void dlgProfilePreferences::slot_save_and_exit()
 {
     Host* pHost = mpHost;
-    if (!pHost) {
-        return;
-    }
+    if (pHost) {
+    // Indentation wrong here to better show changes
     if (dictList->currentItem()) {
         pHost->mSpellDic = dictList->currentItem()->text();
     }
-    pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
+    pHost->mEnableSpellCheck = groupBox_spellCheck->isChecked();
     pHost->mWrapAt = wrap_at_spinBox->value();
     pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
     pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
     pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
     pHost->mCommandSeparator = command_separator_lineedit->text();
     pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
-    //pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
     pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
     pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
-    //pHost->set_LF_ON_GA( checkBox_LF_ON_GA->isChecked() );
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
     pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
     pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
@@ -1320,21 +1350,17 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
-    //qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-    //pHost->mMXPMode = mMXPMode->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
-    mudlet::self()->setToolBarIconSize(MainIconSize->value());
-    mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
-    mudlet::self()->setMenuBarVisible(showMenuBar->isChecked());
-    mudlet::self()->setToolBarVisible(showToolbar->isChecked());
     pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
     pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
     pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
+
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
+
     QString lIgnore = doubleclick_ignore_lineedit->text();
     pHost->mDoubleClickIgnore.clear();
     for (auto character : lIgnore) {
@@ -1416,6 +1442,34 @@ void dlgProfilePreferences::slot_save_and_exit()
         mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
     }
 
+    setDisplayFont();
+
+    if (mudlet::self()->mConsoleMap.contains(pHost)) {
+        int x = mudlet::self()->mConsoleMap[pHost]->width();
+        int y = mudlet::self()->mConsoleMap[pHost]->height();
+        QSize s = QSize(x, y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
+    }
+
+    pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+    pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+    pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+    if (pHost->mpEditorDialog) {
+        pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
+    }
+
+    auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
+    pHost->mThemePreviewItemID = data.second;
+    pHost->mThemePreviewType = data.first;
+    // Incorrect indentation ends here:
+    }
+
+    mudlet::self()->setToolBarIconSize(MainIconSize->value());
+    mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
+    mudlet::self()->setMenuBarVisible(showMenuBar->isChecked());
+    mudlet::self()->setToolBarVisible(showToolbar->isChecked());
+
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (checkBox_USE_SMALL_SCREEN->isChecked()) {
         file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -1426,34 +1480,12 @@ void dlgProfilePreferences::slot_save_and_exit()
         file_use_smallscreen.remove();
     }
 
-    setDisplayFont();
-
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        int x = mudlet::self()->mConsoleMap[pHost]->width();
-        int y = mudlet::self()->mConsoleMap[pHost]->height();
-        QSize s = QSize(x, y);
-        QResizeEvent event(s, s);
-        QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
-        //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
-    }
-
-    // These are only sent on saving because they are application wide and
+    // These are only set on saving because they are application wide and
     // will affect all editors even the ones of other profiles so, if two
     // profile both had their preferences open they would fight each other if
     // they changed things at the same time:
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
-    pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-
-    pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
-    pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
-    if (pHost->mpEditorDialog) {
-        pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
-    }
-
-    auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
-    pHost->mThemePreviewItemID = data.second;
-    pHost->mThemePreviewType = data.first;
 
     close();
 }
@@ -1482,17 +1514,25 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
 
 void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
 {
-    mpHost->mTelnet.setEncoding(mpHost->mTelnet.getComputerEncoding(newEncoding));
+    Host* pHost = mpHost;
+    if (pHost) {
+        pHost->mTelnet.setEncoding(pHost->mTelnet.getComputerEncoding(newEncoding));
+    }
 }
 
 // loads available Lua scripts from triggers, aliases, scripts, etc into the
 // editor tab combobox
 void dlgProfilePreferences::populateScriptsList()
 {
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
     // a items of item name ("My first alias"), item type ("alias"), and item ID
     std::vector<std::tuple<QString, QString, int>> items;
 
-    std::list<TTrigger*> triggers = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    std::list<TTrigger*> triggers = pHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : triggers) {
         if (!trigger->getScript().isEmpty() && !trigger->isTemporary()) {
             items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
@@ -1500,7 +1540,7 @@ void dlgProfilePreferences::populateScriptsList()
         addTriggersToPreview(trigger, items);
     }
 
-    std::list<TAlias*> aliases = mpHost->getAliasUnit()->getAliasRootNodeList();
+    std::list<TAlias*> aliases = pHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : aliases) {
         if (!alias->getScript().isEmpty() && !alias->isTemporary()) {
             items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
@@ -1508,7 +1548,7 @@ void dlgProfilePreferences::populateScriptsList()
         addAliasesToPreview(alias, items);
     }
 
-    std::list<TScript*> scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
+    std::list<TScript*> scripts = pHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : scripts) {
         if (!script->getScript().isEmpty()) {
             items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
@@ -1516,7 +1556,7 @@ void dlgProfilePreferences::populateScriptsList()
         addScriptsToPreview(script, items);
     }
 
-    std::list<TTimer*> timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    std::list<TTimer*> timers = pHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : timers) {
         if (!timer->getScript().isEmpty() && !timer->isTemporary()) {
             items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
@@ -1524,7 +1564,7 @@ void dlgProfilePreferences::populateScriptsList()
         addTimersToPreview(timer, items);
     }
 
-    std::list<TKey*> keys = mpHost->getKeyUnit()->getKeyRootNodeList();
+    std::list<TKey*> keys = pHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : keys) {
         if (!key->getScript().isEmpty() && !key->isTemporary()) {
             items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
@@ -1532,7 +1572,7 @@ void dlgProfilePreferences::populateScriptsList()
         addKeysToPreview(key, items);
     }
 
-    std::list<TAction*> actions = mpHost->getActionUnit()->getActionRootNodeList();
+    std::list<TAction*> actions = pHost->getActionUnit()->getActionRootNodeList();
     for (auto action : actions) {
         if (!action->getScript().isEmpty()) {
             items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
@@ -1802,28 +1842,33 @@ void dlgProfilePreferences::slot_theme_selected(int index)
 // user has picked a different script to preview, so show it
 void dlgProfilePreferences::slot_script_selected(int index)
 {
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
     auto data = script_preview_combobox->itemData(index).value<QPair<QString, int>>();
     auto itemType = data.first;
     auto itemId = data.second;
 
     auto preview = edbeePreviewWidget->textDocument();
     if (itemType == QStringLiteral("trigger")) {
-        auto pT = mpHost->getTriggerUnit()->getTrigger(itemId);
+        auto pT = pHost->getTriggerUnit()->getTrigger(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted trigger item}"));
     } else if (itemType == QStringLiteral("alias")) {
-        auto pT = mpHost->getAliasUnit()->getAlias(itemId);
+        auto pT = pHost->getAliasUnit()->getAlias(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted alias item}"));
     } else if (itemType == QStringLiteral("script")) {
-        auto pT = mpHost->getScriptUnit()->getScript(itemId);
+        auto pT = pHost->getScriptUnit()->getScript(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted script item}"));
     } else if (itemType == QStringLiteral("timer")) {
-        auto pT = mpHost->getTimerUnit()->getTimer(itemId);
+        auto pT = pHost->getTimerUnit()->getTimer(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted timer item}"));
     } else if (itemType == QStringLiteral("key")) {
-        auto pT = mpHost->getKeyUnit()->getKey(itemId);
+        auto pT = pHost->getKeyUnit()->getKey(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted key item}"));
     } else if (itemType == QStringLiteral("button")) {
-        auto pT = mpHost->getActionUnit()->getAction(itemId);
+        auto pT = pHost->getActionUnit()->getAction(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted button item}"));
     }
 }
