@@ -425,8 +425,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
 
-    connect(mudlet::self(), SIGNAL(signal_setToolBarIconSize(const unsigned int)), this, SLOT(slot_setToolBarIconSize(const unsigned int)));
-    connect(mudlet::self(), SIGNAL(signal_setTreeIconSize(const unsigned int)), this, SLOT(slot_setTreeWidgetIconSize(const unsigned int)));
+    connect(mudlet::self(), SIGNAL(signal_setToolBarIconSize(const int)), this, SLOT(slot_setToolBarIconSize(const int)));
+    connect(mudlet::self(), SIGNAL(signal_setTreeIconSize(const int)), this, SLOT(slot_setTreeWidgetIconSize(const int)));
     slot_setToolBarIconSize(mudlet::self()->mToolbarIconSize);
     slot_setTreeWidgetIconSize(mudlet::self()->mEditorTreeWidgetIconSize);
 
