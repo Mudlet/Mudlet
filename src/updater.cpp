@@ -25,6 +25,16 @@
 #include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
 #endif
 
+#if defined(Q_OS_MAC)
+#include <syslog.h>
+ static void SYSLOG(const char* format,...)
+       {
+        va_list vaList;
+        va_start( vaList,format );
+        vsyslog(LOG_ERR,format,vaList);
+       }
+#endif
+
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include "post_guard.h"
@@ -97,6 +107,7 @@ void Updater::setupOnMacOS()
 
     QProcess().start("/usr/bin/logger", QStringList() << "0 launched from update?");
     QProcess().start("syslog", QStringList() << "-s -l notice This message should show up in with a Facility of syslog.");
+    SYSLOG("IT WORKED");
 
     QTimer::singleShot(0, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
     QTimer::singleShot(1000, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
