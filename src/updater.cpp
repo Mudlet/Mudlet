@@ -96,7 +96,7 @@ void Updater::setupOnMacOS()
     // don't need to explicitly check for updates - sparkle will do so on its own
 
     QProcess().start("/usr/bin/logger", QStringList() << "0 launched from update?");
-    QProcess().start("/usr/bin/logger", QStringList() << "1 launched from update?" << QString::number(msparkleUpdater->justUpdated()));
+    QProcess().start("syslog", QStringList() << "-s -l notice This message should show up in with a Facility of syslog.");
 
     QTimer::singleShot(0, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
     QTimer::singleShot(1000, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated())); });
