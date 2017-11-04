@@ -90,158 +90,156 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
 
     if (pHost) {
-        // The following code is miss indented to make it easier to see the changes
-    loadEditorTab();
+        loadEditorTab();
 
-    mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
-    mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
-    acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
+        mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
+        mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
+        acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
 
-    ircHostName->setText(dlgIRC::readIrcHostName(pHost));
-    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
-    ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
-    ircNick->setText(dlgIRC::readIrcNickName(pHost));
+        ircHostName->setText(dlgIRC::readIrcHostName(pHost));
+        ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
+        ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
+        ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
-    dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    groupBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
-    checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
-    // As we reflect the state of the above two checkboxes in the preview widget
-    // on another tab we have to track their changes in state and update that
-    // edbee widget straight away - however we do not need to update any open
-    // widgets of the same sort in use in ANY profile's editor until we hit
-    // the save button...
+        dictList->setSelectionMode(QAbstractItemView::SingleSelection);
+        groupBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+        checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+        // As we reflect the state of the above two checkboxes in the preview widget
+        // on another tab we have to track their changes in state and update that
+        // edbee widget straight away - however we do not need to update any open
+        // widgets of the same sort in use in ANY profile's editor until we hit
+        // the save button...
 
-    QString path;
+        QString path;
 #ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
-        path = "/usr/share/hunspell/";
-    } else {
-        path = "./";
-    }
+        if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
+            path = "/usr/share/hunspell/";
+        } else {
+            path = "./";
+        }
 #elif defined(Q_OS_MAC)
-    path = QCoreApplication::applicationDirPath() + "/../Resources/";
+        path = QCoreApplication::applicationDirPath() + "/../Resources/";
 #else
-    path = "./";
+        path = "./";
 #endif
 
-    QDir dir(path);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
-    entries = entries.filter(rex);
-    for (int i = 0; i < entries.size(); i++) {
-        QString n = entries[i].replace(QStringLiteral(".dic"), "");
-        auto item = new QListWidgetItem(entries[i]);
-        dictList->addItem(item);
-        if (entries[i] == pHost->mSpellDic) {
-            item->setSelected(true);
+        QDir dir(path);
+        QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+        QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+        entries = entries.filter(rex);
+        for (int i = 0; i < entries.size(); i++) {
+            QString n = entries[i].replace(QStringLiteral(".dic"), "");
+            auto item = new QListWidgetItem(entries[i]);
+            dictList->addItem(item);
+            if (entries[i] == pHost->mSpellDic) {
+                item->setSelected(true);
+            }
         }
-    }
 
-    if (pHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-     || pHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-     || pHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-     || pHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+        if (pHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+         || pHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+         || pHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
+         || pHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
 
-        downloadMapOptions->setVisible(true);
-        connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
-    } else {
-        downloadMapOptions->setVisible(false);
-    }
+            downloadMapOptions->setVisible(true);
+            connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
+        } else {
+            downloadMapOptions->setVisible(false);
+        }
 
-    pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
-    pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
+        pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
+        pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
 
-    pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
-    pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
-    pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
-    pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
-    pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
-    pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
-    pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
-    pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
-    pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
-    pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
-    pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
-    pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
-    pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
-    pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
-    pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
-    pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
+        pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
+        pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
+        pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
+        pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
+        pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
+        pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
+        pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
+        pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
+        pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
+        pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
+        pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
+        pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
+        pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
+        pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
+        pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
+        pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
 
-    pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
-    pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
-    pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
-    pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
+        pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
+        pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
+        pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
+        pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
 
-    connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
-    connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
+        connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
+        connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
 
-    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
-    connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
-    connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
-    connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
-    connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
-    connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
-    connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
-    connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
-    connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
-    connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
-    connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
-    connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
-    connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
-    connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
-    connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
-    connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
+        connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
+        connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
+        connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
+        connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
+        connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
+        connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
+        connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
+        connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
+        connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
+        connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
+        connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
+        connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
+        connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
+        connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+        connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
+        connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
 
-    connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
-    connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
-    connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
-    connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
+        connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
+        connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
+        connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
+        connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
 
-    connect(reset_colors_button, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
-    connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
+        connect(reset_colors_button, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
+        connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
 
-    connect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(setDisplayFont()));
-    QStringList sizeList;
-    for (int i = 1; i < 40; i++) {
-        sizeList << QString::number(i);
-    }
-    fontSize->insertItems(1, sizeList);
-    connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
+        connect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(setDisplayFont()));
+        QStringList sizeList;
+        for (int i = 1; i < 40; i++) {
+            sizeList << QString::number(i);
+        }
+        fontSize->insertItems(1, sizeList);
+        connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
 
-    setColors2();
+        setColors2();
 
-    connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
-    connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
-    connect(pushButton_green_2, SIGNAL(clicked()), this, SLOT(setColorGreen2()));
-    connect(pushButton_Lgreen_2, SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
-    connect(pushButton_red_2, SIGNAL(clicked()), this, SLOT(setColorRed2()));
-    connect(pushButton_Lred_2, SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
-    connect(pushButton_blue_2, SIGNAL(clicked()), this, SLOT(setColorBlue2()));
-    connect(pushButton_Lblue_2, SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
-    connect(pushButton_yellow_2, SIGNAL(clicked()), this, SLOT(setColorYellow2()));
-    connect(pushButton_Lyellow_2, SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
-    connect(pushButton_cyan_2, SIGNAL(clicked()), this, SLOT(setColorCyan2()));
-    connect(pushButton_Lcyan_2, SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
-    connect(pushButton_magenta_2, SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
-    connect(pushButton_Lmagenta_2, SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
-    connect(pushButton_white_2, SIGNAL(clicked()), this, SLOT(setColorWhite2()));
-    connect(pushButton_Lwhite_2, SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
+        connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
+        connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
+        connect(pushButton_green_2, SIGNAL(clicked()), this, SLOT(setColorGreen2()));
+        connect(pushButton_Lgreen_2, SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
+        connect(pushButton_red_2, SIGNAL(clicked()), this, SLOT(setColorRed2()));
+        connect(pushButton_Lred_2, SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
+        connect(pushButton_blue_2, SIGNAL(clicked()), this, SLOT(setColorBlue2()));
+        connect(pushButton_Lblue_2, SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
+        connect(pushButton_yellow_2, SIGNAL(clicked()), this, SLOT(setColorYellow2()));
+        connect(pushButton_Lyellow_2, SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
+        connect(pushButton_cyan_2, SIGNAL(clicked()), this, SLOT(setColorCyan2()));
+        connect(pushButton_Lcyan_2, SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
+        connect(pushButton_magenta_2, SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
+        connect(pushButton_Lmagenta_2, SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
+        connect(pushButton_white_2, SIGNAL(clicked()), this, SLOT(setColorWhite2()));
+        connect(pushButton_Lwhite_2, SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
 
-    connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
-    connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
+        connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
+        connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
 
-    // the GMCP warning is hidden by default and is only enabled when the value is toggled
-    need_reconnect_for_data_protocol->hide();
-    connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
-    connect(mEnableMSDP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
+        // the GMCP warning is hidden by default and is only enabled when the value is toggled
+        need_reconnect_for_data_protocol->hide();
+        connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
+        connect(mEnableMSDP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
 
-    // same with special connection warnings
-    need_reconnect_for_specialoption->hide();
-    connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
-    connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+        // same with special connection warnings
+        need_reconnect_for_specialoption->hide();
+        connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+        connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
 
-    // Indentation resumed at correct amount
         fontComboBox->setCurrentFont(pHost->mDisplayFont);
         if (mFontSize < 0) {
             mFontSize = 10;
@@ -1310,159 +1308,158 @@ void dlgProfilePreferences::slot_save_and_exit()
 {
     Host* pHost = mpHost;
     if (pHost) {
-    // Indentation wrong here to better show changes
-    if (dictList->currentItem()) {
-        pHost->mSpellDic = dictList->currentItem()->text();
-    }
-    pHost->mEnableSpellCheck = groupBox_spellCheck->isChecked();
-    pHost->mWrapAt = wrap_at_spinBox->value();
-    pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
-    pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
-    pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
-    pHost->mCommandSeparator = command_separator_lineedit->text();
-    pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
-    pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
-    pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
-    pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
-    pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
-    pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
-    pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
-    pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
-    pHost->mEnableGMCP = mEnableGMCP->isChecked();
-    pHost->mEnableMSDP = mEnableMSDP->isChecked();
-    pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
-    if (pHost->mpMap && pHost->mpMap->mpMapper) {
-        pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
-        bool isAreaWidgetInNeedOfResetting = false;
-        if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAID == -1)) {
-            isAreaWidgetInNeedOfResetting = true;
+        if (dictList->currentItem()) {
+            pHost->mSpellDic = dictList->currentItem()->text();
         }
 
-        pHost->mpMap->mpMapper->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
-        if (isAreaWidgetInNeedOfResetting) {
-            // Corner case fixup:
-            pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
+        pHost->mEnableSpellCheck = groupBox_spellCheck->isChecked();
+        pHost->mWrapAt = wrap_at_spinBox->value();
+        pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
+        pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
+        pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
+        pHost->mCommandSeparator = command_separator_lineedit->text();
+        pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
+        pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
+        pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
+        pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
+        pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
+        pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
+        pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
+        pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
+        pHost->mEnableGMCP = mEnableGMCP->isChecked();
+        pHost->mEnableMSDP = mEnableMSDP->isChecked();
+        pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+        if (pHost->mpMap && pHost->mpMap->mpMapper) {
+            pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+            bool isAreaWidgetInNeedOfResetting = false;
+            if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAID == -1)) {
+                isAreaWidgetInNeedOfResetting = true;
+            }
+
+            pHost->mpMap->mpMapper->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
+            if (isAreaWidgetInNeedOfResetting) {
+                // Corner case fixup:
+                pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
+            }
+            pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
+            pHost->mpMap->mpMapper->update();
         }
-        pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
-        pHost->mpMap->mpMapper->update();
-    }
-    pHost->mBorderTopHeight = topBorderHeight->value();
-    pHost->mBorderBottomHeight = bottomBorderHeight->value();
-    pHost->mBorderLeftWidth = leftBorderWidth->value();
-    pHost->mBorderRightWidth = rightBorderWidth->value();
-    pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-    pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
-    pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
-    pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
-    pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
-    pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
+        pHost->mBorderTopHeight = topBorderHeight->value();
+        pHost->mBorderBottomHeight = bottomBorderHeight->value();
+        pHost->mBorderLeftWidth = leftBorderWidth->value();
+        pHost->mBorderRightWidth = rightBorderWidth->value();
+        pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
+        pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
+        pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
+        pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
+        pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
+        pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
-    }
-
-    QString lIgnore = doubleclick_ignore_lineedit->text();
-    pHost->mDoubleClickIgnore.clear();
-    for (auto character : lIgnore) {
-        pHost->mDoubleClickIgnore.insert(character);
-    }
-
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-
-    QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
-    QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
-    QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
-    QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
-
-    QString newIrcNick = ircNick->text();
-    QString newIrcHost = ircHostName->text();
-    QString newIrcPort = ircHostPort->text();
-    QString newIrcChannels = ircChannels->text();
-    QStringList newChanList;
-    int nIrcPort = dlgIRC::DefaultHostPort;
-    bool restartIrcClient = false;
-
-    if (newIrcHost.isEmpty()) {
-        newIrcHost = dlgIRC::DefaultHostName;
-    }
-
-    if (!newIrcPort.isEmpty()) {
-        bool ok;
-        nIrcPort = newIrcPort.toInt(&ok);
-        if (!ok) {
-            nIrcPort = dlgIRC::DefaultHostPort;
-        } else if (nIrcPort > 65535 || nIrcPort < 1) {
-            nIrcPort = dlgIRC::DefaultHostPort;
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            mudlet::self()->mConsoleMap[pHost]->changeColors();
         }
-        newIrcPort = QString::number(nIrcPort);
-    }
 
-    if (newIrcNick.isEmpty()) {
-        qsrand(QTime::currentTime().msec());
-        newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
-    }
+        QString lIgnore = doubleclick_ignore_lineedit->text();
+        pHost->mDoubleClickIgnore.clear();
+        for (auto character : lIgnore) {
+            pHost->mDoubleClickIgnore.insert(character);
+        }
 
-    if (!newIrcChannels.isEmpty()) {
-        QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
-        for (QString s : tL) {
-            if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
-                newChanList << s;
+        pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+
+        QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
+        QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
+        QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
+        QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
+
+        QString newIrcNick = ircNick->text();
+        QString newIrcHost = ircHostName->text();
+        QString newIrcPort = ircHostPort->text();
+        QString newIrcChannels = ircChannels->text();
+        QStringList newChanList;
+        int nIrcPort = dlgIRC::DefaultHostPort;
+        bool restartIrcClient = false;
+
+        if (newIrcHost.isEmpty()) {
+            newIrcHost = dlgIRC::DefaultHostName;
+        }
+
+        if (!newIrcPort.isEmpty()) {
+            bool ok;
+            nIrcPort = newIrcPort.toInt(&ok);
+            if (!ok) {
+                nIrcPort = dlgIRC::DefaultHostPort;
+            } else if (nIrcPort > 65535 || nIrcPort < 1) {
+                nIrcPort = dlgIRC::DefaultHostPort;
+            }
+            newIrcPort = QString::number(nIrcPort);
+        }
+
+        if (newIrcNick.isEmpty()) {
+            qsrand(QTime::currentTime().msec());
+            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+        }
+
+        if (!newIrcChannels.isEmpty()) {
+            QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
+            for (QString s : tL) {
+                if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
+                    newChanList << s;
+                }
+            }
+        } else {
+            newChanList = dlgIRC::DefaultChannels;
+        }
+        newIrcChannels = newChanList.join(" ");
+
+        if (oldIrcNick != newIrcNick) {
+            dlgIRC::writeIrcNickName(pHost, newIrcNick);
+
+            // if the client is active, update our client nickname.
+            if (mudlet::self()->mpIrcClientMap[pHost]) {
+                mudlet::self()->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
             }
         }
-    } else {
-        newChanList = dlgIRC::DefaultChannels;
-    }
-    newIrcChannels = newChanList.join(" ");
 
-    if (oldIrcNick != newIrcNick) {
-        dlgIRC::writeIrcNickName(pHost, newIrcNick);
-
-        // if the client is active, update our client nickname.
-        if (mudlet::self()->mpIrcClientMap[pHost]) {
-            mudlet::self()->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
+        if (oldIrcChannels != newIrcChannels) {
+            dlgIRC::writeIrcChannels(pHost, newChanList);
         }
-    }
 
-    if (oldIrcChannels != newIrcChannels) {
-        dlgIRC::writeIrcChannels(pHost, newChanList);
-    }
+        if (oldIrcHost != newIrcHost) {
+            dlgIRC::writeIrcHostName(pHost, newIrcHost);
+            restartIrcClient = true;
+        }
 
-    if (oldIrcHost != newIrcHost) {
-        dlgIRC::writeIrcHostName(pHost, newIrcHost);
-        restartIrcClient = true;
-    }
+        if (oldIrcPort != newIrcPort) {
+            dlgIRC::writeIrcHostPort(pHost, nIrcPort);
+            restartIrcClient = true;
+        }
 
-    if (oldIrcPort != newIrcPort) {
-        dlgIRC::writeIrcHostPort(pHost, nIrcPort);
-        restartIrcClient = true;
-    }
+        // restart the irc client if it is active and we have changed host/port.
+        if (restartIrcClient && mudlet::self()->mpIrcClientMap[pHost]) {
+            mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
+        }
 
-    // restart the irc client if it is active and we have changed host/port.
-    if (restartIrcClient && mudlet::self()->mpIrcClientMap[pHost]) {
-        mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
-    }
+        setDisplayFont();
 
-    setDisplayFont();
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            int x = mudlet::self()->mConsoleMap[pHost]->width();
+            int y = mudlet::self()->mConsoleMap[pHost]->height();
+            QSize s = QSize(x, y);
+            QResizeEvent event(s, s);
+            QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
+        }
 
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        int x = mudlet::self()->mConsoleMap[pHost]->width();
-        int y = mudlet::self()->mConsoleMap[pHost]->height();
-        QSize s = QSize(x, y);
-        QResizeEvent event(s, s);
-        QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
-    }
+        pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+        pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+        pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        if (pHost->mpEditorDialog) {
+            pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
+        }
 
-    pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-    pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
-    pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
-    if (pHost->mpEditorDialog) {
-        pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
-    }
-
-    auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
-    pHost->mThemePreviewItemID = data.second;
-    pHost->mThemePreviewType = data.first;
-    // Incorrect indentation ends here:
+        auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
+        pHost->mThemePreviewItemID = data.second;
+        pHost->mThemePreviewType = data.first;
     }
 
     mudlet::self()->setToolBarIconSize(MainIconSize->value());
