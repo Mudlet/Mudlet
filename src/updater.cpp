@@ -95,11 +95,11 @@ void Updater::setupOnMacOS()
     msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
     // don't need to explicitly check for updates - sparkle will do so on its own
 
-    qDebug() << "1 launched from update?" << msparkleUpdater->justUpdated();
+    QProcess().start("logger", QStringList() << "1 launched from update?" << msparkleUpdater->justUpdated());
 
-    QTimer::singleShot(0, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
-    QTimer::singleShot(1000, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
-    QTimer::singleShot(5000, this, [this] { qDebug() << "3 launched from update?" << msparkleUpdater->justUpdated(); });
+    QTimer::singleShot(0, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
+    QTimer::singleShot(1000, this, [this] { QProcess().start("logger", QStringList() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
+    QTimer::singleShot(5000, this, [this] { QProcess().start("logger", QStringList() << "3 launched from update?" << msparkleUpdater->justUpdated(); });
     showChangelog();
 }
 #endif
