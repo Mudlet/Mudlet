@@ -260,8 +260,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         leftBorderWidth->setValue(pHost->mBorderLeftWidth);
         qDebug() << "loading: left border width:" << pHost->mBorderLeftWidth;
         rightBorderWidth->setValue(pHost->mBorderRightWidth);
-        MainIconSize->setValue(mudlet::self()->mMainIconSize);
-        TEFolderIconSize->setValue(mudlet::self()->mTEFolderIconSize);
+        MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
+        TEFolderIconSize->setValue(mudlet::self()->mEditorTreeWidgetIconSize);
         showMenuBar->setChecked(mudlet::self()->mShowMenuBar);
         if (!showMenuBar->isChecked()) {
             showToolbar->setChecked(true);
@@ -1324,22 +1324,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     //pHost->mMXPMode = mMXPMode->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
-    mudlet::self()->mMainIconSize = MainIconSize->value();
-    mudlet::self()->mTEFolderIconSize = TEFolderIconSize->value();
-    mudlet::self()->setIcoSize(MainIconSize->value());
-    pHost->mpEditorDialog->setTBIconSize(0);
-    mudlet::self()->mShowMenuBar = showMenuBar->isChecked();
-    if (showMenuBar->isChecked()) {
-        mudlet::self()->menuBar()->show();
-    } else {
-        mudlet::self()->menuBar()->hide();
-    }
-    mudlet::self()->mShowToolbar = showToolbar->isChecked();
-    if (showToolbar->isChecked()) {
-        mudlet::self()->mpMainToolBar->show();
-    } else {
-        mudlet::self()->mpMainToolBar->hide();
-    }
+    mudlet::self()->setToolBarIconSize(MainIconSize->value());
+    mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
+    mudlet::self()->setMenuBarVisible(showMenuBar->isChecked());
+    mudlet::self()->setToolBarVisible(showToolbar->isChecked());
     pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
     pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
