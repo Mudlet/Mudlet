@@ -27,6 +27,8 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
+// remove me when unneeded
+#include <QByteArray>
 #include "post_guard.h"
 
 Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false)
@@ -95,12 +97,14 @@ void Updater::setupOnMacOS()
     msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
     // don't need to explicitly check for updates - sparkle will do so on its own
 
+    // Needed to enable logging to syslog or journald.
+    qputenv("QT_LOGGING_TO_CONSOLE", QByteArray("0"));
+
     qDebug() << "1 launched from update?" << msparkleUpdater->justUpdated();
 
     QTimer::singleShot(0, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
     QTimer::singleShot(1000, this, [this] { qDebug() << "2 launched from update?" << msparkleUpdater->justUpdated(); });
     QTimer::singleShot(5000, this, [this] { qDebug() << "3 launched from update?" << msparkleUpdater->justUpdated(); });
-    showChangelog();
 }
 #endif
 
