@@ -18,6 +18,9 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
     security set-keychain-settings -t 3600 -u $KEYCHAIN
     security import Certificates.p12 -k $KEYCHAIN -P "$CERT_PW" -T /usr/bin/codesign
     IDENTITY="Developer ID Application: Vadim Peretokin (65HQ5H22TH)"
+    echo "Imported identity:"
+    security find-identity
+    echo "----"
   fi
 
   ln -s "${TRAVIS_BUILD_DIR}" source
