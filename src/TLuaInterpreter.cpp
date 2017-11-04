@@ -11733,6 +11733,9 @@ QString TLuaInterpreter::get_lua_string(const QString& stringName)
     return QString(lua_tostring(L, 1));
 }
 
+
+// check for <whitespace><no_valid_representation> as output
+
 int TLuaInterpreter::noop(lua_State* L)
 {
     return 0;
