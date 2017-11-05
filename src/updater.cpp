@@ -104,32 +104,6 @@ void Updater::setupOnMacOS()
     CocoaInitializer initializer;
     msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
     // don't need to explicitly check for updates - sparkle will do so on its own
-
-    QProcess syslog;
-    syslog.setProcessChannelMode(QProcess::MergedChannels);
-    syslog.start("syslog", QStringList() << "-s" << "-l" << "notice" << "1 launched from update?" << QString::number(msparkleUpdater->justUpdated()));
-    syslog.waitForFinished();
-
-    SYSLOG("Yeah BABY SHIT WORKS");
-
-    QTimer::singleShot(0, this, [this] {
-         QProcess syslog;
-    syslog.setProcessChannelMode(QProcess::MergedChannels);
-    syslog.start("syslog", QStringList() << "-s" << "-l" << "notice" << "2 launched from update?" << QString::number(msparkleUpdater->justUpdated()));
-    syslog.waitForFinished();
-    });
-    QTimer::singleShot(1000, this, [this] {
-         QProcess syslog;
-    syslog.setProcessChannelMode(QProcess::MergedChannels);
-    syslog.start("syslog", QStringList() << "-s" << "-l" << "notice" << "3 launched from update?" << QString::number(msparkleUpdater->justUpdated()));
-    syslog.waitForFinished();
-    });
-    QTimer::singleShot(5000, this, [this] {     QProcess syslog;
-    syslog.setProcessChannelMode(QProcess::MergedChannels);
-    syslog.start("syslog", QStringList() << "-s" << "-l" << "notice" << "4 launched from update?" << QString::number(msparkleUpdater->justUpdated()));
-    syslog.waitForFinished();
-     });
-    showChangelog();
 }
 #endif
 
