@@ -152,9 +152,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
 
     if (pNewParent) {
         pNewParent->Tree<TAction>::addChild(pChild, parentPosition, childPosition);
-        if (pChild) {
-            pChild->Tree<TAction>::setParent(pNewParent);
-        }
+        pChild->Tree<TAction>::setParent(pNewParent);
         pChild->setDataChanged();
         pNewParent->setDataChanged();
         //cout << "dumping family of newParent:"<<endl;

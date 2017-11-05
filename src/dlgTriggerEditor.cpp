@@ -423,8 +423,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(showDebugAreaAction, SIGNAL(triggered()), this, SLOT(slot_debug_mode()));
 
     toolBar = new QToolBar();
-    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
-    toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    toolBar2 = new QToolBar();
+
+    connect(mudlet::self(), SIGNAL(signal_setToolBarIconSize(const int)), this, SLOT(slot_setToolBarIconSize(const int)));
+    connect(mudlet::self(), SIGNAL(signal_setTreeIconSize(const int)), this, SLOT(slot_setTreeWidgetIconSize(const int)));
+    slot_setToolBarIconSize(mudlet::self()->mToolbarIconSize);
+    slot_setTreeWidgetIconSize(mudlet::self()->mEditorTreeWidgetIconSize);
+
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(saveAction);
@@ -441,10 +446,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(saveProfileAsAction);
     toolBar->addAction(profileSaveAction);
 
-
-    toolBar2 = new QToolBar();
-    toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
     connect(button_displayAllVariables, SIGNAL(toggled(bool)), this, SLOT(slot_toggleHiddenVariables(bool)));
 
     connect(mpVarsMainArea->checkBox_variable_hidden, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar(bool)));
@@ -568,7 +569,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     frame_rightBottom->hide();
 
     readSettings();
-    setTBIconSize(0);
 
     treeWidget_searchResults->setColumnCount(4);
     QStringList labelList;
@@ -595,7 +595,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                      << "exact match"
                      << "Lua function"
                      << "line spacer"
-                     << "color trigger";
+                     << "color trigger"
+                     << "prompt";
         QComboBox* pBox = pItem->comboBox_patternType;
         pBox->addItems(_patternList);
         pBox->setItemData(0, QVariant(i));
@@ -607,6 +608,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->mRow = i;
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
     }
@@ -657,24 +659,39 @@ void dlgTriggerEditor::slot_viewErrorsAction()
 }
 
 
-void dlgTriggerEditor::setTBIconSize(int s)
+void dlgTriggerEditor::slot_setToolBarIconSize(const int s)
 {
-    if (mudlet::self()->mMainIconSize > 2) {
+    if (s <= 0) {
+        return;
+    }
+
+    if (s > 2) {
         toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         toolBar2->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
-    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
-    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
-    treeWidget_triggers->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_aliases->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_timers->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_scripts->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_keys->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_actions->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_variables->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
+
+    QSize newSize(s * 8, s * 8);
+    toolBar->setIconSize(newSize);
+    toolBar2->setIconSize(newSize);
+}
+
+void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
+{
+    if (s <= 0) {
+        return;
+    }
+
+    QSize newSize(s * 8, s * 8);
+    treeWidget_triggers->setIconSize(newSize);
+    treeWidget_aliases->setIconSize(newSize);
+    treeWidget_timers->setIconSize(newSize);
+    treeWidget_scripts->setIconSize(newSize);
+    treeWidget_keys->setIconSize(newSize);
+    treeWidget_actions->setIconSize(newSize);
+    treeWidget_variables->setIconSize(newSize);
 }
 
 void dlgTriggerEditor::slot_choseButtonColor()
@@ -693,12 +710,12 @@ void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 
 void dlgTriggerEditor::readSettings()
 {
-    /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-	   Furthermore, we skip the version from the application name to follow the convention.
-	   For compatibility with older settings, if no config is loaded
-	   from the config directory "mudlet", application "Mudlet", we try to load from the config
-	   directory "Mudlet", application "Mudlet 1.0". */
+    /* In case sensitive environments, two different config directories
+       were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+       Furthermore, we skip the version from the application name to follow the convention.
+       For compatibility with older settings, if no config is loaded
+       from the config directory "mudlet", application "Mudlet", we try to load from the config
+       directory "Mudlet", application "Mudlet 1.0". */
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
@@ -711,10 +728,10 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
-	   (the organization name) to "mudlet".
-	   Furthermore, we skip the version from the application name to follow the convention.*/
+    /* In case sensitive environments, two different config directories
+       were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
+       (the organization name) to "mudlet".
+       Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
@@ -3886,7 +3903,8 @@ void dlgTriggerEditor::saveTrigger()
     QList<int> regexPropertyList;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
-        if (pattern.size() < 1) {
+        int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
+        if (pattern.isEmpty() && patternType != REGEX_PROMPT) {
             continue;
         }
         regexList << pattern;
@@ -3912,6 +3930,9 @@ void dlgTriggerEditor::saveTrigger()
             break;
         case 6:
             regexPropertyList << REGEX_COLOR_PATTERN;
+            break;
+        case 7:
+            regexPropertyList << REGEX_PROMPT;
             break;
         }
     }
@@ -4757,42 +4778,63 @@ void dlgTriggerEditor::slot_set_pattern_type_color(int type)
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 1:
         palette.setColor(QPalette::Text, QColor(Qt::blue));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 2:
         palette.setColor(QPalette::Text, QColor(195, 0, 0));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 3:
         palette.setColor(QPalette::Text, QColor(0, 195, 0));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 4:
         palette.setColor(QPalette::Text, QColor(0, 155, 155));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 5:
         palette.setColor(QPalette::Text, QColor(137, 0, 205));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 6:
         palette.setColor(QPalette::Text, QColor(100, 100, 100));
         pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->show();
         pItem->pushButton_bgColor->show();
+        pItem->pushButton_prompt->hide();
+        break;
+    case 7:
+        palette.setColor(QPalette::Text, QColor(Qt::black));
+        pItem->lineEdit_pattern->hide();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
+        if (mpHost->mTelnet.mGA_Driver) {
+            pItem->pushButton_prompt->setText(tr("match on the prompt line"));
+            pItem->pushButton_prompt->setToolTip(QString());
+        } else {
+            pItem->pushButton_prompt->setText(tr("match on the prompt line (disabled)"));
+            pItem->pushButton_prompt->setToolTip(tr("A Go-Ahead (GA) signal from the game is required to make this feature work"));
+        }
+        pItem->pushButton_prompt->show();
         break;
     }
     pItem->lineEdit_pattern->setPalette(palette);
@@ -4846,6 +4888,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(0);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_PERL:
@@ -4853,6 +4897,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(1);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
@@ -4860,6 +4906,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(2);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_EXACT_MATCH:
@@ -4867,6 +4915,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(3);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_LUA_CODE:
@@ -4874,6 +4924,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(4);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_LINE_SPACER:
@@ -4881,6 +4933,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(5);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_COLOR_PATTERN:
@@ -4888,6 +4942,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(6);
                 pItem->pushButton_fgColor->show();
                 pItem->pushButton_bgColor->show();
+                pItem->pushButton_prompt->hide();
                 pItem->lineEdit_pattern->hide();
                 if (!pT->mColorPatternList[i]) {
                     break;
@@ -4895,11 +4950,26 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->fgR, pT->mColorPatternList[i]->fgG, pT->mColorPatternList[i]->fgB).name()));
                 pItem->pushButton_bgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->bgR, pT->mColorPatternList[i]->bgG, pT->mColorPatternList[i]->bgB).name()));
                 break;
+            case REGEX_PROMPT:
+                palette.setColor(QPalette::Text, QColor(Qt::black));
+                pBox->setCurrentIndex(7);
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                    if (mpHost->mTelnet.mGA_Driver) {
+                        pItem->pushButton_prompt->setText(tr("match on the prompt line"));
+                        pItem->pushButton_prompt->setToolTip(QString());
+                    } else {
+                        pItem->pushButton_prompt->setText(tr("match on the prompt line (disabled)"));
+                        pItem->pushButton_prompt->setToolTip(tr("A Go-Ahead (GA) signal from the game is required to make this feature work"));
+                    }
+                    pItem->pushButton_prompt->show();
+                pItem->lineEdit_pattern->hide();
+                break;
             }
 
             pItem->lineEdit_pattern->setPalette(palette);
-            pItem->lineEdit_pattern->setText(patternList[i]);
         }
+        // reset the rest of the patterns that don't have any data
         for (int i = patternList.size(); i < 50; i++) {
             mTriggerPatternEdit[i]->lineEdit_pattern->clear();
             if (mTriggerPatternEdit[i]->lineEdit_pattern->isHidden()) {
@@ -4907,6 +4977,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             }
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
+            mTriggerPatternEdit[i]->pushButton_prompt->hide();
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
         }
         // Scroll to the last used pattern:
