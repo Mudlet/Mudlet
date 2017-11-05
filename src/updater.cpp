@@ -110,6 +110,8 @@ void Updater::setupOnMacOS()
     syslog.start("syslog", QStringList() << "-s" << "-l" << "notice" << "1 launched from update?" << QString::number(msparkleUpdater->justUpdated()));
     syslog.waitForFinished();
 
+    SYSLOG("Yeah BABY SHIT WORKS");
+
     QTimer::singleShot(0, this, [this] {
          QProcess syslog;
     syslog.setProcessChannelMode(QProcess::MergedChannels);
