@@ -43,6 +43,7 @@ public:
     void showChangelog() const;
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
+    bool shouldShowChangelog();
 
 private:
     dblsqd::Feed* feed;

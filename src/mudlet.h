@@ -419,8 +419,6 @@ private:
     void slot_toggle_compact_input_line();
     void set_compact_input_line();
 
-    bool shouldShowChangelog();
-
     QSettings* getQSettings();
 };
 

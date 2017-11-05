@@ -241,4 +241,35 @@ void Updater::recordUpdateTime() const
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     file.close();
 }
+
+// returns true if Mudlet was updated automatically and a changelog should be shown
+// now that the user is on the new version. If the user updated manually, then there
+// is no need as they would have seen the changelog while updating
+bool Updater::shouldShowChangelog()
+{
+    // Don't show changelog for automatic updates on Sparkle - Sparkle doesn't support it
+#if defined (Q_OS_MAC)
+    return false;
+#endif
+
+    if (!updateAutomatically() ) {
+        return false;
+    }
+
+    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
+    bool opened = file.open(QIODevice::ReadOnly);
+    qint64 updateTimestamp;
+    if (!opened) {
+        return false;
+    }
+    QDataStream ifs(&file);
+    ifs >> updateTimestamp;
+    file.close();
+
+    auto currentDateTime = QDateTime::currentDateTime().toMSecsSinceEpoch();
+    auto minsSinceUpdate = (currentDateTime - updateTimestamp) / 1000 / 60;
+
+    return minsSinceUpdate >= 5;
+}
+
 #endif // Q_OS_LINUX
