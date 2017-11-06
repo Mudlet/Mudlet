@@ -174,9 +174,7 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
-        if (pChild) {
-            pChild->setParent(pNewParent);
-        }
+        pChild->setParent(pNewParent);
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     } else {

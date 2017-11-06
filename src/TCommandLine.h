@@ -42,9 +42,8 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TCommandLine)
-
 public:
+    Q_DISABLE_COPY(TCommandLine)
     TCommandLine(Host*, TConsole*, QWidget*);
     ~TCommandLine();
     void focusInEvent(QFocusEvent*) override;

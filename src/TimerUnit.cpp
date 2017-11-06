@@ -123,9 +123,7 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
-        if (pChild) {
-            pChild->setParent(pNewParent);
-        }
+        pChild->setParent(pNewParent);
     } else {
         pChild->Tree<TTimer>::setParent(nullptr);
         addTimerRootNode(pChild, parentPosition, childPosition);
