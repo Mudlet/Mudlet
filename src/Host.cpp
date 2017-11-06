@@ -735,8 +735,10 @@ bool Host::installPackage(const QString& fileName, int module)
     QFile file2;
     if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
         QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
-        QString _dest = mudlet::getMudletPath(mudlet::profileHomePath, getName(), packageName);
-        QDir _tmpDir(_home); // home directory for the PROFILE
+        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+        // home directory for the PROFILE
+        QDir _tmpDir(_home);
+        // directory to store the expanded archive file contents
         _tmpDir.mkpath(_dest);
 
         // TODO: report failure to create destination folder for package/module in profile

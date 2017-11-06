@@ -226,9 +226,9 @@ function InstallZlib() {
 }
 
 function InstallLibzip() {
-  DownloadFile "https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz" "libzip_0.11.2.orig.tar.gz"
-  ExtractTar "libzip_0.11.2.orig.tar.gz" "libzip"
-  Set-Location libzip\libzip-0.11.2
+  DownloadFile "https://libzip.org/download/libzip-1.3.0.tar.gz" "libzip-1.3.0.tar.gz"
+  ExtractTar "libzip-1.3.0.tar.gz" "libzip"
+  Set-Location libzip\libzip-1.3.0
   RunConfigure
   RunMake
   RunMakeInstall

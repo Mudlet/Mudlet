@@ -62,12 +62,11 @@ class TLuaInterpreter : public QThread
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TLuaInterpreter)
-
     friend class TForkedProcess;
     friend class LuaInterface;
 
 public:
+    Q_DISABLE_COPY(TLuaInterpreter)
     TLuaInterpreter(Host* mpHost, int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
@@ -109,12 +108,14 @@ public:
     int startTempLineTrigger(int, int, const QString&);
     int startTempRegexTrigger(const QString&, const QString&);
     int startTempColorTrigger(int, int, const QString&);
+    int startTempPromptTrigger(const QString& function);
     int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
-    int startPermKey(QString&, QString&, int &, int &, QString&);
+    int startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
@@ -257,6 +258,7 @@ public:
     static int tempTrigger(lua_State* L);
     static int tempRegexTrigger(lua_State* L);
     static int tempButtonToolbar(lua_State* L);
+    static int setButtonStyleSheet(lua_State* L);
     static int tempButton(lua_State* L);
     static int tempComplexRegexTrigger(lua_State* L);
     static int killTrigger(lua_State* L);
@@ -405,11 +407,13 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
-    static int setServerEncoding(lua_State *);
-    static int getServerEncoding(lua_State *);
-    static int getServerEncodingsList(lua_State *);
+    static int setServerEncoding(lua_State*);
+    static int getServerEncoding(lua_State*);
+    static int getServerEncodingsList(lua_State*);
     static int alert(lua_State* L);
-// PLACEMARKER: End of Lua functions declarations
+    static int tempPromptTrigger(lua_State*);
+    static int permPromptTrigger(lua_State*);
+    // PLACEMARKER: End of Lua functions declarations
 
 public slots:
     void slot_replyFinished(QNetworkReply*);

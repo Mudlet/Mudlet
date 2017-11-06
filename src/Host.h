@@ -247,6 +247,9 @@ public:
     // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
 
+    // search engine URL prefix to search query
+    QPair<QString, QString> mSearchEngine;
+
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
     // remembering this value to show what the user has selected does have its
     // flaws in case of items getting created/deleted, but this is just a

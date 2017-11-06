@@ -100,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>18</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -109,6 +109,7 @@
     </property>
     <addaction name="dactionScriptEditor"/>
     <addaction name="actionShow_Map"/>
+    <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
     <addaction name="actionLive_Help_Chat"/>
     <addaction name="actionPackage_manager"/>
@@ -357,6 +358,14 @@
    </property>
    <property name="shortcut">
     <string>Alt+V</string>
+   </property>
+  </action>
+  <action name="dactionInputLine">
+   <property name="text">
+    <string>Compact input line</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+L</string>
    </property>
   </action>
  </widget>

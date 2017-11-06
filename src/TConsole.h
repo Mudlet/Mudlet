@@ -55,9 +55,8 @@ class TConsole : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TConsole)
-
 public:
+    Q_DISABLE_COPY(TConsole)
     TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
     void reset();
     void resetMainConsole();
@@ -263,6 +262,7 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     bool mSaveLayoutRequested;
+    QWidget *mpButtonMainLayer;
 
 signals:
 
@@ -278,6 +278,7 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+
 };
 
 #endif // MUDLET_TCONSOLE_H

@@ -72,9 +72,8 @@ class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(mudlet)
-
 public:
+    Q_DISABLE_COPY(mudlet)
     mudlet();
     ~mudlet();
     static mudlet* self();
@@ -158,9 +157,12 @@ public:
     bool mShowMenuBar;
     bool mShowToolbar;
     bool isGoingDown() { return mIsGoingDown; }
-    int mMainIconSize;
-    int mTEFolderIconSize;
-    void setIcoSize(int s);
+    int mToolbarIconSize;
+    int mEditorTreeWidgetIconSize;
+    void setToolBarIconSize(const int);
+    void setEditorTreeWidgetIconSize(const int);
+    void setToolBarVisible(const bool);
+    void setMenuBarVisible(const bool);
     void replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
     void replayOver();
@@ -208,6 +210,8 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    bool compactInputLine() const { return mCompactInputLine; }
+    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
 
     static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
@@ -324,6 +328,8 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
+    void signal_setToolBarIconSize(const int);
+    void signal_setTreeIconSize(const int);
 
 private slots:
     void slot_close_profile();
@@ -391,15 +397,19 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
+    bool mCompactInputLine;
+
+    void slot_toggle_compact_input_line();
+
+    void set_compact_input_line();
 };
 
 class TConsoleMonitor : public QObject
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TConsoleMonitor)
-
 public:
+    Q_DISABLE_COPY(TConsoleMonitor)
     TConsoleMonitor(QObject* parent) : QObject(parent) {}
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;

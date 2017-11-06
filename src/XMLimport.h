@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,6 +31,7 @@
 #include <QMultiHash>
 #include <QPointer>
 #include <QXmlStreamReader>
+#include <QClipboard>
 #include "post_guard.h"
 
 class Host;
@@ -48,20 +50,20 @@ class XMLimport : public QXmlStreamReader
 
 public:
     XMLimport(Host*);
-
     bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
+    std::pair<int, int> importFromClipboard();
 
 private:
-    void readPackage();
+    std::pair<int, int> readPackage();
     void readUnknownPackage();
 
     void readHostPackage();
-    void readTriggerPackage();
-    void readTimerPackage();
-    void readAliasPackage();
-    void readActionPackage();
-    void readScriptPackage();
-    void readKeyPackage();
+    int readTriggerPackage();
+    int readTimerPackage();
+    int readAliasPackage();
+    int readActionPackage();
+    int readScriptPackage();
+    int readKeyPackage();
     void readVariablePackage();
     void readUnknownMapElement();
     void readMap();
@@ -82,12 +84,12 @@ private:
     void readUnknownKeyElement();
 
     void readHostPackage(Host*);
-    void readTriggerGroup(TTrigger*);
-    void readTimerGroup(TTimer*);
-    void readAliasGroup(TAlias*);
-    void readActionGroup(TAction*);
-    void readScriptGroup(TScript*);
-    void readKeyGroup(TKey*);
+    int readTriggerGroup(TTrigger*);
+    int readTimerGroup(TTimer*);
+    int readAliasGroup(TAlias*);
+    int readActionGroup(TAction*);
+    int readScriptGroup(TScript*);
+    int readKeyGroup(TKey*);
     void readVariableGroup(TVar*);
     void readHiddenVariables();
 

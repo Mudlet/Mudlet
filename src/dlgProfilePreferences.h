@@ -35,6 +35,7 @@
 #include <QtCore>
 #include <QDialog>
 #include <QDir>
+#include <QMap>
 #include "post_guard.h"
 
 class Host;
@@ -44,9 +45,8 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgProfilePreferences)
-
 public:
+    Q_DISABLE_COPY(dlgProfilePreferences)
     dlgProfilePreferences(QWidget*, Host*);
 
 public slots:
@@ -118,6 +118,7 @@ private slots:
     void slot_changeShowSpacesAndTabs(const bool);
     void slot_changeShowLineFeedsAndParagraphs(const bool);
     void slot_resetThemeUpdateLabel();
+    void slot_search_engine_edited(const QString&);
 
 private:
     void setColors();
@@ -131,6 +132,8 @@ private:
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);
 
+    QMap<QString, QString> mSearchEngineMap;
+
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();
@@ -140,6 +143,7 @@ private:
     void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void setSearchEngine(const QString&);
 
     void slot_script_selected(int index);
 };

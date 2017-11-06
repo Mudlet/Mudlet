@@ -260,8 +260,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         leftBorderWidth->setValue(pHost->mBorderLeftWidth);
         qDebug() << "loading: left border width:" << pHost->mBorderLeftWidth;
         rightBorderWidth->setValue(pHost->mBorderRightWidth);
-        MainIconSize->setValue(mudlet::self()->mMainIconSize);
-        TEFolderIconSize->setValue(mudlet::self()->mTEFolderIconSize);
+        MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
+        TEFolderIconSize->setValue(mudlet::self()->mEditorTreeWidgetIconSize);
         showMenuBar->setChecked(mudlet::self()->mShowMenuBar);
         if (!showMenuBar->isChecked()) {
             showToolbar->setChecked(true);
@@ -423,6 +423,35 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidgeta->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
+
+    // search engine load
+    // insert might be (/should?) moved elsewhere
+    mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
+    mSearchEngineMap.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
+    mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
+
+    // populate combobox
+    for(auto engineText : mSearchEngineMap.keys())
+    {
+        search_engine_combobox->addItem(engineText);
+    }
+
+    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
+
+    // set to saved value or default to Google
+    int savedText = search_engine_combobox->findText(mpHost->mSearchEngine.first);
+    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
+    setSearchEngine(search_engine_combobox->currentText());
+}
+
+void dlgProfilePreferences::setSearchEngine(const QString &text)
+{
+    mpHost->mSearchEngine = QPair<QString, QString>(text, mSearchEngineMap[text]);
+}
+
+void dlgProfilePreferences::slot_search_engine_edited(const QString &text)
+{
+    setSearchEngine(text);
 }
 
 void dlgProfilePreferences::setColors()
@@ -1295,22 +1324,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     //pHost->mMXPMode = mMXPMode->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
-    mudlet::self()->mMainIconSize = MainIconSize->value();
-    mudlet::self()->mTEFolderIconSize = TEFolderIconSize->value();
-    mudlet::self()->setIcoSize(MainIconSize->value());
-    pHost->mpEditorDialog->setTBIconSize(0);
-    mudlet::self()->mShowMenuBar = showMenuBar->isChecked();
-    if (showMenuBar->isChecked()) {
-        mudlet::self()->menuBar()->show();
-    } else {
-        mudlet::self()->menuBar()->hide();
-    }
-    mudlet::self()->mShowToolbar = showToolbar->isChecked();
-    if (showToolbar->isChecked()) {
-        mudlet::self()->mpMainToolBar->show();
-    } else {
-        mudlet::self()->mpMainToolBar->hide();
-    }
+    mudlet::self()->setToolBarIconSize(MainIconSize->value());
+    mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
+    mudlet::self()->setMenuBarVisible(showMenuBar->isChecked());
+    mudlet::self()->setToolBarVisible(showToolbar->isChecked());
     pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
     pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
@@ -1791,17 +1808,23 @@ void dlgProfilePreferences::slot_script_selected(int index)
 
     auto preview = edbeePreviewWidget->textDocument();
     if (itemType == QStringLiteral("trigger")) {
-        preview->setText(mpHost->getTriggerUnit()->getTrigger(itemId)->getScript());
+        auto pT = mpHost->getTriggerUnit()->getTrigger(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted trigger item}"));
     } else if (itemType == QStringLiteral("alias")) {
-        preview->setText(mpHost->getAliasUnit()->getAlias(itemId)->getScript());
+        auto pT = mpHost->getAliasUnit()->getAlias(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted alias item}"));
     } else if (itemType == QStringLiteral("script")) {
-        preview->setText(mpHost->getScriptUnit()->getScript(itemId)->getScript());
+        auto pT = mpHost->getScriptUnit()->getScript(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted script item}"));
     } else if (itemType == QStringLiteral("timer")) {
-        preview->setText(mpHost->getTimerUnit()->getTimer(itemId)->getScript());
+        auto pT = mpHost->getTimerUnit()->getTimer(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted timer item}"));
     } else if (itemType == QStringLiteral("key")) {
-        preview->setText(mpHost->getKeyUnit()->getKey(itemId)->getScript());
+        auto pT = mpHost->getKeyUnit()->getKey(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted key item}"));
     } else if (itemType == QStringLiteral("button")) {
-        preview->setText(mpHost->getActionUnit()->getAction(itemId)->getScript());
+        auto pT = mpHost->getActionUnit()->getAction(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted button item}"));
     }
 }
 

@@ -37,6 +37,7 @@
 #include <QScrollBar>
 #include <QString>
 #include <QToolTip>
+#include <QDesktopServices>
 #include "post_guard.h"
 
 
@@ -1177,9 +1178,18 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         QAction* action2 = new QAction("copy HTML", this);
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+
+        QString selectedEngine = mpHost->mSearchEngine.first;
+        QAction* action3 = new QAction(("search on " + selectedEngine), this);
+        connect(action3, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+
+        action3->setStatusTip("search selected text on " + selectedEngine);
+
         auto popup = new QMenu(this);
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addAction(action3);
+
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
@@ -1209,48 +1219,17 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     copySelectionToClipboardHTML();
 }
 
+void TTextEdit::slot_searchSelectionOnline()
+{
+    searchSelectionOnline();
+}
+
 
 void TTextEdit::copySelectionToClipboard()
 {
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
-    QString text;
-
-    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            QClipboard* clipboard = QApplication::clipboard();
-            clipboard->setText(text);
-            mSelectedRegion = QRegion(0, 0, 0, 0);
-            forceUpdate();
-            return;
-        }
-        // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
-        if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y()) {
-            text.append(mpBuffer->timeBuffer[y].leftRef(13));
-        }
-        int x = 0;
-        if (y == mPA.y()) {
-            x = mPA.x();
-        }
-        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            text.append(mpBuffer->lineBuffer[y].at(x));
-            if (y >= mPB.y()) {
-                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
-                    QClipboard* clipboard = QApplication::clipboard();
-                    clipboard->setText(text);
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-                    forceUpdate();
-                    return;
-                }
-            }
-            x++;
-        }
-        text.append("\n");
-    }
+    QString selectedText = getSelectedText();
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(selectedText);
 }
 
 void TTextEdit::copySelectionToClipboardHTML()
@@ -1352,6 +1331,65 @@ void TTextEdit::copySelectionToClipboardHTML()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
     return;
+}
+
+void TTextEdit::searchSelectionOnline()
+{
+    QString selectedText = getSelectedText(' ');
+    QString url = QUrl::toPercentEncoding(selectedText.trimmed());
+    url.prepend(mpHost->mSearchEngine.second);
+    QDesktopServices::openUrl(QUrl(url));
+}
+
+QString TTextEdit::getSelectedText(char newlineChar)
+{
+    // mPA QPoint where selection started
+    // mPB QPoint where selection ended
+
+    // if selection was made backwards swap
+    // right to left
+    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
+        swap(mPA, mPB);
+    }
+    // down to up
+    if (mPA.y() > mPB.y()) {
+        swap(mPA, mPB);
+    }
+
+    QString text;
+
+    // for each selected line
+    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
+        // stop if we are at the end of the buffer lines
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            mSelectedRegion = QRegion(0, 0, 0, 0);
+            forceUpdate();
+            return text;
+        }
+
+        int x = 0;
+        // if the selection started on this line
+        if (y == mPA.y()) {
+            // start from the column where the selection started
+            x = mPA.x();
+        }
+        // while we are not at the end of the buffer line
+        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
+            text.append(mpBuffer->lineBuffer[y].at(x));
+            // if the selection ended on this line
+            if (y >= mPB.y()) {
+                // stop if the selection ended on this column or the buffer line is ending
+                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+                    forceUpdate();
+                    return text;
+                }
+            }
+            x++;
+        }
+        // we never append the last character of a buffer line se we set our own
+        text.append(newlineChar);
+    }
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)

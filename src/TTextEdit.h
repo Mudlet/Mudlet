@@ -45,9 +45,8 @@ class TTextEdit : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TTextEdit)
-
 public:
+    Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
@@ -90,6 +89,7 @@ public:
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void copySelectionToClipboardHTML();
+    void searchSelectionOnline();
 
     QColor mBgColor;
     int mCursorY;
@@ -113,9 +113,11 @@ public slots:
     void slot_scrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
+    void slot_searchSelectionOnline();
 
 private:
     void initDefaultSettings();
+    QString getSelectedText(char newlineChar = '\n');
 
     int mFontHeight;
     int mFontWidth;

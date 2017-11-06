@@ -20,28 +20,28 @@
 ---   echo("'" .. s .. "'")
 ---   </pre>
 function string.cut(s, maxLen)
-	if string.len(s) > maxLen then
-		return string.sub(s, 1, maxLen)
-	else
-		return s
-	end
+  if string.len(s) > maxLen then
+    return string.sub(s, 1, maxLen)
+  else
+    return s
+  end
 end
 
 
 
 --- Enclose string by long brackets. <br/>
 function string.enclose(s, maxlevel)
-	s = "["..s.."]"
-	local level = 0
-	while 1 do
-		if maxlevel and level == maxlevel then
-			error( "error: maxlevel too low, "..maxlevel )
-		elseif string.find( s, "%["..string.rep( "=", level ).."%[" ) or string.find( s, "]"..string.rep( "=", level ).."]" ) then
-			level = level + 1
-		else
-			return "["..string.rep( "=", level )..s..string.rep( "=", level ).."]"
-		end
-	end
+  s = "[" .. s .. "]"
+  local level = 0
+  while 1 do
+    if maxlevel and level == maxlevel then
+      error( "error: maxlevel too low, " .. maxlevel )
+    elseif string.find( s, "%[" .. string.rep( "=", level ) .. "%[" ) or string.find( s, "]" .. string.rep( "=", level ) .. "]" ) then
+      level = level + 1
+    else
+      return "[" .. string.rep( "=", level ) .. s .. string.rep( "=", level ) .. "]"
+    end
+  end
 end
 
 
@@ -50,7 +50,7 @@ end
 ---
 --- @see string.starts
 function string.ends(String, Suffix)
-	return Suffix=='' or string.sub(String,-string.len(Suffix))==Suffix
+  return Suffix == '' or string.sub(String, -string.len(Suffix)) == Suffix
 end
 
 
@@ -66,11 +66,11 @@ end
 ---   echo(string.genNocasePattern("123abc"))
 ---   </pre>
 function string.genNocasePattern(s)
-	s = string.gsub(s, "%a",
-		function (c)
-			return string.format("[%s%s]", string.lower(c), string.upper(c))
-		end)
-	return s
+  s = string.gsub(s, "%a",
+  function(c)
+    return string.format("[%s%s]", string.lower(c), string.upper(c))
+  end)
+  return s
 end
 
 
@@ -98,11 +98,11 @@ end
 ---
 --- @see string.genNocasePattern
 function string.findPattern(text, pattern)
-	if string.find(text, pattern, 1) then
-		return string.sub(text, string.find(text, pattern, 1))
-	else
-		return nil
-	end
+  if string.find(text, pattern, 1) then
+    return string.sub(text, string.find(text, pattern, 1))
+  else
+    return nil
+  end
 end
 
 
@@ -127,16 +127,16 @@ end
 ---
 --- @return array with split strings
 function string:split(delimiter)
-	local result = { }
-	local from  = 1
-	local delim_from, delim_to = string.find( self, delimiter, from  )
-	while delim_from do
-		table.insert( result, string.sub( self, from , delim_from-1 ) )
-		from  = delim_to + 1
-		delim_from, delim_to = string.find( self, delimiter, from  )
-	end
-	table.insert( result, string.sub( self, from  ) )
-	return result
+  local result = { }
+  local from = 1
+  local delim_from, delim_to = string.find( self, delimiter, from  )
+  while delim_from do
+    table.insert( result, string.sub( self, from, delim_from - 1 ) )
+    from = delim_to + 1
+    delim_from, delim_to = string.find( self, delimiter, from  )
+  end
+  table.insert( result, string.sub( self, from  ) )
+  return result
 end
 
 
@@ -145,7 +145,7 @@ end
 ---
 --- @see string.ends
 function string.starts(String, Prefix)
-	return string.sub(String,1,string.len(Prefix))==Prefix
+  return string.sub(String, 1, string.len(Prefix)) == Prefix
 end
 
 
@@ -162,9 +162,9 @@ end
 ---   test = string.title(test)
 ---   </pre>
 function string:title()
-	assert(type(self) == "string", "string.title(): no word given to capitalize")
-	self = self:gsub("^%l", string.upper, 1)
-	return self
+  assert(type(self) == "string", "string.title(): no word given to capitalize")
+  self = self:gsub("^%l", string.upper, 1)
+  return self
 end
 
 
@@ -179,10 +179,9 @@ end
 ---   echo("'" .. str .. "'")
 ---   </pre>
 function string.trim(s)
-	if s then
-		return string.gsub(s, "^%s*(.-)%s*$", "%1")
-	else
-		return s
-	end
+  if s then
+    return string.gsub(s, "^%s*(.-)%s*$", "%1")
+  else
+    return s
+  end
 end
-

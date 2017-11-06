@@ -92,9 +92,8 @@ class cTelnet : public QObject
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(cTelnet)
-
 public:
+    Q_DISABLE_COPY(cTelnet)
     cTelnet(Host* pH);
     ~cTelnet();
     void connectIt(const QString& address, int port);

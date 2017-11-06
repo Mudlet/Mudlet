@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -88,8 +89,6 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgTriggerEditor)
-
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
         // having to modify existing code that puts it into the item:
@@ -152,6 +151,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
 
 public:
+    Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
@@ -177,6 +177,16 @@ public:
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void show_vars();
     void setThemeAndOtherSettings(const QString&);
+
+    enum class EditorViewType {
+        cmTriggerView = 0x01,
+        cmTimerView = 0x02,
+        cmAliasView = 0x03,
+        cmScriptView = 0x04,
+        cmActionView = 0x05,
+        cmKeysView = 0x06,
+        cmVarsView = 0x07
+    };
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -242,6 +252,8 @@ public slots:
     void slot_deleteAction();
     void slot_deleteKey();
     void slot_save_edit();
+    void slot_copy_xml();
+    void slot_paste_xml();
     void slot_chose_action_icon();
     void slot_showSearchAreaResults(const bool);
     void slot_script_main_area_delete_handler();
@@ -252,7 +264,8 @@ public slots:
     void grab_key_callback(int key, int modifier);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
-    void setTBIconSize(int);
+    void slot_setToolBarIconSize(const int);
+    void slot_setTreeWidgetIconSize(const int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
 
@@ -285,6 +298,13 @@ private:
     void addAction(bool isFolder);
     void addKey(bool);
 
+    void selectTriggerByID(int id);
+    void selectTimerByID(int id);
+    void selectAliasByID(int id);
+    void selectScriptByID(int id);
+    void selectActionByID(int id);
+    void selectKeyByID(int id);
+
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
     void expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -298,6 +318,13 @@ private:
     void exportAction(QFile&);
     void exportScript(QFile&);
     void exportKey(QFile&);
+
+    void exportTriggerToClipboard();
+    void exportTimerToClipboard();
+    void exportAliasToClipboard();
+    void exportActionToClipboard();
+    void exportScriptToClipboard();
+    void exportKeyToClipboard();
 
     void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
 
@@ -325,7 +352,7 @@ private:
 
     void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:
-        pItem->setData(0, ItemRole, cmVarsView);
+        pItem->setData(0, ItemRole, static_cast<int>(EditorViewType::cmVarsView));
         // What is its name:
         pItem->setData(0, NameRole, name);
         // What is its (Unique per item type) identifier - note that things
@@ -375,14 +402,8 @@ private:
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
 // Not used:    QLineEdit* mpCursorPositionIndicator;
+
     int mCurrentView;
-    static const int cmTriggerView;
-    static const int cmTimerView;
-    static const int cmAliasView;
-    static const int cmScriptView;
-    static const int cmActionView;
-    static const int cmKeysView;
-    static const int cmVarsView;
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
