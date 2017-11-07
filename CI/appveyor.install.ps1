@@ -14,8 +14,7 @@ if($64Bit){
 . CI\appveyor.set-environment.ps1
 SetQtBaseDir
 
-$ShPath = "$Env:MINGW_BASE_DIR\bin;$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
-$NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
+$Env:PATH = "$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 
 # Helper functions
 # see http://patrick.lioi.net/2011/08/18/powershell-and-calling-external-executables/
@@ -294,14 +293,17 @@ if (-not $(Test-Path "$workingBaseDir")) {
 
 # install dependencies
 
-$Env:PATH=$ShPath
-
 CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { InstallSevenZ }
 CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
 CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { InstallMsys }
 CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { InstallBoost }
 CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
+
+# Adapt the PATH variable again as we may have installed MinGW just now and can determine its location.
 SetMingwBaseDir
+$ShPath = "$Env:MINGW_BASE_DIR\bin;$Env:PATH"
+$NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
+
 CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { InstallYajl }
