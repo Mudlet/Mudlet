@@ -19,7 +19,8 @@ Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "
 if(!(Test-Path Env:MINGW_BASE_DIR)){
   $tmp = $Env:QT_BASE_DIR.Split("\\")
   $tmp[-2] = "Tools"
-  $Env:MINGW_BASE_DIR = $tmp -join "\"
+  $tmp[-1] = $tmp[-1] -replace "_32", "*"
+  $Env:MINGW_BASE_DIR = $tmp -join "\" | Resolve-Path
 }
 Write-Output "Using $Env:MINGW_BASE_DIR as MinGW base directory." | Tee-Object -File "$logFile" -Append
 
