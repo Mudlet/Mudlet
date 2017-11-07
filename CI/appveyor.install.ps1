@@ -87,8 +87,6 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
-  Write-Output "MinGW base dir: $Env:MINGW_BASE_DIR" | Tee-Object -File "$logFile" -Append
-  Write-Output "PATH: $Env:PATH" | Tee-Object -File "$logFile" -Append
   exec "bash" @("-c", "`"./configure $configureArguments`"")
 }
 
