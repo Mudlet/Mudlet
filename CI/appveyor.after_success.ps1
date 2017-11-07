@@ -23,9 +23,10 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
   Remove-Item * -include *.cpp, *.o
 
-  if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
-      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
-  } else {
+# temporary commenting to get appveyor squirrel packing to work
+#  if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
+#      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
+#  } else {
     # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
     git clone https://github.com/Mudlet/mudlet-installers.git C:\projects\installers
     cd C:\projects\installers\windows
@@ -38,7 +39,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
     if (-not $(Test-Path "$SQUIRRELWINBIN")) {
         New-Item "$SQUIRRELWINBIN" -ItemType "directory"
-    }
+#    }
 
     nuget pack mudlet.nuspec -Version $($Env:VERSION) -BasePath $(SQUIRRELWIN) -OutputDirectory $(SQUIRRELWIN)
     Squirrel --releasify build/squirrel.windows/GpxUi.$($Env:VERSION).nupkg --releaseDir=$(SQUIRRELWIN)release
