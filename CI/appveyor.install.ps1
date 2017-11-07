@@ -285,7 +285,6 @@ function InstallLuaModules(){
   FinishPart "Installing lua modules"
 }
 
-git submodule update --init --recursive
 if (-not $(Test-Path "$workingBaseDir")) {
     New-Item "$workingBaseDir" -ItemType "directory"
 }

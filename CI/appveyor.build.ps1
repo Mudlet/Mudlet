@@ -1,5 +1,6 @@
 cd "$Env:APPVEYOR_BUILD_FOLDER"
 
+git submodule update --init --recursive
 . CI\appveyor.set-build-info.ps1
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src"
