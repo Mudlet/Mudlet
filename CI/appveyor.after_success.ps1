@@ -26,11 +26,23 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
       $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
   } else {
-    C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
-    git clone https://github.com/keneanung/mudlet-installers.git C:\projects\installers
+    # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
+    git clone https://github.com/Mudlet/mudlet-installers.git C:\projects\installers
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
+    nuget install squirrel.windows -ExcludeVersion
 
+    # credit to http://markwal.github.io/programming/2015/07/28/squirrel-for-windows.html
+    $SQUIRRELWIN = "$Env:APPVEYOR_BUILD_FOLDER\src\release\squirrel.windows\"
+    $SQUIRRELWINBIN = "$Env:APPVEYOR_BUILD_FOLDER\src\release\squirrel.windows\lib\net45\"
+
+    if (-not $(Test-Path "$SQUIRRELWINBIN")) {
+        New-Item "$SQUIRRELWINBIN" -ItemType "directory"
+    }
+
+    nuget pack mudlet.nuspec -Version $($Env:VERSION) -BasePath $(SQUIRRELWIN) -OutputDirectory $(SQUIRRELWIN)
+    Squirrel --releasify build/squirrel.windows/GpxUi.$($Env:VERSION).nupkg --releaseDir=$(SQUIRRELWIN)release
+ 
    <#
     This is the shell version:
     # add ssh-key to ssh-agent for deployment
@@ -53,8 +65,6 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
   }
 }
-
-C:\MinGW\msys\1.0\bin\scp.exe --help
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
   $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
