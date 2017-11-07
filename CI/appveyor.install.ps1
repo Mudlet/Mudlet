@@ -57,8 +57,13 @@ function Step([string] $stepName) {
   Write-Output "---- $stepName ----" | Tee-Object -File "$logFile" -Append
 }
 
-function DownloadFile([string] $url, [string] $outputFile) {
-  Step "Downloading"
+function DownloadFile([string] $url, [string] $outputFile, [bool] $bigDownload = $false) {
+  $stepText = "Downloading"
+  if ($bigDownload)
+  {
+    $stepText = "$stepText, this is a huge download and may take a while"
+  }
+  Step $stepText
   (New-Object System.Net.WebClient).DownloadFile($url, "$workingBaseDir\$outputFile") >> "$logFile" 2>&1
 }
 
@@ -125,7 +130,7 @@ function InstallCmake() {
 }
 
 function InstallMsys() {
-  DownloadFile "https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys%2B7za%2Bwget%2Bsvn%2Bgit%2Bmercurial%2Bcvs-rev13.7z/download" "msys.7z"
+  DownloadFile "https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys%2B7za%2Bwget%2Bsvn%2Bgit%2Bmercurial%2Bcvs-rev13.7z/download" "msys.7z" $true
   Step "Creating MinGW path"
   New-Item -Path "C:\MinGW\msys\1.0" -ItemType "directory" >> "$logFile" 2>&1
   ExtractZip "msys.7z" "."
@@ -134,7 +139,7 @@ function InstallMsys() {
 }
 
 function InstallBoost() {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download" "boost.tar.gz"
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download" "boost.tar.gz" $true
   Step "Creating Boost path"
   New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   ExtractTar "boost.tar.gz" "."
@@ -143,7 +148,7 @@ function InstallBoost() {
 }
 
 function InstallQt() {
-  DownloadFile "http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-windows-x86-mingw492-5.6.3.exe" "qt-installer.exe"
+  DownloadFile "http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-windows-x86-mingw492-5.6.3.exe" "qt-installer.exe" $true
   Step "Warning! Installing Qt 5.6.3, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
   exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
 }
