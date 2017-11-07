@@ -42,9 +42,9 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
         New-Item "$SQUIRRELWINBIN" -ItemType "directory"
 #    }
 
-    nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $(SQUIRRELWIN) -OutputDirectory $(SQUIRRELWIN)
+    nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
-    Squirrel --releasify build/squirrel.windows/GpxUi.$($Env:VERSION).nupkg --releaseDir=$(SQUIRRELWIN)release
+    Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=$Env:APPVEYOR_BUILD_FOLDER\src\release
     echo "ran squirrel"
  
    <#
