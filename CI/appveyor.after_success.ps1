@@ -28,8 +28,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 #      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
 #  } else {
     # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
-    # git clone https://github.com/Mudlet/mudlet-installers.git C:\projects\installers
-    # cd C:\projects\installers\windows
+    git clone https://github.com/Mudlet/installers.git -b squirrel-windows C:\projects\installers
+    cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
     nuget install squirrel.windows -ExcludeVersion
     echo "ran nuget install"
@@ -42,7 +42,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
         New-Item "$SQUIRRELWINBIN" -ItemType "directory"
 #    }
 
-    nuget pack .\CI\mudlet.nuspec -Version $($Env:VERSION) -BasePath $(SQUIRRELWIN) -OutputDirectory $(SQUIRRELWIN)
+    nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $(SQUIRRELWIN) -OutputDirectory $(SQUIRRELWIN)
     echo "ran nuget"
     Squirrel --releasify build/squirrel.windows/GpxUi.$($Env:VERSION).nupkg --releaseDir=$(SQUIRRELWIN)release
     echo "ran squirrel"
