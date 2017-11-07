@@ -1,3 +1,6 @@
+# Exit the script whenever an error in a cmdlet occurs
+$global:ErrorActionPreference = "Stop"
+
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
 $logFile = "$workingBaseDir\verbose_output.log"
@@ -7,11 +10,38 @@ if($64Bit){
 } else {
   $CMakePath = "C:\Program Files\CMake\bin"
 }
+
+if(!Test-Path Env:QT_BASE_DIR){
+  try
+  {
+    $Env:QT_BASE_DIR = Get-Command "qmake.exe" | Select-Object -ExpandProperty definition | Split-Path -Parent | Split-Path -Parent
+  }
+  catch
+  {
+    if(Test-Path "C:\Qt\5.6\mingw49_32\bin\qmake.exe"){
+      $Env:QT_BASE_DIR = "C:\Qt\5.6\mingw49_32"
+    }
+    else
+    {
+      $Env:QT_BASE_DIR = "C:\Qt\5.6.3\mingw49_32"
+    }
+  }
+}
+Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
+
+if(!Test-Path Env:MINGW_BASE_DIR){
+  $tmp = $Env:QT_BASE_DIR.Spilt("\\")
+  $tmp[-2] = "Tools"
+  $Env:MINGW_BASE_DIR = $tmp -join "\"
+}
+Write-Output "Using $Env:MINGW_BASE_DIR as MinGW base directory." | Tee-Object -File "$logFile" -Append
+
+if(!Test-Path Env:MINGW_BASE_DIR_BASH){
+  $Env:MINGW_BASE_DIR_BASH = $Env:MINGW_BASE_DIR -replace "\\", "/" -replace "C:", "/c"
+}
+
 $ShPath = "$Env:MINGW_BASE_DIR\bin;$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
-
-# Exit the script whenever an error in a cmdlet occurs
-$global:ErrorActionPreference = "Stop"
 
 # Helper functions
 # see http://patrick.lioi.net/2011/08/18/powershell-and-calling-external-executables/
@@ -149,7 +179,6 @@ function InstallBoost() {
 
 function InstallQt() {
   DownloadFile "http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-windows-x86-mingw492-5.6.3.exe" "qt-installer.exe" $true
-  Step "Warning! Installing Qt 5.6.3, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
   exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
 }
 
@@ -297,7 +326,7 @@ CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { InstallSevenZ }
 CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
 CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { InstallMsys }
 CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { InstallBoost }
-CheckAndInstall "Qt" "$Env:MINGW_BASE_DIR\bin\mingw32-make.exe" { InstallQt }
+CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
 CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { InstallYajl }
