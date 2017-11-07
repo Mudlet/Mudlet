@@ -40,7 +40,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
     if (-not $(Test-Path "$SQUIRRELWINBIN")) {
         New-Item "$SQUIRRELWINBIN" -ItemType "directory"
-#    }
+   }
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
