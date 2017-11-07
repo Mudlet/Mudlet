@@ -1,8 +1,8 @@
 cd "$Env:APPVEYOR_BUILD_FOLDER"
 
 . CI\appveyor.set-environment.ps1
-SetQtBaseDir
-SetMingwBaseDir
+SetQtBaseDir "C:\src\verbose_output.log"
+SetMingwBaseDir "C:\src\verbose_output.log"
 
 git submodule update --init --recursive
 . CI\appveyor.set-build-info.ps1

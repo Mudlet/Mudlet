@@ -1,4 +1,4 @@
-function SetQtBaseDir() {
+function SetQtBaseDir([string] $logFile) {
   if(!(Test-Path Env:QT_BASE_DIR)){
     try
     {
@@ -18,7 +18,7 @@ function SetQtBaseDir() {
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
 }
 
-function SetMingwBaseDir() {
+function SetMingwBaseDir([string] $logFile) {
   if(!(Test-Path Env:MINGW_BASE_DIR)){
     $tmp = $Env:QT_BASE_DIR.Split("\\")
     $tmp[-2] = "Tools"

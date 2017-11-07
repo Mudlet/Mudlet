@@ -12,7 +12,7 @@ if($64Bit){
 }
 
 . CI\appveyor.set-environment.ps1
-SetQtBaseDir
+SetQtBaseDir "$logFile"
 
 $Env:PATH = "$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 
@@ -300,7 +300,7 @@ CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { InstallBoost
 CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
 
 # Adapt the PATH variable again as we may have installed MinGW just now and can determine its location.
-SetMingwBaseDir
+SetMingwBaseDir "$logFile"
 $ShPath = "$Env:MINGW_BASE_DIR\bin;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
 $Env:PATH = $ShPath
