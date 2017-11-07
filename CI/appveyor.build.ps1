@@ -1,6 +1,8 @@
 cd "$Env:APPVEYOR_BUILD_FOLDER"
 
 . CI\appveyor.set-environment.ps1
+SetQtBaseDir
+SetMingwBaseDir
 
 git submodule update --init --recursive
 . CI\appveyor.set-build-info.ps1
