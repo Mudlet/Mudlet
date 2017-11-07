@@ -17,8 +17,6 @@ install:
 
 build_script:
 - powershell ".\CI\appveyor.build.ps1"
-
-on_failure:
 - cd C:\src
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
