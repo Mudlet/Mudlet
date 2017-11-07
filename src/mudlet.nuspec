@@ -1,0 +1,15 @@
+<package>
+  <metadata>
+    <id>Mudlet</id>
+    <version>0.0.0</version>
+    <authors>Mudlet Makers</authors>
+    <owners>Mudlet Makers</owners>
+    <licenseUrl>https://github.com/Mudlet/Mudlet/blob/development/COPYING</licenseUrl>
+    <projectUrl>https://www.mudlet.org/</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_main_512x512_6XS_icon.ico</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A cross-platform, open source, and super fast MUD client with scripting in Lua.</description>
+    <copyright>Copyright 2008-2017, Mudlet Makers</copyright>
+    <tags>mud game rpg text</tags>
+  </metadata>
+</package>
