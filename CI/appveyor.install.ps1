@@ -11,34 +11,7 @@ if($64Bit){
   $CMakePath = "C:\Program Files\CMake\bin"
 }
 
-if(!Test-Path Env:QT_BASE_DIR){
-  try
-  {
-    $Env:QT_BASE_DIR = Get-Command "qmake.exe" | Select-Object -ExpandProperty definition | Split-Path -Parent | Split-Path -Parent
-  }
-  catch
-  {
-    if(Test-Path "C:\Qt\5.6\mingw49_32\bin\qmake.exe"){
-      $Env:QT_BASE_DIR = "C:\Qt\5.6\mingw49_32"
-    }
-    else
-    {
-      $Env:QT_BASE_DIR = "C:\Qt\5.6.3\mingw49_32"
-    }
-  }
-}
-Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
-
-if(!Test-Path Env:MINGW_BASE_DIR){
-  $tmp = $Env:QT_BASE_DIR.Spilt("\\")
-  $tmp[-2] = "Tools"
-  $Env:MINGW_BASE_DIR = $tmp -join "\"
-}
-Write-Output "Using $Env:MINGW_BASE_DIR as MinGW base directory." | Tee-Object -File "$logFile" -Append
-
-if(!Test-Path Env:MINGW_BASE_DIR_BASH){
-  $Env:MINGW_BASE_DIR_BASH = $Env:MINGW_BASE_DIR -replace "\\", "/" -replace "C:", "/c"
-}
+. CI\appveyor.set-environment.ps1
 
 $ShPath = "$Env:MINGW_BASE_DIR\bin;$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'

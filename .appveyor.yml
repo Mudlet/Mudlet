@@ -4,14 +4,7 @@ init:
 environment:
   matrix:
   - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
-    MINGW_BASE_DIR: C:\Qt\Tools\mingw492_32
-    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw492_32
-#  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
-#    MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
-#    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
 #  - QT_BASE_DIR: C:\Qt\5.9\mingw53_32
-#    MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
-#    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
 install:
 - powershell ".\CI\appveyor.install.ps1"
 
