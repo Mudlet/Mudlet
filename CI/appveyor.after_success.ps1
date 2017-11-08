@@ -48,14 +48,17 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
         New-Item "$SQUIRRELWINBIN" -ItemType "directory"
     }
 
+    # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
+    Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
+
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
-    .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=$Env:APPVEYOR_BUILD_FOLDER\src\release
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=$Env:APPVEYOR_BUILD_FOLDER\src\release\packagedbysquirrel
     echo "ran squirrel"
   echo "4 in this path:"
   echo (Get-Item -Path ".\" -Verbose).FullName
   echo "SQUIRRELWIN is:"
-  echo Get-ChildItem -Path $SQUIRRELWIN
+  echo $SQUIRRELWIN
   echo "src\release is:"
   echo $Env:APPVEYOR_BUILD_FOLDER\src\release
  
