@@ -41,8 +41,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     echo "ran nuget install"
 
     # credit to http://markwal.github.io/programming/2015/07/28/squirrel-for-windows.html
-    $SQUIRRELWIN = "$Env:APPVEYOR_BUILD_FOLDER\src\release\squirrel.windows\"
-    $SQUIRRELWINBIN = "$Env:APPVEYOR_BUILD_FOLDER\src\release\squirrel.windows\lib\net45\"
+    $SQUIRRELWIN = "C:\projects\squirrel-packaging-prep"
+    $SQUIRRELWINBIN = "$SQUIRRELWIN\lib\net45\"
 
     if (-not $(Test-Path "$SQUIRRELWINBIN")) {
         New-Item "$SQUIRRELWINBIN" -ItemType "directory"
@@ -53,7 +53,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
-    .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=$Env:APPVEYOR_BUILD_FOLDER\src\release\packagedbysquirrel
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=C:\projects\squirreloutput
     echo "ran squirrel"
   echo "4 in this path:"
   echo (Get-Item -Path ".\" -Verbose).FullName
@@ -61,6 +61,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   echo $SQUIRRELWIN
   echo "src\release is:"
   echo $Env:APPVEYOR_BUILD_FOLDER\src\release
+  Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release
+  Move-Item C:\projects\squirreloutput $Env:APPVEYOR_BUILD_FOLDER\src\release\
  
    <#
     This is the shell version:
