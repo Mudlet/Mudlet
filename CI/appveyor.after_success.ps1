@@ -6,6 +6,8 @@ if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
 if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
   cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
+  echo "1 in this path:"
+  echo (Get-Item -Path ".\" -Verbose).FullName
   windeployqt.exe --release mudlet.exe
   COPY $Env:MINGW_BASE_DIR\lib\libyajl.dll .
   COPY C:\src\lua-5.1.5\lua-5.1.5\src\lua51.dll .
@@ -22,6 +24,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   XCOPY /S /I /Q $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
   Remove-Item * -include *.cpp, *.o
+  echo "2 in this path:"
+  echo (Get-Item -Path ".\" -Verbose).FullName
 
 # temporary commenting to get appveyor squirrel packing to work
 #  if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
@@ -30,6 +34,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
     git clone https://github.com/Mudlet/installers.git C:\projects\installers
     cd C:\projects\installers\windows
+  echo "3 in this path:"
+  echo (Get-Item -Path ".\" -Verbose).FullName
     nuget install secure-file -ExcludeVersion
     nuget install squirrel.windows -ExcludeVersion
     echo "ran nuget install"
@@ -46,6 +52,12 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     echo "ran nuget"
     .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=$Env:APPVEYOR_BUILD_FOLDER\src\release
     echo "ran squirrel"
+  echo "4 in this path:"
+  echo (Get-Item -Path ".\" -Verbose).FullName
+  echo "SQUIRRELWIN is:"
+  echo Get-ChildItem -Path $SQUIRRELWIN
+  echo "src\release is:"
+  echo $Env:APPVEYOR_BUILD_FOLDER\src\release
  
    <#
     This is the shell version:
