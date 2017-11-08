@@ -54,7 +54,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
     .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=C:\projects\squirreloutput
-    echo "ran squirrel"
+    echo "ran squirrel. C:\projects\squirreloutput is:"
+    Get-ChildItem -Path C:\projects\squirreloutput
   echo "4 in this path:"
   echo (Get-Item -Path ".\" -Verbose).FullName
   echo "SQUIRRELWIN is:"
@@ -62,7 +63,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   echo "src\release is:"
   echo $Env:APPVEYOR_BUILD_FOLDER\src\release
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release
-  Move-Item C:\projects\squirreloutput $Env:APPVEYOR_BUILD_FOLDER\src\release\
+  Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
  
    <#
     This is the shell version:
