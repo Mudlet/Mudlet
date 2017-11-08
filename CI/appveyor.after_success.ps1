@@ -53,7 +53,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
-    .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\mudlet.nupkg --releaseDir=C:\projects\squirreloutput
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\installers\windows\Mudlet.$($Env:VERSION).nupkg --releaseDir=C:\projects\squirreloutput
     echo "ran squirrel. C:\projects\squirreloutput is:"
     Get-ChildItem -Path C:\projects\squirreloutput
   echo "4 in this path:"
@@ -64,7 +64,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   echo $Env:APPVEYOR_BUILD_FOLDER\src\release
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
- 
+
    <#
     This is the shell version:
     # add ssh-key to ssh-agent for deployment
