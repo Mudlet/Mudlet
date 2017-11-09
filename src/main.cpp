@@ -462,7 +462,7 @@ int main(int argc, char* argv[])
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
-#if defined(Q_OS_LINUX)
+#if !defined(Q_OS_MACOS)
     // Sparkle doesn't allow us to manually show the changelog, so leave it be for dblsqd only
     mudlet::self()->showChangelogIfUpdated();
 #endif // Q_OS_LINUX
