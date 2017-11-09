@@ -62,7 +62,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   echo $SQUIRRELWIN
   echo "src\release is:"
   echo $Env:APPVEYOR_BUILD_FOLDER\src\release
-  Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release
+  Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
    <#
