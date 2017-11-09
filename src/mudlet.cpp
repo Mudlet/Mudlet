@@ -3371,6 +3371,7 @@ void mudlet::slot_update_installed()
     });
     dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
 }
+#endif // Q_OS_LINUX
 
 void mudlet::showChangelogIfUpdated()
 {
@@ -3386,5 +3387,4 @@ void mudlet::showChangelogIfUpdated()
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
     file.remove();
 }
-#endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
