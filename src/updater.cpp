@@ -271,12 +271,20 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
     }
 
     // otherwise the button says 'Install', so install the update
+#if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
+#elif defined(Q_OS_WIN)
+    QFuture<void> future = QtConcurrent::run(this, &Updater::runSetupOnWindows, filePath);
+#endif
 
     // replace current binary with the unzipped one
     auto watcher = new QFutureWatcher<void>;
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+#if defined(Q_OS_LINUX)
         updateBinaryOnLinux();
+#elif defined(Q_OS_WIN)
+        finishSetup();
+#endif
         installOrRestartButton->setText(tr("Restart to apply update"));
         installOrRestartButton->setEnabled(true);
     });
