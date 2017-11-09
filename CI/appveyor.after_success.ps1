@@ -32,7 +32,6 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
     nuget install squirrel.windows -ExcludeVersion
-    echo "ran nuget install"
 
     # credit to http://markwal.github.io/programming/2015/07/28/squirrel-for-windows.html
     $SQUIRRELWIN = "C:\projects\squirrel-packaging-prep"
@@ -46,7 +45,6 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
-    echo "ran nuget"
     .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
     Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
     Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
