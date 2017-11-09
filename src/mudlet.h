@@ -368,7 +368,7 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
     void slot_module_manager_destroyed();
-#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+#if defined (INCLUDE_UPDATER) && !defined(Q_OS_MACOS)
     void slot_update_installed();
 #endif
 
