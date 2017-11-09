@@ -28,7 +28,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 #      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
 #  } else {
     # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
-    git clone https://github.com/Mudlet/installers.git -b add-squirrel-install C:\projects\installers
+    git clone https://github.com/Mudlet/installers.git -b C:\projects\installers
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
     nuget install squirrel.windows -ExcludeVersion
