@@ -47,7 +47,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
-    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir=C:\projects\squirreloutput -g C:\projects\installers\windows\splash-installing.png
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir=C:\projects\squirreloutput -g C:\projects\installers\windows\splash-installing.png --no-msi
     Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
     Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
