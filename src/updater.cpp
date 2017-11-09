@@ -146,7 +146,7 @@ void Updater::setupOnWindows()
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
-        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::finishSetupOnWindows);
+        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::finishSetup);
         watcher->setFuture(future);
     });
 
