@@ -78,19 +78,19 @@ void Updater::setAutomaticUpdates(const bool state)
 
 bool Updater::updateAutomatically() const
 {
-#if defined(Q_OS_LINUX)
-    return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
-#elif defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
     return msparkleUpdater->automaticallyDownloadsUpdates();
+#else
+    return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
 #endif
 }
 
 void Updater::manuallyCheckUpdates()
 {
-#if defined(Q_OS_LINUX)
-    updateDialog->show();
-#elif defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
     msparkleUpdater->checkForUpdates();
+#else
+    updateDialog->show();
 #endif
 }
 
