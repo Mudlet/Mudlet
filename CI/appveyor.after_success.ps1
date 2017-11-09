@@ -32,7 +32,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 #      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
 #  } else {
     # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
-    git clone https://github.com/Mudlet/installers.git C:\projects\installers
+    git clone https://github.com/Mudlet/installers.git -b add-squirrel-install C:\projects\installers
     cd C:\projects\installers\windows
   echo "3 in this path:"
   echo (Get-Item -Path ".\" -Verbose).FullName
@@ -53,7 +53,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
     echo "ran nuget"
-    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir=C:\projects\squirreloutput
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir=C:\projects\squirreloutput -g C:\projects\installers\windows\splash-installing.png
     echo "ran squirrel. C:\projects\squirreloutput is:"
     Get-ChildItem -Path C:\projects\squirreloutput
   echo "4 in this path:"
