@@ -456,7 +456,7 @@ mudlet::mudlet()
 #else
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
-#endif // else Q_OS_MACOS
+#endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
     // mToolbarIconSize has been set to 0 in the initialisation list so either

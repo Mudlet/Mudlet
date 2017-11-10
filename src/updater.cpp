@@ -25,16 +25,6 @@
 #include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
 #endif
 
-#if defined(Q_OS_MAC)
-#include <syslog.h>
- static void SYSLOG(const char* format,...)
-       {
-        va_list vaList;
-        va_start( vaList,format );
-        vsyslog(LOG_ERR,format,vaList);
-       }
-#endif
-
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include "post_guard.h"
@@ -69,10 +59,10 @@ void Updater::checkUpdatesOnStart()
 
 void Updater::setAutomaticUpdates(const bool state)
 {
-#if defined(Q_OS_LINUX)
-    return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);
-#elif defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
     msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
+#else
+    settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);
 #endif
 }
 
@@ -115,7 +105,7 @@ void Updater::setupOnMacOS()
     msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
     // don't need to explicitly check for updates - sparkle will do so on its own
 }
-#endif
+#endif // Q_OS_MACOS
 
 #if defined(Q_OS_WIN)
 void Updater::setupOnWindows()
@@ -270,7 +260,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
         return;
     }
 
-    // otherwise the button says 'Install', so install the update
+// otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
 #elif defined(Q_OS_WIN)
@@ -315,12 +305,12 @@ void Updater::recordUpdateTime() const
 // is no need as they would have seen the changelog while updating
 bool Updater::shouldShowChangelog()
 {
-    // Don't show changelog for automatic updates on Sparkle - Sparkle doesn't support it
-#if defined (Q_OS_MAC)
+// Don't show changelog for automatic updates on Sparkle - Sparkle doesn't support it
+#if defined(Q_OS_MAC)
     return false;
 #endif
 
-    if (!updateAutomatically() ) {
+    if (!updateAutomatically()) {
         return false;
     }
 
