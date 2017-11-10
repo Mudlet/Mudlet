@@ -90,6 +90,7 @@ SET(mudlet_SRCS
     XMLexport.cpp
     XMLimport.cpp
     ircmessageformatter.cpp
+    updater.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -159,6 +160,8 @@ SET(mudlet_MOC_HDRS
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
+    updater.h
+
 )
 
 SET(mudlet_HDRS
@@ -198,6 +201,7 @@ SET(mudlet_HDRS
     XMLexport.h
     XMLimport.h
     ircmessageformatter.h
+    updater.h
 )
 
 IF(MSVC)
@@ -377,6 +381,10 @@ ENDIF(UNIX)
 # will be used.
 ADD_DEFINITIONS(-DLUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
+# Enable the built-in updater by default. Linux packagers will find it useful to disable it
+# since package managers are responsible for updates there
+ADD_DEFINITIONS(-DINCLUDE_UPDATER=TRUE)
+
 # Enable leak detection for MSVC debug builds.
 if(MSVC)
   SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -FItestdbg.h")
@@ -441,6 +449,7 @@ TARGET_LINK_LIBRARIES(mudlet
     communi
     lua_yajl
     edbee-lib
+    dblsqd
 )
 
 IF(Qt5Gamepad_FOUND)
@@ -455,6 +464,11 @@ ENDIF()
 
 IF(APPLE)
   TARGET_LINK_LIBRARIES(mudlet luazip)
+  TARGET_LINK_LIBRARIES(mudlet cocoa-qt-glue)
+  target_link_libraries(mudlet
+          "-framework Sparkle"
+          "-framework AppKit"
+          "-F${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/sparkle")
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)

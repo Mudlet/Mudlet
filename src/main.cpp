@@ -51,6 +51,8 @@ using namespace std;
 
 TConsole* spDebugConsole = nullptr;
 
+void initUpdater();
+
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
 
@@ -458,7 +460,16 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
+#if defined(INCLUDE_UPDATER)
+    mudlet::self()->checkUpdatesOnStart();
+#if !defined(Q_OS_MACOS)
+    // Sparkle doesn't allow us to manually show the changelog, so leave it be for dblsqd only
+    mudlet::self()->showChangelogIfUpdated();
+#endif // Q_OS_LINUX
+#endif // INCLUDE_UPDATER
+
     app->restoreOverrideCursor();
+
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
     // click something in a parent process to the application when you are stuck

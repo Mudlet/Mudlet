@@ -23,13 +23,31 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
   Remove-Item * -include *.cpp, *.o
 
-  if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
-      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
-  } else {
-    C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
-    git clone https://github.com/keneanung/mudlet-installers.git C:\projects\installers
+# temporary commenting to get appveyor squirrel packing to work
+#  if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
+#      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
+#  } else {
+    # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
+    git clone https://github.com/Mudlet/installers.git C:\projects\installers
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
+    nuget install squirrel.windows -ExcludeVersion
+
+    # credit to http://markwal.github.io/programming/2015/07/28/squirrel-for-windows.html
+    $SQUIRRELWIN = "C:\projects\squirrel-packaging-prep"
+    $SQUIRRELWINBIN = "$SQUIRRELWIN\lib\net45\"
+
+    if (-not $(Test-Path "$SQUIRRELWINBIN")) {
+        New-Item "$SQUIRRELWINBIN" -ItemType "directory"
+    }
+
+    # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
+    Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
+
+    nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
+    Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
+    Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
    <#
     This is the shell version:
@@ -51,10 +69,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
     fi #>
 
-  }
+  # }
 }
-
-C:\MinGW\msys\1.0\bin\scp.exe --help
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
   $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
