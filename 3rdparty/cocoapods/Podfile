@@ -1,7 +1,6 @@
 platform :osx, '10.7'
 project 'Empty'
 
-
 target 'Empty' do
 	pod 'Sparkle', '~> 1.18'
 end
