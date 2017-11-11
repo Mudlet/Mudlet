@@ -1,4 +1,6 @@
 platform :osx, '10.7'
+
+# Empty is a fake XCode project that's needed for CocoaPods to work
 project 'Empty'
 
 target 'Empty' do
