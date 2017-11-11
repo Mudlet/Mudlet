@@ -472,11 +472,11 @@ macx: {
     LIBS += -framework AppKit
 
     # allow linker to find sparkle framework as we bundle it in
-    LIBS += -F../3rdparty/sparkle
+    SPARKLE_PATH = $$PWD/../3rdparty/sparkle
+    LIBS += -F$$SPARKLE_PATH
     LIBS += -framework Sparkle
 
     # necessary for Sparkle to compile
-    SPARKLE_PATH = $$PWD/../3rdparty/sparkle
     QMAKE_LFLAGS += -F $$SPARKLE_PATH
     QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
