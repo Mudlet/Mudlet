@@ -1,4 +1,9 @@
 platform :osx, '10.7'
-xcodeproj 'Empty'
+project 'Empty'
 
-pod 'Sparkle', '~> 1.18'
+
+target 'Mudlet' do
+	pod 'Sparkle', '~> 1.18'
+end
+
+
