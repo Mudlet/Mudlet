@@ -463,12 +463,19 @@ ELSE()
 ENDIF()
 
 IF(APPLE)
+  IF(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+    MESSAGE(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
+    EXECUTE_PROCESS(TIMEOUT 30
+            WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
+            COMMAND pod install )
+  ENDIF()
+
   target_link_libraries(mudlet
           luazip
           cocoa-qt-glue
           "-framework Sparkle"
           "-framework AppKit"
-          "-F${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/sparkle")
+          "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)
