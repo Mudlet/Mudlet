@@ -68,7 +68,7 @@ void Updater::checkUpdatesOnStart()
 void Updater::setAutomaticUpdates(const bool state)
 {
 #if defined(Q_OS_LINUX)
-    return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);
+    dblsqd::UpdateDialog::enableAutoDownload(state, settings);
 #elif defined(Q_OS_MACOS)
     msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
 #endif
@@ -77,7 +77,7 @@ void Updater::setAutomaticUpdates(const bool state)
 bool Updater::updateAutomatically() const
 {
 #if defined(Q_OS_LINUX)
-    return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
+    return dblsqd::UpdateDialog::autoDownloadEnabled(true, settings);
 #elif defined(Q_OS_MACOS)
     return msparkleUpdater->automaticallyDownloadsUpdates();
 #endif
@@ -193,6 +193,8 @@ void Updater::updateBinaryOnLinux()
 
 void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 {
+    Q_UNUSED(button)
+
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
         // timer is necessary as calling close right way doesn't seem to do the trick
