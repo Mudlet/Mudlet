@@ -472,7 +472,7 @@ macx: {
     LIBS += -framework AppKit
 
     # allow linker to find sparkle framework as we bundle it in
-    SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/sparkle
+    SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
 
     !exists($$SPARKLE_PATH) {
         message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
