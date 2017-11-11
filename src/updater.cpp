@@ -241,6 +241,7 @@ void Updater::updateBinaryOnLinux()
 }
 #endif // Q_OS_LINUX
 
+#if !defined(Q_OS_MACOS)
 void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 {
     Q_UNUSED(button)
@@ -282,6 +283,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
     });
     watcher->setFuture(future);
 }
+#endif // !Q_OS_MACOS
 
 // records a unix epoch on disk indicating that an update has happened.
 // Mudlet will use that on the next launch to decide whenever it should show
