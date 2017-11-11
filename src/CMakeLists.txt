@@ -119,7 +119,7 @@ SET(mudlet_UIS
     ui/vars_main_area.ui
 )
 
-SET(mudlet_MOC_HDRS 
+SET(mudlet_MOC_HDRS
     ctelnet.h
     dlgAboutDialog.h
     dlgActionMainArea.h
@@ -463,9 +463,9 @@ ELSE()
 ENDIF()
 
 IF(APPLE)
-  TARGET_LINK_LIBRARIES(mudlet luazip)
-  TARGET_LINK_LIBRARIES(mudlet cocoa-qt-glue)
   target_link_libraries(mudlet
+          luazip
+          cocoa-qt-glue
           "-framework Sparkle"
           "-framework AppKit"
           "-F${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/sparkle")
