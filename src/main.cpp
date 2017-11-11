@@ -51,7 +51,9 @@ using namespace std;
 
 TConsole* spDebugConsole = nullptr;
 
+#if defined(Q_OS_WIN)
 bool runUpdate();
+#endif
 
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
@@ -485,6 +487,7 @@ int main(int argc, char* argv[])
     return app->exec();
 }
 
+#if defined(Q_OS_WIN)
 // small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done
@@ -495,7 +498,6 @@ bool runUpdate()
     QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup-seen.exe"));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
-        qDebug() << "new updater available";
         if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
             qWarning() << "Couldn't delete previous installer";
         }
@@ -506,15 +508,10 @@ bool runUpdate()
 
         QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
         return true;
-    }
-
-    // no new updater and only the old one? Then we're restarting from an update: delete the old installer
-    if (seenUpdatedInstaller.exists()) {
-        qDebug() << "old updater available";
-        if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
-            // non-fatal
-            qWarning() << "Couldn't delete old uninstaller";
-        }
+    } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
+        qWarning() << "Couldn't delete old uninstaller";
     }
     return false;
 }
+#endif
