@@ -449,14 +449,14 @@ mudlet::mudlet()
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, settings);
-#if defined(Q_OS_LINUX)
-    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
-    connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
-#elif defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     // ensure that 'Check for updates' is under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
-#endif
+#else
+    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+    connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
+#endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
     // mToolbarIconSize has been set to 0 in the initialisation list so either
@@ -3358,7 +3358,7 @@ void mudlet::slot_check_manual_update()
     updater->manuallyCheckUpdates();
 }
 
-#if defined(Q_OS_LINUX)
+#if !defined(Q_OS_MACOS)
 void mudlet::slot_update_installed()
 {
     // disable existing functionality to show the updates window
@@ -3371,6 +3371,7 @@ void mudlet::slot_update_installed()
     });
     dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
 }
+#endif // !Q_OS_MACOS
 
 void mudlet::showChangelogIfUpdated()
 {
@@ -3386,5 +3387,4 @@ void mudlet::showChangelogIfUpdated()
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
     file.remove();
 }
-#endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER

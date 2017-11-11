@@ -52,9 +52,16 @@ private:
     bool mUpdateInstalled;
     QSettings* settings;
 
+#if defined(Q_OS_LINUX)
     void setupOnLinux();
     void untarOnLinux(const QString& fileName);
+#elif defined(Q_OS_WIN)
+    void setupOnWindows();
+    void runSetupOnWindows(const QString& fileName);
+#endif
+
     void recordUpdateTime() const;
+    void finishSetup();
 
 #if defined(Q_OS_MACOS)
     AutoUpdater* msparkleUpdater;
@@ -68,10 +75,10 @@ signals:
     void updateInstalled();
 
 public slots:
+    void installOrRestartClicked(QAbstractButton* button, QString filePath);
 #if defined(Q_OS_LINUX)
     // might want to make these private
     void updateBinaryOnLinux();
-    void installOrRestartClicked(QAbstractButton* button, QString filePath);
 #endif
 };
 

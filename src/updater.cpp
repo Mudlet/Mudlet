@@ -25,16 +25,6 @@
 #include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
 #endif
 
-#if defined(Q_OS_MAC)
-#include <syslog.h>
- static void SYSLOG(const char* format,...)
-       {
-        va_list vaList;
-        va_start( vaList,format );
-        vsyslog(LOG_ERR,format,vaList);
-       }
-#endif
-
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include "post_guard.h"
@@ -62,33 +52,35 @@ void Updater::checkUpdatesOnStart()
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
     setupOnLinux();
+#elif defined(Q_OS_WIN)
+    setupOnWindows();
 #endif
 }
 
 void Updater::setAutomaticUpdates(const bool state)
 {
-#if defined(Q_OS_LINUX)
-    dblsqd::UpdateDialog::enableAutoDownload(state, settings);
-#elif defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
     msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
+#else
+    dblsqd::UpdateDialog::enableAutoDownload(state, settings);
 #endif
 }
 
 bool Updater::updateAutomatically() const
 {
-#if defined(Q_OS_LINUX)
-    return dblsqd::UpdateDialog::autoDownloadEnabled(true, settings);
-#elif defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
     return msparkleUpdater->automaticallyDownloadsUpdates();
+#else
+    return dblsqd::UpdateDialog::autoDownloadEnabled(true, settings);
 #endif
 }
 
 void Updater::manuallyCheckUpdates()
 {
-#if defined(Q_OS_LINUX)
-    updateDialog->show();
-#elif defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS)
     msparkleUpdater->checkForUpdates();
+#else
+    updateDialog->show();
 #endif
 }
 
@@ -98,6 +90,14 @@ void Updater::showChangelog() const
     changelogDialog->show();
 }
 
+void Updater::finishSetup()
+{
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
+    recordUpdateTime();
+    mUpdateInstalled = true;
+    emit updateInstalled();
+}
+
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
@@ -105,7 +105,59 @@ void Updater::setupOnMacOS()
     msparkleUpdater = new SparkleAutoUpdater(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast"));
     // don't need to explicitly check for updates - sparkle will do so on its own
 }
-#endif
+#endif // Q_OS_MACOS
+
+#if defined(Q_OS_WIN)
+void Updater::setupOnWindows()
+{
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
+
+    // Setup to automatically download the new release when an update is available
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
+        if (!updateAutomatically()) {
+            return;
+        }
+
+        auto updates = feed->getUpdates();
+        if (updates.isEmpty()) {
+            return;
+        }
+        feed->downloadRelease(updates.first());
+    });
+
+    // Setup to run setup.exe to replace the old installation
+    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
+        // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
+        if (!(updateAutomatically() && updateDialog->isHidden())) {
+            return;
+        }
+
+        QFuture<void> future = QtConcurrent::run(this, &Updater::runSetupOnWindows, feed->getDownloadFile()->fileName());
+
+        // replace current binary with the unzipped one
+        auto watcher = new QFutureWatcher<void>;
+        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::finishSetup);
+        watcher->setFuture(future);
+    });
+
+    // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
+    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
+    installOrRestartButton = new QPushButton(tr("Update"));
+    updateDialog->addInstallButton(installOrRestartButton);
+    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
+}
+
+void Updater::runSetupOnWindows(const QString& fileName)
+{
+    QProcess setup;
+    setup.setProcessChannelMode(QProcess::MergedChannels);
+    setup.start(fileName);
+    if (!setup.waitForFinished()) {
+        qWarning() << "Running setup using" << fileName << "failed:" << setup.errorString();
+        return;
+    }
+}
+#endif // Q_OS_WIN
 
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
@@ -185,11 +237,9 @@ void Updater::updateBinaryOnLinux()
         return;
     }
 
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
-    recordUpdateTime();
-    mUpdateInstalled = true;
-    emit updateInstalled();
+    finishSetup();
 }
+#endif // Q_OS_LINUX
 
 void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 {
@@ -212,13 +262,21 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
         return;
     }
 
-    // otherwise the button says 'Install', so install the update
+// otherwise the button says 'Install', so install the update
+#if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
+#elif defined(Q_OS_WIN)
+    QFuture<void> future = QtConcurrent::run(this, &Updater::runSetupOnWindows, filePath);
+#endif
 
     // replace current binary with the unzipped one
     auto watcher = new QFutureWatcher<void>;
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+#if defined(Q_OS_LINUX)
         updateBinaryOnLinux();
+#elif defined(Q_OS_WIN)
+        finishSetup();
+#endif
         installOrRestartButton->setText(tr("Restart to apply update"));
         installOrRestartButton->setEnabled(true);
     });
@@ -249,12 +307,12 @@ void Updater::recordUpdateTime() const
 // is no need as they would have seen the changelog while updating
 bool Updater::shouldShowChangelog()
 {
-    // Don't show changelog for automatic updates on Sparkle - Sparkle doesn't support it
-#if defined (Q_OS_MAC)
+// Don't show changelog for automatic updates on Sparkle - Sparkle doesn't support it
+#if defined(Q_OS_MAC)
     return false;
 #endif
 
-    if (!updateAutomatically() ) {
+    if (!updateAutomatically()) {
         return false;
     }
 
@@ -273,5 +331,3 @@ bool Updater::shouldShowChangelog()
 
     return minsSinceUpdate >= 5;
 }
-
-#endif // Q_OS_LINUX
