@@ -28,7 +28,7 @@
 #include "HostManager.h"
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
-#if defined (INCLUDE_UPDATER)
+#if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
 
@@ -293,7 +293,7 @@ public:
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
 
-#if defined (INCLUDE_UPDATER)
+#if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
 
@@ -334,7 +334,7 @@ public slots:
     void slot_module_manager();
     void layoutModules();
     void slot_help_module();
-#if defined (INCLUDE_UPDATER)
+#if defined(INCLUDE_UPDATER)
     void slot_check_manual_update();
 #endif
 
@@ -368,7 +368,7 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
     void slot_module_manager_destroyed();
-#if defined (INCLUDE_UPDATER) && !defined(Q_OS_MACOS)
+#if defined(INCLUDE_UPDATER) && !defined(Q_OS_MACOS)
     void slot_update_installed();
 #endif
 

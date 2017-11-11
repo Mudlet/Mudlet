@@ -52,7 +52,7 @@
 #include "edbee/models/textgrammar.h"
 #include "edbee/texteditorwidget.h"
 #include "edbee/views/texttheme.h"
-#if defined (INCLUDE_UPDATER)
+#if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
 
@@ -417,7 +417,7 @@ mudlet::mudlet()
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-#if !defined (INCLUDE_UPDATER)
+#if !defined(INCLUDE_UPDATER)
     dactionUpdate->setVisible(false);
 #endif
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
