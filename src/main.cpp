@@ -491,10 +491,11 @@ int main(int argc, char* argv[])
 // return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {
-    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("\\new-mudlet-setup.exe"));
-    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("\\new-mudlet-setup-seen.exe"));
+    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup.exe"));
+    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup-seen.exe"));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
+        qDebug() << "new updater available";
         if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
             qWarning() << "Couldn't delete previous installer";
         }
@@ -509,6 +510,7 @@ bool runUpdate()
 
     // no new updater and only the old one? Then we're restarting from an update: delete the old installer
     if (seenUpdatedInstaller.exists()) {
+        qDebug() << "old updater available";
         if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
             // non-fatal
             qWarning() << "Couldn't delete old uninstaller";

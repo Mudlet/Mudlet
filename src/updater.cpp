@@ -156,10 +156,14 @@ void Updater::setupOnWindows()
 void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 {
     QDir dir;
-    auto newPath = QString(QCoreApplication::applicationDirPath() + QStringLiteral("\\new-mudlet-setup.exe"));
+    auto newPath = QString(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup.exe"));
+    QFileInfo newPathFileInfo(newPath);
+    if (newPathFileInfo.exists() && !dir.remove(newPathFileInfo.absoluteFilePath())) {
+        qDebug() << "Couldn't delete the old installer";
+    }
 
     // dir.rename actually moves a file
-    if (!(dir.remove(newPath) && dir.rename(downloadedSetupName, newPath))) {
+    if (!dir.rename(downloadedSetupName, newPath)) {
         qWarning() << "Moving new installer into " << newPath << "failed";
         return;
     }
