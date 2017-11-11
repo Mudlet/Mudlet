@@ -57,7 +57,7 @@ private:
     void untarOnLinux(const QString& fileName);
 #elif defined(Q_OS_WIN)
     void setupOnWindows();
-    void runSetupOnWindows(const QString& fileName);
+    void prepareSetupOnWindows(const QString& fileName);
 #endif
 
     void recordUpdateTime() const;

@@ -191,6 +191,34 @@ int main(int argc, char* argv[])
 
     QApplication* app = qobject_cast<QApplication*>(initApp.data());
 
+#if defined(Q_OS_WIN)
+    // small detour for Windows - check if there's an updated Mudlet
+    // available to install. If there is, quit and run it - Squirrel
+    // will update Mudlet and then launch it once it's done
+   QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("\\new-mudlet-setup.exe"));
+   QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("\\new-mudlet-setup-seen.exe"));
+   QDir updateDir;
+   if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
+       if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+           qWarning() << "Couldn't delete previous installer";
+       }
+
+       if (!updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath())) {
+           qWarning() << "Failed to prep installer: couldn't rename it";
+       }
+
+       QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
+       return 0;
+   }
+// restarting from an update? Delete the old installer
+   if (seenUpdatedInstaller.exists()) {
+       if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+           // non-fatal
+           qWarning() << "Couldn't delete old uninstaller";
+       }
+   }
+#endif
+
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
     if (!app) {

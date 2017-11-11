@@ -92,7 +92,11 @@ void Updater::showChangelog() const
 
 void Updater::finishSetup()
 {
+#if defined(Q_OS_LINUX)
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
+#elif defined(Q_OS_WIN)
+    qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
+#endif
     recordUpdateTime();
     mUpdateInstalled = true;
     emit updateInstalled();
@@ -132,7 +136,7 @@ void Updater::setupOnWindows()
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run(this, &Updater::runSetupOnWindows, feed->getDownloadFile()->fileName());
+        QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, feed->getDownloadFile()->fileName());
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
@@ -147,13 +151,16 @@ void Updater::setupOnWindows()
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
 }
 
-void Updater::runSetupOnWindows(const QString& fileName)
+// moved the new updater to the same directory as mudlet.exe so it is run on the next
+// launch. Don't run it ourselves right now since it insists on launching Mudlet when it's done
+void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 {
-    QProcess setup;
-    setup.setProcessChannelMode(QProcess::MergedChannels);
-    setup.start(fileName);
-    if (!setup.waitForFinished()) {
-        qWarning() << "Running setup using" << fileName << "failed:" << setup.errorString();
+    QDir dir;
+    auto newPath = QString(QCoreApplication::applicationDirPath() + QStringLiteral("\\new-mudlet-setup.exe"));
+
+    // dir.rename actually moves a file
+    if (!(dir.remove(newPath) && dir.rename(downloadedSetupName, newPath))) {
+        qWarning() << "Moving new installer into " << newPath << "failed";
         return;
     }
 }
@@ -267,7 +274,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 #if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
 #elif defined(Q_OS_WIN)
-    QFuture<void> future = QtConcurrent::run(this, &Updater::runSetupOnWindows, filePath);
+    QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, filePath);
 #endif
 
     // replace current binary with the unzipped one
