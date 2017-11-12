@@ -46,9 +46,8 @@ class T2DMap : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(T2DMap)
-
 public:
+    Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = 0);
     void paintMap();
     void setMapZoom(int zoom);

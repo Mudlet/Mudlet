@@ -89,8 +89,6 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgTriggerEditor)
-
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
         // having to modify existing code that puts it into the item:
@@ -153,6 +151,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
 
 public:
+    Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
@@ -265,7 +264,8 @@ public slots:
     void grab_key_callback(int key, int modifier);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
-    void setTBIconSize(int);
+    void slot_setToolBarIconSize(const int);
+    void slot_setTreeWidgetIconSize(const int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
 

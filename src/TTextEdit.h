@@ -45,9 +45,8 @@ class TTextEdit : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TTextEdit)
-
 public:
+    Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;

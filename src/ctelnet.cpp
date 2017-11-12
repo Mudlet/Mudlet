@@ -555,7 +555,7 @@ void cTelnet::processTelnetCommand(const string& command)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         option = command[2];
-        int idxOption = static_cast<int>(option);
+        const auto idxOption = static_cast<int>(option);
 
         if (option == static_cast<char>(25)) //EOR support (END OF RECORD=TN_GA
         {
