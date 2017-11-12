@@ -23,11 +23,9 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
   Remove-Item * -include *.cpp, *.o
 
-# temporary commenting to get appveyor squirrel packing to work
-#  if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
-#      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
-#  } else {
-    # C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
+if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
+    $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
+} else {
     git clone https://github.com/Mudlet/installers.git C:\projects\installers
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
@@ -69,7 +67,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
     fi #>
 
-  # }
+  }
 }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
