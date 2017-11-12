@@ -369,7 +369,6 @@ private slots:
 #endif
     void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
-    // should also be !Q_OS_MACOS but moc chokes on it
     void slot_update_installed();
 #endif
 

@@ -3358,9 +3358,10 @@ void mudlet::slot_check_manual_update()
     updater->manuallyCheckUpdates();
 }
 
-#if !defined(Q_OS_MACOS)
 void mudlet::slot_update_installed()
 {
+// can't comment out method entirely as moc chokes on it, so leave a stub
+#if !defined(Q_OS_MACOS)
     // disable existing functionality to show the updates window
     dactionUpdate->disconnect(SIGNAL(triggered()));
 
@@ -3370,8 +3371,8 @@ void mudlet::slot_update_installed()
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
     dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
-}
 #endif // !Q_OS_MACOS
+}
 
 void mudlet::showChangelogIfUpdated()
 {
@@ -3379,12 +3380,6 @@ void mudlet::showChangelogIfUpdated()
         return;
     }
 
-    if (!updater) {
-        return;
-    }
-
     updater->showChangelog();
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
-    file.remove();
 }
 #endif // INCLUDE_UPDATER
