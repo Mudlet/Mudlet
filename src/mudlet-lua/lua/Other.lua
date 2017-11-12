@@ -812,8 +812,9 @@ local timeframetable = {}
 function timeframe(vname, true_time, nil_time, ...)
   local format = string.format
 
-  assert(type(true_time) == "number" or type(true_time) == "table", format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!", type(true_time)))
-  assert(type(nil_time) == "nil" or type(nil_time) == "number" or type(nil_time) == "table", format("timeframe: bad argument #3 type (nil time as a number or table expected, got %s!", type(nil_time)))
+  assert(type(vname) == "string" or type(vname) == "function", format("timeframe: bad argument #1 type (vname as a string or function expected, got %s!", type(vname)))
+  assert(type(true_time) == "number" or type(true_time) == "table", format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!)", type(true_time)))
+  assert(type(nil_time) == "nil" or type(nil_time) == "number" or type(nil_time) == "table", format("timeframe: bad argument #3 type (nil time as a number or table expected, got %s!)", type(nil_time)))
 
   -- aggregate timerlist data
   local timerlist = {
@@ -831,9 +832,11 @@ function timeframe(vname, true_time, nil_time, ...)
 
   -- loop through timerlist and create tempTimers
   local maxtime = 0
+  local vcount = 1
   for step, data in ipairs(timerlist) do
-    assert(type(data) == "table", format("timeframe: bad argument #4 type (timerlist data as a table expected, got %s!", type(data)))
+    assert(type(data) == "table", format("timeframe: bad argument #%d type (timerlist data as a table expected, got %s!", step, type(data)))
     local time, value = data[1], data[2]
+    assert(type(time) == "number", format("timeframe: bad argument #%d type (timerlist data table argument #1 as a number expected, got %s!", step, type(time)))
 
     maxtime = (time > maxtime) and time or maxtime
 
@@ -844,19 +847,20 @@ function timeframe(vname, true_time, nil_time, ...)
         if not s then error(m) end
       end
     else
-      assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #4 type (timerlist data argument #2 expects a string, number or boolean value; got %s!", type(value)))
+      assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #%d type (timerlist data argument #2 expects a string, number or boolean value; got %s!", step, type(value)))
       fun = assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))
     end
 
     if time <= 0 then
       fun()
     else
-      timeframetable[vname][step] = tempTimer(time, fun)
+      timeframetable[vname][vcount] = tempTimer(time, fun)
+      vcount = vcount + 1
     end
   end
 
   -- add final tempTimer to kill the timeframe
-  timeframetable[vname][#timeframetable[vname] + 1] = tempTimer(maxtime + 0.1, function()
+  timeframetable[vname][vcount] = tempTimer(maxtime + 0.1, function()
     killtimeframe(vname)
   end)
 
@@ -866,8 +870,8 @@ end
 
 function killtimeframe(vname)
   if timeframetable[vname] then
-    for _, step in ipairs(timeframetable[vname]) do
-      killTimer(step); _G["Timer" .. step] = nil
+    for _, timerId in ipairs(timeframetable[vname]) do
+      killTimer(timerId); _G["Timer" .. timerId] = nil
     end
     timeframetable[vname] = nil
   end
