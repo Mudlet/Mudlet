@@ -333,6 +333,7 @@ bool Updater::shouldShowChangelog()
     bool opened = file.open(QIODevice::ReadOnly);
     qint64 updateTimestamp;
     if (!opened) {
+        file.remove();
         return false;
     }
     QDataStream ifs(&file);
@@ -341,6 +342,10 @@ bool Updater::shouldShowChangelog()
 
     auto currentDateTime = QDateTime::currentDateTime().toMSecsSinceEpoch();
     auto minsSinceUpdate = (currentDateTime - updateTimestamp) / 1000 / 60;
+
+    // delete the file on check as well since if we updated and restarted right away
+    // we won't need to show the changelog - as well as on a launch 5mins after.
+    file.remove();
 
     return minsSinceUpdate >= 5;
 }
