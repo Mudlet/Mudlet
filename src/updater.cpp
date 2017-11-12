@@ -252,9 +252,11 @@ void Updater::updateBinaryOnLinux()
 }
 #endif // Q_OS_LINUX
 
-#if !defined(Q_OS_MACOS)
 void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 {
+    // moc, when used with cmake on macos bugs out if the entire function declaration and definition is entirely
+    // commented out so we leave a stub in
+#if !defined(Q_OS_MACOS)
     Q_UNUSED(button)
 
     // if the update is already installed, then the button says 'Restart' - do so
@@ -293,8 +295,8 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
         installOrRestartButton->setEnabled(true);
     });
     watcher->setFuture(future);
-}
 #endif // !Q_OS_MACOS
+}
 
 // records a unix epoch on disk indicating that an update has happened.
 // Mudlet will use that on the next launch to decide whenever it should show

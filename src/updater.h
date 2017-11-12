@@ -75,9 +75,7 @@ signals:
     void updateInstalled();
 
 public slots:
-#if !defined(Q_OS_MACOS)
     void installOrRestartClicked(QAbstractButton* button, QString filePath);
-#endif
 #if defined(Q_OS_LINUX)
     // might want to make these private
     void updateBinaryOnLinux();
