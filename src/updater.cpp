@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
+#include <QProcessEnvironment>
 #include "post_guard.h"
 
 // update flows:
@@ -235,7 +236,12 @@ void Updater::updateBinaryOnLinux()
 {
     // FIXME don't hardcode name in case we want to change it
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
-    QString installedBinaryPath(QCoreApplication::applicationFilePath());
+    auto systemEnvironment = QProcessEnvironment::systemEnvironment();
+    auto appimageLocation = systemEnvironment.contains(QStringLiteral("APPIMAGE")) ?
+                systemEnvironment.value(QStringLiteral("APPIMAGE"), QString()) :
+                QCoreApplication::applicationFilePath();
+
+    QString installedBinaryPath(appimageLocation);
 
     auto executablePermissions = unzippedBinary.permissions();
     executablePermissions |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
@@ -247,7 +253,7 @@ void Updater::updateBinaryOnLinux()
         return;
     }
 
-    QFile updatedBinary(QCoreApplication::applicationFilePath());
+    QFile updatedBinary(appimageLocation);
     if (!updatedBinary.setPermissions(executablePermissions)) {
         qWarning() << "couldn't set executable permissions on updated Mudlet binary at" << installedBinaryPath;
         return;
