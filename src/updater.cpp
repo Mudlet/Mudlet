@@ -50,12 +50,6 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdat
 // setup manual updates to do our custom actions
 void Updater::checkUpdatesOnStart()
 {
-    // only update release builds to prevent auto-update from overwriting your
-    // compiled binary while in development
-    if (mudlet::self()->onDevelopmentVersion()) {
-        //        return;
-    }
-
 #if defined(Q_OS_MACOS)
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
@@ -126,7 +120,7 @@ void Updater::setupOnWindows()
 
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
-        if (!updateAutomatically()) {
+        if (!updateAutomatically() || mudlet::self()->onDevelopmentVersion()) {
             return;
         }
 
@@ -185,7 +179,10 @@ void Updater::setupOnLinux()
 
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
-        if (!updateAutomatically()) {
+
+        // only update release builds to prevent auto-update from overwriting your
+        // compiled binary while in development
+        if (!updateAutomatically() || mudlet::self()->onDevelopmentVersion()) {
             return;
         }
 
