@@ -76,6 +76,8 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 {
     action = 0;
 
+    qDebug() << "envs:" << QProcessEnvironment::systemEnvironment().toStringList();
+
 // A crude and simplistic commandline options processor - note that Qt deals
 // with its options automagically!
 #if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC))
