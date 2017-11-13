@@ -29,6 +29,14 @@
 #include <QtConcurrent>
 #include "post_guard.h"
 
+// update flows:
+// linux: new AppImage is downloaded, unzipped, and put in place of the old one
+//   user then only restarts mudlet to get the new version
+// windows: new squirrel installer is downloaded and saved
+//   user then restarts, mudlet sees that there's a new installer available: launches it
+//   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
+// mac: handled completely outside of Mudlet by Sparkle
+
 Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
