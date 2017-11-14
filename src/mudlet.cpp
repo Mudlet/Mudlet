@@ -444,17 +444,16 @@ mudlet::mudlet()
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
-    settings = getQSettings();
-    readSettings(*settings);
+    mpSettings = getQSettings();
+    readSettings(*mpSettings);
 
 #if defined(INCLUDE_UPDATER)
-    updater = new Updater(this, settings);
-#if defined(Q_OS_MACOS)
+    updater = new Updater(this, mpSettings);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+#if defined(Q_OS_MACOS)
     // ensure that 'Check for updates' is under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
 #else
-    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER

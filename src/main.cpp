@@ -193,13 +193,6 @@ int main(int argc, char* argv[])
 
     QApplication* app = qobject_cast<QApplication*>(initApp.data());
 
-#if defined(Q_OS_WIN)
-    auto abortLaunch = runUpdate();
-    if (abortLaunch) {
-        return 0;
-    }
-#endif
-
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
     if (!app) {
@@ -281,6 +274,13 @@ int main(int argc, char* argv[])
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
+
+#if defined(Q_OS_WIN)
+    auto abortLaunch = runUpdate();
+    if (abortLaunch) {
+        return 0;
+    }
+#endif
 
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
