@@ -62,6 +62,8 @@ public:
     TEvent mLeaveParams;
     TEvent mEnterParams;
     bool mouseInside;
+
+    static QMap<Qt::MouseButton, QString> mMouseButtons;
 };
 
 #endif // MUDLET_TLABEL_H
