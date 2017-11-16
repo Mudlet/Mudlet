@@ -83,9 +83,12 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
+    if (event->button() == Qt::LeftButton || event->button() == Qt::RightButton) {
         if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams);
+            TEvent mReleaseParamsWButton = mReleaseParams;
+            mReleaseParamsWButton.mArgumentList.prepend(event->button() == Qt::LeftButton ? "LeftButton" : "RightButton");
+            mReleaseParamsWButton.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
+            mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParamsWButton);
         }
         event->accept();
         return;
