@@ -223,7 +223,7 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
 # Enable the built-in updater by default. Linux packagers will find it useful to disable it
 # since package managers are responsible for updates there
-DEFINES += INCLUDE_UPDATER=TRUE
+DEFINES += INCLUDE_UPDATER
 
 SOURCES += \
     ActionUnit.cpp \

@@ -383,7 +383,7 @@ ADD_DEFINITIONS(-DLUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 # Enable the built-in updater by default. Linux packagers will find it useful to disable it
 # since package managers are responsible for updates there
-ADD_DEFINITIONS(-DINCLUDE_UPDATER=TRUE)
+ADD_DEFINITIONS(-DINCLUDE_UPDATER)
 
 # Enable leak detection for MSVC debug builds.
 if(MSVC)
