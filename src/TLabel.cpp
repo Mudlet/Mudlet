@@ -67,9 +67,12 @@ void TLabel::setLeave(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
+    if (event->button() == Qt::LeftButton || event->button() == Qt::RightButton) {
         if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParams);
+            TEvent mClickParamsWButton = mClickParams;
+            mClickParamsWButton.mArgumentList.prepend(event->button() == Qt::LeftButton ? "LeftButton" : "RightButton");
+            mClickParamsWButton.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
+            mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParamsWButton);
         }
         event->accept();
         return;
