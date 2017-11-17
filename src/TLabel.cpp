@@ -102,7 +102,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
     if (mMouseButtons.contains(event->button())) {
         if (mpHost) {
             TEvent tmpClickParams = mClickParams;
-            tmpClickParams.mArgumentList.append(mMouseButtons[event->button()]);
+            tmpClickParams.mArgumentList.append(mMouseButtons.value(event->button()));
             tmpClickParams.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->getLuaInterpreter()->callEventHandler(mClick, tmpClickParams);
         }
@@ -118,7 +118,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     if (mMouseButtons.contains(event->button())) {
         if (mpHost) {
             TEvent tmpReleaseParams = mReleaseParams;
-            tmpReleaseParams.mArgumentList.append(mMouseButtons[event->button()]);
+            tmpReleaseParams.mArgumentList.append(mMouseButtons.value(event->button()));
             tmpReleaseParams.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mpHost->getLuaInterpreter()->callEventHandler(mRelease, tmpReleaseParams);
         }
