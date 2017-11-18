@@ -64,7 +64,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // These are currently empty so can be hidden until needed, but provides
     // locations on the first (General) and last (Special Options) tabs where
     // temporary/development/testing controls can be placed if needed...
-    groupBox_Debug->hide();
+    groupBox_debug->hide();
 
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -140,10 +140,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
          || pHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
          || pHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
 
-            downloadMapOptions->setVisible(true);
+            groupBox_downloadMapOptions->setVisible(true);
             connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
         } else {
-            downloadMapOptions->setVisible(false);
+            groupBox_downloadMapOptions->setVisible(false);
         }
 
         pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
@@ -394,20 +394,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     } else {
         // pHost is a nullptr
         // CHECKME: It may be better to use removeTab(n) instead...!
-        tabWidgeta->setTabBarAutoHide(true);
-        tabWidgeta->setTabEnabled(1, false); // Input Line
-        tabWidgeta->setTabEnabled(2, false); // Main Display
-        tabWidgeta->setTabEnabled(3, false); // Editor
-        tabWidgeta->setTabEnabled(4, false); // Color view
-        tabWidgeta->setTabEnabled(5, false); // Mapper
-        tabWidgeta->setTabEnabled(6, false); // Mapper colors
-        tabWidgeta->setTabEnabled(7, false); // Profile Special options
+        tabWidget->setTabBarAutoHide(true);
+        tabWidget->setTabEnabled(1, false); // Input Line
+        tabWidget->setTabEnabled(2, false); // Main Display
+        tabWidget->setTabEnabled(3, false); // Editor
+        tabWidget->setTabEnabled(4, false); // Color view
+        tabWidget->setTabEnabled(5, false); // Mapper
+        tabWidget->setTabEnabled(6, false); // Mapper colors
+        tabWidget->setTabEnabled(7, false); // Profile Special options
     }
 
     // Enforce selection of the first tab - despite any cock-ups when using the
     // Qt Designer utility when the dialog was saved with a different one
     // on top! 8-)
-    tabWidgeta->setCurrentIndex(0);
+    tabWidget->setCurrentIndex(0);
 }
 
 void dlgProfilePreferences::loadEditorTab()
@@ -417,7 +417,7 @@ void dlgProfilePreferences::loadEditorTab()
         return;
     }
 
-    connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
+    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
 
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
@@ -466,7 +466,7 @@ void dlgProfilePreferences::loadEditorTab()
     connect(script_preview_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_script_selected);
 
     // fire tab selection event manually should the dialog open on it by default
-    if (tabWidgeta->currentIndex() == 3) {
+    if (tabWidget->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
 }
