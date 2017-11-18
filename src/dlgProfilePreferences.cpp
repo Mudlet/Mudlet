@@ -64,8 +64,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // These are currently empty so can be hidden until needed, but provides
     // locations on the first (General) and last (Special Options) tabs where
     // temporary/development/testing controls can be placed if needed...
-    groupBox_debugApplication->hide();
-    groupBox_debugProfile->hide();
+    groupBox_Debug->hide();
 
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -102,7 +101,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
         dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-        groupBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+        enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
         checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
         // As we reflect the state of the above two checkboxes in the preview widget
         // on another tab we have to track their changes in state and update that
@@ -1312,7 +1311,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mSpellDic = dictList->currentItem()->text();
         }
 
-        pHost->mEnableSpellCheck = groupBox_spellCheck->isChecked();
+        pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
         pHost->mWrapAt = wrap_at_spinBox->value();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
