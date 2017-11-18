@@ -19,6 +19,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QApplication>
 
 #include "TLabel.h"
 
@@ -67,6 +68,18 @@ void TLabel::setLeave(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::mousePressEvent(QMouseEvent* event)
 {
+    // Workaround for mapper not receiving mouse events while sharing space with a label
+    QWidget* qw = qApp->widgetAt(event->globalPos());
+
+    if (qw)
+        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QMouseEvent newEvent(event->type(), qw->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
+            qApp->sendEvent(qw, &newEvent);
+            return;
+        }
+
+
     if (event->button() == Qt::LeftButton) {
         if (mpHost) {
             mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParams);
@@ -80,6 +93,17 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
+    // Workaround for mapper not receiving mouse events while sharing space with a label
+    QWidget* qw = qApp->widgetAt(event->globalPos());
+
+    if (qw)
+        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QMouseEvent newEvent(event->type(), qw->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
+            qApp->sendEvent(qw, &newEvent);
+            return;
+
+        }
     if (event->button() == Qt::LeftButton) {
         if (mpHost) {
             mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams);
@@ -91,8 +115,59 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     QWidget::mouseReleaseEvent(event);
 }
 
+void TLabel::mouseMoveEvent(QMouseEvent* event)
+{
+    // Workaround for mapper not receiving mouse events while sharing space with a label
+    QWidget* qw = qApp->widgetAt(event->globalPos());
+
+    if (qw)
+        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QMouseEvent newEvent(event->type(), qw->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
+            qApp->sendEvent(qw, &newEvent);
+            return;
+
+        }
+
+}
+
+void TLabel::wheelEvent(QWheelEvent* event)
+{
+    // Workaround for mapper not receiving mouse events while sharing space with a label
+    QWidget* qw = qApp->widgetAt(event->globalPos());
+
+    if (qw)
+        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QWheelEvent newEvent(
+                        qw->mapFromGlobal(event->globalPos()),
+                        event->globalPos(),
+                        event->pixelDelta(),
+                        event->angleDelta(),
+                        event->angleDelta().y()/8,
+                        Qt::Vertical,
+                        event->buttons(),
+                        event->modifiers(),
+                        event->phase());
+            qApp->sendEvent(qw, &newEvent);
+            return;
+
+        }
+}
+
 void TLabel::leaveEvent(QEvent* event)
 {
+    QWidget* qw = qApp->widgetAt(QCursor::pos());
+
+    if (qw)
+        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QEvent newEvent(event->type());
+            qApp->sendEvent(qw, &newEvent);
+            return;
+
+        }
+
     if (mLeave != "") {
         if (mpHost) {
             mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams);
@@ -105,6 +180,16 @@ void TLabel::leaveEvent(QEvent* event)
 
 void TLabel::enterEvent(QEvent* event)
 {
+    QWidget* qw = qApp->widgetAt(QCursor::pos());
+
+    if (qw)
+        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QEvent newEvent(event->type());
+            qApp->sendEvent(qw, &newEvent);
+            return;
+
+        }
     if (mEnter != "") {
         if (mpHost) {
             mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams);
@@ -114,3 +199,4 @@ void TLabel::enterEvent(QEvent* event)
     }
     QWidget::enterEvent(event);
 }
+

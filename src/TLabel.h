@@ -49,6 +49,8 @@ public:
     void setLeave(Host* pHost, const QString& func, const TEvent& args);
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
+    void wheelEvent(QWheelEvent*) override;
+    void mouseMoveEvent(QMouseEvent*) override;
     void leaveEvent(QEvent*) override;
     void enterEvent(QEvent*) override;
 
