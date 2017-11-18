@@ -392,16 +392,66 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         setSearchEngine(search_engine_combobox->currentText());
 
     } else {
-        // pHost is a nullptr
-        // CHECKME: It may be better to use removeTab(n) instead...!
-        tabWidget->setTabBarAutoHide(true);
-        tabWidget->setTabEnabled(1, false); // Input Line
-        tabWidget->setTabEnabled(2, false); // Main Display
-        tabWidget->setTabEnabled(3, false); // Editor
-        tabWidget->setTabEnabled(4, false); // Color view
-        tabWidget->setTabEnabled(5, false); // Mapper
-        tabWidget->setTabEnabled(6, false); // Mapper colors
-        tabWidget->setTabEnabled(7, false); // Profile Special options
+        // pHost is a nullptr so disable every control that depends on it
+        // on tab_general:
+        // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
+        groupBox_encoding->setEnabled(false);
+        groupBox_miscellaneous->setEnabled(false);
+        groupBox_protocols->setEnabled(false);
+        need_reconnect_for_data_protocol->hide();
+
+        // on tab_inputLine:
+        groupBox_input->setEnabled(false);
+        groupBox_spellCheck->setEnabled(false);
+
+        // on tab_display:
+        groupBox_font->setEnabled(false);
+        groupBox_borders->setEnabled(false);
+        groupBox_wrapping->setEnabled(false);
+        groupBox_doubleClick->setEnabled(false);
+        // Some of groupBox_displayOptions are usable, so must pick out and
+        // disable the others:
+        checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
+        checkBox_echoLuaErrors->setEnabled(false);
+
+        // on tab_codeEditor:
+        groupbox_codeEditorThemeSelection->setEnabled(false);
+        theme_download_label->hide();
+
+        // on tab_displayColors:
+        groupBox_displayColors->setEnabled(false);
+
+        // on tab_mapper:
+        // most of groupBox_mapFiles is disabled but there is ONE checkBox that
+        // is accessable because it is application wide - so disable EVERYTHING
+        // else that is not already disabled:
+        label_saveMap->setEnabled(false);
+        pushButton_saveMap->setEnabled(false);
+        label_loadMap->setEnabled(false);
+        pushButton_loadMap->setEnabled(false);
+        label_copyMap->setEnabled(false);
+        label_mapFileSaveFormatVersion->setEnabled(false);
+        comboBox_mapFileSaveFormatVersion->setEnabled(false);
+        comboBox_mapFileSaveFormatVersion->clear();
+        label_mapFileActionResult->hide();
+
+        groupBox_downloadMapOptions->setEnabled(false);
+        // The above is actually normally hidden:
+        groupBox_downloadMapOptions->hide();
+        groupBox_mapOptions->setEnabled(false);
+        // This is actually normally hidden until a map is loaded:
+        checkBox_showDefaultArea->hide();
+
+        // on tab_mapperColors:
+        groupBox_mapperColors->setEnabled(false);
+
+        // on groupBox_specialOptions:
+        groupBox_specialOptions->setEnabled(false);
+        // it is possible to connect using the IRC client off of the
+        // "default" host even without a normal profile loaded so leave
+        // groupBox_ircOptions enabled...
+        need_reconnect_for_specialoption->hide();
+        groupbox_searchEngineSelection->setEnabled(false);
     }
 
     // Enforce selection of the first tab - despite any cock-ups when using the
