@@ -24,45 +24,46 @@
 
 #include "TEvent.h"
 
-#include "post_guard.h"
 #include "pre_guard.h"
 #include <QLabel>
 #include <QPointer>
 #include <QString>
+#include "post_guard.h"
 
 class Host;
 
 class QMouseEvent;
 
-class TLabel : public QLabel {
-  Q_OBJECT
+class TLabel : public QLabel
+{
+    Q_OBJECT
 
 public:
-  Q_DISABLE_COPY(TLabel)
-  TLabel(QWidget *pW = 0);
-  void setClick(Host *pHost, const QString &func, const TEvent &args);
-  void setRelease(Host *pHost, const QString &func, const TEvent &args);
-  void setEnter(Host *pHost, const QString &func, const TEvent &args);
-  void setLeave(Host *pHost, const QString &func, const TEvent &args);
-  void mousePressEvent(QMouseEvent *) override;
-  void mouseReleaseEvent(QMouseEvent *) override;
-  void wheelEvent(QWheelEvent *) override;
-  void mouseMoveEvent(QMouseEvent *) override;
-  void leaveEvent(QEvent *) override;
-  void enterEvent(QEvent *) override;
+    Q_DISABLE_COPY(TLabel)
+    TLabel(QWidget* pW = 0);
+    void setClick(Host* pHost, const QString& func, const TEvent& args);
+    void setRelease(Host* pHost, const QString& func, const TEvent& args);
+    void setEnter(Host* pHost, const QString& func, const TEvent& args);
+    void setLeave(Host* pHost, const QString& func, const TEvent& args);
+    void mousePressEvent(QMouseEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
+    void wheelEvent(QWheelEvent*) override;
+    void mouseMoveEvent(QMouseEvent*) override;
+    void leaveEvent(QEvent*) override;
+    void enterEvent(QEvent*) override;
 
-  bool forwardEventToMapper(QEvent *);
+    bool forwardEventToMapper(QEvent*);
 
-  QPointer<Host> mpHost;
-  QString mClick;
-  QString mRelease;
-  QString mEnter;
-  QString mLeave;
-  TEvent mClickParams;
-  TEvent mReleaseParams;
-  TEvent mLeaveParams;
-  TEvent mEnterParams;
-  bool mouseInside;
+    QPointer<Host> mpHost;
+    QString mClick;
+    QString mRelease;
+    QString mEnter;
+    QString mLeave;
+    TEvent mClickParams;
+    TEvent mReleaseParams;
+    TEvent mLeaveParams;
+    TEvent mEnterParams;
+    bool mouseInside;
 };
 
 #endif // MUDLET_TLABEL_H
