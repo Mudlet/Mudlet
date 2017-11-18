@@ -54,6 +54,8 @@ public:
     void leaveEvent(QEvent*) override;
     void enterEvent(QEvent*) override;
 
+    bool forwardEventToMapper(QEvent*);
+
     QPointer<Host> mpHost;
     QString mClick;
     QString mRelease;

@@ -68,17 +68,9 @@ void TLabel::setLeave(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::mousePressEvent(QMouseEvent* event)
 {
-    // Workaround for mapper not receiving mouse events while sharing space with a label
-    QWidget* qw = qApp->widgetAt(event->globalPos());
-
-    if (qw)
-        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
-        {
-            QMouseEvent newEvent(event->type(), qw->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
-            qApp->sendEvent(qw, &newEvent);
-            return;
-        }
-
+    if (forwardEventToMapper(event)) {
+        return;
+    }
 
     if (event->button() == Qt::LeftButton) {
         if (mpHost) {
@@ -93,17 +85,10 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
-    // Workaround for mapper not receiving mouse events while sharing space with a label
-    QWidget* qw = qApp->widgetAt(event->globalPos());
+    if (forwardEventToMapper(event)) {
+        return;
+    }
 
-    if (qw)
-        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
-        {
-            QMouseEvent newEvent(event->type(), qw->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
-            qApp->sendEvent(qw, &newEvent);
-            return;
-
-        }
     if (event->button() == Qt::LeftButton) {
         if (mpHost) {
             mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams);
@@ -117,56 +102,24 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
-    // Workaround for mapper not receiving mouse events while sharing space with a label
-    QWidget* qw = qApp->widgetAt(event->globalPos());
-
-    if (qw)
-        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
-        {
-            QMouseEvent newEvent(event->type(), qw->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
-            qApp->sendEvent(qw, &newEvent);
-            return;
-
-        }
+    if (forwardEventToMapper(event)) {
+        return;
+    }
 
 }
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    // Workaround for mapper not receiving mouse events while sharing space with a label
-    QWidget* qw = qApp->widgetAt(event->globalPos());
-
-    if (qw)
-        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
-        {
-            QWheelEvent newEvent(
-                        qw->mapFromGlobal(event->globalPos()),
-                        event->globalPos(),
-                        event->pixelDelta(),
-                        event->angleDelta(),
-                        event->angleDelta().y()/8,
-                        Qt::Vertical,
-                        event->buttons(),
-                        event->modifiers(),
-                        event->phase());
-            qApp->sendEvent(qw, &newEvent);
-            return;
-
-        }
+    if (forwardEventToMapper(event)) {
+        return;
+    }
 }
 
 void TLabel::leaveEvent(QEvent* event)
 {
-    QWidget* qw = qApp->widgetAt(QCursor::pos());
-
-    if (qw)
-        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
-        {
-            QEvent newEvent(event->type());
-            qApp->sendEvent(qw, &newEvent);
-            return;
-
-        }
+    if (forwardEventToMapper(event)) {
+        return;
+    }
 
     if (mLeave != "") {
         if (mpHost) {
@@ -180,16 +133,10 @@ void TLabel::leaveEvent(QEvent* event)
 
 void TLabel::enterEvent(QEvent* event)
 {
-    QWidget* qw = qApp->widgetAt(QCursor::pos());
+    if (forwardEventToMapper(event)) {
+        return;
+    }
 
-    if (qw)
-        if (this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
-        {
-            QEvent newEvent(event->type());
-            qApp->sendEvent(qw, &newEvent);
-            return;
-
-        }
     if (mEnter != "") {
         if (mpHost) {
             mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams);
@@ -198,5 +145,61 @@ void TLabel::enterEvent(QEvent* event)
         return;
     }
     QWidget::enterEvent(event);
+}
+
+bool TLabel::forwardEventToMapper(QEvent* event)
+{
+    if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseMove)
+    {
+        QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
+        QWidget* qw = qApp->widgetAt(mouseEvent->globalPos());
+
+        if (qw && this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QMouseEvent newEvent(mouseEvent->type(), qw->mapFromGlobal(mouseEvent->globalPos()), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
+            qApp->sendEvent(qw, &newEvent);
+            return true;
+
+        }
+        return false;
+
+    }
+    else if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
+    {
+        QWidget* qw = qApp->widgetAt(QCursor::pos());
+
+        if (qw && this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QEvent newEvent(event->type());
+            qApp->sendEvent(qw, &newEvent);
+            return true;
+
+        }
+        return false;
+    }
+    else if (event->type() == QEvent::Wheel)
+    {
+        QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
+        QWidget* qw = qApp->widgetAt(wheelEvent->globalPos());
+
+        if (qw && this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw))
+        {
+            QWheelEvent newEvent(
+                        qw->mapFromGlobal(wheelEvent->globalPos()),
+                        wheelEvent->globalPos(),
+                        wheelEvent->pixelDelta(),
+                        wheelEvent->angleDelta(),
+                        wheelEvent->angleDelta().y()/8,
+                        Qt::Vertical,
+                        wheelEvent->buttons(),
+                        wheelEvent->modifiers(),
+                        wheelEvent->phase());
+            qApp->sendEvent(qw, &newEvent);
+            return true;
+
+        }
+        return false;
+    }
+    return false;
 }
 
