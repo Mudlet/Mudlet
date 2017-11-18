@@ -2151,7 +2151,7 @@ void mudlet::setEditorTreeWidgetIconSize(const int s)
 
 void mudlet::setMenuBarVisible(const bool state)
 {
-    mShowMenuBar == state;
+    mShowMenuBar = state;
 
     if (mShowMenuBar) {
         menuBar()->show();
@@ -2162,7 +2162,7 @@ void mudlet::setMenuBarVisible(const bool state)
 
 void mudlet::setToolBarVisible(const bool state)
 {
-    mShowToolbar == state;
+    mShowToolbar = state;
 
     if (mShowToolbar) {
         mpMainToolBar->show();
