@@ -84,9 +84,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (forwardEventToMapper(event)) {
-        return;
-    }
+    static_cast<void>(forwardEventToMapper(event));
 }
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
@@ -115,9 +113,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    if (forwardEventToMapper(event)) {
-        return;
-    }
+    static_cast<void>(forwardEventToMapper(event));
 }
 
 void TLabel::leaveEvent(QEvent* event)
@@ -154,6 +150,12 @@ void TLabel::enterEvent(QEvent* event)
 
 bool TLabel::forwardEventToMapper(QEvent* event)
 {
+    // This function implements a workaround to the issue of the mapper not receiving
+    //   mouse events while sharing space with labels, regardless of z-level. It works
+    //   by checking, when a label receives a mouse event, if the top-most widget at
+    //   the event's location is a child of the mapper object. If so, it redirects the
+    //   event there manually.
+
     switch (event->type()) {
     case (QEvent::MouseButtonPress):
     case (QEvent::MouseButtonDblClick):
