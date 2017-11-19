@@ -82,6 +82,13 @@ void TLabel::mousePressEvent(QMouseEvent* event)
     QWidget::mousePressEvent(event);
 }
 
+void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (forwardEventToMapper(event)) {
+        return;
+    }
+}
+
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
@@ -147,30 +154,37 @@ void TLabel::enterEvent(QEvent* event)
 
 bool TLabel::forwardEventToMapper(QEvent* event)
 {
-    if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseMove) {
+    switch (event->type()) {
+    case (QEvent::MouseButtonPress):
+    case (QEvent::MouseButtonDblClick):
+    case (QEvent::MouseButtonRelease):
+    case (QEvent::MouseMove): {
         auto mouseEvent = static_cast<QMouseEvent*>(event);
         QWidget* qw = qApp->widgetAt(mouseEvent->globalPos());
 
-        if (qw && this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
+        if (qw && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper")) && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
             QMouseEvent newEvent(mouseEvent->type(), qw->mapFromGlobal(mouseEvent->globalPos()), mouseEvent->button(), mouseEvent->buttons(), mouseEvent->modifiers());
             qApp->sendEvent(qw, &newEvent);
             return true;
         }
-
-    } else if (event->type() == QEvent::Enter || event->type() == QEvent::Leave) {
+        break;
+    }
+    case (QEvent::Enter):
+    case (QEvent::Leave): {
         QWidget* qw = qApp->widgetAt(QCursor::pos());
 
-        if (qw && this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
+        if (qw && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper")) && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
             QEvent newEvent(event->type());
             qApp->sendEvent(qw, &newEvent);
             return true;
         }
-
-    } else if (event->type() == QEvent::Wheel) {
+        break;
+    }
+    case (QEvent::Wheel): {
         auto wheelEvent = static_cast<QWheelEvent*>(event);
         QWidget* qw = qApp->widgetAt(wheelEvent->globalPos());
 
-        if (qw && this->parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
+        if (qw && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper")) && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
             QWheelEvent newEvent(qw->mapFromGlobal(wheelEvent->globalPos()),
                                  wheelEvent->globalPos(),
                                  wheelEvent->pixelDelta(),
@@ -183,6 +197,8 @@ bool TLabel::forwardEventToMapper(QEvent* event)
             qApp->sendEvent(qw, &newEvent);
             return true;
         }
+        break;
+    }
     }
     return false;
 }
