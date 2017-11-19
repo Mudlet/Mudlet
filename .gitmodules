@@ -1,3 +1,6 @@
 [submodule "3rdparty/edbee-lib"]
 	path = 3rdparty/edbee-lib
 	url = http://github.com/edbee/edbee-lib.git
+[submodule "3rdparty/lua_code_formatter"]
+	path = 3rdparty/lua_code_formatter
+	url = https://github.com/martin-eden/lua_code_formatter.git
