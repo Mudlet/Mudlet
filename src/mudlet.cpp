@@ -189,6 +189,7 @@ mudlet::mudlet()
     QStringList translationFilesList(translationDir.entryList(QDir::Files | QDir::Readable, QDir::Name));
     QStringListIterator itTranslation(translationFilesList);
     qDebug() << "mudlet::mudlet() INFO - Seeking Qt library translations files in:" << qtTranslationsFilePath;
+    qDebug() << "mudlet::mudlet() INFO - Seeking Mudlet library translations files in:" << translationFilesPath;
     while (itTranslation.hasNext()) {
         QString translationFileName = itTranslation.next();
         QString languageCode(translationFileName);
