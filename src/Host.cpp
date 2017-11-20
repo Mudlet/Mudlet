@@ -466,18 +466,10 @@ void Host::reenableAllTriggers()
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    auto ret = QPair<QString, QString>();
-    ret.first = QString("Google");
-    ret.second = mSearchEngineData[ret.first];
-
-    auto iterator = mSearchEngineData.constFind(mSearchEngineName);
-    if(iterator != mSearchEngineData.end())
-    {
-        ret.first = iterator.key();
-        ret.second = iterator.value();
-    }
-
-    return ret;
+    if(mSearchEngineData.contains(mSearchEngineName))
+        return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
+    else
+        return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
 }
 
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
