@@ -121,7 +121,7 @@ void Updater::setupOnWindows()
 
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
-        if (!updateAutomatically() || mudlet::self()->onDevelopmentVersion()) {
+        if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
             return;
         }
 
@@ -183,7 +183,7 @@ void Updater::setupOnLinux()
 
         // only update release builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (!updateAutomatically() || mudlet::self()->onDevelopmentVersion()) {
+        if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
             return;
         }
 

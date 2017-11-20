@@ -58,16 +58,17 @@ private:
 #elif defined(Q_OS_WIN)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
+#elif defined(Q_OS_MACOS)
+    void setupOnMacOS();
 #endif
 
     void recordUpdateTime() const;
     void finishSetup();
 
-#if defined(Q_OS_MACOS)
-    AutoUpdater* msparkleUpdater;
-    void setupOnMacOS();
-#elif defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX)
     QString unzippedBinaryName;
+#elif defined(Q_OS_MACOS)
+    AutoUpdater* msparkleUpdater;
 #endif
 
 

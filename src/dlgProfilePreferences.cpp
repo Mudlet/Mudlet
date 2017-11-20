@@ -441,7 +441,7 @@ void dlgProfilePreferences::loadSpecialSettingsTab()
 #if !defined(INCLUDE_UPDATER)
     groupBox_updates->hide();
 #else
-    if (mudlet::self()->onDevelopmentVersion()) {
+    if (mudlet::scmIsDevelopmentVersion) {
         // tick the box and make it be untickable as automatic updates are disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
@@ -1310,7 +1310,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEnableMSDP = mEnableMSDP->isChecked();
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
 
+#if defined(INCLUDE_UPDATER)
     mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+#endif
 
     if (pHost->mpMap && pHost->mpMap->mpMapper) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();

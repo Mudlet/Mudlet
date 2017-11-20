@@ -121,6 +121,7 @@ QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QMainWindow* mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
+const bool mudlet::scmIsDevelopmentVersion = ! QByteArray(APP_BUILD).isEmpty();
 
 QPointer<mudlet> mudlet::_self;
 
@@ -3338,13 +3339,6 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         return QStringLiteral("%1/.config/mudlet/moduleBackups/")
                 .arg(QDir::homePath());
     }
-}
-
-// returns whenever this is a release or development build of Mudlet
-bool mudlet::onDevelopmentVersion()
-{
-    auto devSuffix = QByteArray(APP_BUILD).trimmed();
-    return !devSuffix.isEmpty();
 }
 
 #if defined(INCLUDE_UPDATER)
