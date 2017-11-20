@@ -1178,17 +1178,27 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         QAction* action2 = new QAction("copy HTML", this);
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+        QAction* action3 = new QAction("copy all", this);
+        action3->setStatusTip(tr("copy all text in the buffer to clipboard"));
+        connect(action3, SIGNAL(triggered()), this, SLOT(slot_copyAllToClipboard()));
+        QAction* action4 = new QAction("copy all HTML", this);
+        action4->setStatusTip(tr("copy all text in the buffer with colors as HTML (for web browsers)"));
+        connect(action4, SIGNAL(triggered()), this, SLOT(slot_copyAllToClipboardHTML()));
 
         QString selectedEngine = mpHost->mSearchEngine.first;
-        QAction* action3 = new QAction(("search on " + selectedEngine), this);
-        connect(action3, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+        QAction* action5 = new QAction(("search on " + selectedEngine), this);
+        connect(action5, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
 
-        action3->setStatusTip("search selected text on " + selectedEngine);
+        action5->setStatusTip("search selected text on " + selectedEngine);
 
         auto popup = new QMenu(this);
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addSeparator();
         popup->addAction(action3);
+        popup->addAction(action4);
+        popup->addSeparator();
+        popup->addAction(action5);
 
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
@@ -1214,9 +1224,18 @@ void TTextEdit::slot_copySelectionToClipboard()
     copySelectionToClipboard();
 }
 
+void TTextEdit::slot_copyAllToClipboard()
+{
+    copyAllToClipboard();
+}
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
     copySelectionToClipboardHTML();
+}
+
+void TTextEdit::slot_copyAllToClipboardHTML()
+{
+    copyAllToClipboardHTML();
 }
 
 void TTextEdit::slot_searchSelectionOnline()
@@ -1230,6 +1249,17 @@ void TTextEdit::copySelectionToClipboard()
     QString selectedText = getSelectedText();
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
+}
+
+void TTextEdit::copyAllToClipboard()
+{
+    QPoint holdmPA = mPA;
+    QPoint holdmPB = mPB;
+    mPA = QPoint(0,0);
+    mPB = mpBuffer->getEndPos();
+    copySelectionToClipboard();
+    mPA = holdmPA;
+    mPB = holdmPB;
 }
 
 void TTextEdit::copySelectionToClipboardHTML()
@@ -1331,6 +1361,17 @@ void TTextEdit::copySelectionToClipboardHTML()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
     return;
+}
+
+void TTextEdit::copyAllToClipboardHTML()
+{
+    QPoint holdmPA = mPA;
+    QPoint holdmPB = mPB;
+    mPA = QPoint(0,0);
+    mPB = mpBuffer->getEndPos();
+    copySelectionToClipboardHTML();
+    mPA = holdmPA;
+    mPB = holdmPB;
 }
 
 void TTextEdit::searchSelectionOnline()

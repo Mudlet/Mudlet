@@ -85,10 +85,12 @@ public:
     int bufferScrollDown(int lines);
     bool isTailMode();
     void copySelectionToClipboard();
+    void copyAllToClipboard();
     void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void copySelectionToClipboardHTML();
+    void copyAllToClipboardHTML();
     void searchSelectionOnline();
 
     QColor mBgColor;
@@ -110,9 +112,11 @@ public:
 public slots:
     void slot_toggleTimeStamps();
     void slot_copySelectionToClipboard();
+    void slot_copyAllToClipboard();
     void slot_scrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
+    void slot_copyAllToClipboardHTML();
     void slot_searchSelectionOnline();
 
 private:
