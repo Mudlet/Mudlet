@@ -425,11 +425,7 @@ void dlgProfilePreferences::loadEditorTab()
     }
 
     // search engine load
-    // populate combobox
-    for(auto engineText : mpHost->mSearchEngineData.keys())
-    {
-        search_engine_combobox->addItem(engineText);
-    }
+    search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
 
     connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
 
