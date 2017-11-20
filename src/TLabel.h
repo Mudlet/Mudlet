@@ -22,7 +22,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "TEvent.h"
 
 #include "pre_guard.h"
@@ -34,7 +33,6 @@
 class Host;
 
 class QMouseEvent;
-
 
 class TLabel : public QLabel
 {
@@ -48,9 +46,14 @@ public:
     void setEnter(Host* pHost, const QString& func, const TEvent& args);
     void setLeave(Host* pHost, const QString& func, const TEvent& args);
     void mousePressEvent(QMouseEvent*) override;
+    void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
+    void wheelEvent(QWheelEvent*) override;
+    void mouseMoveEvent(QMouseEvent*) override;
     void leaveEvent(QEvent*) override;
     void enterEvent(QEvent*) override;
+
+    bool forwardEventToMapper(QEvent*);
 
     QPointer<Host> mpHost;
     QString mClick;
