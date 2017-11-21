@@ -108,6 +108,8 @@ macx {
     TARGET = mudlet
 }
 
+QMAKE_CXX = ccache g++
+
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
 # executables with an ".exe" extension!
