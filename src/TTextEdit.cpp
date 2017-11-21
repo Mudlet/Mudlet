@@ -1212,6 +1212,7 @@ void TTextEdit::slot_selectAll()
     mPA = QPoint(0, 0);
     mPB = mpBuffer->getEndPos();
     highlight();
+    update();
 }
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
