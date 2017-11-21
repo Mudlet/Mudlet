@@ -78,7 +78,6 @@ public:
     int bufferScrollDown(int lines);
     bool isTailMode();
     void copySelectionToClipboard();
-    void selectAll();
     void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }

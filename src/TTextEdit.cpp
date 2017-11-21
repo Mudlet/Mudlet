@@ -1168,7 +1168,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         action3->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
 
-        QString selectedEngine = mpHost->mSearchEngine.first;
+
+        QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(("search on " + selectedEngine), this);
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
         action4->setStatusTip("search selected text on " + selectedEngine);
@@ -1205,7 +1206,9 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_selectAll()
 {
-    selectAll();
+    mPA = QPoint(0, 0);
+    mPB = mpBuffer->getEndPos();
+    highlight();
 }
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
@@ -1224,13 +1227,6 @@ void TTextEdit::copySelectionToClipboard()
     QString selectedText = getSelectedText();
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
-}
-
-void TTextEdit::selectAll()
-{
-    mPA = QPoint(0, 0);
-    mPB = mpBuffer->getEndPos();
-    highlight();
 }
 
 void TTextEdit::copySelectionToClipboardHTML()
@@ -1338,7 +1334,7 @@ void TTextEdit::searchSelectionOnline()
 {
     QString selectedText = getSelectedText(' ');
     QString url = QUrl::toPercentEncoding(selectedText.trimmed());
-    url.prepend(mpHost->mSearchEngine.second);
+    url.prepend(mpHost->getSearchEngine().second);
     QDesktopServices::openUrl(QUrl(url));
 }
 
