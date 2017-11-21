@@ -1169,7 +1169,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         action3->setStatusTip(tr("select all text in the buffer"));
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
-
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(("search on " + selectedEngine), this);
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
