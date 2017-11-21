@@ -3000,26 +3000,26 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     return 0;
 }
 
-int TLuaInterpreter::setLabelCallback(lua_State* L, QString funcName)
+int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 {
     Host& host = getHostFromLua(L);
 
     QString labelName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "(%s: bad argument #1 type (label name as string expected, got %s!))", funcName.toUtf8().constData(), luaL_typename(L, 1));
+        lua_pushfstring(L, "%s: bad argument #1 type (label name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
     } else {
         labelName = QString::fromUtf8(lua_tostring(L, 1));
         if (labelName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushfstring(L, R"(%s: bad argument #1 value (label name cannot be an empty string.))", funcName.toUtf8().constData());
+            lua_pushfstring(L, "%s: bad argument #1 value (label name cannot be an empty string.)", funcName.toUtf8().constData());
             return 2;
         }
     }
 
     QString eventName;
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, R"(%s: bad argument #2 type (event name as string expected, got %s!))", funcName.toUtf8().constData(), luaL_typename(L, 2));
+        lua_pushfstring(L, "%s: bad argument #2 type (event name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 2));
         return lua_error(L);
     } else {
         eventName = QString::fromUtf8(lua_tostring(L, 2));
@@ -3066,7 +3066,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, QString funcName)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, R"(%s: bad argument #1 value (label name "%s" not found.))", funcName.toUtf8().constData(), labelName.toUtf8().constData());
+        lua_pushfstring(L, R"("%s": bad argument #1 value (label name "%s" not found.))", funcName.toUtf8().constData(), labelName.toUtf8().constData());
         return 2;
     }
 }
