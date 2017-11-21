@@ -1179,7 +1179,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
 
-        QString selectedEngine = mpHost->mSearchEngine.first;
+        QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action3 = new QAction(("search on " + selectedEngine), this);
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
 
@@ -1337,7 +1337,7 @@ void TTextEdit::searchSelectionOnline()
 {
     QString selectedText = getSelectedText(' ');
     QString url = QUrl::toPercentEncoding(selectedText.trimmed());
-    url.prepend(mpHost->mSearchEngine.second);
+    url.prepend(mpHost->getSearchEngine().second);
     QDesktopServices::openUrl(QUrl(url));
 }
 
