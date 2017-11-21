@@ -1158,15 +1158,16 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mIsCommandPopup = false;
 
-        QAction* action = new QAction("select all", this);
-        action->setStatusTip(tr("select all text in the buffer"));
-        connect(action, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
-        QAction* action2 = new QAction("copy", this);
-        action2->setStatusTip(tr("copy selected text to clipboard"));
-        connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
-        QAction* action3 = new QAction("copy HTML", this);
-        action3->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
-        connect(action3, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+
+        QAction* action = new QAction("copy", this);
+        action->setStatusTip(tr("copy selected text to clipboard"));
+        connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
+        QAction* action2 = new QAction("copy HTML", this);
+        action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
+        connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+        QAction* action3 = new QAction("select all", this);
+        action3->setStatusTip(tr("select all text in the buffer"));
+        connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
 
         QString selectedEngine = mpHost->getSearchEngine().first;
@@ -1177,7 +1178,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         auto popup = new QMenu(this);
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addSeparator();
         popup->addAction(action3);
+        popup->addSeparator();
         popup->addAction(action4);
 
         popup->popup(mapToGlobal(event->pos()), action);
