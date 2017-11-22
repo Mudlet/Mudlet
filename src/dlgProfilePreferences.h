@@ -121,7 +121,6 @@ private slots:
     void slot_changeShowSpacesAndTabs(const bool);
     void slot_changeShowLineFeedsAndParagraphs(const bool);
     void slot_resetThemeUpdateLabel();
-    void slot_setSearchEngine(const QString&);
     void slot_script_selected(int index);
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);

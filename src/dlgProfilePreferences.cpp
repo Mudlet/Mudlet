@@ -422,21 +422,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
-    // search engine, loading of the entries was moved from loadEditorTab,
-    // but this still may not be the best place!
-    mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
-    mSearchEngineMap.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
-    mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
-
-    // populate combobox
-    for (auto engineText : mSearchEngineMap.keys()) {
-        search_engine_combobox->addItem(engineText);
-    }
+    // search engine load
+    search_engine_combobox->addItems(QStringList(pHost->mSearchEngineData.keys()));
 
     // set to saved value or default to Google
-    int savedText = search_engine_combobox->findText(pHost->mSearchEngine.first);
+    int savedText = search_engine_combobox->findText(pHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
-    slot_setSearchEngine(search_engine_combobox->currentText());
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -507,7 +498,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
     connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
     connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
-    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_setSearchEngine(const QString)));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControlls()
@@ -730,14 +720,6 @@ void dlgProfilePreferences::loadEditorTab()
     // fire tab selection event manually should the dialog open on it by default
     if (tabWidget->currentIndex() == 3) {
         slot_editor_tab_selected(3);
-    }
-}
-
-void dlgProfilePreferences::slot_setSearchEngine(const QString &text)
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        pHost->mSearchEngine = QPair<QString, QString>(text, mSearchEngineMap[text]);
     }
 }
 
@@ -1757,6 +1739,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
         pHost->mThemePreviewItemID = data.second;
         pHost->mThemePreviewType = data.first;
+
+        pHost->mSearchEngineName = search_engine_combobox->currentText();
     }
 
     mudlet::self()->setToolBarIconSize(MainIconSize->value());
