@@ -330,6 +330,8 @@ signals:
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(const int);
     void signal_setTreeIconSize(const int);
+    void signal_hostCreated(const Host*, const quint8);
+    void signal_hostDestroyed(const Host*, const quint8);
 
 private slots:
     void slot_close_profile();
