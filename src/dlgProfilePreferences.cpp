@@ -57,6 +57,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
 , mFontSize(10)
 , mpHost(pHost)
+, mpMenu(nullptr)
 {
     // init generated dialog
     setupUi(this);
@@ -66,14 +67,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // temporary/development/testing controls can be placed if needed...
     groupBox_debug->hide();
 
+    QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+    checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-
-    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
-    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
-
-    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
-
+    // As we reflect the state of the above two checkboxes in the preview widget
+    // on another tab we have to track their changes in state and update that
+    // edbee widget straight away - however we do not need to update any open
+    // widgets of the same sort in use in ANY profile's editor until we hit
+    // the save button...
     checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
 
     MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
@@ -85,379 +87,589 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         showToolbar->setChecked(mudlet::self()->mShowToolbar);
     }
 
-    QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-    checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
-
     if (pHost) {
-        loadEditorTab();
-
-        mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
-        mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
-        acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
-
-        ircHostName->setText(dlgIRC::readIrcHostName(pHost));
-        ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
-        ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
-        ircNick->setText(dlgIRC::readIrcNickName(pHost));
-
-        dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-        enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
-        checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
-        // As we reflect the state of the above two checkboxes in the preview widget
-        // on another tab we have to track their changes in state and update that
-        // edbee widget straight away - however we do not need to update any open
-        // widgets of the same sort in use in ANY profile's editor until we hit
-        // the save button...
-
-        QString path;
-#ifdef Q_OS_LINUX
-        if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
-            path = "/usr/share/hunspell/";
-        } else {
-            path = "./";
-        }
-#elif defined(Q_OS_MAC)
-        path = QCoreApplication::applicationDirPath() + "/../Resources/";
-#else
-        path = "./";
-#endif
-
-        QDir dir(path);
-        QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-        QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
-        entries = entries.filter(rex);
-        for (int i = 0; i < entries.size(); i++) {
-            QString n = entries[i].replace(QStringLiteral(".dic"), "");
-            auto item = new QListWidgetItem(entries[i]);
-            dictList->addItem(item);
-            if (entries[i] == pHost->mSpellDic) {
-                item->setSelected(true);
-            }
-        }
-
-        if (pHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-         || pHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-         || pHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-         || pHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
-
-            groupBox_downloadMapOptions->setVisible(true);
-            connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
-        } else {
-            groupBox_downloadMapOptions->setVisible(false);
-        }
-
-        pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
-        pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
-
-        pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
-        pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
-        pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
-        pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
-        pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
-        pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
-        pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
-        pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
-        pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
-        pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
-        pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
-        pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
-        pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
-        pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
-        pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
-        pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
-
-        pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
-        pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
-        pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
-        pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
-
-        connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
-        connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
-
-        connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
-        connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
-        connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
-        connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
-        connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
-        connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
-        connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
-        connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
-        connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
-        connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
-        connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
-        connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
-        connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
-        connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
-        connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
-        connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
-
-        connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
-        connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
-        connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
-        connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
-
-        connect(reset_colors_button, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
-        connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
-
-        connect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(setDisplayFont()));
-        QStringList sizeList;
-        for (int i = 1; i < 40; i++) {
-            sizeList << QString::number(i);
-        }
-        fontSize->insertItems(1, sizeList);
-        connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
-
-        setColors2();
-
-        connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
-        connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
-        connect(pushButton_green_2, SIGNAL(clicked()), this, SLOT(setColorGreen2()));
-        connect(pushButton_Lgreen_2, SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
-        connect(pushButton_red_2, SIGNAL(clicked()), this, SLOT(setColorRed2()));
-        connect(pushButton_Lred_2, SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
-        connect(pushButton_blue_2, SIGNAL(clicked()), this, SLOT(setColorBlue2()));
-        connect(pushButton_Lblue_2, SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
-        connect(pushButton_yellow_2, SIGNAL(clicked()), this, SLOT(setColorYellow2()));
-        connect(pushButton_Lyellow_2, SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
-        connect(pushButton_cyan_2, SIGNAL(clicked()), this, SLOT(setColorCyan2()));
-        connect(pushButton_Lcyan_2, SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
-        connect(pushButton_magenta_2, SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
-        connect(pushButton_Lmagenta_2, SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
-        connect(pushButton_white_2, SIGNAL(clicked()), this, SLOT(setColorWhite2()));
-        connect(pushButton_Lwhite_2, SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
-
-        connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
-        connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
-
-        // the GMCP warning is hidden by default and is only enabled when the value is toggled
-        need_reconnect_for_data_protocol->hide();
-        connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
-        connect(mEnableMSDP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
-
-        // same with special connection warnings
-        need_reconnect_for_specialoption->hide();
-        connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
-        connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
-
-        fontComboBox->setCurrentFont(pHost->mDisplayFont);
-        if (mFontSize < 0) {
-            mFontSize = 10;
-        }
-        if (mFontSize < 40 && mFontSize > 0) {
-            fontSize->setCurrentIndex( (mFontSize - 1) );
-        } else {
-            // if the font size set for the main console is outside the pre-set range
-            // this will unfortunately reset the font to default size.
-            // without this the first entry (font-size 1) is selected and on-save
-            // will make the console font far too tiny to read.
-            // Maybe our font-size range should be generated differently if the console
-            // has a font size larger than the preset range offers?
-            fontSize->setCurrentIndex(9); // default font is size 10, index 9.
-        }
-
-        setColors();
-
-        wrap_at_spinBox->setValue(pHost->mWrapAt);
-        indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
-
-        show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
-        auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
-        command_separator_lineedit->setText(pHost->mCommandSeparator);
-        //disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
-
-        checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
-        //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
-        //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
-        checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
-        USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
-        topBorderHeight->setValue(pHost->mBorderTopHeight);
-        bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
-        leftBorderWidth->setValue(pHost->mBorderLeftWidth);
-        rightBorderWidth->setValue(pHost->mBorderRightWidth);
-        mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
-        mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
-        commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
-        mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
-        mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
-        mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
-        mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-        //mMXPMode->setCurrentIndex( pHost->mMXPMode );
-        //encoding->setCurrentIndex( pHost->mEncoding );
-        mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
-        mEnableGMCP->setChecked(pHost->mEnableGMCP);
-        mEnableMSDP->setChecked(pHost->mEnableMSDP);
-
-        // load profiles into mappers "copy map to profile" combobox
-        // this feature should work seamlessly both for online and offline profiles
-        QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
-        pushButton_chooseProfiles->setEnabled(false);
-        pushButton_copyMap->setEnabled(false);
-        QMenu* pMenu = new QMenu(tr("Other profiles to Map to:"));
-        for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
-            QString s = profileList.at(i);
-            if (s.isEmpty() || !s.compare(pHost->getName()) || !s.compare(QStringLiteral("default_host"))) {
-                // Do not include THIS profile in the list - it will
-                // automatically get saved - as the file to copy to the other
-                // profiles!  Also exclude the dummy "default_host" one
-                continue;
-            }
-
-            auto pItem = new QAction(s, nullptr);
-            pItem->setCheckable(true);
-            pItem->setChecked(false);
-            pMenu->addAction(pItem);
-            //Enable it as we now have at least one profile to copy to
-            pushButton_chooseProfiles->setEnabled(true);
-        }
-
-        pushButton_chooseProfiles->setMenu(pMenu);
-        connect(pMenu, SIGNAL(triggered(QAction*)), this, SLOT(slot_chooseProfilesChanged(QAction*)));
-
-        connect(pushButton_copyMap, SIGNAL(clicked()), this, SLOT(copyMap()));
-
-        // label to show on successful map file action
-        label_mapFileActionResult->hide();
-
-        connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
-        connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
-
-        //doubleclick ignore
-        QString ignore;
-        QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
-        while (it.hasNext()) {
-            ignore = ignore.append(it.next());
-        }
-        doubleclick_ignore_lineedit->setText(ignore);
-
-        // FIXME: Check this each time that it is appropriate for THIS build version
-        comboBox_mapFileSaveFormatVersion->clear();
-        // Add default version:
-        comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
-        comboBox_mapFileSaveFormatVersion->setEnabled(false);
-        label_mapFileSaveFormatVersion->setEnabled(false);
-        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
-            for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
-                if (i == pHost->mpMap->mDefaultVersion) {
-                    continue;
-                }
-                comboBox_mapFileSaveFormatVersion->setEnabled(true);
-                label_mapFileSaveFormatVersion->setEnabled(true);
-                if (i > pHost->mpMap->mDefaultVersion) {
-                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
-                } else {
-                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
-                }
-            }
-            int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
-            if (_indexForCurrentSaveFormat >= 0) {
-                comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
-            }
-        }
-        if (pHost->mpMap->mpMapper) {
-            checkBox_showDefaultArea->show();
-            checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
-            checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
-        } else {
-            checkBox_showDefaultArea->hide();
-        }
-
-        comboBox_encoding->addItem(QLatin1String("ASCII"));
-        comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
-        if (pHost->mTelnet.getEncoding().isEmpty()) {
-            // cTelnet::mEncoding is (or should be) empty for the default 7-bit
-            // ASCII case, so need to set the control specially to its (the
-            // first) value
-            comboBox_encoding->setCurrentIndex(0);
-        } else {
-            comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
-        }
-        connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
-
-        // search engine, loading of the entries was moved from loadEditorTab,
-        // but this still may not be the best place!
-        mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
-        mSearchEngineMap.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
-        mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
-
-        // populate combobox
-        for (auto engineText : mSearchEngineMap.keys()) {
-            search_engine_combobox->addItem(engineText);
-        }
-
-        connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
-
-        // set to saved value or default to Google
-        int savedText = search_engine_combobox->findText(pHost->mSearchEngine.first);
-        search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
-        setSearchEngine(search_engine_combobox->currentText());
-
+        initWithHost(pHost);
     } else {
-        // pHost is a nullptr so disable every control that depends on it
-        // on tab_general:
-        // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
-        groupBox_encoding->setEnabled(false);
-        groupBox_miscellaneous->setEnabled(false);
-        groupBox_protocols->setEnabled(false);
-        need_reconnect_for_data_protocol->hide();
-
-        // on tab_inputLine:
-        groupBox_input->setEnabled(false);
-        groupBox_spellCheck->setEnabled(false);
-
-        // on tab_display:
-        groupBox_font->setEnabled(false);
-        groupBox_borders->setEnabled(false);
-        groupBox_wrapping->setEnabled(false);
-        groupBox_doubleClick->setEnabled(false);
-        // Some of groupBox_displayOptions are usable, so must pick out and
-        // disable the others:
-        checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
-        checkBox_echoLuaErrors->setEnabled(false);
-
-        // on tab_codeEditor:
-        groupbox_codeEditorThemeSelection->setEnabled(false);
-        theme_download_label->hide();
-
-        // on tab_displayColors:
-        groupBox_displayColors->setEnabled(false);
-
-        // on tab_mapper:
-        // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-        // is accessable because it is application wide - so disable EVERYTHING
-        // else that is not already disabled:
-        label_saveMap->setEnabled(false);
-        pushButton_saveMap->setEnabled(false);
-        label_loadMap->setEnabled(false);
-        pushButton_loadMap->setEnabled(false);
-        label_copyMap->setEnabled(false);
-        label_mapFileSaveFormatVersion->setEnabled(false);
-        comboBox_mapFileSaveFormatVersion->setEnabled(false);
-        comboBox_mapFileSaveFormatVersion->clear();
-        label_mapFileActionResult->hide();
-
-        groupBox_downloadMapOptions->setEnabled(false);
-        // The above is actually normally hidden:
-        groupBox_downloadMapOptions->hide();
-        groupBox_mapOptions->setEnabled(false);
-        // This is actually normally hidden until a map is loaded:
-        checkBox_showDefaultArea->hide();
-
-        // on tab_mapperColors:
-        groupBox_mapperColors->setEnabled(false);
-
-        // on groupBox_specialOptions:
-        groupBox_specialOptions->setEnabled(false);
-        // it is possible to connect using the IRC client off of the
-        // "default" host even without a normal profile loaded so leave
-        // groupBox_ircOptions enabled...
-        need_reconnect_for_specialoption->hide();
-        groupbox_searchEngineSelection->setEnabled(false);
+        disableHostDetails();
+        clearHostDetails();
     }
 
     // Enforce selection of the first tab - despite any cock-ups when using the
     // Qt Designer utility when the dialog was saved with a different one
     // on top! 8-)
     tabWidget->setCurrentIndex(0);
+
+    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
+    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
+    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
+    connect(mudlet::self(), SIGNAL(signal_hostCreated(Host*,quint8)), this, SLOT(slot_handleHostAddition(Host*,quint8)));
+    connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*,quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
+}
+
+void dlgProfilePreferences::disableHostDetails()
+{
+    // The Host pointer is a nullptr so disable every control that depends on it
+
+    // on tab_general:
+    // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
+    groupBox_encoding->setEnabled(false);
+    groupBox_miscellaneous->setEnabled(false);
+    groupBox_protocols->setEnabled(false);
+    need_reconnect_for_data_protocol->hide();
+
+    // on tab_inputLine:
+    groupBox_input->setEnabled(false);
+    groupBox_spellCheck->setEnabled(false);
+
+    // on tab_display:
+    groupBox_font->setEnabled(false);
+    groupBox_borders->setEnabled(false);
+    groupBox_wrapping->setEnabled(false);
+    groupBox_doubleClick->setEnabled(false);
+    // Some of groupBox_displayOptions are usable, so must pick out and
+    // disable the others:
+    checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
+    checkBox_echoLuaErrors->setEnabled(false);
+
+    // on tab_codeEditor:
+    groupbox_codeEditorThemeSelection->setEnabled(false);
+    theme_download_label->hide();
+
+    // on tab_displayColors:
+    groupBox_displayColors->setEnabled(false);
+
+    // on tab_mapper:
+    // most of groupBox_mapFiles is disabled but there is ONE checkBox that
+    // is accessable because it is application wide - so disable EVERYTHING
+    // else that is not already disabled:
+    label_saveMap->setEnabled(false);
+    pushButton_saveMap->setEnabled(false);
+    label_loadMap->setEnabled(false);
+    pushButton_loadMap->setEnabled(false);
+    label_copyMap->setEnabled(false);
+    label_mapFileSaveFormatVersion->setEnabled(false);
+    comboBox_mapFileSaveFormatVersion->setEnabled(false);
+    comboBox_mapFileSaveFormatVersion->clear();
+    label_mapFileActionResult->hide();
+
+    groupBox_downloadMapOptions->setEnabled(false);
+    // The above is actually normally hidden:
+    groupBox_downloadMapOptions->hide();
+    groupBox_mapOptions->setEnabled(false);
+    // This is actually normally hidden until a map is loaded:
+    checkBox_showDefaultArea->hide();
+
+    // on tab_mapperColors:
+    groupBox_mapperColors->setEnabled(false);
+
+    // on groupBox_specialOptions:
+    groupBox_specialOptions->setEnabled(false);
+    // it is possible to connect using the IRC client off of the
+    // "default" host even without a normal profile loaded so leave
+    // groupBox_ircOptions enabled...
+    need_reconnect_for_specialoption->hide();
+    groupbox_searchEngineSelection->setEnabled(false);
+}
+
+void dlgProfilePreferences::enableHostDetails()
+{
+    groupBox_encoding->setEnabled(true);
+    groupBox_miscellaneous->setEnabled(true);
+    groupBox_protocols->setEnabled(true);
+
+    // on tab_inputLine:
+    groupBox_input->setEnabled(true);
+    groupBox_spellCheck->setEnabled(true);
+
+    // on tab_display:
+    groupBox_font->setEnabled(true);
+    groupBox_borders->setEnabled(true);
+    groupBox_wrapping->setEnabled(true);
+    groupBox_doubleClick->setEnabled(true);
+
+    checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
+    checkBox_echoLuaErrors->setEnabled(true);
+
+    // on tab_codeEditor:
+    groupbox_codeEditorThemeSelection->setEnabled(true);
+
+    // on tab_displayColors:
+    groupBox_displayColors->setEnabled(true);
+
+    // on tab_mapper:
+    // most of groupBox_mapFiles is disabled but there is ONE checkBox that
+    // is accessable because it is application wide - so disable EVERYTHING
+    // else that is not already disabled:
+    label_saveMap->setEnabled(true);
+    pushButton_saveMap->setEnabled(true);
+    label_loadMap->setEnabled(true);
+    pushButton_loadMap->setEnabled(true);
+    label_copyMap->setEnabled(true);
+    label_mapFileSaveFormatVersion->setEnabled(true);
+
+    groupBox_downloadMapOptions->setEnabled(true);
+    groupBox_mapOptions->setEnabled(true);
+
+    // on tab_mapperColors:
+    groupBox_mapperColors->setEnabled(true);
+
+    // on groupBox_specialOptions:
+    groupBox_specialOptions->setEnabled(true);
+    // it is possible to connect using the IRC client off of the
+    // "default" host even without a normal profile loaded so leave
+    // groupBox_ircOptions enabled...
+    groupbox_searchEngineSelection->setEnabled(true);
+}
+
+void dlgProfilePreferences::initWithHost(Host* pHost)
+{
+    loadEditorTab();
+
+    mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
+    mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
+    acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
+
+    ircHostName->setText(dlgIRC::readIrcHostName(pHost));
+    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
+    ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
+    ircNick->setText(dlgIRC::readIrcNickName(pHost));
+
+    dictList->setSelectionMode(QAbstractItemView::SingleSelection);
+    enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
+    checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+
+    QString path;
+#ifdef Q_OS_LINUX
+    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
+        path = "/usr/share/hunspell/";
+    } else {
+        path = "./";
+    }
+#elif defined(Q_OS_MAC)
+    path = QCoreApplication::applicationDirPath() + "/../Resources/";
+#else
+    path = "./";
+#endif
+
+    QDir dir(path);
+    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    entries = entries.filter(rex);
+    for (int i = 0; i < entries.size(); i++) {
+        QString n = entries[i].replace(QStringLiteral(".dic"), "");
+        auto item = new QListWidgetItem(entries[i]);
+        dictList->addItem(item);
+        if (entries[i] == pHost->mSpellDic) {
+            item->setSelected(true);
+        }
+    }
+
+    const QString url(pHost->getUrl());
+    if (url.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+
+        groupBox_downloadMapOptions->setVisible(true);
+        connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
+    } else {
+        groupBox_downloadMapOptions->setVisible(false);
+    }
+
+    setColors();
+
+    QStringList sizeList;
+    for (int i = 1; i < 40; i++) {
+        sizeList << QString::number(i);
+    }
+    fontSize->insertItems(1, sizeList);
+
+    setColors2();
+
+    // the GMCP warning is hidden by default and is only enabled when the value is toggled
+    need_reconnect_for_data_protocol->hide();
+
+    // same with special connection warnings
+    need_reconnect_for_specialoption->hide();
+
+    fontComboBox->setCurrentFont(pHost->mDisplayFont);
+    if (mFontSize < 0) {
+        mFontSize = 10;
+    }
+    if (mFontSize < 40 && mFontSize > 0) {
+        fontSize->setCurrentIndex( (mFontSize - 1) );
+    } else {
+        // if the font size set for the main console is outside the pre-set range
+        // this will unfortunately reset the font to default size.
+        // without this the first entry (font-size 1) is selected and on-save
+        // will make the console font far too tiny to read.
+        // Maybe our font-size range should be generated differently if the console
+        // has a font size larger than the preset range offers?
+        fontSize->setCurrentIndex(9); // default font is size 10, index 9.
+    }
+
+    wrap_at_spinBox->setValue(pHost->mWrapAt);
+    indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
+
+    show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
+    auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
+    command_separator_lineedit->setText(pHost->mCommandSeparator);
+    //disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
+
+    checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
+    //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
+    //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
+    checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
+    USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
+    topBorderHeight->setValue(pHost->mBorderTopHeight);
+    bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
+    leftBorderWidth->setValue(pHost->mBorderLeftWidth);
+    rightBorderWidth->setValue(pHost->mBorderRightWidth);
+    mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+    mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
+    commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
+    mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
+    mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
+    mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
+    mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
+    //mMXPMode->setCurrentIndex( pHost->mMXPMode );
+    //encoding->setCurrentIndex( pHost->mEncoding );
+    mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
+    mEnableGMCP->setChecked(pHost->mEnableGMCP);
+    mEnableMSDP->setChecked(pHost->mEnableMSDP);
+
+    // load profiles into mappers "copy map to profile" combobox
+    // this feature should work seamlessly both for online and offline profiles
+    QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
+    pushButton_chooseProfiles->setEnabled(false);
+    pushButton_copyMap->setEnabled(false);
+    if (! mpMenu) {
+        mpMenu = new QMenu(tr("Other profiles to Map to:"));
+    }
+
+    mpMenu->clear();
+    for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
+        QString s = profileList.at(i);
+        if (s.isEmpty() || !s.compare(pHost->getName()) || !s.compare(QStringLiteral("default_host"))) {
+            // Do not include THIS profile in the list - it will
+            // automatically get saved - as the file to copy to the other
+            // profiles!  Also exclude the dummy "default_host" one
+            continue;
+        }
+
+        auto pItem = new QAction(s, nullptr);
+        pItem->setCheckable(true);
+        pItem->setChecked(false);
+        mpMenu->addAction(pItem);
+        //Enable it as we now have at least one profile to copy to
+        pushButton_chooseProfiles->setEnabled(true);
+    }
+
+    pushButton_chooseProfiles->setMenu(mpMenu);
+
+
+    // label to show on successful map file action
+    label_mapFileActionResult->hide();
+
+    //doubleclick ignore
+    QString ignore;
+    QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
+    while (it.hasNext()) {
+        ignore = ignore.append(it.next());
+    }
+    doubleclick_ignore_lineedit->setText(ignore);
+
+    // FIXME: Check this each time that it is appropriate for THIS build version
+    comboBox_mapFileSaveFormatVersion->clear();
+    // Add default version:
+    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
+    comboBox_mapFileSaveFormatVersion->setEnabled(false);
+    label_mapFileSaveFormatVersion->setEnabled(false);
+    if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
+        for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
+            if (i == pHost->mpMap->mDefaultVersion) {
+                continue;
+            }
+            comboBox_mapFileSaveFormatVersion->setEnabled(true);
+            label_mapFileSaveFormatVersion->setEnabled(true);
+            if (i > pHost->mpMap->mDefaultVersion) {
+                comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
+            } else {
+                comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+            }
+        }
+        int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
+        if (_indexForCurrentSaveFormat >= 0) {
+            comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
+        }
+    }
+    if (pHost->mpMap->mpMapper) {
+        checkBox_showDefaultArea->show();
+        checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
+        checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
+    } else {
+        checkBox_showDefaultArea->hide();
+    }
+
+    comboBox_encoding->addItem(QLatin1String("ASCII"));
+    comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
+    if (pHost->mTelnet.getEncoding().isEmpty()) {
+        // cTelnet::mEncoding is (or should be) empty for the default 7-bit
+        // ASCII case, so need to set the control specially to its (the
+        // first) value
+        comboBox_encoding->setCurrentIndex(0);
+    } else {
+        comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
+    }
+
+    // search engine, loading of the entries was moved from loadEditorTab,
+    // but this still may not be the best place!
+    mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
+    mSearchEngineMap.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
+    mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
+
+    // populate combobox
+    for (auto engineText : mSearchEngineMap.keys()) {
+        search_engine_combobox->addItem(engineText);
+    }
+
+    // set to saved value or default to Google
+    int savedText = search_engine_combobox->findText(pHost->mSearchEngine.first);
+    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
+    slot_setSearchEngine(search_engine_combobox->currentText());
+
+    // Enable the controls that would be disabled if there wasn't a Host instance
+    // on tab_general:
+    // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
+    enableHostDetails();
+
+    // CHECKME: Have moved ALL the connects, where possible, to the end so that
+    // none are triggered by the setup operations...
+    connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
+    connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
+
+    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
+    connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
+    connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
+    connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
+    connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
+    connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
+    connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
+    connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
+    connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
+    connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
+    connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
+    connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
+    connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
+    connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+    connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
+    connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
+
+    connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
+    connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
+    connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
+    connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
+
+    connect(reset_colors_button, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
+    connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
+
+    connect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(setDisplayFont()));
+    connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
+
+    connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
+    connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
+    connect(pushButton_green_2, SIGNAL(clicked()), this, SLOT(setColorGreen2()));
+    connect(pushButton_Lgreen_2, SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
+    connect(pushButton_red_2, SIGNAL(clicked()), this, SLOT(setColorRed2()));
+    connect(pushButton_Lred_2, SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
+    connect(pushButton_blue_2, SIGNAL(clicked()), this, SLOT(setColorBlue2()));
+    connect(pushButton_Lblue_2, SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
+    connect(pushButton_yellow_2, SIGNAL(clicked()), this, SLOT(setColorYellow2()));
+    connect(pushButton_Lyellow_2, SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
+    connect(pushButton_cyan_2, SIGNAL(clicked()), this, SLOT(setColorCyan2()));
+    connect(pushButton_Lcyan_2, SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
+    connect(pushButton_magenta_2, SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
+    connect(pushButton_Lmagenta_2, SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
+    connect(pushButton_white_2, SIGNAL(clicked()), this, SLOT(setColorWhite2()));
+    connect(pushButton_Lwhite_2, SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
+
+    connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
+    connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
+
+    connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
+    connect(mEnableMSDP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
+
+    connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+    connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+    connect(mpMenu, SIGNAL(triggered(QAction*)), this, SLOT(slot_chooseProfilesChanged(QAction*)));
+
+    connect(pushButton_copyMap, SIGNAL(clicked()), this, SLOT(copyMap()));
+    connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
+    connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
+    connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
+    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_setSearchEngine(const QString)));
+}
+
+void dlgProfilePreferences::disconnectHostRelatedControlls()
+{
+    disconnect(buttonDownloadMap, SIGNAL(clicked()));
+
+    disconnect(pushButton_command_line_foreground_color, SIGNAL(clicked()));
+    disconnect(pushButton_command_line_background_color, SIGNAL(clicked()));
+
+    disconnect(pushButton_black, SIGNAL(clicked()));
+    disconnect(pushButton_Lblack, SIGNAL(clicked()));
+    disconnect(pushButton_green, SIGNAL(clicked()));
+    disconnect(pushButton_Lgreen, SIGNAL(clicked()));
+    disconnect(pushButton_red, SIGNAL(clicked()));
+    disconnect(pushButton_Lred, SIGNAL(clicked()));
+    disconnect(pushButton_blue, SIGNAL(clicked()));
+    disconnect(pushButton_Lblue, SIGNAL(clicked()));
+    disconnect(pushButton_yellow, SIGNAL(clicked()));
+    disconnect(pushButton_Lyellow, SIGNAL(clicked()));
+    disconnect(pushButton_cyan, SIGNAL(clicked()));
+    disconnect(pushButton_Lcyan, SIGNAL(clicked()));
+    disconnect(pushButton_magenta, SIGNAL(clicked()));
+    disconnect(pushButton_Lmagenta, SIGNAL(clicked()));
+    disconnect(pushButton_white, SIGNAL(clicked()));
+    disconnect(pushButton_Lwhite, SIGNAL(clicked()));
+
+    disconnect(pushButton_foreground_color, SIGNAL(clicked()));
+    disconnect(pushButton_background_color, SIGNAL(clicked()));
+    disconnect(pushButton_command_foreground_color, SIGNAL(clicked()));
+    disconnect(pushButton_command_background_color, SIGNAL(clicked()));
+
+    // The "new" style connect(...) does not have the same range of overloaded
+    // disconnect(...) counterparts - so we need to provide the "dummy"
+    // arguments to get the wanted wild-card behaviour for them:
+    disconnect(reset_colors_button, &QAbstractButton::clicked, 0, 0);
+    disconnect(reset_colors_button_2, &QAbstractButton::clicked, 0, 0);
+
+    disconnect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)));
+    disconnect(fontSize, SIGNAL(currentIndexChanged(int)));
+
+    disconnect(pushButton_black_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lblack_2, SIGNAL(clicked()));
+    disconnect(pushButton_green_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lgreen_2, SIGNAL(clicked()));
+    disconnect(pushButton_red_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lred_2, SIGNAL(clicked()));
+    disconnect(pushButton_blue_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lblue_2, SIGNAL(clicked()));
+    disconnect(pushButton_yellow_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lyellow_2, SIGNAL(clicked()));
+    disconnect(pushButton_cyan_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lcyan_2, SIGNAL(clicked()));
+    disconnect(pushButton_magenta_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lmagenta_2, SIGNAL(clicked()));
+    disconnect(pushButton_white_2, SIGNAL(clicked()));
+    disconnect(pushButton_Lwhite_2, SIGNAL(clicked()));
+
+    disconnect(pushButton_foreground_color_2, SIGNAL(clicked()));
+    disconnect(pushButton_background_color_2, SIGNAL(clicked()));
+
+    disconnect(mEnableGMCP, SIGNAL(clicked()));
+    disconnect(mEnableMSDP, SIGNAL(clicked()));
+
+    disconnect(mFORCE_MCCP_OFF, SIGNAL(clicked()));
+    disconnect(mFORCE_GA_OFF, SIGNAL(clicked()));
+
+    disconnect(mpMenu, SIGNAL(triggered(QAction*)));
+    disconnect(pushButton_copyMap, SIGNAL(clicked()));
+    disconnect(pushButton_loadMap, SIGNAL(clicked()));
+    disconnect(pushButton_saveMap, SIGNAL(clicked()));
+
+    disconnect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)));
+
+    disconnect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)));
+}
+
+void dlgProfilePreferences::clearHostDetails()
+{
+    code_editor_theme_selection_combobox->clear();
+    script_preview_combobox->clear();
+    edbeePreviewWidget->textDocument()->setText(QString());
+
+    mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
+    mMapperUseAntiAlias->setChecked(false);
+    acceptServerGUI->setChecked(false);
+
+    // Given that the IRC sub-system can handle there NOT being an active host
+    // this may need revising - but then the IRC sub-system may need to be fixed
+    // to handle switching back to the "default_host" should the currently
+    // active one be the one "going away" at this point...
+    ircHostName->clear();
+    ircHostPort->clear();
+    ircChannels->clear();
+    ircNick->clear();
+
+    dictList->clear();
+    enableSpellCheck->setChecked(false);
+    checkBox_echoLuaErrors->setChecked(false);
+
+    groupBox_downloadMapOptions->setVisible(false);
+
+    fontSize->clear();
+
+    need_reconnect_for_data_protocol->hide();
+
+    need_reconnect_for_specialoption->hide();
+
+    fontComboBox->clear();
+
+    fontSize->clear();
+
+    setColors();
+    setColors2();
+
+    wrap_at_spinBox->clear();
+    indent_wrapped_spinBox->clear();
+
+    show_sent_text_checkbox->setChecked(false);
+    auto_clear_input_line_checkbox->setChecked(false);
+    command_separator_lineedit->clear();
+
+    checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
+    checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
+    USE_UNIX_EOL->setChecked(false);
+    topBorderHeight->clear();
+    bottomBorderHeight->clear();
+    leftBorderWidth->clear();
+    rightBorderWidth->clear();
+    mIsToLogInHtml->setChecked(false);
+    mIsLoggingTimestamps->setChecked(false);
+    commandLineMinimumHeight->clear();
+    mNoAntiAlias->setChecked(false);
+    mFORCE_MCCP_OFF->setChecked(false);
+    mFORCE_GA_OFF->setChecked(false);
+    mAlertOnNewData->setChecked(false);
+    mFORCE_SAVE_ON_EXIT->setChecked(false);
+    mEnableGMCP->setChecked(false);
+    mEnableMSDP->setChecked(false);
+
+    pushButton_chooseProfiles->setEnabled(false);
+    pushButton_copyMap->setEnabled(false);
+    if (mpMenu ) {
+        mpMenu->deleteLater();
+        mpMenu = nullptr;
+    }
+
+    pushButton_chooseProfiles->setEnabled(false);
+
+    label_mapFileActionResult->hide();
+
+    doubleclick_ignore_lineedit->clear();
+
+    comboBox_mapFileSaveFormatVersion->clear();
+    comboBox_mapFileSaveFormatVersion->setEnabled(true);
+    label_mapFileSaveFormatVersion->setEnabled(false);
+    checkBox_showDefaultArea->setChecked(false);
+    checkBox_showDefaultArea->hide();
+
+    comboBox_encoding->clear();
+
+    mSearchEngineMap.clear();
+    search_engine_combobox->clear();
 }
 
 void dlgProfilePreferences::loadEditorTab()
@@ -521,7 +733,7 @@ void dlgProfilePreferences::loadEditorTab()
     }
 }
 
-void dlgProfilePreferences::setSearchEngine(const QString &text)
+void dlgProfilePreferences::slot_setSearchEngine(const QString &text)
 {
     Host* pHost = mpHost;
     if (pHost) {
@@ -529,69 +741,105 @@ void dlgProfilePreferences::setSearchEngine(const QString &text)
     }
 }
 
-void dlgProfilePreferences::slot_search_engine_edited(const QString &text)
-{
-    setSearchEngine(text);
-}
-
 void dlgProfilePreferences::setColors()
 {
     Host* pHost = mpHost;
-    if (!pHost) {
-        return;
+    if (pHost) {
+        pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
+        pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
+        pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
+        pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
+        pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
+        pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
+        pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
+        pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
+        pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
+        pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
+        pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
+        pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
+        pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
+        pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
+        pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
+        pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
+        pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
+        pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
+
+        pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
+        pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
+        pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
+        pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
+    } else {
+        pushButton_foreground_color->setStyleSheet(QString());
+        pushButton_background_color->setStyleSheet(QString());
+
+        pushButton_black->setStyleSheet(QString());
+        pushButton_Lblack->setStyleSheet(QString());
+        pushButton_green->setStyleSheet(QString());
+        pushButton_Lgreen->setStyleSheet(QString());
+        pushButton_red->setStyleSheet(QString());
+        pushButton_Lred->setStyleSheet(QString());
+        pushButton_blue->setStyleSheet(QString());
+        pushButton_Lblue->setStyleSheet(QString());
+        pushButton_yellow->setStyleSheet(QString());
+        pushButton_Lyellow->setStyleSheet(QString());
+        pushButton_cyan->setStyleSheet(QString());
+        pushButton_Lcyan->setStyleSheet(QString());
+        pushButton_magenta->setStyleSheet(QString());
+        pushButton_Lmagenta->setStyleSheet(QString());
+        pushButton_white->setStyleSheet(QString());
+        pushButton_Lwhite->setStyleSheet(QString());
+
+        pushButton_command_line_foreground_color->setStyleSheet(QString());
+        pushButton_command_line_background_color->setStyleSheet(QString());
+        pushButton_command_foreground_color->setStyleSheet(QString());
+        pushButton_command_background_color->setStyleSheet(QString());
     }
-
-    pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
-    pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
-    pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
-    pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
-    pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
-    pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
-    pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
-    pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
-    pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
-    pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
-    pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
-    pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
-    pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
-    pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
-    pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
-    pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
-    pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
-    pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
-
-    pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
-    pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
-    pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
-    pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
 }
 
 void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
-    if (!pHost) {
-        return;
+    if (pHost) {
+        pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack_2.name()));
+        pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack_2.name()));
+        pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen_2.name()));
+        pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen_2.name()));
+        pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed_2.name()));
+        pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed_2.name()));
+        pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue_2.name()));
+        pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue_2.name()));
+        pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow_2.name()));
+        pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow_2.name()));
+        pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan_2.name()));
+        pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan_2.name()));
+        pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta_2.name()));
+        pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta_2.name()));
+        pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite_2.name()));
+        pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite_2.name()));
+
+        pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
+        pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
+    } else {
+        pushButton_black_2->setStyleSheet(QString());
+        pushButton_Lblack_2->setStyleSheet(QString());
+        pushButton_green_2->setStyleSheet(QString());
+        pushButton_Lgreen_2->setStyleSheet(QString());
+        pushButton_red_2->setStyleSheet(QString());
+        pushButton_Lred_2->setStyleSheet(QString());
+        pushButton_blue_2->setStyleSheet(QString());
+        pushButton_Lblue_2->setStyleSheet(QString());
+        pushButton_yellow_2->setStyleSheet(QString());
+        pushButton_Lyellow_2->setStyleSheet(QString());
+        pushButton_cyan_2->setStyleSheet(QString());
+        pushButton_Lcyan_2->setStyleSheet(QString());
+        pushButton_magenta_2->setStyleSheet(QString());
+        pushButton_Lmagenta_2->setStyleSheet(QString());
+        pushButton_white_2->setStyleSheet(QString());
+        pushButton_Lwhite_2->setStyleSheet(QString());
+
+        pushButton_foreground_color_2->setStyleSheet(QString());
+        pushButton_background_color_2->setStyleSheet(QString());
     }
-
-    pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack_2.name()));
-    pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack_2.name()));
-    pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen_2.name()));
-    pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen_2.name()));
-    pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed_2.name()));
-    pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed_2.name()));
-    pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue_2.name()));
-    pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue_2.name()));
-    pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow_2.name()));
-    pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow_2.name()));
-    pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan_2.name()));
-    pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan_2.name()));
-    pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta_2.name()));
-    pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta_2.name()));
-    pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite_2.name()));
-    pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite_2.name()));
-
-    pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
-    pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
 }
 
 void dlgProfilePreferences::resetColors()
@@ -685,6 +933,7 @@ void dlgProfilePreferences::setFgColor()
         setColor(pushButton_foreground_color, pHost->mFgColor);
     }
 }
+
 void dlgProfilePreferences::setBgColor()
 {
     Host* pHost = mpHost;
@@ -724,7 +973,6 @@ void dlgProfilePreferences::setCommandBgColor()
         setColor(pushButton_command_background_color, pHost->mCommandBgColor);
     }
 }
-
 
 void dlgProfilePreferences::setFontSize()
 {
@@ -1957,4 +2205,35 @@ void dlgProfilePreferences::slot_resetThemeUpdateLabel()
 {
     theme_download_label->hide();
     theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
+}
+
+void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 count)
+{
+    // count will be 2 in the case we particularly want to handle (adding the
+    // first real Host instance):
+    if (!mpHost && pHost && count < 3) {
+        // We have not been constructedf with a valid Host pointer,
+        // AND a real Host instance has just been created
+        // AND there are only two Host instances (the "real" one and the
+        // "default_host") around.
+        mpHost = pHost;
+        // So make connections to the details of the real Host instance:
+        initWithHost(pHost);
+    }
+}
+
+void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
+{
+    if (mpHost && pHost && mpHost == pHost) {
+        // We have been constructed with a valid Host pointer,
+        // AND a real Host instance is being destroyed
+        // AND we are working on the Host instance concerned
+        mpHost = nullptr;
+        // So remove connections to the details of the real Host instance (we
+        // have to throw them away as it is too late to save them:
+        disconnectHostRelatedControlls();
+        clearHostDetails();
+        // and we can then use the following to disable the Host specific controls:
+        disableHostDetails();
+    }
 }

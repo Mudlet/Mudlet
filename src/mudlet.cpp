@@ -2628,6 +2628,8 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
     pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
+    // For the first real host created the getHostCount() will return 2 because
+    // there is already a "default_host"
     signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, 0);
     enableToolbarButtons();
