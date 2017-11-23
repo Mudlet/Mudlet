@@ -49,7 +49,6 @@ INT_NO_INCLUDE_UPDATER = $$(NO_INCLUDE_UPDATER)
 if(!isEmpty(INT_NO_INCLUDE_UPDATER))|freebsd|cygwin {
     message("Updater code is not enabled or not available in this configuration")
 } else {
-    message("Updater code is enabled in this configuration")
     DEFINES+=INCLUDE_UPDATER
 }
 
@@ -83,9 +82,7 @@ contains(DEFINES, INCLUDE_UPDATER) {
 }
 
 # Now handle any submodule missing:
-isEmpty(GIT_MODULES_NEEDED) {
-    message("All git submodules needed already in place ")
-} else {
+!isEmpty(GIT_MODULES_NEEDED) {
     message("Running git submodule update --init \"$${GIT_MODULES_NEEDED}\" ")
     system("git submodule update --init $${GIT_MODULES_NEEDED} ")
 }
