@@ -25,7 +25,6 @@
 
 #include "mudlet.h"
 
-
 #include "EAction.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -49,6 +48,13 @@
 #include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
+#include "edbee/models/textgrammar.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/texttheme.h"
+#if defined(INCLUDE_UPDATER)
+#include "updater.h"
+#endif
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -64,11 +70,6 @@
 #include <QTextCharFormat>
 #include <QToolBar>
 #include "post_guard.h"
-
-#include "edbee/edbee.h"
-#include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
-#include "edbee/views/texttheme.h"
 
 #include <zip.h>
 
@@ -120,6 +121,7 @@ QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QMainWindow* mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
+const bool mudlet::scmIsDevelopmentVersion = ! QByteArray(APP_BUILD).isEmpty();
 
 QPointer<mudlet> mudlet::_self;
 
@@ -154,12 +156,12 @@ mudlet::mudlet()
 , replayTimer(nullptr)
 , replayToolBar(nullptr)
 , moduleTable(nullptr)
-, mshowMapAuditErrors(false)
 , mCompactInputLine(false)
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
 , mpProfilePreferencesDlg(nullptr)
+, mshowMapAuditErrors(false)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -416,7 +418,9 @@ mudlet::mudlet()
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
+#if !defined(INCLUDE_UPDATER)
+    dactionUpdate->setVisible(false);
+#endif
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
@@ -441,11 +445,23 @@ mudlet::mudlet()
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
+    mpSettings = getQSettings();
+    readSettings(*mpSettings);
+
+#if defined(INCLUDE_UPDATER)
+    updater = new Updater(this, mpSettings);
+    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+#if defined(Q_OS_MACOS)
+    // ensure that 'Check for updates' is under the Applications menu per convention
+    dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
+#else
+    connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
+#endif // !Q_OS_MACOS
+#endif // INCLUDE_UPDATER
+
     // mToolbarIconSize has been set to 0 in the initialisation list so either
     // value will be accepted:
     setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
-
-    readSettings();
 
     // Recover from a save in a state when both are hidden so that the toolbar
     // is shown
@@ -469,6 +485,18 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+}
+
+QSettings* mudlet::getQSettings()
+{
+    /*In case sensitive environments, two different config directories
+        were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+        Furthermore, we skip the version from the application name to follow the convention.
+        For compatibility with older settings, if no config is loaded
+        from the config directory "mudlet", application "Mudlet", we try to load from the config
+        directory "Mudlet", application "Mudlet 1.0". */
+    QSettings settings_new("mudlet", "Mudlet");
+    return new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 }
 
 void mudlet::initEdbee()
@@ -2059,30 +2087,46 @@ void mudlet::closeEvent(QCloseEvent* event)
         }
     }
 
+    // pass the event on so dblsqd can perform an update
+    // if automatic updates have been disabled
     event->accept();
-    qApp->quit();
 }
 
 void mudlet::forceClose()
 {
     for (auto console : mConsoleMap) {
+        auto host = console->getHost();
+        host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
+
+        if (host->getName() != QStringLiteral("default_host")) {
+            host->mTelnet.disconnect();
+            // close script-editor
+            if (host->mpEditorDialog) {
+                host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+                host->mpEditorDialog->close();
+            }
+            if (host->mpNotePad) {
+                host->mpNotePad->save();
+                host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+                host->mpNotePad->close();
+            }
+
+            if (mpIrcClientMap.contains(host)) {
+                mpIrcClientMap.value(host)->close();
+            }
+        }
+
+        console->close();
     }
+
+    writeSettings();
 
     close();
 }
 
-void mudlet::readSettings()
+void mudlet::readSettings(const QSettings& settings)
 {
-    /* In case sensitive environments, two different config directories
-       were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-       Furthermore, we skip the version from the application name to follow the convention.
-       For compatibility with older settings, if no config is loaded
-       from the config directory "mudlet", application "Mudlet", we try to load from the config
-       directory "Mudlet", application "Mudlet 1.0". */
-    QSettings settings_new("mudlet", "Mudlet");
-    QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
-
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
@@ -2433,11 +2477,6 @@ void mudlet::check_for_mappingscript()
 void mudlet::slot_open_mappingscripts_page()
 {
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
-}
-
-void mudlet::slot_show_help_dialog_download()
-{
-    QDesktopServices::openUrl(QUrl("https://www.mudlet.org/download/"));
 }
 
 void mudlet::slot_show_about_dialog()
@@ -3301,3 +3340,39 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
                 .arg(QDir::homePath());
     }
 }
+
+#if defined(INCLUDE_UPDATER)
+void mudlet::checkUpdatesOnStart() {
+    updater->checkUpdatesOnStart();
+}
+
+void mudlet::slot_check_manual_update()
+{
+    updater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_update_installed()
+{
+// can't comment out method entirely as moc chokes on it, so leave a stub
+#if !defined(Q_OS_MACOS)
+    // disable existing functionality to show the updates window
+    dactionUpdate->disconnect(SIGNAL(triggered()));
+
+    // rejig to restart Mudlet instead
+    QObject::connect(dactionUpdate, &QAction::triggered, [=]() {
+        forceClose();
+        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+    });
+    dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
+#endif // !Q_OS_MACOS
+}
+
+void mudlet::showChangelogIfUpdated()
+{
+    if (!updater->shouldShowChangelog()) {
+        return;
+    }
+
+    updater->showChangelog();
+}
+#endif // INCLUDE_UPDATER

@@ -146,6 +146,8 @@ private:
     void setSearchEngine(const QString&);
 
     void slot_script_selected(int index);
+
+    void loadSpecialSettingsTab();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

@@ -118,7 +118,7 @@ SET(mudlet_UIS
     ui/vars_main_area.ui
 )
 
-SET(mudlet_MOC_HDRS 
+SET(mudlet_MOC_HDRS
     ctelnet.h
     dlgAboutDialog.h
     dlgActionMainArea.h
@@ -167,6 +167,7 @@ SET(mudlet_HDRS
     FontManager.h
     Host.h
     HostManager.h
+    ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
     pre_guard.h
@@ -197,8 +198,12 @@ SET(mudlet_HDRS
     VarUnit.h
     XMLexport.h
     XMLimport.h
-    ircmessageformatter.h
 )
+
+IF(WITH_UPDATER)
+  LIST(APPEND mudlet_SRCS updater.cpp)
+  LIST(APPEND mudlet_MOC_HDRS updater.h)
+ENDIF(WITH_UPDATER)
 
 IF(MSVC)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
@@ -274,7 +279,7 @@ ENDIF()
 # Break each step into a separate command so any status message is output straight away
 IF(APPLE)
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
-  # we need the path to an interal header zipconf.g that it calls for using '<''>'s
+  # we need the path to an interal header zipconf.h that it calls for using '<''>'s
   # i.e. SYSTEM #include delimiters which are typically located at e.g. /usr/lib/libzip/include/zipconf.h
   # and using pkg-config is the recommended way to get the details.
   # Spotted recommendation to use pkg-config here https://github.com/Homebrew/homebrew/issues/13390
@@ -325,6 +330,14 @@ IF (Qt5Core_VERSION VERSION_LESS 5.6)
   message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
 ELSE()
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
+ENDIF()
+
+MESSAGE(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
+
+IF(WITH_UPDATER)
+  MESSAGE(STATUS "Updater code is enabled in this configuration")
+ELSE()
+  MESSAGE(STATUS "Updater code is not enabled or not available in this configuration")
 ENDIF()
 
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
@@ -443,6 +456,11 @@ TARGET_LINK_LIBRARIES(mudlet
     edbee-lib
 )
 
+IF(WITH_UPDATER)
+    TARGET_LINK_LIBRARIES(mudlet
+        dblsqd)
+ENDIF(WITH_UPDATER)
+
 IF(Qt5Gamepad_FOUND)
     TARGET_LINK_LIBRARIES(mudlet ${Qt5Gamepad_LIBRARIES})
 ENDIF(Qt5Gamepad_FOUND)
@@ -454,7 +472,17 @@ ELSE()
 ENDIF()
 
 IF(APPLE)
-  TARGET_LINK_LIBRARIES(mudlet luazip)
+  target_link_libraries(mudlet
+          luazip
+  )
+
+  IF(WITH_UPDATER)
+    target_link_libraries(mudlet
+          cocoa-qt-glue
+          "-framework Sparkle"
+          "-framework AppKit"
+          "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+  ENDIF()
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)

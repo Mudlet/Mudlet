@@ -64,6 +64,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     groupBox_Debug->hide();
 
     loadEditorTab();
+    loadSpecialSettingsTab();
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
@@ -423,7 +424,10 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidgeta->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
+}
 
+void dlgProfilePreferences::loadSpecialSettingsTab()
+{
     // search engine load
     search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
 
@@ -433,6 +437,19 @@ void dlgProfilePreferences::loadEditorTab()
     int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
     setSearchEngine(search_engine_combobox->currentText());
+
+#if !defined(INCLUDE_UPDATER)
+    groupBox_updates->hide();
+#else
+    if (mudlet::scmIsDevelopmentVersion) {
+        // tick the box and make it be untickable as automatic updates are disabled in dev builds
+        checkbox_noAutomaticUpdates->setChecked(true);
+        checkbox_noAutomaticUpdates->setDisabled(true);
+        checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
+    } else {
+        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
+    }
+#endif
 }
 
 void dlgProfilePreferences::setSearchEngine(const QString &text)
@@ -1292,6 +1309,11 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEnableGMCP = mEnableGMCP->isChecked();
     pHost->mEnableMSDP = mEnableMSDP->isChecked();
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+
+#if defined(INCLUDE_UPDATER)
+    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+#endif
+
     if (pHost->mpMap && pHost->mpMap->mpMapper) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         bool isAreaWidgetInNeedOfResetting = false;
