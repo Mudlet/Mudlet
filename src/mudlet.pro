@@ -30,84 +30,24 @@ include(../3rdparty/communi/communi.pri)
 # Include lua_yajl (run time lua module needed)
 include(../3rdparty/lua_yajl/lua_yajl.pri)
 
-# Enable the built-in updater by default - provided NO_INCLUDE_UPDATER has not
-# been previously defined (to something other than an empty string) in the
-# environment. Linux packagers will find it useful to not have the updater code
-# by using one of:
-# * NO_INCLUDE_UPDATER="true" sh -c 'qmake -spec linux-g++ ../src'
-# * NO_INCLUDE_UPDATER="true" sh -c 'qmake -spec linux-clang ../src'
-# or similar as appropriate (unless they export NO_INCLUDE_UPDATER into the
-# environment) as their qmake invocation. This is because package managers will
-# want to be responsible for updates for their distributions; similarly we also
-# disable it on FreeBSD and Cygwin as those platforms (if they ever are
-# finished) will have an external system package system to do updates.
-
-# Humm, seems that using the presence or absence of Environmental variables is
-# a bit iffy in qmake - it looks as though it is necessary to drop them into a
-# qmake variable and check that for emptiness:
-INT_NO_INCLUDE_UPDATER = $$(NO_INCLUDE_UPDATER)
-if(!isEmpty(INT_NO_INCLUDE_UPDATER))|freebsd|cygwin {
-    message("Updater code is not enabled or not available in this configuration")
-} else {
-    DEFINES+=INCLUDE_UPDATER
-}
+include(../3rdparty/dblsqd/dblsqd-sdk-qt.pri)
 
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
-macx {
+macx: {
     include(../3rdparty/luazip/luazip.pri)
 }
 
-# Define but leave this variable empty
-GIT_MODULES_NEEDED =
-
-# Check for wanted/needed submodules:
 !exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
-    message("git submodule for required edbee-lib editor widget missing from source code, will need to execute 'git submodule update --init' to get it...")
-    GIT_MODULES_NEEDED+="../3rdparty/edbee-lib"
-}
-
-contains(DEFINES, INCLUDE_UPDATER) {
-    !exists("../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
-        message("git submodule for optional and wanted DBLSQD updater missing from source code, will need to execute 'git submodule update --init' to get it...")
-        GIT_MODULES_NEEDED+="../3rdparty/dblsqd"
-    }
-
-    macx {
-        !exists("../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-            message("git submodule for optional and wanted Sparkle framework missing from source code, will need to execute 'git submodule update --init' to get it...")
-            GIT_MODULES_NEEDED+="../3rdparty/sparkle-glue"
-         }
-    }
-}
-
-# Now handle any submodule missing:
-!isEmpty(GIT_MODULES_NEEDED) {
-    message("Running git submodule update --init \"$${GIT_MODULES_NEEDED}\" ")
-    system("git submodule update --init $${GIT_MODULES_NEEDED} ")
+    message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
+    system("git submodule update --init");
 }
 
 exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     # Include shiny, new (and quite substantial) editor widget
-    include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri")
+    include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
 } else {
     error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
-}
-
-contains(DEFINES, INCLUDE_UPDATER) {
-    exists("../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
-        include("../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
-    } else {
-        error("Cannot locate DBLSQD updater submodule source code, build abandoned!")
-    }
-
-    macx {
-        exists("../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
-            include("../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro")
-        } else {
-            error("Cannot locate the Sparkle glue (needed for the updater) as a submodule, build abandoned!")
-        }
-    }
 }
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
@@ -227,7 +167,7 @@ unix:!macx {
         -lzip \
         -lz
     LUA_DEFAULT_DIR = $${DATADIR}/lua
-} else:win32 {
+} else:win32: {
     LIBS += -L"C:\\mingw32\\bin" \
         -L"C:\\mingw32\\lib" \
         -llua51 \
@@ -280,6 +220,10 @@ macx:LIBS += \
 # platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
+
+# Enable the built-in updater by default. Linux packagers will find it useful to disable it
+# since package managers are responsible for updates there
+DEFINES += INCLUDE_UPDATER
 
 SOURCES += \
     ActionUnit.cpp \
@@ -350,9 +294,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
-
-contains(DEFINES, INCLUDE_UPDATER) : SOURCES += updater.cpp
+    XMLimport.cpp \
+    updater.cpp
 
 
 HEADERS += \
@@ -429,10 +372,8 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h
-
-contains(DEFINES, INCLUDE_UPDATER) : HEADERS += updater.h
-
+    XMLimport.h \
+    updater.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -518,7 +459,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
 
-macx {
+macx: {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
     APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
@@ -530,44 +471,40 @@ macx {
 
     LIBS += -framework AppKit
 
-    contains(DEFINES, INCLUDE_UPDATER) {
-        # allow linker to find sparkle framework as we bundle it in
-        SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
+    # allow linker to find sparkle framework as we bundle it in
+    SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
 
-        !exists($$SPARKLE_PATH) {
-            message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
-            system("cd ../3rdparty/cocoapods && pod install")
-        }
-
-        LIBS += -F$$SPARKLE_PATH
-        LIBS += -framework Sparkle
-
-        # necessary for Sparkle to compile
-        QMAKE_LFLAGS += -F $$SPARKLE_PATH
-        QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
-
-        SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
-
-        OBJECTIVE_SOURCES += \
-            ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
-            ../3rdparty/sparkle-glue/CocoaInitializer.mm
-
-        HEADERS += \
-            ../3rdparty/sparkle-glue/AutoUpdater.h \
-            ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
-            ../3rdparty/sparkle-glue/CocoaInitializer.h
-
-        # Copy Sparkle into the app bundle
-        sparkle.path = Contents/Frameworks
-        sparkle.files = $$SPARKLE_PATH/Sparkle.framework
-        QMAKE_BUNDLE_DATA += sparkle
+    !exists($$SPARKLE_PATH) {
+        message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
+        system("cd ../3rdparty/cocoapods && pod install");
     }
+
+    LIBS += -F$$SPARKLE_PATH
+    LIBS += -framework Sparkle
+
+    # necessary for Sparkle to compile
+    QMAKE_LFLAGS += -F $$SPARKLE_PATH
+    QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
+
+    SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
+
+    OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
+        ../3rdparty/sparkle-glue/CocoaInitializer.mm
+
+    HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
+        ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
+        ../3rdparty/sparkle-glue/CocoaInitializer.h
+
+    # Copy Sparkle into the app bundle
+    sparkle.path = Contents/Frameworks
+    sparkle.files = $$SPARKLE_PATH/Sparkle.framework
+    QMAKE_BUNDLE_DATA += sparkle
 
     # And add frameworks to the rpath so that the app can find the framework.
     QMAKE_RPATHDIR += @executable_path/../Frameworks
 }
 
-win32 {
+win32: {
     # set the Windows binary icon
     RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
 
@@ -592,7 +529,7 @@ OTHER_FILES += \
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
 # or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
-unix:!macx {
+unix:!macx: {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
     INSTALLS += \
         target \
@@ -601,7 +538,6 @@ unix:!macx {
 }
 
 DISTFILES += \
-    ../.gitmodules \
     ../.travis.yml \
     ../CMakeLists.txt \
     ../CI/travis.before_install.sh \
