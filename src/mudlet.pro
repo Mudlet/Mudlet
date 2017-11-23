@@ -51,6 +51,20 @@ if(!isEmpty(INT_NO_INCLUDE_UPDATER))|freebsd|cygwin {
 } else {
     message("Updater code is enabled in this configuration")
     DEFINES+=INCLUDE_UPDATER
+    macx {
+        # This is an (experimental) hack to get around a build file name
+        # collision between the main Mudlet app and something in the
+        # sparkle-glue sub-module - it does mean that the build files (.o) will
+        # be spread out in a nested sub-directory tree under the build directory
+        # which is one parallel to the source code.
+        # CMake does something similar but it does not include a complete copy
+        # of the parent tree all the way up to the root onem which is a lot
+        # better.
+        # tl;dr; the build artifacts may not be where you think they are on
+        # MacOs qmake builds WITH the updater...!
+        CONFIG += object_parallel_to_source
+        OBJECTS_DIR = objects
+    }
 }
 
 # Include luazip module (run time lua module - but not needed on Linux/Windows as

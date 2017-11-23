@@ -40,6 +40,12 @@ env:
   matrix:
   - Q_OR_C_MAKE=cmake
     QT_VERSION=59 # actually 5.9
+    NO_INCLUDE_UPDATER # Prevent updater code from being included
+  - Q_OR_C_MAKE=cmake
+    QT_VERSION=59 # actually 5.9
+  - Q_OR_C_MAKE=qmake
+    QT_VERSION=59 # actually 5.9
+    NO_INCLUDE_UPDATER # Prevent updater code from being included
   - Q_OR_C_MAKE=qmake
     QT_VERSION=59 # actually 5.9
   global:
