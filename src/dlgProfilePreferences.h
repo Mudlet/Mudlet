@@ -148,7 +148,7 @@ private:
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
-    void disconnectHostRelatedControlls();
+    void disconnectHostRelatedControls();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

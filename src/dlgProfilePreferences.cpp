@@ -500,7 +500,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
 }
 
-void dlgProfilePreferences::disconnectHostRelatedControlls()
+void dlgProfilePreferences::disconnectHostRelatedControls()
 {
     disconnect(buttonDownloadMap, SIGNAL(clicked()));
 
@@ -2191,12 +2191,20 @@ void dlgProfilePreferences::slot_resetThemeUpdateLabel()
     theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
 }
 
+/*
+ * This is to deal particularly with the case where the preferences dialog is
+ * opened without a host instance (other than the dummy "default_host") being
+ * around - and then the user starts up a profile and one gets created.
+ * In that situation we detect the signal that the mudlet class sends out (now)
+ * when a host is created and wire it up into the controls that until then
+ * have been disabled/greyed-out.
+ */
 void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 count)
 {
     // count will be 2 in the case we particularly want to handle (adding the
     // first real Host instance):
     if (!mpHost && pHost && count < 3) {
-        // We have not been constructedf with a valid Host pointer,
+        // We have not been constructed with a valid Host pointer,
         // AND a real Host instance has just been created
         // AND there are only two Host instances (the "real" one and the
         // "default_host") around.
@@ -2206,16 +2214,30 @@ void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 co
     }
 }
 
+/*
+ * This is to deal with the case where the preferences is opened on a profile
+ * and then the user closes the profile before closing the dialog/form of this
+ * class and (currently) they are multiplaying so that Mudlet itself is not
+ * shutting down.  It disables/greys-out/hides the controls that are
+ * particularly associated with the single host instance (without saving
+ * application wide settings adjustments).
+ * This was not originally planned to be done but with the addition of the
+ * functionality to handle the situation of having a mainly disabled preference
+ * dialog opened when no profiles were, it makes for a slightly more friendly
+ * UX to also do this and adds a certain "balance" in the "code functionality".
+ */
 void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
 {
     if (mpHost && pHost && mpHost == pHost) {
         // We have been constructed with a valid Host pointer,
         // AND a real Host instance is being destroyed
-        // AND we are working on the Host instance concerned
+        // AND we are working on the Host instance concerned.
+        // Forget about the host:
         mpHost = nullptr;
-        // So remove connections to the details of the real Host instance (we
-        // have to throw them away as it is too late to save them:
-        disconnectHostRelatedControlls();
+        // Remove connections to the details of the real Host instance (we
+        // have to throw them away as it is too late to save them - the profile
+        // has already been saved - or not):
+        disconnectHostRelatedControls();
         clearHostDetails();
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
