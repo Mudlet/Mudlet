@@ -11811,7 +11811,11 @@ void TLuaInterpreter::initLuaGlobals()
     pGlobalLua = newstate();
     storeHostInLua(pGlobalLua, mpHost);
 
+    pIndenterState = newstate();
+    storeHostInLua(pIndenterState, mpHost);
+
     luaL_openlibs(pGlobalLua);
+    luaL_openlibs(pIndenterState);
 
     lua_pushstring(pGlobalLua, "SESSION");
     lua_pushnumber(pGlobalLua, mHostID);

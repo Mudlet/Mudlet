@@ -432,6 +432,7 @@ private:
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
+    lua_State* pIndenterState;
 
     QPointer<Host> mpHost;
     int mHostID;
