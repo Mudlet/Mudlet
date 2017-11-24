@@ -73,6 +73,7 @@ public:
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void msdp2Lua(char* src, int srclen);
     void initLuaGlobals();
+    void initIndenterGlobals();
     bool call(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
@@ -84,6 +85,7 @@ public:
     void setGMCPTable(QString&, const QString&);
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
+    QString indentCode(const QString&);
     void loadGlobal();
     QString get_lua_string(const QString& stringName);
     int check_for_mappingscript();

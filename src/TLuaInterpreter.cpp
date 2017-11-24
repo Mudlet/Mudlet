@@ -93,6 +93,7 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
     connect(mpFileDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(slot_replyFinished(QNetworkReply*)));
 
     initLuaGlobals();
+    initIndenterGlobals();
 
     purgeTimer.start(2000);
 }
@@ -10903,6 +10904,36 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
     }
 }
 
+QString TLuaInterpreter::indentCode(const QString& code)
+{
+    if (code.isEmpty()) {
+        return code;
+    }
+    lua_State* L = pIndenterState;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return false;
+    }
+
+    int error = luaL_dostring(L, QString(QStringLiteral("return get_formatted_code(get_ast[[") + code + QStringLiteral("]])")).toUtf8().constData());
+    QString n;
+    if (error != 0) {
+        string e = "no error message available from Lua";
+        if (lua_isstring(L, 1)) {
+            e = "Lua error:";
+            e += lua_tostring(L, 1);
+        }
+        if (mudlet::debugMode) {
+            qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
+        }
+        QString _n = "error in Lua code";
+        QString _n2 = "no debug data available";
+        logError(e, _n, _n2);
+    }
+
+    return QString(lua_tostring(L, 1));
+}
+
 bool TLuaInterpreter::compileScript(const QString& code)
 {
     lua_State* L = pGlobalLua;
@@ -11804,18 +11835,14 @@ static lua_State* newstate()
 
 static void storeHostInLua(lua_State* L, Host* h);
 
-// this function initializes the Lua Session interpreter.
+// this function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
 {
     pGlobalLua = newstate();
     storeHostInLua(pGlobalLua, mpHost);
 
-    pIndenterState = newstate();
-    storeHostInLua(pIndenterState, mpHost);
-
     luaL_openlibs(pGlobalLua);
-    luaL_openlibs(pIndenterState);
 
     lua_pushstring(pGlobalLua, "SESSION");
     lua_pushnumber(pGlobalLua, mHostID);
@@ -12238,6 +12265,75 @@ void TLuaInterpreter::initLuaGlobals()
 
     //FIXME make function call in destructor lua_close(L);
 }
+
+// initialised a slimmed-down Lua state just to run the indenter in a separate sandbox
+// the indenter by default pollutes the global environment with some utility functions
+// and we don't want to tie ourselves to it by exposing them for scripting
+void TLuaInterpreter::initIndenterGlobals()
+{
+    pIndenterState = newstate();
+    storeHostInLua(pIndenterState, mpHost);
+
+    luaL_openlibs(pIndenterState);
+
+    lua_pushstring(pIndenterState, "SESSION");
+    lua_pushnumber(pIndenterState, mHostID);
+    lua_settable(pIndenterState, LUA_GLOBALSINDEX);
+
+    lua_pushstring(pIndenterState, "SCRIPT_NAME");
+    lua_pushstring(pIndenterState, "Lua Indenter Interpreter");
+    lua_settable(pIndenterState, LUA_GLOBALSINDEX);
+
+    lua_pushstring(pIndenterState, "SCRIPT_ID");
+    lua_pushnumber(pIndenterState, -2); // ID 2 is used to indicate that this is the indenter Lua interpreter
+    lua_settable(pIndenterState, LUA_GLOBALSINDEX);
+    lua_register(pIndenterState, "echo", TLuaInterpreter::Echo);
+    lua_register(pIndenterState, "tempTimer", TLuaInterpreter::tempTimer);
+    lua_register(pIndenterState, "send", TLuaInterpreter::sendRaw);
+    lua_register(pIndenterState, "debugc", TLuaInterpreter::debug);
+
+// PLACEMARKER: End of Lua functions registration
+    luaopen_yajl(pIndenterState);
+    lua_setglobal(pIndenterState, "yajl");
+
+    QString n;
+    int error;
+
+#ifdef Q_OS_LINUX
+    // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
+    luaL_dostring(pIndenterState, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
+
+    //AppInstaller on Linux would like the search path to also be set to the current binary directory
+    luaL_dostring(pIndenterState, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+#endif
+#ifdef Q_OS_MAC
+    //macOS app bundle would like the search path to also be set to the current binary directory
+    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+#endif
+
+
+    error = luaL_dostring(pIndenterState, R"(
+      require('lcf.workshop.base')
+      get_ast = request('!.lua.code.get_ast')
+      get_formatted_code = request('!.formats.lua.save')
+    )");
+    if (error != 0) {
+        string e = "no error message available from Lua";
+        if (lua_isstring(pIndenterState, -1)) {
+            e = "Lua error:";
+            e += lua_tostring(pIndenterState, -1);
+        }
+        QString msg = "[ ERROR ] - Cannot load code indenter, indenting functionality wont' be available.\n";
+        msg.append(e.c_str());
+        mpHost->postMessage(msg);
+    } else {
+        QString msg = "[  OK  ]  - Lua code indenter loaded.";
+        mpHost->postMessage(msg);
+    }
+
+    lua_pop(pIndenterState, lua_gettop(pIndenterState));
+}
+
 
 void TLuaInterpreter::loadGlobal()
 {

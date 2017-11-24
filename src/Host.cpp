@@ -342,6 +342,7 @@ void Host::resetProfile()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
+    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
 
