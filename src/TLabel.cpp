@@ -47,7 +47,6 @@ const QMap<Qt::MouseButton, QString> TLabel::mMouseButtons = {
 };
 
 
-
 TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(nullptr), mouseInside()
 {
     setMouseTracking(true);
@@ -165,16 +164,13 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-    else if (mpHost) {
+    } else if (mpHost) {
         TEvent tmpMoveParams = mMoveParams;
-        for( auto button : mMouseButtons.keys())
-        {
+        for (auto button : mMouseButtons.keys()) {
             if (button & event->buttons()) {
                 tmpMoveParams.mArgumentList.append(mMouseButtons.value(button));
                 tmpMoveParams.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             }
-
         }
         mpHost->getLuaInterpreter()->callEventHandler(mMove, tmpMoveParams);
         event->accept();
@@ -182,7 +178,6 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
     }
 
     QWidget::mouseMoveEvent(event);
-
 }
 
 void TLabel::wheelEvent(QWheelEvent* event)
@@ -191,9 +186,9 @@ void TLabel::wheelEvent(QWheelEvent* event)
         return;
     else if (mpHost) {
         TEvent tmpWheelParams = mWheelParams;
-        tmpWheelParams.mArgumentList.append(QString::number(event->angleDelta().x()/8));
+        tmpWheelParams.mArgumentList.append(QString::number(event->angleDelta().x() / 8));
         tmpWheelParams.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        tmpWheelParams.mArgumentList.append(QString::number(event->angleDelta().y()/8));
+        tmpWheelParams.mArgumentList.append(QString::number(event->angleDelta().y() / 8));
         tmpWheelParams.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->getLuaInterpreter()->callEventHandler(mWheel, tmpWheelParams);
         event->accept();

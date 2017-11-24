@@ -27,9 +27,9 @@
 
 #include "HostManager.h"
 
+#include "edbee/views/texttheme.h"
 #include "pre_guard.h"
 #include "ui_main_window.h"
-#include "edbee/views/texttheme.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
@@ -39,7 +39,7 @@
 #include <QTextOption>
 #include <QTime>
 #ifdef QT_GAMEPAD_LIB
-  #include <QGamepad>
+#include <QGamepad>
 #endif
 #include "post_guard.h"
 
@@ -204,7 +204,7 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
-    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
+    static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
@@ -217,7 +217,7 @@ public:
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
 
-    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
+    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'

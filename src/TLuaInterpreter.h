@@ -6,6 +6,7 @@
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,9 +34,9 @@
 #include "post_guard.h"
 
 extern "C" {
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 }
 
 #include <iostream>
@@ -223,7 +224,7 @@ public:
     static int isPrompt(lua_State* L);
     static int feedTriggers(lua_State*);
     static int Wait(lua_State* L);
-    static int expandAlias(lua_State *L);
+    static int expandAlias(lua_State* L);
     static int sendRaw(lua_State* L);
     static int Echo(lua_State* L);
     static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
