@@ -1691,11 +1691,44 @@ bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const QStri
     }
 }
 
+bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+{
+    QMap<QString, TLabel*>& labelMap = mHostLabelMap[pHost];
+    if (labelMap.contains(name)) {
+        labelMap[name]->setDoubleClick(pHost, func, pA);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
 {
     QMap<QString, TLabel*>& labelMap = mHostLabelMap[pHost];
     if (labelMap.contains(name)) {
         labelMap[name]->setRelease(pHost, func, pA);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+{
+    QMap<QString, TLabel*>& labelMap = mHostLabelMap[pHost];
+    if (labelMap.contains(name)) {
+        labelMap[name]->setMove(pHost, func, pA);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+{
+    QMap<QString, TLabel*>& labelMap = mHostLabelMap[pHost];
+    if (labelMap.contains(name)) {
+        labelMap[name]->setWheel(pHost, func, pA);
         return true;
     } else {
         return false;

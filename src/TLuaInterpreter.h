@@ -310,7 +310,10 @@ public:
     static int setBackgroundColor(lua_State*);
     static int createButton(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
+    static int setLabelMoveCallback(lua_State*);
+    static int setLabelWheelCallback(lua_State*);
     static int setLabelOnEnter(lua_State*);
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);

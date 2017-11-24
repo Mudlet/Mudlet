@@ -62,11 +62,32 @@ void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
     mClickParams = args;
 }
 
+void TLabel::setDoubleClick(Host* pHost, const QString& func, const TEvent& args)
+{
+    mpHost = pHost;
+    mDoubleClick = func;
+    mDoubleClickParams = args;
+}
+
 void TLabel::setRelease(Host* pHost, const QString& func, const TEvent& args)
 {
     mpHost = pHost;
     mRelease = func;
     mReleaseParams = args;
+}
+
+void TLabel::setMove(Host* pHost, const QString& func, const TEvent& args)
+{
+    mpHost = pHost;
+    mMove = func;
+    mMoveParams = args;
+}
+
+void TLabel::setWheel(Host* pHost, const QString& func, const TEvent& args)
+{
+    mpHost = pHost;
+    mWheel = func;
+    mWheelParams = args;
 }
 
 void TLabel::setEnter(Host* pHost, const QString& func, const TEvent& args)
@@ -104,7 +125,20 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    static_cast<void>(forwardEventToMapper(event));
+    if (forwardEventToMapper(event)) {
+        return;
+    }
+    if (mMouseButtons.contains(event->button())) {
+        if (mpHost) {
+            TEvent tmpDoubleClickParams = mDoubleClickParams;
+            tmpDoubleClickParams.mArgumentList.append(mMouseButtons.value(event->button()));
+            tmpDoubleClickParams.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->getLuaInterpreter()->callEventHandler(mDoubleClick, tmpDoubleClickParams);
+        }
+        event->accept();
+        return;
+    }
+    QWidget::mouseDoubleClickEvent(event);
 }
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
@@ -132,11 +166,39 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
     if (forwardEventToMapper(event)) {
         return;
     }
+    else if (mpHost) {
+        TEvent tmpMoveParams = mMoveParams;
+        for( auto button : mMouseButtons.keys())
+        {
+            if (button & event->buttons()) {
+                tmpMoveParams.mArgumentList.append(mMouseButtons.value(button));
+                tmpMoveParams.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            }
+
+        }
+        mpHost->getLuaInterpreter()->callEventHandler(mMove, tmpMoveParams);
+        event->accept();
+        return;
+    }
+
+    QWidget::mouseMoveEvent(event);
+
 }
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    static_cast<void>(forwardEventToMapper(event));
+    if (forwardEventToMapper(event))
+        return;
+    else if (mpHost) {
+        TEvent tmpWheelParams = mWheelParams;
+        tmpWheelParams.mArgumentList.append(QString::number(event->angleDelta().x()/8));
+        tmpWheelParams.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        tmpWheelParams.mArgumentList.append(QString::number(event->angleDelta().y()/8));
+        tmpWheelParams.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->getLuaInterpreter()->callEventHandler(mWheel, tmpWheelParams);
+        event->accept();
+        return;
+    }
 }
 
 void TLabel::leaveEvent(QEvent* event)

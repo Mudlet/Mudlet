@@ -3054,8 +3054,14 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     bool lua_result;
     if (funcName == QStringLiteral("setLabelClickCallback"))
         lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
+    else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
+        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelReleaseCallback"))
         lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, eventName, event);
+    else if (funcName == QStringLiteral("setLabelMoveCallback"))
+        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, eventName, event);
+    else if (funcName == QStringLiteral("setLabelWheelCallback"))
+        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelOnEnter"))
         lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
@@ -3076,9 +3082,24 @@ int TLuaInterpreter::setLabelClickCallback(lua_State* L)
     return setLabelCallback(L, QStringLiteral("setLabelClickCallback"));
 }
 
+int TLuaInterpreter::setLabelDoubleClickCallback(lua_State* L)
+{
+    return setLabelCallback(L, QStringLiteral("setLabelDoubleClickCallback"));
+}
+
 int TLuaInterpreter::setLabelReleaseCallback(lua_State* L)
 {
     return setLabelCallback(L, QStringLiteral("setLabelReleaseCallback"));
+}
+
+int TLuaInterpreter::setLabelMoveCallback(lua_State* L)
+{
+    return setLabelCallback(L, QStringLiteral("setLabelMoveCallback"));
+}
+
+int TLuaInterpreter::setLabelWheelCallback(lua_State* L)
+{
+    return setLabelCallback(L, QStringLiteral("setLabelWheelCallback"));
 }
 
 int TLuaInterpreter::setLabelOnEnter(lua_State* L)
@@ -11744,7 +11765,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
     lua_register(pGlobalLua, "createButton", TLuaInterpreter::createButton);
     lua_register(pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback);
+    lua_register(pGlobalLua, "setLabelDoubleClickCallback", TLuaInterpreter::setLabelDoubleClickCallback);
     lua_register(pGlobalLua, "setLabelReleaseCallback", TLuaInterpreter::setLabelReleaseCallback);
+    lua_register(pGlobalLua, "setLabelMoveCallback", TLuaInterpreter::setLabelMoveCallback);
+    lua_register(pGlobalLua, "setLabelWheelCallback", TLuaInterpreter::setLabelWheelCallback);
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
