@@ -138,6 +138,8 @@ mudlet::mudlet()
 : QMainWindow()
 , mShowMenuBar(false)
 , mShowToolbar(true)
+, mToolbarIconSize(0)
+, mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
 , mReplaySpeed(1)
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
@@ -205,13 +207,6 @@ mudlet::mudlet()
         mAutolog = false;
     }
 
-    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-    if (file_use_smallscreen.exists()) {
-        mpMainToolBar->setIconSize(QSize(16, 16));
-    } else {
-        mpMainToolBar->setIconSize(QSize(32, 32));
-        mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    }
     QAction* actionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
     actionConnect->setToolTip(tr("Connect to a MUD"));
     mpMainToolBar->addAction(actionConnect);
@@ -338,8 +333,11 @@ mudlet::mudlet()
     disableToolbarButtons();
 
     mpDebugArea = new QMainWindow(nullptr);
-    mHostManager.addHost("default_host", "", "", "");
-    mpDefaultHost = mHostManager.getHost(QString("default_host"));
+    // PLACEMARKER: Host creation (1) - "default_host" case
+    QString defaultHost(QStringLiteral("default_host"));
+    // We DO NOT emit a signal_hostCreated for THIS case:
+    mHostManager.addHost(defaultHost, QString(), QString(), QString());
+    mpDefaultHost = mHostManager.getHost(defaultHost);
     mpDebugConsole = new TConsole(mpDefaultHost, true);
     mpDebugConsole->setSizePolicy(sizePolicy);
     mpDebugConsole->setWrapAt(100);
@@ -355,8 +353,9 @@ mudlet::mudlet()
     mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
     mpDebugArea->hide();
     QFont mainFont;
+    mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (file_use_smallscreen.exists()) {
-        mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
         showFullScreen();
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
@@ -364,8 +363,6 @@ mudlet::mudlet()
         actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
-    } else {
-        mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     }
     QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 6, QFont::Normal);
     setFont(mainFont);
@@ -447,7 +444,19 @@ mudlet::mudlet()
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
+    // mToolbarIconSize has been set to 0 in the initialisation list so either
+    // value will be accepted:
+    setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+
     readSettings();
+
+    // Recover from a save in a state when both are hidden so that the toolbar
+    // is shown
+    // TODO: Provide a main console context menu item to restore at least one
+    // of them - if both are hidden.
+    if (!(mShowMenuBar || mShowToolbar)) {
+        setToolBarVisible(true);
+    }
 
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
@@ -836,7 +845,7 @@ void mudlet::slot_package_exporter()
 void mudlet::slot_close_profile_requested(int tab)
 {
     QString name = mpTabBar->tabText(tab);
-    Host* pH = getHostManager().getHost(name);
+    Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
     }
@@ -847,9 +856,9 @@ void mudlet::slot_close_profile_requested(int tab)
 
     if (!pH->mpConsole->close()) {
         return;
-    } else {
-        pH->mpConsole->mUserAgreedToCloseConsole = true;
     }
+
+    pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->closingDown();
 
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
@@ -889,7 +898,17 @@ void mudlet::slot_close_profile_requested(int tab)
         mpTabBar->removeTab(tab);
         mConsoleMap.remove(pH);
         mTabMap.remove(pH->getName());
-        getHostManager().deleteHost(pH->getName());
+        // PLACEMARKER: Host destruction (1) - from close button on tab bar
+        // Unfortunately the spaghetti nature of the code means that the profile
+        // is also (maybe) saved (or not) in the TConsole::close() call prior to
+        // here but because that is optional we cannot only force a "save"
+        // operation in the profile preferences dialog for the Host specific
+        // details BEFORE the save (so any changes make it into the save) -
+        // instead we just have to accept that any profile changes will not be
+        // saved if the preferences dialog is not closed before the profile is...
+        int hostCount = mHostManager.getHostCount();
+        emit signal_hostDestroyed(pH, --hostCount);
+        mHostManager.deleteHost(pH->getName());
     }
 
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
@@ -948,7 +967,10 @@ void mudlet::slot_close_profile()
                 if (mTabMap.contains(name)) {
                     mpTabBar->removeTab(mpTabBar->currentIndex());
                     mConsoleMap.remove(pH);
-                    getHostManager().deleteHost(name);
+                    // PLACEMARKER: Host destruction (2) - normal case
+                    int hostCount = mHostManager.getHostCount();
+                    emit signal_hostDestroyed(pH, --hostCount);
+                    mHostManager.deleteHost(name);
                     mTabMap.remove(name);
                 }
                 mpCurrentActiveHost = Q_NULLPTR;
@@ -1123,7 +1145,6 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[7]->setEnabled(false);
     mpMainToolBar->actions()[9]->setEnabled(false);
     mpMainToolBar->actions()[10]->setEnabled(false);
-    mpMainToolBar->actions()[11]->setEnabled(false);
     mpMainToolBar->actions()[12]->setEnabled(false);
     mpMainToolBar->actions()[13]->setEnabled(false);
     mpMainToolBar->actions()[14]->setEnabled(false);
@@ -1140,7 +1161,6 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[7]->setEnabled(true);
     mpMainToolBar->actions()[9]->setEnabled(true);
     mpMainToolBar->actions()[10]->setEnabled(true);
-    mpMainToolBar->actions()[11]->setEnabled(true);
     mpMainToolBar->actions()[12]->setEnabled(true);
     mpMainToolBar->actions()[13]->setEnabled(true);
     mpMainToolBar->actions()[14]->setEnabled(true);
@@ -2068,28 +2088,32 @@ void mudlet::forceClose()
 
 void mudlet::readSettings()
 {
-    /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-	   Furthermore, we skip the version from the application name to follow the convention.
-	   For compatibility with older settings, if no config is loaded
-	   from the config directory "mudlet", application "Mudlet", we try to load from the config
-	   directory "Mudlet", application "Mudlet 1.0". */
+    /* In case sensitive environments, two different config directories
+       were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+       Furthermore, we skip the version from the application name to follow the convention.
+       For compatibility with older settings, if no config is loaded
+       from the config directory "mudlet", application "Mudlet", we try to load from the config
+       directory "Mudlet", application "Mudlet 1.0". */
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
-    mMainIconSize = settings.value("mainiconsize", QVariant(3)).toInt();
-    mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(3)).toInt();
-    mShowMenuBar = settings.value("showMenuBar", QVariant(0)).toBool();
-    mShowToolbar = settings.value("showToolbar", QVariant(0)).toBool();
+    // A sensible default has already been set up according to whether we are on
+    // a netbook or not before this gets called so only change if there is a
+    // setting stored:
+    if (settings.contains("mainiconsize")) {
+        setToolBarIconSize(settings.value("mainiconsize").toInt());
+    }
+    setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
+    setMenuBarVisible(settings.value("showMenuBar", QVariant(false)).toBool());
+    setToolBarVisible(settings.value("showToolbar", QVariant(true)).toBool());
     mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     resize(size);
     move(pos);
-    setIcoSize(mMainIconSize);
     if (mShowMenuBar) {
         MenuBar->show();
     } else {
@@ -2109,14 +2133,42 @@ void mudlet::readSettings()
     }
 }
 
-void mudlet::setIcoSize(int s)
+void mudlet::setToolBarIconSize(const int s)
 {
+
+    if (mToolbarIconSize == s || s <= 0) {
+        return;
+    }
+
+    mToolbarIconSize = s;
     mpMainToolBar->setIconSize(QSize(s * 8, s * 8));
-    if (mMainIconSize > 2) {
+    if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
+
+    if(replayToolBar) {
+        replayToolBar->setIconSize(mpMainToolBar->iconSize());
+        replayToolBar->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+    }
+    emit signal_setToolBarIconSize(s);
+}
+
+void mudlet::setEditorTreeWidgetIconSize(const int s)
+{
+    if (mEditorTreeWidgetIconSize == s || s <= 0) {
+        return;
+    }
+
+    mEditorTreeWidgetIconSize = s;
+    emit signal_setTreeIconSize(s);
+}
+
+void mudlet::setMenuBarVisible(const bool state)
+{
+    mShowMenuBar = state;
+
     if (mShowMenuBar) {
         menuBar()->show();
     } else {
@@ -2124,16 +2176,27 @@ void mudlet::setIcoSize(int s)
     }
 }
 
+void mudlet::setToolBarVisible(const bool state)
+{
+    mShowToolbar = state;
+
+    if (mShowToolbar) {
+        mpMainToolBar->show();
+    } else {
+        mpMainToolBar->hide();
+    }
+}
+
 void mudlet::writeSettings()
 {
     /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
-	   Furthermore, we skip the version from the application name to follow the convention.*/
+      were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
+      Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
-    settings.setValue("mainiconsize", mMainIconSize);
-    settings.setValue("tefoldericonsize", mTEFolderIconSize);
+    settings.setValue("mainiconsize", mToolbarIconSize);
+    settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("showMenuBar", mShowMenuBar);
     settings.setValue("showToolbar", mShowToolbar);
     settings.setValue("maximized", isMaximized());
@@ -2261,9 +2324,6 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog()
 {
     Host* pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
 
     if (!mpProfilePreferencesDlg) {
         mpProfilePreferencesDlg = new dlgProfilePreferences(this, pHost);
@@ -2534,16 +2594,20 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    Host* pOH = getHostManager().getHost(profile_name);
-    if (pOH) {
-        pOH->mTelnet.connectIt(pOH->getUrl(), pOH->getPort());
+    Host* pHost = mHostManager.getHost(profile_name);
+    if (pHost) {
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
         return;
     }
-    // load an old profile if there is any
-    getHostManager().addHost(profile_name, "", "", "");
-    Host* pHost = getHostManager().getHost(profile_name);
 
-    if (!pHost) {
+    // load an old profile if there is any
+    // PLACEMARKER: Host creation (2) - autoload case
+    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+        pHost = mHostManager.getHost(profile_name);
+        if (!pHost) {
+            return;
+        }
+    } else {
         return;
     }
 
@@ -2562,12 +2626,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
         importer.importPackage(&file); // TODO: Missing false return value handler
     }
 
-    QString login = "login";
-    QString val1 = readProfileData(profile_name, login);
-    pHost->setLogin(val1);
-    QString pass = "password";
-    QString val2 = readProfileData(profile_name, pass);
-    pHost->setPass(val2);
+    pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
+    pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
+    // For the first real host created the getHostCount() will return 2 because
+    // there is already a "default_host"
+    signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, 0);
     enableToolbarButtons();
 }
@@ -2739,7 +2802,7 @@ void mudlet::replayStart()
     replayTime = new QLabel(this);
     actionReplayTime = replayToolBar->addWidget(replayTime);
 
-    replayToolBar->setIconSize(QSize(8 * mMainIconSize, 8 * mMainIconSize));
+    replayToolBar->setIconSize(mpMainToolBar->iconSize());
     replayToolBar->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
 
     actionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);

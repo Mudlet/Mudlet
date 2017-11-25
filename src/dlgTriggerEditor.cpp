@@ -427,8 +427,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(showDebugAreaAction, SIGNAL(triggered()), this, SLOT(slot_debug_mode()));
 
     toolBar = new QToolBar();
-    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
-    toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    toolBar2 = new QToolBar();
+
+    connect(mudlet::self(), SIGNAL(signal_setToolBarIconSize(const int)), this, SLOT(slot_setToolBarIconSize(const int)));
+    connect(mudlet::self(), SIGNAL(signal_setTreeIconSize(const int)), this, SLOT(slot_setTreeWidgetIconSize(const int)));
+    slot_setToolBarIconSize(mudlet::self()->mToolbarIconSize);
+    slot_setTreeWidgetIconSize(mudlet::self()->mEditorTreeWidgetIconSize);
+
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(saveAction);
@@ -445,10 +450,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(saveProfileAsAction);
     toolBar->addAction(profileSaveAction);
 
-
-    toolBar2 = new QToolBar();
-    toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
     connect(button_displayAllVariables, SIGNAL(toggled(bool)), this, SLOT(slot_toggleHiddenVariables(bool)));
 
     connect(mpVarsMainArea->checkBox_variable_hidden, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar(bool)));
@@ -572,7 +573,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     frame_rightBottom->hide();
 
     readSettings();
-    setTBIconSize(0);
 
     treeWidget_searchResults->setColumnCount(4);
     QStringList labelList;
@@ -663,24 +663,39 @@ void dlgTriggerEditor::slot_viewErrorsAction()
 }
 
 
-void dlgTriggerEditor::setTBIconSize(int s)
+void dlgTriggerEditor::slot_setToolBarIconSize(const int s)
 {
-    if (mudlet::self()->mMainIconSize > 2) {
+    if (s <= 0) {
+        return;
+    }
+
+    if (s > 2) {
         toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         toolBar2->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
-    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
-    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
-    treeWidget_triggers->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_aliases->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_timers->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_scripts->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_keys->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_actions->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
-    treeWidget_variables->setIconSize(QSize(mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8));
+
+    QSize newSize(s * 8, s * 8);
+    toolBar->setIconSize(newSize);
+    toolBar2->setIconSize(newSize);
+}
+
+void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
+{
+    if (s <= 0) {
+        return;
+    }
+
+    QSize newSize(s * 8, s * 8);
+    treeWidget_triggers->setIconSize(newSize);
+    treeWidget_aliases->setIconSize(newSize);
+    treeWidget_timers->setIconSize(newSize);
+    treeWidget_scripts->setIconSize(newSize);
+    treeWidget_keys->setIconSize(newSize);
+    treeWidget_actions->setIconSize(newSize);
+    treeWidget_variables->setIconSize(newSize);
 }
 
 void dlgTriggerEditor::slot_choseButtonColor()
@@ -699,12 +714,12 @@ void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 
 void dlgTriggerEditor::readSettings()
 {
-    /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-	   Furthermore, we skip the version from the application name to follow the convention.
-	   For compatibility with older settings, if no config is loaded
-	   from the config directory "mudlet", application "Mudlet", we try to load from the config
-	   directory "Mudlet", application "Mudlet 1.0". */
+    /* In case sensitive environments, two different config directories
+       were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+       Furthermore, we skip the version from the application name to follow the convention.
+       For compatibility with older settings, if no config is loaded
+       from the config directory "mudlet", application "Mudlet", we try to load from the config
+       directory "Mudlet", application "Mudlet 1.0". */
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
@@ -717,10 +732,10 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
-	   (the organization name) to "mudlet".
-	   Furthermore, we skip the version from the application name to follow the convention.*/
+    /* In case sensitive environments, two different config directories
+       were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
+       (the organization name) to "mudlet".
+       Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
