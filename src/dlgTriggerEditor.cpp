@@ -48,6 +48,7 @@
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
+#include "edbee/views/components/texteditorcomponent.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
@@ -207,6 +208,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbeeDocument->setText(QString("# Enter your lua code here\n"));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
+
+    mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(mpSourceEditorEdbee->textEditorComponent(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slot_editorContextMenu()));
 
     // option areas
 
@@ -8028,4 +8032,36 @@ void dlgTriggerEditor::slot_clearSearchResults()
     auto textRanges = controller->borderedTextRanges();
     textRanges->clear();
     controller->update();
+}
+
+// shows a custom right-click menu for the editor, including the indent action
+void dlgTriggerEditor::slot_editorContextMenu()
+{
+    // retrieve the current controller and editor
+    edbee::TextEditorWidget* editor = mpSourceEditorEdbee;
+    if (!editor) {
+        return;
+    }
+
+    edbee::TextEditorController* controller = mpSourceEditorEdbee->controller();
+
+    // create the menu
+    auto menu = new QMenu();
+    menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
+    menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
+    menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
+    menu->addSeparator();
+    menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon(), menu));
+
+    auto formatAction = new QAction(QIcon(), tr("Format All"), menu);
+    connect(formatAction, &QAction::triggered, [=]() {
+        auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
+        qDebug() << formattedText;
+        mpSourceEditorEdbeeDocument->setText(formattedText);
+    });
+
+    menu->addAction(formatAction);
+    menu->exec(QCursor::pos());
+
+    delete menu;
 }

@@ -10904,7 +10904,8 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
     }
 }
 
-QString TLuaInterpreter::indentCode(const QString& code)
+// reformats given Lua code. In case of error, returns the original code as-is
+QString TLuaInterpreter::formatLuaCode(const QString &code)
 {
     if (code.isEmpty()) {
         return code;
@@ -10912,10 +10913,19 @@ QString TLuaInterpreter::indentCode(const QString& code)
     lua_State* L = pIndenterState;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
+        return code;
     }
 
-    int error = luaL_dostring(L, QString(QStringLiteral("return get_formatted_code(get_ast[[") + code + QStringLiteral("]])")).toUtf8().constData());
+    QString escapedCode = code;
+    // escape backslashes so we can pass \n to the function
+    escapedCode.replace(QLatin1String("\\"), QLatin1String("\\\\"), Qt::CaseInsensitive);
+    // escape quotes since we'll be using quotes to pass data to the function
+    escapedCode.replace(QLatin1String("\""), QLatin1String("\\\""), Qt::CaseInsensitive);
+    // escape newlines so they don't interpreted as newlines, but instead get passed onto the function
+    escapedCode.replace(QLatin1String("\n"), QLatin1String("\\n"), Qt::CaseInsensitive);
+
+    QString thing = QString(R"(return get_formatted_code(get_ast("%1"), {indent_chunk = '  ', right_margin = 100, max_text_width = 160, keep_comments = true}))").arg(escapedCode);
+    int error = luaL_dostring(L, thing.toUtf8().constData());
     QString n;
     if (error != 0) {
         string e = "no error message available from Lua";
@@ -10926,12 +10936,16 @@ QString TLuaInterpreter::indentCode(const QString& code)
         if (mudlet::debugMode) {
             qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
         }
-        QString _n = "error in Lua code";
-        QString _n2 = "no debug data available";
-        logError(e, _n, _n2);
+        QString objectName = "error in Lua code";
+        QString functionName = "no debug data available";
+        logError(e, objectName, functionName);
+        lua_pop(L, lua_gettop(L));
+        return code;
     }
 
-    return QString(lua_tostring(L, 1));
+    QString result = lua_tostring(L, 1);
+    lua_pop(L, lua_gettop(L));
+    return result;
 }
 
 bool TLuaInterpreter::compileScript(const QString& code)

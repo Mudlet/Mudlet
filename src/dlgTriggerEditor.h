@@ -275,6 +275,7 @@ private slots:
     void slot_toggle_isPushDownButton(const int);
     void slot_toggleSearchCaseSensitivity(const bool);
     void slot_clearSearchResults();
+    void slot_editorContextMenu();
 
 public:
     TConsole* mpErrorConsole;
