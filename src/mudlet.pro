@@ -477,7 +477,7 @@ OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
     ${DISTFILES} \
-    ../README \
+    ../README.md \
     ../COMPILE \
     ../COPYING \
     ../Doxyfile \
