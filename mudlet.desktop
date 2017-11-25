@@ -1,6 +1,5 @@
 [Desktop Entry]
-Version=1.0
-Encoding=UTF-8
+Version=1.1
 Name=Mudlet
 X-AppInstall-Package=mudlet
 GenericName=Mud Client
@@ -9,4 +8,4 @@ Exec=mudlet
 Terminal=false
 Type=Application
 Icon=mudlet
-Categories=Game;AdventureGame;RolePlaying;ActionGame
+Categories=Game;AdventureGame;RolePlaying;ActionGame;
