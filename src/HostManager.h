@@ -42,6 +42,7 @@ class HostManager
 public:
     HostManager() /* : mpActiveHost() - Not needed */ {}
     Host* getHost(QString hostname);
+    int getHostCount();
     QStringList getHostList();
     bool addHost(QString name, QString port, QString login, QString pass);
     bool deleteHost(QString);

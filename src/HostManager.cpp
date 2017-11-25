@@ -50,7 +50,7 @@ bool HostManager::deleteHost(QString hostname)
     } else {
         int ret = mHostPool.remove(hostname);
         mPoolReadWriteLock.unlock();
-        return true;
+        return ret;
     }
 }
 
@@ -103,6 +103,16 @@ QStringList HostManager::getHostList()
     }
 
     return strlist;
+}
+
+int HostManager::getHostCount()
+{
+    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
+    // This assumes that there will not be nullptr values for destroyed Host
+    // instances:
+    const unsigned int total = mHostPool.count();
+    mPoolReadWriteLock.unlock();
+    return total;
 }
 
 void HostManager::postIrcMessage(QString a, QString b, QString c)
