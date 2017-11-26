@@ -10755,7 +10755,8 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
     }
 }
 
-// reformats given Lua code. In case of error, returns the original code as-is
+// reformats given Lua code. In case of any issues, returns the original code as-is
+// issues could be invalid Lua code or the formatter code bugging out
 QString TLuaInterpreter::formatLuaCode(const QString &code)
 {
     if (code.isEmpty()) {
@@ -10764,6 +10765,10 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
     lua_State* L = pIndenterState;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return code;
+    }
+    
+    if (!validLuaCode(code)) {
         return code;
     }
 
@@ -10877,6 +10882,21 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     } else {
         return false;
     }
+}
+
+// returns true if the given Lua code is valid, false otherwise
+bool TLuaInterpreter::validLuaCode(const QString &code)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qWarning() << "LUA CRITICAL ERROR: pGlobalLua Lua execution unit found.";
+        return false;
+    }
+
+    int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
+    lua_pop(L, lua_gettop(L));
+
+    return error == 0;
 }
 
 void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList)

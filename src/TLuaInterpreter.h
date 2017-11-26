@@ -431,6 +431,7 @@ private:
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     void logError(std::string& e, const QString&, const QString& function);
     static int setLabelCallback(lua_State*, const QString& funcName);
+    bool validLuaCode(const QString &code);
 
     QMap<QNetworkReply*, QString> downloadMap;
 
