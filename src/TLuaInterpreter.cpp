@@ -10889,7 +10889,7 @@ bool TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
     if (!L) {
-        qWarning() << "LUA CRITICAL ERROR: pGlobalLua Lua execution unit found.";
+        qWarning() << "LUA CRITICAL ERROR: no pGlobalLua Lua execution unit found.";
         return false;
     }
 
