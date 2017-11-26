@@ -88,4 +88,10 @@ ELSEIF()
   MESSAGE(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
 ENDIF()
 
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+  SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
+
 ADD_SUBDIRECTORY(src)

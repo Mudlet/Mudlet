@@ -208,6 +208,12 @@ macx {
     INCLUDEPATH += /usr/local/include
 }
 
+# use ccache if available
+unix {
+    BASE_CXX = $$QMAKE_CXX
+    exists(/usr/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+}
+
 # There does not seem to be an obvious pkg-config option for these two
 macx:LIBS += \
     -lz \
