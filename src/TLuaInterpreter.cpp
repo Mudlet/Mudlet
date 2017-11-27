@@ -75,6 +75,21 @@
 #include "luazip.h"
 #endif
 
+const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
+        {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
+        {Qt::MidButton, QStringLiteral("MidButton")},         {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
+        {Qt::TaskButton, QStringLiteral("TaskButton")},       {Qt::ExtraButton4, QStringLiteral("ExtraButton4")},   {Qt::ExtraButton5, QStringLiteral("ExtraButton5")},
+        {Qt::ExtraButton6, QStringLiteral("ExtraButton6")},   {Qt::ExtraButton7, QStringLiteral("ExtraButton7")},   {Qt::ExtraButton8, QStringLiteral("ExtraButton8")},
+        {Qt::ExtraButton9, QStringLiteral("ExtraButton9")},   {Qt::ExtraButton10, QStringLiteral("ExtraButton10")}, {Qt::ExtraButton11, QStringLiteral("ExtraButton11")},
+        {Qt::ExtraButton12, QStringLiteral("ExtraButton12")}, {Qt::ExtraButton13, QStringLiteral("ExtraButton13")}, {Qt::ExtraButton14, QStringLiteral("ExtraButton14")},
+        {Qt::ExtraButton15, QStringLiteral("ExtraButton15")}, {Qt::ExtraButton16, QStringLiteral("ExtraButton16")}, {Qt::ExtraButton17, QStringLiteral("ExtraButton17")},
+        {Qt::ExtraButton18, QStringLiteral("ExtraButton18")}, {Qt::ExtraButton19, QStringLiteral("ExtraButton19")}, {Qt::ExtraButton20, QStringLiteral("ExtraButton20")},
+        {Qt::ExtraButton21, QStringLiteral("ExtraButton21")}, {Qt::ExtraButton22, QStringLiteral("ExtraButton22")}, {Qt::ExtraButton23, QStringLiteral("ExtraButton23")},
+        {Qt::ExtraButton24, QStringLiteral("ExtraButton24")},
+
+};
+
+
 extern "C" {
 int luaopen_yajl(lua_State*);
 }
@@ -11458,7 +11473,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     }
 }
 
-bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
+bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE)
 {
     if (function.isEmpty()) {
         return false;
@@ -11498,7 +11513,157 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
-    error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+    if (qE != 0) {
+        // Create Lua table with QEvent data if needed
+        switch (qE->type()) {
+        // This means the default argument value was used, so ignore
+        case (QEvent::None):
+            error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+            break;
+        // These are all QMouseEvents
+        case (QEvent::MouseButtonPress):
+        case (QEvent::MouseButtonDblClick):
+        case (QEvent::MouseButtonRelease):
+        case (QEvent::MouseMove): {
+            auto qME = static_cast<const QMouseEvent*>(qE);
+            lua_newtable(L);
+
+            // push button()
+            lua_pushstring(L, QStringLiteral("button").toUtf8().constData());
+            lua_pushstring(L, mMouseButtons.value(qME->button()).toUtf8().constData());
+            lua_settable(L, -3);
+
+            // push buttons()
+            lua_pushstring(L, QStringLiteral("buttons").toUtf8().constData());
+            lua_newtable(L);
+            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            int counter = 1;
+            while (iter != mMouseButtons.constEnd()) {
+                if (iter.key() & qME->buttons()) {
+                    lua_pushnumber(L, counter);
+                    lua_pushstring(L, iter.value().toUtf8().constData());
+                    lua_settable(L, -3);
+                    counter++;
+                }
+                ++iter;
+            }
+            lua_settable(L, -3);
+            // Push globalX()
+            lua_pushstring(L, QStringLiteral("globalX").toUtf8().constData());
+            lua_pushnumber(L, qME->globalX());
+            lua_settable(L, -3);
+
+            // Push globalY()
+            lua_pushstring(L, QStringLiteral("globalY").toUtf8().constData());
+            lua_pushnumber(L, qME->globalY());
+            lua_settable(L, -3);
+
+            // Push x()
+            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
+            lua_pushnumber(L, qME->x());
+            lua_settable(L, -3);
+
+            // Push y()
+            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
+            lua_pushnumber(L, qME->y());
+            lua_settable(L, -3);
+
+            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            break;
+        }
+        // These are QEvents
+        case (QEvent::Enter): {
+            auto qME = static_cast<const QEnterEvent*>(qE);
+            lua_newtable(L);
+
+            // Push globalX()
+            lua_pushstring(L, QStringLiteral("globalX").toUtf8().constData());
+            lua_pushnumber(L, qME->globalX());
+            lua_settable(L, -3);
+
+            // Push globalY()
+            lua_pushstring(L, QStringLiteral("globalY").toUtf8().constData());
+            lua_pushnumber(L, qME->globalY());
+            lua_settable(L, -3);
+
+            // Push x()
+            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
+            lua_pushnumber(L, qME->x());
+            lua_settable(L, -3);
+
+            // Push y()
+            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
+            lua_pushnumber(L, qME->y());
+            lua_settable(L, -3);
+
+            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            break;
+        }
+        case (QEvent::Leave): {
+            // Seems there isn't a QLeaveEvent, so no
+            // extra information to be gotten
+            error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+            break;
+        }
+        // This is a QWheelEvent
+        case (QEvent::Wheel): {
+            auto qME = static_cast<const QWheelEvent*>(qE);
+            lua_newtable(L);
+
+            // push buttons()
+            lua_pushstring(L, QStringLiteral("buttons").toUtf8().constData());
+            lua_newtable(L);
+            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            int counter = 1;
+            while (iter != mMouseButtons.constEnd()) {
+                if (iter.key() & qME->buttons()) {
+                    lua_pushnumber(L, counter);
+                    lua_pushstring(L, iter.value().toUtf8().constData());
+                    lua_settable(L, -3);
+                    counter++;
+                }
+                ++iter;
+            }
+            lua_settable(L, -3);
+
+            // Push globalX()
+            lua_pushstring(L, QStringLiteral("globalX").toUtf8().constData());
+            lua_pushnumber(L, qME->globalX());
+            lua_settable(L, -3);
+
+            // Push globalY()
+            lua_pushstring(L, QStringLiteral("globalY").toUtf8().constData());
+            lua_pushnumber(L, qME->globalY());
+            lua_settable(L, -3);
+
+            // Push x()
+            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
+            lua_pushnumber(L, qME->x());
+            lua_settable(L, -3);
+
+            // Push y()
+            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
+            lua_pushnumber(L, qME->y());
+            lua_settable(L, -3);
+
+            // Push angleDelta()
+            lua_pushstring(L, QStringLiteral("angleDelta").toUtf8().constData());
+            lua_newtable(L);
+            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
+            lua_pushnumber(L, qME->angleDelta().x());
+            lua_settable(L, -3);
+            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
+            lua_pushnumber(L, qME->angleDelta().y());
+            lua_settable(L, -3);
+            lua_settable(L, -3);
+
+            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            break;
+        }
+        }
+    }
+
+
     if (error) {
         string err = "";
         if (lua_isstring(L, -1)) {
@@ -11602,7 +11767,6 @@ int TLuaInterpreter::noop(lua_State* L)
 {
     return 0;
 }
-
 int TLuaInterpreter::check_for_mappingscript()
 {
     lua_State* L = pGlobalLua;

@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
+#include <QEvent>
 #include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -95,7 +96,7 @@ public:
 
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
-    bool callEventHandler(const QString& function, const TEvent& pE);
+    bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = 0);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
 
@@ -418,6 +419,7 @@ public:
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
+    static const QMap<Qt::MouseButton, QString> mMouseButtons;
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
