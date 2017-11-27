@@ -11109,18 +11109,18 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
     int i = 0;
     for (; i < tokenList.size() - 1; i++) {
-        lua_getfield(L, -1, tokenList[i].toLatin1().data());
+        lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
         if (!lua_istable(L, -1)) {
             lua_pop(L, 1);
-            lua_pushstring(L, tokenList[i].toLatin1().data());
+            lua_pushstring(L, tokenList.at(i).toUtf8().constData());
             lua_newtable(L);
             lua_rawset(L, -3);
-            lua_getfield(L, -1, tokenList[i].toLatin1().data());
+            lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
         }
         lua_remove(L, -2);
     }
     bool __needMerge = false;
-    lua_getfield(L, -1, tokenList[i].toLatin1().data());
+    lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
     if (lua_istable(L, -1)) {
         // only merge tables (instead of replacing them) if the key has been registered as a need to merge key by the user default is Char.Status only
         if (mpHost->mGMCP_merge_table_keys.contains(key)) {
@@ -11129,7 +11129,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
     lua_pop(L, 1);
     if (!__needMerge) {
-        lua_pushstring(L, tokenList[i].toLatin1().data());
+        lua_pushstring(L, tokenList.at(i).toUtf8().constData());
     } else {
         lua_pushstring(L, "__needMerge");
     }
@@ -11141,7 +11141,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
-    lua_pushlstring(L, string_data.toLatin1().data(), string_data.size());
+    lua_pushlstring(L, string_data.toUtf8().constData(), string_data.size());
     int error = lua_pcall(L, 1, 1, 0);
     if (error == 0) {
         // Top of stack should now contain the lua representation of json.
@@ -11157,10 +11157,10 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             lua_getglobal(L, "gmcp");
             i = 0;
             for (; i < tokenList.size() - 1; i++) {
-                lua_getfield(L, -1, tokenList[i].toLatin1().data());
+                lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
                 lua_remove(L, -2);
             }
-            lua_pushstring(L, tokenList[i].toLatin1().data());
+            lua_pushstring(L, tokenList.at(i).toUtf8().constData());
             lua_pcall(L, 2, 0, 0);
         }
     } else {
