@@ -145,6 +145,8 @@ mudlet::mudlet()
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
 , mpCurrentActiveHost(nullptr)
 , mIsGoingDown(false)
+, mIsLoadingLayout(false)
+, mHasSavedLayout(false)
 , actionReplaySpeedDown(nullptr)
 , actionReplaySpeedUp(nullptr)
 , actionSpeedDisplay(nullptr)
@@ -1193,6 +1195,10 @@ bool mudlet::saveWindowLayout()
 
 bool mudlet::loadWindowLayout()
 {
+    if (mIsLoadingLayout) {
+        qDebug() << "mudlet::loadWindowLayout() - already loading...";
+        return false;
+    }
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
     QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
@@ -1344,8 +1350,9 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
 
         setFontSize(pHost, name, 10);
 
-        if (loadLayout) {
+        if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();
+            dockWindowMap[name]->hasLayoutAlready = true;
         }
 
         return true;
@@ -1354,8 +1361,9 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         dockWindowMap[name]->show();
         dockWindowConsoleMap[name]->showWindow(name);
 
-        if (loadLayout) {
+        if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();
+            dockWindowMap[name]->hasLayoutAlready = true;
         }
 
         return true;
