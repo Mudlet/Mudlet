@@ -8,7 +8,7 @@ addons:
   apt:
     sources:
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
-    - sourceline: 'ppa:beineri/opt-qt591-trusty'
+    - sourceline: 'ppa:beineri/opt-qt593-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:jonathonf/php7'
     packages:

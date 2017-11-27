@@ -190,6 +190,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
+
+    // search engine load entries
+    mSearchEngineData = QMap<QString, QString>(
+    {
+                    {"Bing",       "https://www.bing.com/search?q="},
+                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
+                    {"Google",     "https://www.google.com/search?q="}
+    });
 }
 
 Host::~Host()
@@ -454,6 +462,14 @@ void Host::reenableAllTriggers()
     mTriggerUnit.reenableAllTriggers();
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
+}
+
+QPair<QString, QString> Host::getSearchEngine()
+{
+    if(mSearchEngineData.contains(mSearchEngineName))
+        return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
+    else
+        return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
 }
 
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
