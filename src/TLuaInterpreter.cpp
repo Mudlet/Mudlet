@@ -11529,9 +11529,8 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_newtable(L);
 
             // push button()
-            lua_pushstring(L, QStringLiteral("button").toUtf8().constData());
             lua_pushstring(L, mMouseButtons.value(qME->button()).toUtf8().constData());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("button").toUtf8().constData());
 
             // push buttons()
             lua_pushstring(L, QStringLiteral("buttons").toUtf8().constData());
@@ -11549,24 +11548,20 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             }
             lua_settable(L, -3);
             // Push globalX()
-            lua_pushstring(L, QStringLiteral("globalX").toUtf8().constData());
             lua_pushnumber(L, qME->globalX());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushstring(L, QStringLiteral("globalY").toUtf8().constData());
             lua_pushnumber(L, qME->globalY());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("globalY").toUtf8().constData());
 
             // Push x()
-            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
             lua_pushnumber(L, qME->x());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("x").toUtf8().constData());
 
             // Push y()
-            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
             lua_pushnumber(L, qME->y());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
             error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
             break;
@@ -11577,24 +11572,20 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_newtable(L);
 
             // Push globalX()
-            lua_pushstring(L, QStringLiteral("globalX").toUtf8().constData());
             lua_pushnumber(L, qME->globalX());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushstring(L, QStringLiteral("globalY").toUtf8().constData());
             lua_pushnumber(L, qME->globalY());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("globalY").toUtf8().constData());
 
             // Push x()
-            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
             lua_pushnumber(L, qME->x());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("x").toUtf8().constData());
 
             // Push y()
-            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
             lua_pushnumber(L, qME->y());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
             error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
             break;
@@ -11627,42 +11618,32 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_settable(L, -3);
 
             // Push globalX()
-            lua_pushstring(L, QStringLiteral("globalX").toUtf8().constData());
             lua_pushnumber(L, qME->globalX());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushstring(L, QStringLiteral("globalY").toUtf8().constData());
             lua_pushnumber(L, qME->globalY());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("globalY").toUtf8().constData());
 
             // Push x()
-            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
             lua_pushnumber(L, qME->x());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("x").toUtf8().constData());
 
             // Push y()
-            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
             lua_pushnumber(L, qME->y());
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
             // Push angleDelta()
-            lua_pushstring(L, QStringLiteral("angleDelta").toUtf8().constData());
-            lua_newtable(L);
-            lua_pushstring(L, QStringLiteral("x").toUtf8().constData());
             lua_pushnumber(L, qME->angleDelta().x());
-            lua_settable(L, -3);
-            lua_pushstring(L, QStringLiteral("y").toUtf8().constData());
+            lua_setfield(L, -2, QStringLiteral("angleDeltaX").toUtf8().constData());
             lua_pushnumber(L, qME->angleDelta().y());
-            lua_settable(L, -3);
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("angleDeltaY").toUtf8().constData());
 
             error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
             break;
         }
         }
-    }
-    else
+    } else
         error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
 
     if (error) {
