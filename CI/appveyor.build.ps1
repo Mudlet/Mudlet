@@ -5,7 +5,7 @@ SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 
 git submodule update --init --recursive
-. .\appveyor.set-build-info.ps1
+. CI\appveyor.set-build-info.ps1
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src"
 
