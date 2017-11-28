@@ -11662,7 +11662,8 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
         }
     }
-
+    else
+        error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
 
     if (error) {
         string err = "";
