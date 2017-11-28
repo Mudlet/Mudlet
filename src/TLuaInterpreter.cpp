@@ -11533,7 +11533,6 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_setfield(L, -2, QStringLiteral("button").toUtf8().constData());
 
             // push buttons()
-            lua_pushstring(L, QStringLiteral("buttons").toUtf8().constData());
             lua_newtable(L);
             QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
             int counter = 1;
@@ -11546,7 +11545,8 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
                 }
                 ++iter;
             }
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("buttons").toUtf8().constData());
+
             // Push globalX()
             lua_pushnumber(L, qME->globalX());
             lua_setfield(L, -2, QStringLiteral("globalX").toUtf8().constData());
@@ -11602,7 +11602,6 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_newtable(L);
 
             // push buttons()
-            lua_pushstring(L, QStringLiteral("buttons").toUtf8().constData());
             lua_newtable(L);
             QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
             int counter = 1;
@@ -11615,7 +11614,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
                 }
                 ++iter;
             }
-            lua_settable(L, -3);
+            lua_setfield(L, -2, QStringLiteral("buttons").toUtf8().constData());
 
             // Push globalX()
             lua_pushnumber(L, qME->globalX());
