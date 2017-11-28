@@ -10219,14 +10219,14 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     QString packageName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "installPackage: bad argument #1 type (pathFileName of package as string expected, got %s!)",
+        lua_pushfstring(L, "installPackage: bad argument #1 type (package {path and/or} file name as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
         packageName = QString::fromUtf8(lua_tostring(L, 1));
         if (packageName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushstring(L, "An empty string is not a valid pathFileName for a package to install.");
+            lua_pushstring(L, "An empty string is not a valid file name for a package to install.");
             return 2;
         }
     }
@@ -10238,7 +10238,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to install package \"%s\", error message: %s.",
+        lua_pushfstring(L, "Failed to install package \"%s\", reason: %s.",
                         packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
@@ -10248,7 +10248,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
     QString packageName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "uninstallPackage: bad argument #1 type (name of package as string expected, got %s!)",
+        lua_pushfstring(L, "uninstallPackage: bad argument #1 type (package name as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -10267,7 +10267,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to uninstall package \"%s\", error message: %s.",
+        lua_pushfstring(L, "Failed to uninstall package \"%s\", reason: %s.",
                         packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
@@ -10277,14 +10277,14 @@ int TLuaInterpreter::installModule(lua_State* L)
 {
     QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "installModule: bad argument #1 type (pathFileName of module as string expected, got %s!)",
+        lua_pushfstring(L, "installModule: bad argument #1 type (module {path and/or} file name as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
         moduleName = QString::fromUtf8(lua_tostring(L, 1));
         if (moduleName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushstring(L, "An empty string is not a valid pathFileName for a module to install.");
+            lua_pushstring(L, "An empty string is not a valid file name for a module to install.");
             return 2;
         }
     }
@@ -10298,7 +10298,7 @@ int TLuaInterpreter::installModule(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to install module \"%s\", error message: %s.",
+        lua_pushfstring(L, "Failed to install module \"%s\", reason: %s.",
                         moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
@@ -10308,7 +10308,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "uninstallModule: bad argument #1 type (name of module as string expected, got %s!)",
+        lua_pushfstring(L, "uninstallModule: bad argument #1 type (module name as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -10329,7 +10329,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to uninstall module \"%s\", error message: %s.",
+        lua_pushfstring(L, "Failed to uninstall module \"%s\", reason: %s.",
                         moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
@@ -10339,7 +10339,7 @@ int TLuaInterpreter::reloadModule(lua_State* L)
 {
     QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "reloadModule: bad argument #1 type (name of module as string expected, got %s!)",
+        lua_pushfstring(L, "reloadModule: bad argument #1 type (module name as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -10358,7 +10358,7 @@ int TLuaInterpreter::reloadModule(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to reload module \"%s\", error message: %s.",
+        lua_pushfstring(L, "Failed to reload module \"%s\", reason: %s.",
                         moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }

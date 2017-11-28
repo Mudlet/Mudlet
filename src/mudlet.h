@@ -213,7 +213,10 @@ public:
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
 
-    static QPair<bool, QString> unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
+    // last argument causes error messages of form tr("[ ERROR ] - ...") for use
+    // in main console when true or ommitted, so that a false can be used in
+    // TLuaInterpreter class methods.
+    static QPair<bool, QString> unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir, const bool isFullMessage = true);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'

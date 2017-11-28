@@ -487,6 +487,8 @@ void cTelnet::replyFinished(QNetworkReply* reply)
     file.write(reply->readAll());
     file.flush();
     file.close();
+    // Absence of (non-null) third argument will cause error messages to be
+    // produced on main console:
     mpHost->installPackage(mServerPackage, 0);
     QString packageName = mServerPackage.section("/", -1);
     packageName.replace(".zip", "");
@@ -927,6 +929,8 @@ void cTelnet::processTelnetCommand(const string& command)
                     QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
                                             .arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
                     mpHost->mpConsole->print(_smsg.toLatin1().data());
+                    // Absence of (non-null) third argument will cause error
+                    // messages to be produced on main console:
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
                     mpHost->mServerGUI_Package_version = newVersion;
                 }
@@ -1146,6 +1150,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
             QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
                                     .arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
             mpHost->mpConsole->print(_smsg.toLatin1().data());
+            // Absence of (non-null) third argument will cause error messages to
+            // be produced on main console:
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;
         }

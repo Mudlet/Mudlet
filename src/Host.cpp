@@ -759,7 +759,7 @@ bool Host::reloadModule(const QString& moduleName, QString* pErrorMessage)
 
     if (!isFound) {
         // No need to name the module - the lua system will already have done that...
-        *pErrorMessage = QStringLiteral("module not found").arg(moduleName);
+        *pErrorMessage = QStringLiteral("module not found");
         return false;
     } else if (isError) {
         return false;
@@ -1233,7 +1233,11 @@ bool Host::installPackage(const QString& fileName, int module, QString* pErrorMe
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto results = mudlet::unzip(fileName, _dest, _tmpDir);
+        // Uses non-null pErrorMessage as a signal that it is being used for a
+        // lua function and thus needs to supply a false last argument to unzip
+        // to force a shorter, non-translated error message for that usage in
+        // results.second:
+        auto results = mudlet::unzip(fileName, _dest, _tmpDir, (!pErrorMessage));
         pUnzipDialog->deleteLater();
         pUnzipDialog = Q_NULLPTR;
         if (!results.first) {
@@ -1268,10 +1272,10 @@ bool Host::installPackage(const QString& fileName, int module, QString* pErrorMe
                     removeDir(_dir.absolutePath(), _dir.absolutePath());
                     if (pErrorMessage) {
                         *pErrorMessage = QLatin1String("nothing to do, package already installed");
-                    } else {
-                        postMessage(tr("[ ALERT ] - Package \"%1\" already seems to be installed, nothing to do.")
-                                    .arg(packageName));
                     }
+                    // It has been decided NOT to say anything on the main
+                    // console if this happens outside of the lua function call
+                    // to load a package/module
                     return false;
                 }
             }

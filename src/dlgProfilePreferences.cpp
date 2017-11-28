@@ -1738,8 +1738,20 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                             return;
                         }
 
-                        // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("edbee/")), temporaryDir.path());
+                        // perform unzipping in a worker thread so as not to
+                        // freeze the UI, also needs an ineffective last bool
+                        // argument for mudlet::unzip - we do not care about any
+                        // error messages in future.result().second if
+                        // future.result().first is false, but if we did
+                        // that bool would control the format (true produces
+                        // translated "[ ERROR - ..." ones, false gives shorter
+                        // ones not mentioning the tempThemesArchive->fileName()
+                        // argument):
+                        auto future = QtConcurrent::run(mudlet::unzip, // Called method
+                                                        tempThemesArchive->fileName(), // Arguments to method (this is first)
+                                                        mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("edbee/")),
+                                                        temporaryDir.path(),
+                                                        false);
                         auto watcher = new QFutureWatcher<QPair<bool, QString>>;
                         QObject::connect(watcher, &QFutureWatcher<QPair<bool, QString>>::finished, [=]() {
                             if (future.result().first == true) {

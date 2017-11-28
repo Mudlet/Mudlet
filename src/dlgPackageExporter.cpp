@@ -556,7 +556,7 @@ void dlgPackageExporter::slot_export_package()
                 ;
             } else if (!archive) {
                 // Failed to open/create archive file
-#if defined(LIBZIP_VERSION_MAJOR) && LIBZIP_VERSION_MAJOR >= 1
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
                 // A better error handling system (not requiring a previously
                 // defined finite-sized char type buffer {which obviously can
                 // have string buffer overflow issues} is available in 1.x
