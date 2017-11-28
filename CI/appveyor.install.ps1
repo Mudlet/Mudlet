@@ -72,9 +72,6 @@ function DownloadFile([string] $url, [string] $outputFile, [bool] $bigDownload =
 
 function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
-  if(Test-Path -Path "$outputPath" -PathType "Any"){
-    Remove-Item -Path "$outputPath" -Recurse
-  }
   $file = Get-ChildItem $tarFile
   exec "7z" @("x", "$($file.FullName)", "-y")
   exec "7z" @("-o$outputPath", "x", "$($file.Directory)\$($file.BaseName)", "-y")
