@@ -92,70 +92,59 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-
-    if (mpHost) {
+    } else if (mpHost && mClick != "") {
         mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParams, event);
+        event->accept();
+    } else {
+        QWidget::mousePressEvent(event);
     }
-    event->accept();
-    return;
-
-
-    QWidget::mousePressEvent(event);
 }
 
 void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else {
-        if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mDoubleClick, mDoubleClickParams, event);
-        }
+    } else if (mpHost && mDoubleClick != "") {
+        mpHost->getLuaInterpreter()->callEventHandler(mDoubleClick, mDoubleClickParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::mouseDoubleClickEvent(event);
     }
-    QWidget::mouseDoubleClickEvent(event);
 }
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-
-    else {
-        if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams, event);
-        }
+    } else if (mpHost && mRelease != "") {
+        mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::mouseReleaseEvent(event);
     }
-
-    QWidget::mouseReleaseEvent(event);
 }
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost) {
+    } else if (mpHost && mMove != "") {
         mpHost->getLuaInterpreter()->callEventHandler(mMove, mMoveParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::mouseMoveEvent(event);
     }
-
-    QWidget::mouseMoveEvent(event);
 }
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
     if (forwardEventToMapper(event))
         return;
-    else if (mpHost) {
+    else if (mpHost && mWheel != "") {
         mpHost->getLuaInterpreter()->callEventHandler(mWheel, mWheelParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::wheelEvent(event);
     }
 }
 
@@ -163,32 +152,24 @@ void TLabel::leaveEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-
-    if (mLeave != "") {
-        if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams, event);
-        }
+    } else if (mpHost && mLeave != "") {
+        mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::leaveEvent(event);
     }
-    QWidget::leaveEvent(event);
 }
 
 void TLabel::enterEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-
-    if (mEnter != "") {
-        if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams, event);
-        }
+    } else if (mpHost && mEnter != "") {
+        mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::enterEvent(event);
     }
-    QWidget::enterEvent(event);
 }
 
 bool TLabel::forwardEventToMapper(QEvent* event)
