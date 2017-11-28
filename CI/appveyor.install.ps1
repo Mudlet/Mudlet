@@ -11,7 +11,7 @@ if($64Bit){
   $CMakePath = "C:\Program Files\CMake\bin"
 }
 
-. CI\appveyor.set-environment.ps1
+. .\appveyor.set-environment.ps1
 SetQtBaseDir "$logFile"
 
 $Env:PATH = "$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
@@ -131,8 +131,10 @@ function InstallCmake() {
 
 function InstallMsys() {
   DownloadFile "https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys%2B7za%2Bwget%2Bsvn%2Bgit%2Bmercurial%2Bcvs-rev13.7z/download" "msys.7z" $true
-  Step "Creating MinGW path"
-  New-Item -Path "C:\MinGW\msys\1.0" -ItemType "directory" >> "$logFile" 2>&1
+  if (!(Test-Path -Path "C:\MinGW\msys\1.0" -PathType Container)) {
+    Step "Creating MinGW path"
+    New-Item -Path "C:\MinGW\msys\1.0" -ItemType "directory" >> "$logFile" 2>&1
+  }
   ExtractZip "msys.7z" "."
   Step "Copying folder"
   Move-Item "msys\*" "C:\MinGW\msys\1.0" >> "$logFile" 2>&1
@@ -140,8 +142,10 @@ function InstallMsys() {
 
 function InstallBoost() {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download" "boost.tar.gz" $true
-  Step "Creating Boost path"
-  New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
+  if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
+    Step "Creating Boost path"
+    New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
+  }
   ExtractTar "boost.tar.gz" "."
   Step "Copying folder"
   Move-Item "boost_1_60_0" "C:\Libraries\" >> "$logFile" 2>&1
@@ -150,6 +154,14 @@ function InstallBoost() {
 function InstallQt() {
   DownloadFile "http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-windows-x86-mingw492-5.6.3.exe" "qt-installer.exe" $true
   exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
+}
+
+function InstallPython() {
+  DownloadFile "https://www.python.org/ftp/python/2.7.14/python-2.7.14.msi" "python-installer.msi" $true
+  exec "msiexec.exe" @("/q", "/li", "$workingBaseDir\python-installer.log", "/i", "python-installer.msi")
+  if(Test-Path -Path "$workingBaseDir\python-installer.log" -PathType Leaf){
+    Get-Content "$workingBaseDir\python-installer.log" | Out-File $logFile -Append
+  }
 }
 
 function InstallOpenssl() {
@@ -173,7 +185,10 @@ function InstallYajl() {
   Set-Location "yajl-2.0.1\lloyd-yajl-f4b2b1a"
   Step "changing CMakeLists.txt"
   (Get-Content CMakeLists.txt -Raw) -replace '\/W4' -replace '(?<=SET\(linkFlags)[^\)]+' -replace '\/wd4996 \/wd4255 \/wd4130 \/wd4100 \/wd4711' -replace '(?<=SET\(CMAKE_C_FLAGS_DEBUG .)\/D \DEBUG \/Od \/Z7', '-g' -replace '(?<=SET\(CMAKE_C_FLAGS_RELEASE .)\/D NDEBUG \/O2', '-O2' | Out-File -encoding ASCII CMakeLists.txt >> "$logFile" 2>&1
-  New-Item build -ItemType Directory >> "$logFile" 2>&1
+  if (!(Test-Path -Path "build" -PathType Container)) {
+    Step "Creating yajl build path"
+    New-Item build -ItemType Directory >> "$logFile" 2>&1
+  }
   Set-Location build
   Step "running cmake"
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "..")
@@ -190,7 +205,7 @@ function InstallLua() {
   DownloadFile "https://github.com/Tieske/luawinmake/archive/master.zip" "luawinmake.zip"
   ExtractZip "luawinmake.zip" "luawinmake"
   Step "copying luawinmake files"
-  exec "XCOPY" @("/S", "/I", "/Q", "$workingBaseDir\luawinmake\luawinmake-master\etc", "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc")
+  exec "XCOPY" @("/Y", "/S", "/I", "/Q", "$workingBaseDir\luawinmake\luawinmake-master\etc", "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc")
   Set-Location lua-5.1.5\lua-5.1.5
   Step "compiling lua"
   exec "etc\winmake"
@@ -295,10 +310,11 @@ CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
 CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { InstallMsys }
 CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { InstallBoost }
 CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
+CheckAndInstall "Python" "C:\Python27\python.exe" { InstallPython }
 
-# Adapt the PATH variable again as we may have installed MinGW just now and can determine its location.
+# Adapt the PATH variable again as we may have installed some dependencies just now and can determine their location.
 SetMingwBaseDir "$logFile"
-$ShPath = "$Env:MINGW_BASE_DIR\bin;$Env:PATH"
+$ShPath = "$Env:MINGW_BASE_DIR\bin;C:\Python27;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
 $Env:PATH = $ShPath
 
