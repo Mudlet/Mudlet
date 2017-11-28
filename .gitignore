@@ -8,3 +8,4 @@ qrc_*.cpp
 *.dmg
 *.app
 mudlet
+/.vscode
