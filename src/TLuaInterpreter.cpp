@@ -11513,7 +11513,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
-    if (qE != 0) {
+    if (qE) {
         // Create Lua table with QEvent data if needed
         switch (qE->type()) {
         // This means the default argument value was used, so ignore
