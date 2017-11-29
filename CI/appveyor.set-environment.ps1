@@ -2,7 +2,7 @@ function SetQtBaseDir([string] $logFile) {
   if(!(Test-Path Env:QT_BASE_DIR)){
     try
     {
-      $Env:QT_BASE_DIR = Get-Command "qmake.exe" | Select-Object -ExpandProperty definition | Split-Path -Parent | Split-Path -Parent
+      $Env:QT_BASE_DIR = Get-Command "qmake.exe" -ErrorAction Stop | Select-Object -ExpandProperty definition | Split-Path -Parent | Split-Path -Parent
     }
     catch
     {
