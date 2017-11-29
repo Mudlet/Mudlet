@@ -8074,10 +8074,11 @@ void dlgTriggerEditor::slot_editorContextMenu()
     connect(formatAction, &QAction::triggered, [=]() {
         auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
         // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66
-        controller->beginUndoGroup(new edbee::MergableChangeGroup(controller));
+        controller->beginUndoGroup();
         mpSourceEditorEdbeeDocument->setText(formattedText);
-        // I am not sure if CoalesceId_UserDefined is the right thing to use
-        controller->endUndoGroup(edbee::CoalesceId::CoalesceId_UserDefined, false);
+        // don't coalesce the format text action - not that it matters for us since we we only change
+        // the text once during the undo group
+        controller->endUndoGroup(edbee::CoalesceId::CoalesceId_None, false);
     });
 
     menu->addAction(formatAction);
