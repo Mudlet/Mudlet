@@ -2,7 +2,8 @@ $sourceDir = $pwd.Path
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {
     $arguments = "& 'CI\appveyor.install.ps1'"
-    Start-Process powershell -Verb runAs -ArgumentList $arguments
+    $arguments = "cd $sourceDir\CI ; & '.\appveyor.install.ps1'"
+    Start-Process powershell -Verb runAs -ArgumentList $arguments -Wait
 }
 else {
     CI\appveyor.install.ps1
