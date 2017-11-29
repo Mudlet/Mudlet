@@ -12176,8 +12176,8 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_register(pIndenterState, "tempTimer", TLuaInterpreter::tempTimer);
     lua_register(pIndenterState, "send", TLuaInterpreter::sendRaw);
     lua_register(pIndenterState, "debugc", TLuaInterpreter::debug);
+    // PLACEMARKER: End of Lua functions registration
 
-// PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pIndenterState);
     lua_setglobal(pIndenterState, "yajl");
 

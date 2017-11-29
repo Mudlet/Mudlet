@@ -49,6 +49,8 @@
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
 #include "edbee/views/components/texteditorcomponent.h"
+#include "edbee/models/changes/mergablechangegroup.h"
+#include "edbee/texteditorcommand.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
@@ -8071,8 +8073,11 @@ void dlgTriggerEditor::slot_editorContextMenu()
     auto formatAction = new QAction(QIcon(), tr("Format All"), menu);
     connect(formatAction, &QAction::triggered, [=]() {
         auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
-        qDebug() << formattedText;
+        // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66
+        controller->beginUndoGroup(new edbee::MergableChangeGroup(controller));
         mpSourceEditorEdbeeDocument->setText(formattedText);
+        // I am not sure if CoalesceId_UserDefined is the right thing to use
+        controller->endUndoGroup(edbee::CoalesceId::CoalesceId_UserDefined, false);
     });
 
     menu->addAction(formatAction);
