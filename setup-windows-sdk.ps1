@@ -19,7 +19,7 @@ git submodule update --init --recursive
 cd "$sourceDir\src"
 
 $Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:QT_BASE_DIR\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
-qmake CONFIG+=debug LIBPATH+=$Env:MINGW_BASE_DIR\bin INCLUDEPATH+=C:\Libraries\boost_1_63_0 INCLUDEPATH+=$Env:MINGW_BASE_DIR\include INCLUDEPATH+=$Env:MINGW_BASE_DIR\lib\include mudlet.pro
+qmake CONFIG+=debug LIBPATH+=$Env:MINGW_BASE_DIR\bin INCLUDEPATH+=C:\Libraries\boost_1_60_0 INCLUDEPATH+=$Env:MINGW_BASE_DIR\include INCLUDEPATH+=$Env:MINGW_BASE_DIR\lib\include mudlet.pro
 if("$LastExitCode" -ne "0"){
   exit 1
 }
