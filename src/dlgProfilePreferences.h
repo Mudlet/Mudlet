@@ -142,7 +142,8 @@ private:
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();
-
+    void loadSpecialSettingsTab();
+    
     int mFontSize;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
