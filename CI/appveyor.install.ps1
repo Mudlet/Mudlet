@@ -31,9 +31,9 @@ function script:exec {
   $outLog = "$workingBaseDir\stdout.log"
   $errLog = "$workingBaseDir\stderr.log"
   if($parameter.Length -eq 0){
-    $exitCode = (Start-Process -FilePath $cmd -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog").ExitCode
+    $exitCode = (Start-Process -FilePath $cmd -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   } else {
-    $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog").ExitCode
+    $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   }
   Get-Content $outLog, $errLog | Out-File $logFile -Append
   if ($exitCode -ne 0)
