@@ -92,7 +92,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && mClick != "") {
+    } else if (mpHost && !mClick.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParams, event);
         event->accept();
     } else {
@@ -104,7 +104,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && mDoubleClick != "") {
+    } else if (mpHost && !mDoubleClick.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mDoubleClick, mDoubleClickParams, event);
         event->accept();
     } else {
@@ -116,7 +116,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && mRelease != "") {
+    } else if (mpHost && !mRelease.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams, event);
         event->accept();
     } else {
@@ -128,7 +128,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && mMove != "") {
+    } else if (mpHost && !mMove.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mMove, mMoveParams, event);
         event->accept();
     } else {
@@ -140,7 +140,7 @@ void TLabel::wheelEvent(QWheelEvent* event)
 {
     if (forwardEventToMapper(event))
         return;
-    else if (mpHost && mWheel != "") {
+    else if (mpHost && !mWheel.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mWheel, mWheelParams, event);
         event->accept();
     } else {
@@ -152,7 +152,7 @@ void TLabel::leaveEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && mLeave != "") {
+    } else if (mpHost && !mLeave.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams, event);
         event->accept();
     } else {
@@ -164,7 +164,7 @@ void TLabel::enterEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && mEnter != "") {
+    } else if (mpHost && !mEnter.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams, event);
         event->accept();
     } else {
