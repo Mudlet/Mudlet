@@ -47,7 +47,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
-    dlgProfilePreferences(QWidget*, Host*);
+    dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
 
 public slots:
     // Fonts.
@@ -114,26 +114,21 @@ public slots:
     void hideActionLabel();
     void slot_setEncoding(const QString&);
 
+    void slot_handleHostAddition(Host*, const quint8);
+    void slot_handleHostDeletion(Host*);
+
 private slots:
     void slot_changeShowSpacesAndTabs(const bool);
     void slot_changeShowLineFeedsAndParagraphs(const bool);
     void slot_resetThemeUpdateLabel();
-    void slot_search_engine_edited(const QString&);
+    void slot_script_selected(int index);
+    void slot_editor_tab_selected(int tabIndex);
+    void slot_theme_selected(int index);
 
 private:
     void setColors();
     void setColors2();
     void setColor(QPushButton* b, QColor& c);
-
-    int mFontSize;
-    QPointer<Host> mpHost;
-    QPointer<QTemporaryFile> tempThemesArchive;
-
-    void slot_editor_tab_selected(int tabIndex);
-    void slot_theme_selected(int index);
-
-    QMap<QString, QString> mSearchEngineMap;
-
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();
@@ -143,9 +138,18 @@ private:
     void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
-    void setSearchEngine(const QString&);
-
-    void slot_script_selected(int index);
+    void initWithHost(Host*);
+    void disableHostDetails();
+    void enableHostDetails();
+    void clearHostDetails();
+    void loadSpecialSettingsTab();
+    
+    int mFontSize;
+    QPointer<Host> mpHost;
+    QPointer<QTemporaryFile> tempThemesArchive;
+    QMap<QString, QString> mSearchEngineMap;
+    QPointer<QMenu> mpMenu;
+    void disconnectHostRelatedControls();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
