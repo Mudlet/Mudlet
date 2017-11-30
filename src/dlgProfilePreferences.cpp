@@ -224,6 +224,7 @@ void dlgProfilePreferences::enableHostDetails()
 void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
+    loadSpecialSettingsTab();
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
@@ -422,12 +423,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
-    // search engine load
-    search_engine_combobox->addItems(QStringList(pHost->mSearchEngineData.keys()));
-
-    // set to saved value or default to Google
-    int savedText = search_engine_combobox->findText(pHost->getSearchEngine().first);
-    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -721,6 +716,32 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidget->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
+}
+
+void dlgProfilePreferences::loadSpecialSettingsTab()
+{
+    // search engine load
+    search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
+
+    // set to saved value or default to Google
+    int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
+    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
+
+    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
+
+
+#if !defined(INCLUDE_UPDATER)
+    groupBox_updates->hide();
+#else
+    if (mudlet::scmIsDevelopmentVersion) {
+        // tick the box and make it be untickable as automatic updates are disabled in dev builds
+        checkbox_noAutomaticUpdates->setChecked(true);
+        checkbox_noAutomaticUpdates->setDisabled(true);
+        checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
+    } else {
+        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
+    }
+#endif
 }
 
 void dlgProfilePreferences::setColors()
@@ -1590,6 +1611,10 @@ void dlgProfilePreferences::slot_save_and_exit()
         if (dictList->currentItem()) {
             pHost->mSpellDic = dictList->currentItem()->text();
         }
+
+#if defined(INCLUDE_UPDATER)
+	    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+#endif
 
         pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
         pHost->mWrapAt = wrap_at_spinBox->value();

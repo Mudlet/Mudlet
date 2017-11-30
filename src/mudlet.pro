@@ -30,6 +30,8 @@ include(../3rdparty/communi/communi.pri)
 # Include lua_yajl (run time lua module needed)
 include(../3rdparty/lua_yajl/lua_yajl.pri)
 
+include(../3rdparty/dblsqd/dblsqd-sdk-qt.pri)
+
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
 macx: {
@@ -228,6 +230,10 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
+# Enable the built-in updater by default. Linux packagers will find it useful to disable it
+# since package managers are responsible for updates there
+DEFINES += INCLUDE_UPDATER
+
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -297,7 +303,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    updater.cpp
 
 
 HEADERS += \
@@ -374,7 +381,8 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h
+    XMLimport.h \
+    updater.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -400,7 +408,6 @@ FORMS += \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
-
 
 RESOURCES = \
     mudlet.qrc
@@ -470,6 +477,40 @@ macx: {
 
     # Set the .app's icns file
     ICON = icons/osx.icns
+
+    LIBS += -framework AppKit
+
+    # allow linker to find sparkle framework as we bundle it in
+    SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
+
+    !exists($$SPARKLE_PATH) {
+        message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
+        system("cd ../3rdparty/cocoapods && pod install");
+    }
+
+    LIBS += -F$$SPARKLE_PATH
+    LIBS += -framework Sparkle
+
+    # necessary for Sparkle to compile
+    QMAKE_LFLAGS += -F $$SPARKLE_PATH
+    QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
+
+    SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
+
+    OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
+        ../3rdparty/sparkle-glue/CocoaInitializer.mm
+
+    HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
+        ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
+        ../3rdparty/sparkle-glue/CocoaInitializer.h
+
+    # Copy Sparkle into the app bundle
+    sparkle.path = Contents/Frameworks
+    sparkle.files = $$SPARKLE_PATH/Sparkle.framework
+    QMAKE_BUNDLE_DATA += sparkle
+
+    # And add frameworks to the rpath so that the app can find the framework.
+    QMAKE_RPATHDIR += @executable_path/../Frameworks
 }
 
 win32: {

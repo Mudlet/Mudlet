@@ -26,16 +26,20 @@
 
 
 #include "HostManager.h"
-
-#include "pre_guard.h"
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
+#if defined(INCLUDE_UPDATER)
+#include "updater.h"
+#endif
+
+#include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QQueue>
+#include <QSettings>
 #include <QTextOption>
 #include <QTime>
 #ifdef QT_GAMEPAD_LIB
@@ -80,6 +84,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
+    QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
     int getLineNumber(Host* pHost, QString& name);
@@ -141,9 +146,10 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings();
+    void readSettings(const QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
+    void checkUpdatesOnStart();
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
@@ -175,6 +181,7 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(QString s, int);
+    static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
@@ -208,8 +215,11 @@ public:
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
 
+    void showChangelogIfUpdated();
+
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
@@ -283,6 +293,10 @@ public:
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
 
+#if defined(INCLUDE_UPDATER)
+    Updater* updater;
+#endif
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -295,7 +309,6 @@ public slots:
     void slot_show_help_dialog_video();
     void slot_show_help_dialog_forum();
     void slot_show_help_dialog_irc();
-    void slot_show_help_dialog_download();
     void slot_open_mappingscripts_page();
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
@@ -321,6 +334,9 @@ public slots:
     void slot_module_manager();
     void layoutModules();
     void slot_help_module();
+#if defined(INCLUDE_UPDATER)
+    void slot_check_manual_update();
+#endif
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -354,6 +370,9 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
     void slot_module_manager_destroyed();
+#if defined(INCLUDE_UPDATER)
+    void slot_update_installed();
+#endif
 
 private:
     void initEdbee();
@@ -368,8 +387,6 @@ private:
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
-
-
     QMenu* restoreBar;
     bool mIsGoingDown;
 
@@ -399,11 +416,12 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
+
     bool mCompactInputLine;
-
     void slot_toggle_compact_input_line();
-
     void set_compact_input_line();
+
+    QSettings* getQSettings();
 };
 
 class TConsoleMonitor : public QObject
