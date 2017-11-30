@@ -155,9 +155,14 @@ IF(APPLE AND WITH_UPDATER AND NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoa
   MESSAGE(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
   EXECUTE_PROCESS(TIMEOUT 30
     WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
-    COMMAND pod install )
-  # TODO: Find a way to remove Sparkle cocoa pod if not needed - perhaps "pod deintegrate" ?
+    COMMAND pod install)
 ENDIF()
+
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+  SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
 
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(3rdparty/communi)
