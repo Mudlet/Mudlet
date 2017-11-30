@@ -145,6 +145,8 @@ mudlet::mudlet()
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
 , mpCurrentActiveHost(nullptr)
 , mIsGoingDown(false)
+, mIsLoadingLayout(false)
+, mHasSavedLayout(false)
 , actionReplaySpeedDown(nullptr)
 , actionReplaySpeedUp(nullptr)
 , actionSpeedDisplay(nullptr)
@@ -333,8 +335,11 @@ mudlet::mudlet()
     disableToolbarButtons();
 
     mpDebugArea = new QMainWindow(nullptr);
-    mHostManager.addHost("default_host", "", "", "");
-    mpDefaultHost = mHostManager.getHost(QString("default_host"));
+    // PLACEMARKER: Host creation (1) - "default_host" case
+    QString defaultHost(QStringLiteral("default_host"));
+    // We DO NOT emit a signal_hostCreated for THIS case:
+    mHostManager.addHost(defaultHost, QString(), QString(), QString());
+    mpDefaultHost = mHostManager.getHost(defaultHost);
     mpDebugConsole = new TConsole(mpDefaultHost, true);
     mpDebugConsole->setSizePolicy(sizePolicy);
     mpDebugConsole->setWrapAt(100);
@@ -844,7 +849,7 @@ void mudlet::slot_package_exporter()
 void mudlet::slot_close_profile_requested(int tab)
 {
     QString name = mpTabBar->tabText(tab);
-    Host* pH = getHostManager().getHost(name);
+    Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
     }
@@ -855,9 +860,9 @@ void mudlet::slot_close_profile_requested(int tab)
 
     if (!pH->mpConsole->close()) {
         return;
-    } else {
-        pH->mpConsole->mUserAgreedToCloseConsole = true;
     }
+
+    pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->closingDown();
 
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
@@ -897,7 +902,17 @@ void mudlet::slot_close_profile_requested(int tab)
         mpTabBar->removeTab(tab);
         mConsoleMap.remove(pH);
         mTabMap.remove(pH->getName());
-        getHostManager().deleteHost(pH->getName());
+        // PLACEMARKER: Host destruction (1) - from close button on tab bar
+        // Unfortunately the spaghetti nature of the code means that the profile
+        // is also (maybe) saved (or not) in the TConsole::close() call prior to
+        // here but because that is optional we cannot only force a "save"
+        // operation in the profile preferences dialog for the Host specific
+        // details BEFORE the save (so any changes make it into the save) -
+        // instead we just have to accept that any profile changes will not be
+        // saved if the preferences dialog is not closed before the profile is...
+        int hostCount = mHostManager.getHostCount();
+        emit signal_hostDestroyed(pH, --hostCount);
+        mHostManager.deleteHost(pH->getName());
     }
 
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
@@ -956,7 +971,10 @@ void mudlet::slot_close_profile()
                 if (mTabMap.contains(name)) {
                     mpTabBar->removeTab(mpTabBar->currentIndex());
                     mConsoleMap.remove(pH);
-                    getHostManager().deleteHost(name);
+                    // PLACEMARKER: Host destruction (2) - normal case
+                    int hostCount = mHostManager.getHostCount();
+                    emit signal_hostDestroyed(pH, --hostCount);
+                    mHostManager.deleteHost(name);
                     mTabMap.remove(name);
                 }
                 mpCurrentActiveHost = Q_NULLPTR;
@@ -1131,7 +1149,6 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[7]->setEnabled(false);
     mpMainToolBar->actions()[9]->setEnabled(false);
     mpMainToolBar->actions()[10]->setEnabled(false);
-    mpMainToolBar->actions()[11]->setEnabled(false);
     mpMainToolBar->actions()[12]->setEnabled(false);
     mpMainToolBar->actions()[13]->setEnabled(false);
     mpMainToolBar->actions()[14]->setEnabled(false);
@@ -1148,7 +1165,6 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[7]->setEnabled(true);
     mpMainToolBar->actions()[9]->setEnabled(true);
     mpMainToolBar->actions()[10]->setEnabled(true);
-    mpMainToolBar->actions()[11]->setEnabled(true);
     mpMainToolBar->actions()[12]->setEnabled(true);
     mpMainToolBar->actions()[13]->setEnabled(true);
     mpMainToolBar->actions()[14]->setEnabled(true);
@@ -1181,6 +1197,10 @@ bool mudlet::saveWindowLayout()
 
 bool mudlet::loadWindowLayout()
 {
+    if (mIsLoadingLayout) {
+        qDebug() << "mudlet::loadWindowLayout() - already loading...";
+        return false;
+    }
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
     QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
@@ -1332,8 +1352,9 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
 
         setFontSize(pHost, name, 10);
 
-        if (loadLayout) {
+        if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();
+            dockWindowMap[name]->hasLayoutAlready = true;
         }
 
         return true;
@@ -1342,8 +1363,9 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         dockWindowMap[name]->show();
         dockWindowConsoleMap[name]->showWindow(name);
 
-        if (loadLayout) {
+        if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();
+            dockWindowMap[name]->hasLayoutAlready = true;
         }
 
         return true;
@@ -2344,9 +2366,6 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog()
 {
     Host* pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
 
     if (!mpProfilePreferencesDlg) {
         mpProfilePreferencesDlg = new dlgProfilePreferences(this, pHost);
@@ -2616,16 +2635,20 @@ void mudlet::doAutoLogin(const QString& profile_name)
         return;
     }
 
-    Host* pOH = getHostManager().getHost(profile_name);
-    if (pOH) {
-        pOH->mTelnet.connectIt(pOH->getUrl(), pOH->getPort());
+    Host* pHost = mHostManager.getHost(profile_name);
+    if (pHost) {
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
         return;
     }
-    // load an old profile if there is any
-    getHostManager().addHost(profile_name, "", "", "");
-    Host* pHost = getHostManager().getHost(profile_name);
 
-    if (!pHost) {
+    // load an old profile if there is any
+    // PLACEMARKER: Host creation (2) - autoload case
+    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+        pHost = mHostManager.getHost(profile_name);
+        if (!pHost) {
+            return;
+        }
+    } else {
         return;
     }
 
@@ -2644,12 +2667,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
         importer.importPackage(&file); // TODO: Missing false return value handler
     }
 
-    QString login = "login";
-    QString val1 = readProfileData(profile_name, login);
-    pHost->setLogin(val1);
-    QString pass = "password";
-    QString val2 = readProfileData(profile_name, pass);
-    pHost->setPass(val2);
+    pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
+    pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
+    // For the first real host created the getHostCount() will return 2 because
+    // there is already a "default_host"
+    signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, 0);
     enableToolbarButtons();
 }
