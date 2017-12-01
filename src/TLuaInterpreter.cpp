@@ -944,12 +944,12 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
 
 int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 {
-    string windowName = "";
+    QString windowName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
-        windowName = lua_tostring(L, 1);
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
     int size;
     if (!lua_isnumber(L, 2)) {
@@ -959,7 +959,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
         size = lua_tointeger(L, 2);
     }
     Host* host = &getHostFromLua(L);
-    if (mudlet::self()->setFontSize(host, QString::fromUtf8(windowName), size) {
+    if (mudlet::self()->setFontSize(host, windowName, size) {
         lua_pushboolean(L, true);
     } else {
         lua_pushnil(L);
