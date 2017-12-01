@@ -506,14 +506,12 @@ QSettings* mudlet::getQSettings()
 
 void mudlet::initEdbee()
 {
-    // We only need the single Lua lexer, probably ever
-    // Optional additional themes will be added in future
-
-    edbee::Edbee* edbee = edbee::Edbee::instance();
-    edbee->autoInit();
+    auto edbee = edbee::Edbee::instance();
+    edbee->init();
     edbee->autoShutDownOnAppExit();
 
     auto grammarManager = edbee->grammarManager();
+    // We only need the single Lua lexer, probably ever
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
 
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
@@ -2822,6 +2820,7 @@ void mudlet::set_compact_input_line()
 
 mudlet::~mudlet()
 {
+    mHostManager.deleteHost("default_host");
     mudlet::_self = nullptr;
 }
 
