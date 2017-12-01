@@ -2200,7 +2200,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
         std::string _n = name.toStdString();
-        pC->setMiniConsoleFontSize(_n, 12);
+        pC->setMiniConsoleFontSize(12);
         pC->show();
         return pC;
     } else {
