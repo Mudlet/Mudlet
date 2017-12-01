@@ -10774,11 +10774,11 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 
     QString escapedCode = code;
     // escape backslashes so we can pass \n to the function
-    escapedCode.replace(QLatin1String("\\"), QLatin1String("\\\\"), Qt::CaseInsensitive);
+    escapedCode.replace(QLatin1String("\\"), QLatin1String("\\\\"));
     // escape quotes since we'll be using quotes to pass data to the function
-    escapedCode.replace(QLatin1String("\""), QLatin1String("\\\""), Qt::CaseInsensitive);
+    escapedCode.replace(QLatin1String("\""), QLatin1String("\\\""));
     // escape newlines so they don't interpreted as newlines, but instead get passed onto the function
-    escapedCode.replace(QLatin1String("\n"), QLatin1String("\\n"), Qt::CaseInsensitive);
+    escapedCode.replace(QLatin1String("\n"), QLatin1String("\\n"));
 
     QString thing = QString(R"(return get_formatted_code(get_ast("%1"), {indent_chunk = '  ', right_margin = 100, max_text_width = 160, keep_comments = true}))").arg(escapedCode);
     int error = luaL_dostring(L, thing.toUtf8().constData());
@@ -12035,8 +12035,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "alert", TLuaInterpreter::alert);
     lua_register(pGlobalLua, "tempPromptTrigger", TLuaInterpreter::tempPromptTrigger);
     lua_register(pGlobalLua, "permPromptTrigger", TLuaInterpreter::permPromptTrigger);
+    // PLACEMARKER: End of main Lua interpreter functions registration
 
-// PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");
 
@@ -12176,7 +12176,7 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_register(pIndenterState, "tempTimer", TLuaInterpreter::tempTimer);
     lua_register(pIndenterState, "send", TLuaInterpreter::sendRaw);
     lua_register(pIndenterState, "debugc", TLuaInterpreter::debug);
-    // PLACEMARKER: End of Lua functions registration
+    // PLACEMARKER: End of indenter Lua interpreter functions registration
 
     luaopen_yajl(pIndenterState);
     lua_setglobal(pIndenterState, "yajl");
