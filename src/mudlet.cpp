@@ -2820,7 +2820,6 @@ void mudlet::set_compact_input_line()
 
 mudlet::~mudlet()
 {
-    mHostManager.deleteHost("default_host");
     mudlet::_self = nullptr;
 }
 
