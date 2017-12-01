@@ -34,6 +34,7 @@
 class TDockWidget : public QDockWidget {
 public:
     QString widgetConsoleName;
+    bool hasLayoutAlready;
 
     TDockWidget(Host * , const QString &);
 
