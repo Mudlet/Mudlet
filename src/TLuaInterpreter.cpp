@@ -963,7 +963,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
         lua_pushboolean(L, true);
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, R"(MiniConsole "%s" not found)", windowName);
+        lua_pushfstring(L, R"(MiniConsole "%s" not found)", windowName.toUtf8().constData());
     }
     return 0;
 }
