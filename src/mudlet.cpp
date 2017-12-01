@@ -1333,9 +1333,8 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     }
 
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
 
-    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap.value(name)->console->mDisplayFont.pointSize();
     } else {
         return -1;
