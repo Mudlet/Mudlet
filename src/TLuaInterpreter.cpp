@@ -959,7 +959,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
         size = lua_tointeger(L, 2);
     }
     Host* host = &getHostFromLua(L);
-    if (mudlet::self()->setFontSize(host, windowName, size) {
+    if (mudlet::self()->setFontSize(host, windowName, size)) {
         lua_pushboolean(L, true);
     } else {
         lua_pushnil(L);
