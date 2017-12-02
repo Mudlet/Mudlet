@@ -93,6 +93,15 @@ function Geyser.Label:setClickCallback (func, ...)
   self.clickArgs = { ... }
 end
 
+--- Sets a callback to be used when this label is double clicked.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setDoubleClickCallback (func, ...)
+  setLabelDoubleClickCallback(self.name, func, ...)
+  self.doubleclickCallback = func
+  self.doubleclickArgs = { ... }
+end
+
 --- Sets a callback to be used when a mouse click is released over this label.
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
@@ -100,6 +109,24 @@ function Geyser.Label:setReleaseCallback (func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
+end
+
+--- Sets a callback to be used when the mouse cursor is moved over this label.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setMoveCallback (func, ...)
+  setLabelMoveCallback(self.name, func, ...)
+  self.moveCallback = func
+  self.moveArgs = { ... }
+end
+
+--- Sets a callback to be used when the user scrolls over this label.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setWheelCallback (func, ...)
+  setLabelWheelCallback(self.name, func, ...)
+  self.wheelCallback = func
+  self.wheelArgs = { ... }
 end
 
 --- Sets a callback to be used when the mouse passes over this label.
