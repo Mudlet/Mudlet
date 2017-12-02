@@ -93,6 +93,15 @@ function Geyser.Label:setClickCallback (func, ...)
   self.clickArgs = { ... }
 end
 
+--- Sets a callback to be used when this label is double clicked.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setDoubleClickCallback (func, ...)
+  setLabelDoubleClickCallback(self.name, func, ...)
+  self.doubleclickCallback = func
+  self.doubleclickArgs = { ... }
+end
+
 --- Sets a callback to be used when a mouse click is released over this label.
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
@@ -100,6 +109,24 @@ function Geyser.Label:setReleaseCallback (func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
+end
+
+--- Sets a callback to be used when the mouse cursor is moved over this label.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setMoveCallback (func, ...)
+  setLabelMoveCallback(self.name, func, ...)
+  self.moveCallback = func
+  self.moveArgs = { ... }
+end
+
+--- Sets a callback to be used when the user scrolls over this label.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setWheelCallback (func, ...)
+  setLabelWheelCallback(self.name, func, ...)
+  self.wheelCallback = func
+  self.wheelArgs = { ... }
 end
 
 --- Sets a callback to be used when the mouse passes over this label.
@@ -432,7 +459,7 @@ function Geyser.Label:new (cons, container)
     setLabelClickCallback(me.name, "doNestClick", me.name)
   end
   if me.clickCallback then
-    if type(me.clickArgs) == "" then
+    if type(me.clickArgs) == "string" or type(me.clickArgs) == "number" then
       me:setClickCallback(me.clickCallback, me.clickArgs)
     elseif type(me.clickArgs) == "table" then
       me:setClickCallback(me.clickCallback, unpack(me.clickArgs))
@@ -441,13 +468,43 @@ function Geyser.Label:new (cons, container)
     end
   end
 
+  if me.doubleClickCallback then
+    if type(me.doubleClickArgs) == "string" or type(me.doubleClickArgs) == "number" then
+      me:setDoubleClickCallback(me.doubleClickCallback, me.doubleClickArgs)
+    elseif type(me.doubleClickArgs) == "table" then
+      me:setDoubleClickCallback(me.doubleClickCallback, unpack(me.doubleClickArgs))
+    else
+      me:setDoubleClickCallback(me.doubleClickCallback)
+    end
+  end
+
   if me.releaseCallback then
-    if type(me.releaseArgs) == "" then
+    if type(me.releaseArgs) == "string" or type(me.releaseArgs) == "number" then
       me:setReleaseCallback(me.releaseCallback, me.releaseArgs)
     elseif type(me.releaseArgs) == "table" then
       me:setReleaseCallback(me.releaseCallback, unpack(me.releaseArgs))
     else
       me:setReleaseCallback(me.releaseCallback)
+    end
+  end
+
+  if me.moveCallback then
+    if type(me.moveArgs) == "string" or type(me.moveArgs) == "number" then
+      me:setMoveCallback(me.moveCallback, me.moveArgs)
+    elseif type(me.moveArgs) == "table" then
+      me:setMoveCallback(me.moveCallback, unpack(me.moveArgs))
+    else
+      me:setMoveCallback(me.moveCallback)
+    end
+  end
+
+  if me.wheelCallback then
+    if type(me.wheelArgs) == "string" or type(me.wheelArgs) == "number" then
+      me:setWheelCallback(me.wheelCallback, me.wheelArgs)
+    elseif type(me.wheelArgs) == "table" then
+      me:setWheelCallback(me.wheelCallback, unpack(me.wheelArgs))
+    else
+      me:setWheelCallback(me.wheelCallback)
     end
   end
 
