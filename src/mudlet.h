@@ -31,7 +31,7 @@
 #include "edbee/views/texttheme.h"
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
-
+#endif
 #include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
