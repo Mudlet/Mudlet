@@ -468,6 +468,16 @@ function Geyser.Label:new (cons, container)
     end
   end
 
+  if me.doubleClickCallback then
+    if type(me.doubleClickArgs) == "" then
+      me:setDoubleClickCallback(me.doubleClickCallback, me.doubleClickArgs)
+    elseif type(me.doubleClickArgs) == "table" then
+      me:setDoubleClickCallback(me.doubleClickCallback, unpack(me.doubleClickArgs))
+    else
+      me:setDoubleClickCallback(me.doubleClickCallback)
+    end
+  end
+
   if me.releaseCallback then
     if type(me.releaseArgs) == "" then
       me:setReleaseCallback(me.releaseCallback, me.releaseArgs)
@@ -475,6 +485,26 @@ function Geyser.Label:new (cons, container)
       me:setReleaseCallback(me.releaseCallback, unpack(me.releaseArgs))
     else
       me:setReleaseCallback(me.releaseCallback)
+    end
+  end
+
+  if me.moveCallback then
+    if type(me.moveArgs) == "" then
+      me:setMoveCallback(me.moveCallback, me.moveArgs)
+    elseif type(me.moveArgs) == "table" then
+      me:setMoveCallback(me.moveCallback, unpack(me.moveArgs))
+    else
+      me:setMoveCallback(me.moveCallback)
+    end
+  end
+
+  if me.wheelCallback then
+    if type(me.wheelArgs) == "" then
+      me:setWheelCallback(me.wheelCallback, me.wheelArgs)
+    elseif type(me.wheelArgs) == "table" then
+      me:setWheelCallback(me.wheelCallback, unpack(me.wheelArgs))
+    else
+      me:setWheelCallback(me.wheelCallback)
     end
   end
 
