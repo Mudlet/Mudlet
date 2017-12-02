@@ -10992,7 +10992,8 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
-    lua_pushlstring(L, string_data.toUtf8().constData(), string_data.size());
+    auto dataInUtf8 = string_data.toUtf8();
+    lua_pushlstring(L, dataInUtf8.constData(), dataInUtf8.length());
     int error = lua_pcall(L, 1, 1, 0);
     if (error == 0) {
         // Top of stack should now contain the lua representation of json.

@@ -965,12 +965,13 @@ void cTelnet::processTelnetCommand(const string& command)
 
         // GMCP
         if (option == static_cast<char>(201)) {
-            QString _m = command.c_str();
+            QString rawPayload = command.c_str();
             if (command.size() < 6) {
                 return;
             }
-            _m = _m.mid(3, command.size() - 5);
-            setGMCPVariables(_m);
+            // strip first 3 characters to get rid of <IAC><SB><201>
+            // and strip the last 2 characters to get rid of <IAC><TN_SE>
+            setGMCPVariables(rawPayload.mid(3, rawPayload.size() - 5));
             return;
         }
 
