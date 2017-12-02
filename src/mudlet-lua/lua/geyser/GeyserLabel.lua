@@ -459,7 +459,7 @@ function Geyser.Label:new (cons, container)
     setLabelClickCallback(me.name, "doNestClick", me.name)
   end
   if me.clickCallback then
-    if type(me.clickArgs) == "" then
+    if type(me.clickArgs) == "string" or type(me.clickArgs) == "number" then
       me:setClickCallback(me.clickCallback, me.clickArgs)
     elseif type(me.clickArgs) == "table" then
       me:setClickCallback(me.clickCallback, unpack(me.clickArgs))
@@ -469,7 +469,7 @@ function Geyser.Label:new (cons, container)
   end
 
   if me.doubleClickCallback then
-    if type(me.doubleClickArgs) == "" then
+    if type(me.doubleClickArgs) == "string" or type(me.doubleClickArgs) == "number" then
       me:setDoubleClickCallback(me.doubleClickCallback, me.doubleClickArgs)
     elseif type(me.doubleClickArgs) == "table" then
       me:setDoubleClickCallback(me.doubleClickCallback, unpack(me.doubleClickArgs))
@@ -479,7 +479,7 @@ function Geyser.Label:new (cons, container)
   end
 
   if me.releaseCallback then
-    if type(me.releaseArgs) == "" then
+    if type(me.releaseArgs) == "string" or type(me.releaseArgs) == "number" then
       me:setReleaseCallback(me.releaseCallback, me.releaseArgs)
     elseif type(me.releaseArgs) == "table" then
       me:setReleaseCallback(me.releaseCallback, unpack(me.releaseArgs))
@@ -489,7 +489,7 @@ function Geyser.Label:new (cons, container)
   end
 
   if me.moveCallback then
-    if type(me.moveArgs) == "" then
+    if type(me.moveArgs) == "string" or type(me.moveArgs) == "number" then
       me:setMoveCallback(me.moveCallback, me.moveArgs)
     elseif type(me.moveArgs) == "table" then
       me:setMoveCallback(me.moveCallback, unpack(me.moveArgs))
@@ -499,7 +499,7 @@ function Geyser.Label:new (cons, container)
   end
 
   if me.wheelCallback then
-    if type(me.wheelArgs) == "" then
+    if type(me.wheelArgs) == "string" or type(me.wheelArgs) == "number" then
       me:setWheelCallback(me.wheelCallback, me.wheelArgs)
     elseif type(me.wheelArgs) == "table" then
       me:setWheelCallback(me.wheelCallback, unpack(me.wheelArgs))
