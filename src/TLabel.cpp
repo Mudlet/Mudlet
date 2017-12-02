@@ -32,22 +32,6 @@
 #include "post_guard.h"
 
 
-const QMap<Qt::MouseButton, QString> TLabel::mMouseButtons = {
-        {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
-        {Qt::MidButton, QStringLiteral("MidButton")},         {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
-        {Qt::TaskButton, QStringLiteral("TaskButton")},       {Qt::ExtraButton4, QStringLiteral("ExtraButton4")},   {Qt::ExtraButton5, QStringLiteral("ExtraButton5")},
-        {Qt::ExtraButton6, QStringLiteral("ExtraButton6")},   {Qt::ExtraButton7, QStringLiteral("ExtraButton7")},   {Qt::ExtraButton8, QStringLiteral("ExtraButton8")},
-        {Qt::ExtraButton9, QStringLiteral("ExtraButton9")},   {Qt::ExtraButton10, QStringLiteral("ExtraButton10")}, {Qt::ExtraButton11, QStringLiteral("ExtraButton11")},
-        {Qt::ExtraButton12, QStringLiteral("ExtraButton12")}, {Qt::ExtraButton13, QStringLiteral("ExtraButton13")}, {Qt::ExtraButton14, QStringLiteral("ExtraButton14")},
-        {Qt::ExtraButton15, QStringLiteral("ExtraButton15")}, {Qt::ExtraButton16, QStringLiteral("ExtraButton16")}, {Qt::ExtraButton17, QStringLiteral("ExtraButton17")},
-        {Qt::ExtraButton18, QStringLiteral("ExtraButton18")}, {Qt::ExtraButton19, QStringLiteral("ExtraButton19")}, {Qt::ExtraButton20, QStringLiteral("ExtraButton20")},
-        {Qt::ExtraButton21, QStringLiteral("ExtraButton21")}, {Qt::ExtraButton22, QStringLiteral("ExtraButton22")}, {Qt::ExtraButton23, QStringLiteral("ExtraButton23")},
-        {Qt::ExtraButton24, QStringLiteral("ExtraButton24")},
-
-};
-
-
-
 TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(nullptr), mouseInside()
 {
     setMouseTracking(true);
@@ -62,11 +46,32 @@ void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
     mClickParams = args;
 }
 
+void TLabel::setDoubleClick(Host* pHost, const QString& func, const TEvent& args)
+{
+    mpHost = pHost;
+    mDoubleClick = func;
+    mDoubleClickParams = args;
+}
+
 void TLabel::setRelease(Host* pHost, const QString& func, const TEvent& args)
 {
     mpHost = pHost;
     mRelease = func;
     mReleaseParams = args;
+}
+
+void TLabel::setMove(Host* pHost, const QString& func, const TEvent& args)
+{
+    mpHost = pHost;
+    mMove = func;
+    mMoveParams = args;
+}
+
+void TLabel::setWheel(Host* pHost, const QString& func, const TEvent& args)
+{
+    mpHost = pHost;
+    mWheel = func;
+    mWheelParams = args;
 }
 
 void TLabel::setEnter(Host* pHost, const QString& func, const TEvent& args)
@@ -87,88 +92,84 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-    if (mMouseButtons.contains(event->button())) {
-        if (mpHost) {
-            TEvent tmpClickParams = mClickParams;
-            tmpClickParams.mArgumentList.append(mMouseButtons.value(event->button()));
-            tmpClickParams.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mpHost->getLuaInterpreter()->callEventHandler(mClick, tmpClickParams);
-        }
+    } else if (mpHost && !mClick.isEmpty()) {
+        mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::mousePressEvent(event);
     }
-
-    QWidget::mousePressEvent(event);
 }
 
 void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    static_cast<void>(forwardEventToMapper(event));
+    if (forwardEventToMapper(event)) {
+        return;
+    } else if (mpHost && !mDoubleClick.isEmpty()) {
+        mpHost->getLuaInterpreter()->callEventHandler(mDoubleClick, mDoubleClickParams, event);
+        event->accept();
+    } else {
+        QWidget::mouseDoubleClickEvent(event);
+    }
 }
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-
-    if (mMouseButtons.contains(event->button())) {
-        if (mpHost) {
-            TEvent tmpReleaseParams = mReleaseParams;
-            tmpReleaseParams.mArgumentList.append(mMouseButtons.value(event->button()));
-            tmpReleaseParams.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mpHost->getLuaInterpreter()->callEventHandler(mRelease, tmpReleaseParams);
-        }
+    } else if (mpHost && !mRelease.isEmpty()) {
+        mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::mouseReleaseEvent(event);
     }
-
-    QWidget::mouseReleaseEvent(event);
 }
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
+    } else if (mpHost && !mMove.isEmpty()) {
+        mpHost->getLuaInterpreter()->callEventHandler(mMove, mMoveParams, event);
+        event->accept();
+    } else {
+        QWidget::mouseMoveEvent(event);
     }
 }
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    static_cast<void>(forwardEventToMapper(event));
+    if (forwardEventToMapper(event))
+        return;
+    else if (mpHost && !mWheel.isEmpty()) {
+        mpHost->getLuaInterpreter()->callEventHandler(mWheel, mWheelParams, event);
+        event->accept();
+    } else {
+        QWidget::wheelEvent(event);
+    }
 }
 
 void TLabel::leaveEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-
-    if (mLeave != "") {
-        if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams);
-        }
+    } else if (mpHost && !mLeave.isEmpty()) {
+        mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::leaveEvent(event);
     }
-    QWidget::leaveEvent(event);
 }
 
 void TLabel::enterEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    }
-
-    if (mEnter != "") {
-        if (mpHost) {
-            mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams);
-        }
+    } else if (mpHost && !mEnter.isEmpty()) {
+        mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams, event);
         event->accept();
-        return;
+    } else {
+        QWidget::enterEvent(event);
     }
-    QWidget::enterEvent(event);
 }
 
 bool TLabel::forwardEventToMapper(QEvent* event)

@@ -6,6 +6,7 @@
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +25,7 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
+#include <QEvent>
 #include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -33,9 +35,9 @@
 #include "post_guard.h"
 
 extern "C" {
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 }
 
 #include <iostream>
@@ -96,7 +98,7 @@ public:
 
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
-    bool callEventHandler(const QString& function, const TEvent& pE);
+    bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = 0);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
 
@@ -225,7 +227,7 @@ public:
     static int isPrompt(lua_State* L);
     static int feedTriggers(lua_State*);
     static int Wait(lua_State* L);
-    static int expandAlias(lua_State *L);
+    static int expandAlias(lua_State* L);
     static int sendRaw(lua_State* L);
     static int Echo(lua_State* L);
     static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
@@ -312,7 +314,10 @@ public:
     static int setBackgroundColor(lua_State*);
     static int createButton(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
+    static int setLabelMoveCallback(lua_State*);
+    static int setLabelWheelCallback(lua_State*);
     static int setLabelOnEnter(lua_State*);
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
@@ -416,6 +421,7 @@ public:
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
+    static const QMap<Qt::MouseButton, QString> mMouseButtons;
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
