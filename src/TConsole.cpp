@@ -936,8 +936,7 @@ void TConsole::slot_toggleReplayRecording()
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (5 of 6)
-        QString mLogFileName = QStringLiteral("%1/%2.dat")
-                               .arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -1104,8 +1103,7 @@ void TConsole::setConsoleFgColor(int r, int g, int b)
 void TConsole::loadRawFile(std::string n)
 {
     QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
-    QString fileName = QStringLiteral("%1/%2")
-                       .arg(directoryLogFile, QString(n.c_str()));
+    QString fileName = QStringLiteral("%1/%2").arg(directoryLogFile, QString(n.c_str()));
     mpHost->mTelnet.loadReplay(fileName);
 }
 
@@ -2029,6 +2027,16 @@ void TConsole::setBgColor(int r, int g, int b)
     mFormatCurrent.bgG = g;
     mFormatCurrent.bgB = b;
     buffer.applyBgColor(P_begin, P_end, r, g, b);
+}
+
+void TConsole::setScrollBarVisible(bool isVisible)
+{
+    if (mpScrollBar) {
+        if (isVisible)
+            mpScrollBar->show();
+        else
+            mpScrollBar->hide();
+    }
 }
 
 void TConsole::printCommand(QString& msg)
