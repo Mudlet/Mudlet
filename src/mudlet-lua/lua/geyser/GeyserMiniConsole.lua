@@ -54,10 +54,16 @@ function Geyser.MiniConsole:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underlin
   setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
 end
 
--- Sets the scroll bar to be visible or invisible for this window
+-- Enables the scroll bar for this window
 -- @param isVisible boolean to set visibility.
-function Geyser.MiniConsole:setScrollBarVisible(isVisible)
-  setScrollBarVisible(self.name, isVisible)
+function Geyser.MiniConsole:enableScrollBar()
+  enableScrollBar(self.name)
+end
+
+-- Disables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:disableScrollBar()
+  disableScrollBar(self.name)
 end
 
 --- Sets bold status for this miniconsole
@@ -154,7 +160,7 @@ function Geyser.MiniConsole:new (cons, container)
     me:setFontSize(8)
   end
   if cons.scrollBar then
-    me:setScrollBarVisible(cons.scrollBar)
+    me:enableScrollBar()
   end
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

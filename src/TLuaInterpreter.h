@@ -351,7 +351,8 @@ public:
     static int setBorderRight(lua_State*);
     static int setBorderColor(lua_State*);
     static int setConsoleBufferSize(lua_State*);
-    static int setScrollBarVisible(lua_State*);
+    static int enableScrollBar(lua_State*);
+    static int disableScrollBar(lua_State*);
     static int startLogging(lua_State* L);
     static int calcFontWidth(int size);
     static int calcFontHeight(int size);
