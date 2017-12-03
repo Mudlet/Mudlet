@@ -48,9 +48,6 @@
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
-#include "edbee/views/components/texteditorcomponent.h"
-#include "edbee/models/changes/mergablechangegroup.h"
-#include "edbee/texteditorcommand.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
@@ -8054,7 +8051,6 @@ void dlgTriggerEditor::slot_clearSearchResults()
 // shows a custom right-click menu for the editor, including the indent action
 void dlgTriggerEditor::slot_editorContextMenu()
 {
-    // retrieve the current controller and editor
     edbee::TextEditorWidget* editor = mpSourceEditorEdbee;
     if (!editor) {
         return;
@@ -8062,8 +8058,8 @@ void dlgTriggerEditor::slot_editorContextMenu()
 
     edbee::TextEditorController* controller = mpSourceEditorEdbee->controller();
 
-    // create the menu
     auto menu = new QMenu();
+    // appropriate shortcuts are automatically supplied by edbee here
     menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
     menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
     menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
