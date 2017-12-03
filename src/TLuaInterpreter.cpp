@@ -12218,7 +12218,8 @@ void TLuaInterpreter::initLuaGlobals()
 #endif
 #ifdef Q_OS_MAC
     //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());    
+    luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
@@ -12356,6 +12357,7 @@ void TLuaInterpreter::initIndenterGlobals()
 #ifdef Q_OS_MAC
     //macOS app bundle would like the search path to also be set to the current binary directory
     luaL_dostring(pIndenterState, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+    luaL_dostring(pIndenterState, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #endif
 
 
