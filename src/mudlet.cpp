@@ -1317,16 +1317,10 @@ bool mudlet::setFontSize(Host* pHost, const QString& name, int size)
     }
 
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
 
-    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name)) {
         TConsole* pC = dockWindowConsoleMap.value(name);
-        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console->updateScreenView();
-        pC->console->forceUpdate();
-        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console2->updateScreenView();
-        pC->console2->forceUpdate();
+        pC->setMiniConsoleFontSize(size);
 
         return true;
     } else {
@@ -1341,9 +1335,8 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     }
 
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
 
-    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap.value(name)->console->mDisplayFont.pointSize();
     } else {
         return -1;
@@ -1418,7 +1411,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
         if (pC) {
             dockWindowConsoleMap[name] = pC;
             std::string _n = name.toStdString();
-            pC->setMiniConsoleFontSize(_n, 12);
+            pC->setMiniConsoleFontSize(12);
             return true;
         }
     } else {

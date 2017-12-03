@@ -957,24 +957,27 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
 
 int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 {
-    string luaSendText = "";
+    QString windowName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setMiniConsoleFontSize: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
-    int luaNumOfMatch;
+    int size;
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setMiniConsoleFontSize: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #2 type (font size as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     } else {
-        luaNumOfMatch = lua_tointeger(L, 2);
+        size = lua_tointeger(L, 2);
     }
-    Host& host = getHostFromLua(L);
-    host.mpConsole->setMiniConsoleFontSize(luaSendText, luaNumOfMatch);
+    Host* host = &getHostFromLua(L);
+    if (mudlet::self()->setFontSize(host, windowName, size)) {
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(MiniConsole "%s" not found)", windowName.toUtf8().constData());
+    }
     return 0;
 }
 
