@@ -1820,23 +1820,15 @@ void TConsole::_luaWrapLine(int line)
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
-bool TConsole::setMiniConsoleFontSize(std::string& buf, int size)
+bool TConsole::setMiniConsoleFontSize(int size)
 {
-    std::string key = buf;
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return false;
-        }
-        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console->updateScreenView();
-        pC->console->forceUpdate();
-        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console2->updateScreenView();
-        pC->console2->forceUpdate();
-        return true;
-    }
-    return false;
+    console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    console->updateScreenView();
+    console->forceUpdate();
+    console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    console2->updateScreenView();
+    console2->forceUpdate();
+    return true;
 }
 
 QString TConsole::getCurrentLine()
@@ -2208,7 +2200,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
         std::string _n = name.toStdString();
-        pC->setMiniConsoleFontSize(_n, 12);
+        pC->setMiniConsoleFontSize(12);
         pC->show();
         return pC;
     } else {

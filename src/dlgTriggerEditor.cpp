@@ -208,6 +208,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
+    mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(mpSourceEditorEdbee->textEditorComponent(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slot_editorContextMenu()));
+
     // option areas
 
     auto pHB2 = new QHBoxLayout(popupArea);
@@ -8043,4 +8046,39 @@ void dlgTriggerEditor::slot_clearSearchResults()
     auto textRanges = controller->borderedTextRanges();
     textRanges->clear();
     controller->update();
+}
+ 
+// shows a custom right-click menu for the editor, including the indent action
+void dlgTriggerEditor::slot_editorContextMenu()
+{
+    edbee::TextEditorWidget* editor = mpSourceEditorEdbee;
+    if (!editor) {
+        return;
+    }
+
+    edbee::TextEditorController* controller = mpSourceEditorEdbee->controller();
+
+    auto menu = new QMenu();
+    // appropriate shortcuts are automatically supplied by edbee here
+    menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
+    menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
+    menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
+    menu->addSeparator();
+    menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon(), menu));
+
+    auto formatAction = new QAction(QIcon(), tr("Format All"), menu);
+    connect(formatAction, &QAction::triggered, [=]() {
+        auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
+        // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66
+        controller->beginUndoGroup();
+        mpSourceEditorEdbeeDocument->setText(formattedText);
+        // don't coalesce the format text action - not that it matters for us since we we only change
+        // the text once during the undo group
+        controller->endUndoGroup(edbee::CoalesceId::CoalesceId_None, false);
+    });
+
+    menu->addAction(formatAction);
+    menu->exec(QCursor::pos());
+
+    delete menu;
 }

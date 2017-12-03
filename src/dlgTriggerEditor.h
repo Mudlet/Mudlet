@@ -54,16 +54,18 @@
 #include <QTreeWidgetItem>
 #include "post_guard.h"
 
-// Edbee Editor Includes
-
-#include "edbee/texteditorwidget.h"
+// Edbee editor includes
+#include "edbee/edbee.h"
+#include "edbee/models/changes/mergablechangegroup.h"
+#include "edbee/models/chardocument/chartextdocument.h"
 #include "edbee/models/textdocument.h"
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/models/textgrammar.h"
-#include "edbee/texteditorcontroller.h"
 #include "edbee/models/textundostack.h"
-#include "edbee/models/chardocument/chartextdocument.h"
-#include "edbee/edbee.h"
+#include "edbee/texteditorcommand.h"
+#include "edbee/texteditorcontroller.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/components/texteditorcomponent.h"
 
 #include "edbee/models/textsearcher.h" // These three are required for search highlighting
 #include "edbee/views/texttheme.h"
@@ -276,6 +278,7 @@ private slots:
     void slot_toggle_isPushDownButton(const int);
     void slot_toggleSearchCaseSensitivity(const bool);
     void slot_clearSearchResults();
+    void slot_editorContextMenu();
 
 public:
     TConsole* mpErrorConsole;
