@@ -1650,6 +1650,46 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::enableScrollBar(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "enableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setScrollBarVisible(&host, windowName, true);
+    return 0;
+}
+
+int TLuaInterpreter::disableScrollBar(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "disableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setScrollBarVisible(&host, windowName, false);
+    return 0;
+}
+
 // replace( sessionID, replace_with )
 int TLuaInterpreter::replace(lua_State* L)
 {
@@ -12018,6 +12058,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight);
     lua_register(pGlobalLua, "setBorderColor", TLuaInterpreter::setBorderColor);
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
+    lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
+    lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
     lua_register(pGlobalLua, "startLogging", TLuaInterpreter::startLogging);
     lua_register(pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize);
     lua_register(pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger);

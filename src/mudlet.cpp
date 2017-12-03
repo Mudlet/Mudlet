@@ -121,7 +121,7 @@ QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QMainWindow* mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
-const bool mudlet::scmIsDevelopmentVersion = ! QByteArray(APP_BUILD).isEmpty();
+const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
 
 QPointer<mudlet> mudlet::_self;
 
@@ -579,9 +579,10 @@ void mudlet::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                                                                         "is saved at the end of the session.")));
+            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                             .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                     "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                     "is saved at the end of the session.")));
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
@@ -1667,6 +1668,17 @@ bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int 
     } else {
         return false;
     }
+}
+
+bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisible)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(name)) {
+        dockWindowConsoleMap[name]->setScrollBarVisible(isVisible);
+        return true;
+    } else
+        return false;
 }
 
 bool mudlet::resetFormat(Host* pHost, QString& name)
@@ -3374,7 +3386,8 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 }
 
 #if defined(INCLUDE_UPDATER)
-void mudlet::checkUpdatesOnStart() {
+void mudlet::checkUpdatesOnStart()
+{
     updater->checkUpdatesOnStart();
 }
 

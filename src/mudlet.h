@@ -27,8 +27,8 @@
 
 #include "HostManager.h"
 
-#include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
+#include "ui_main_window.h"
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
@@ -174,6 +174,7 @@ public:
     void setMenuBarVisible(const bool);
     void replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
+    bool setScrollBarVisible(Host* pHost, const QString& name, bool isVisible);
     void replayOver();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
@@ -222,7 +223,6 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
-
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
