@@ -75,6 +75,7 @@ public:
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void msdp2Lua(char* src, int srclen);
     void initLuaGlobals();
+    void initIndenterGlobals();
     bool call(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
@@ -86,6 +87,7 @@ public:
     void setGMCPTable(QString&, const QString&);
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
+    QString formatLuaCode(const QString &);
     void loadGlobal();
     QString get_lua_string(const QString& stringName);
     int check_for_mappingscript();
@@ -435,10 +437,12 @@ private:
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     void logError(std::string& e, const QString&, const QString& function);
     static int setLabelCallback(lua_State*, const QString& funcName);
+    bool validLuaCode(const QString &code);
 
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
+    lua_State* pIndenterState;
 
     QPointer<Host> mpHost;
     int mHostID;
