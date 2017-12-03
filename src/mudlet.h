@@ -26,12 +26,12 @@
 
 
 #include "HostManager.h"
+
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
-
 #include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
@@ -43,7 +43,7 @@
 #include <QTextOption>
 #include <QTime>
 #ifdef QT_GAMEPAD_LIB
-  #include <QGamepad>
+#include <QGamepad>
 #endif
 #include "post_guard.h"
 
@@ -123,7 +123,10 @@ public:
     bool setBackgroundImage(Host*, const QString& name, QString& path);
     bool setTextFormat(Host*, const QString& name, int, int, int, int, int, int, bool, bool, bool, bool);
     bool setLabelClickCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelDoubleClickCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelReleaseCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelMoveCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelWheelCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelOnEnter(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
@@ -208,7 +211,7 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
-    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
+    static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
@@ -224,7 +227,7 @@ public:
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
 
-    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
+    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'

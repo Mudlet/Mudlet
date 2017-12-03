@@ -43,7 +43,10 @@ public:
     Q_DISABLE_COPY(TLabel)
     TLabel(QWidget* pW = 0);
     void setClick(Host* pHost, const QString& func, const TEvent& args);
+    void setDoubleClick(Host* pHost, const QString& func, const TEvent& args);
     void setRelease(Host* pHost, const QString& func, const TEvent& args);
+    void setMove(Host* pHost, const QString& func, const TEvent& args);
+    void setWheel(Host* pHost, const QString& func, const TEvent& args);
     void setEnter(Host* pHost, const QString& func, const TEvent& args);
     void setLeave(Host* pHost, const QString& func, const TEvent& args);
     void mousePressEvent(QMouseEvent*) override;
@@ -58,16 +61,20 @@ public:
 
     QPointer<Host> mpHost;
     QString mClick;
+    QString mDoubleClick;
     QString mRelease;
+    QString mMove;
+    QString mWheel;
     QString mEnter;
     QString mLeave;
     TEvent mClickParams;
+    TEvent mDoubleClickParams;
     TEvent mReleaseParams;
+    TEvent mMoveParams;
+    TEvent mWheelParams;
     TEvent mLeaveParams;
     TEvent mEnterParams;
     bool mouseInside;
-
-    static const QMap<Qt::MouseButton, QString> mMouseButtons;
 };
 
 #endif // MUDLET_TLABEL_H
