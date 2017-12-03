@@ -19,32 +19,32 @@
 ############################################################################
 
 # Should be called before PROJECT.
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
+cmake_minimum_required(VERSION 3.1)
 
-PROJECT(mudlet)
+project(mudlet)
 
-IF(CMAKE_CONFIGURATION_TYPES)
-  ADD_CUSTOM_TARGET(check COMMAND ${CMAKE_CTEST_COMMAND}
+if(CMAKE_CONFIGURATION_TYPES)
+  add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
                     --force-new-ctest-process --output-on-failure
                     --build-config "$<CONFIGURATION>")
-ELSE()
-  ADD_CUSTOM_TARGET(check COMMAND ${CMAKE_CTEST_COMMAND}
+else()
+  add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
                     --force-new-ctest-process --output-on-failure)
-ENDIF()
+endif()
 
-ENABLE_TESTING()
+enable_testing()
 
-IF(POLICY CMP0020)
-  CMAKE_POLICY(SET CMP0020 NEW)
-ENDIF()
+if(POLICY CMP0020)
+  cmake_policy(SET CMP0020 NEW)
+endif()
 
-IF(WIN32)
-  SET(APP_TARGET mudlet.exe)
-ELSEIF(APPLE)
-  SET(APP_TARGET Mudlet)
-ELSE()
-  SET(APP_TARGET mudlet)
-ENDIF()
+if(WIN32)
+  set(APP_TARGET mudlet.exe)
+elseif(APPLE)
+  set(APP_TARGET Mudlet)
+else()
+  set(APP_TARGET mudlet)
+endif()
 
 # APP_BUILD should only be empty/null in official "release" builds,
 # developers may like to set the MUDLET_VERSION_BUILD environment variable to
@@ -59,111 +59,111 @@ ENDIF()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-SET(APP_VERSION 3.5.0)
-IF(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-  SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+set(APP_VERSION 3.5.0)
+if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
+  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
-  SET(APP_BUILD "-dev")
-ENDIF()
+  set(APP_BUILD "-dev")
+endif()
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # Enable the built-in updater by default unless NO_INCLUDE_UPDATER is
 # already defined. Linux packagers will find it useful to do this since
 # package managers are responsible for updates there. Automatically exclude
 # the update stuff from FreeBSD and Cygwin because if they ever get finished
 # they have their own packaging system
-IF((DEFINED ENV{NO_INCLUDE_UPDATER} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "") OR (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD") OR (CMAKE_SYSTEM_NAME STREQUAL "Cygwin"))
-  OPTION(WITH_UPDATER "Include libraries and code to allow release versions to be updated on demand" OFF)
-ELSE()
-  OPTION(WITH_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
-ENDIF()
+if((DEFINED ENV{NO_INCLUDE_UPDATER} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "") OR (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD") OR (CMAKE_SYSTEM_NAME STREQUAL "Cygwin"))
+  option(WITH_UPDATER "Include libraries and code to allow release versions to be updated on demand" OFF)
+else()
+  option(WITH_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
+endif()
 
-IF(APPLE)
+if(APPLE)
   # Needed (just) on MacOs as an #include in luazip.h:
-  ADD_SUBDIRECTORY(3rdparty/luazip)
-ENDIF()
+  add_subdirectory(3rdparty/luazip)
+endif()
 
-IF(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   # The above CMakeList.txt is the top level one - we actually use the one
   # another level down in 3rdparty/edbee-lib/edbee-lib/CMakeLists.txt
-  MESSAGE(STATUS "git submodule for required edbee-lib editor widget missing from source code, will attempt to get it...")
-  EXECUTE_PROCESS(COMMAND git submodule update --init 3rdparty/edbee-lib
+  message(STATUS "git submodule for required edbee-lib editor widget missing from source code, will attempt to get it...")
+  execute_process(COMMAND git submodule update --init 3rdparty/edbee-lib
     TIMEOUT 30
     WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
     OUTPUT_VARIABLE output_text
     ERROR_VARIABLE error_text)
-  IF(output_text OR error_text)
-    MESSAGE(STATUS ${output_text} ${error_text})
-  ENDIF()
-ENDIF()
+  if(output_text OR error_text)
+    message(STATUS ${output_text} ${error_text})
+  endif()
+endif()
 
-IF(WITH_UPDATER)
-  IF(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
-    MESSAGE(STATUS "git submodule for optional but wanted DBLSQD updater missing from source code, will attempt to get it...")
-    EXECUTE_PROCESS(COMMAND git submodule update --init 3rdparty/dblsqd
+if(WITH_UPDATER)
+  if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
+    message(STATUS "git submodule for optional but wanted DBLSQD updater missing from source code, will attempt to get it...")
+    execute_process(COMMAND git submodule update --init 3rdparty/dblsqd
       TIMEOUT 30
       WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
       OUTPUT_VARIABLE output_text
       ERROR_VARIABLE error_text)
-    IF(output_text OR error_text)
-      MESSAGE(STATUS ${output_text} ${error_text})
-    ENDIF()
-  ENDIF()
-ENDIF()
+    if(output_text OR error_text)
+      message(STATUS ${output_text} ${error_text})
+    endif()
+  endif()
+endif()
 
-IF(APPLE)
-  IF(WITH_UPDATER)
-    IF(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
-      MESSAGE(STATUS "git submodule for optional but wanted Sparkle glue for updater missing from source code, will attempt to get it...")
-      EXECUTE_PROCESS(COMMAND git submodule update --init 3rdparty/sparkle-glue
+if(APPLE)
+  if(WITH_UPDATER)
+    if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
+      message(STATUS "git submodule for optional but wanted Sparkle glue for updater missing from source code, will attempt to get it...")
+      execute_process(COMMAND git submodule update --init 3rdparty/sparkle-glue
         TIMEOUT 30
         WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
         OUTPUT_VARIABLE output_text
         ERROR_VARIABLE error_text)
-      IF(output_text OR error_text)
-        MESSAGE(STATUS ${output_text} ${error_text})
-      ENDIF()
-    ENDIF()
-  ENDIF()
-ENDIF()
+      if(output_text OR error_text)
+        message(STATUS ${output_text} ${error_text})
+      endif()
+    endif()
+  endif()
+endif()
 
-IF(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
-  ADD_SUBDIRECTORY(3rdparty/edbee-lib/edbee-lib)
-ELSEIF()
-  MESSAGE(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
-ENDIF()
+if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
+  add_subdirectory(3rdparty/edbee-lib/edbee-lib)
+elseif()
+  message(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+endif()
 
-IF(WITH_UPDATER)
-  IF(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
-    ADD_SUBDIRECTORY(3rdparty/dblsqd)
-    ADD_DEFINITIONS(-DINCLUDE_UPDATER)
-  ELSE()
-    MESSAGE(FATAL_ERROR "Cannot locate DBLSQD updater submodule source code, build abandoned!")
-  ENDIF()
+if(WITH_UPDATER)
+  if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
+    add_subdirectory(3rdparty/dblsqd)
+    add_definitions(-DINCLUDE_UPDATER)
+  else()
+    message(FATAL_ERROR "Cannot locate DBLSQD updater submodule source code, build abandoned!")
+  endif()
 
-  IF(APPLE)
-    IF(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
-      ADD_SUBDIRECTORY(3rdparty/sparkle-glue)
-    ELSE()
-      MESSAGE(FATAL_ERROR "Cannot locate Sparkle glue for updater submodule source code, build abandoned!")
-    ENDIF()
-  ENDIF()
-ENDIF()
+  if(APPLE)
+    if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
+      add_subdirectory(3rdparty/sparkle-glue)
+    else()
+      message(FATAL_ERROR "Cannot locate Sparkle glue for updater submodule source code, build abandoned!")
+    endif()
+  endif()
+endif()
 
-IF(APPLE AND WITH_UPDATER AND NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-  MESSAGE(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
-  EXECUTE_PROCESS(TIMEOUT 30
+if(APPLE AND WITH_UPDATER AND NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+  message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
+  execute_process(TIMEOUT 30
     WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
     COMMAND pod install)
-ENDIF()
+endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-  SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-  SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
-ADD_SUBDIRECTORY(src)
-ADD_SUBDIRECTORY(3rdparty/communi)
-ADD_SUBDIRECTORY(3rdparty/lua_yajl)
+add_subdirectory(src)
+add_subdirectory(3rdparty/communi)
+add_subdirectory(3rdparty/lua_yajl)
