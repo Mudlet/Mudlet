@@ -8047,7 +8047,7 @@ void dlgTriggerEditor::slot_clearSearchResults()
     textRanges->clear();
     controller->update();
 }
-
+ 
 // shows a custom right-click menu for the editor, including the indent action
 void dlgTriggerEditor::slot_editorContextMenu()
 {
