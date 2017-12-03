@@ -59,11 +59,11 @@ ENDIF()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-SET(APP_VERSION 3.5.0)
+SET(APP_VERSION 3.6.0)
 IF(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
-  SET(APP_BUILD "-dev")
+  SET(APP_BUILD "")
 ENDIF()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
