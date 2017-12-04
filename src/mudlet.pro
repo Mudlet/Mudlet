@@ -103,6 +103,18 @@ isEmpty( BUILD ) {
 # Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
+
+FONTTEST = $$(WITH_FONTS)
+isEmpty( FONTTEST ) | !equals($$upper(FONTTEST), "NO" ) {
+# Include the font resources (by defining "INCLUDE_FONTS", like a
+# "#define INCLUDE_FONTS" C preprocessor) if WITH_FONTS is NOT defined in the
+# environment or is NOT set to a case insensitive "no"
+    DEFINES += INCLUDE_FONTS
+    # Can download and extract latest Unbuntu font files (currently X.YY is
+    # 0.83) from:
+    # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
+}
+
 # Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
 macx {
     TARGET = Mudlet
@@ -409,8 +421,13 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-RESOURCES = \
-    mudlet.qrc
+RESOURCES = mudlet.qrc
+contains(DEFINES, INCLUDE_FONTS) {
+    RESOURCES += mudlet_fonts.qrc
+    message("Including additional font resources within the Mudlet executable.")
+} else {
+    message("No font resources are to be included within the Mudlet executable.")
+}
 
 TEMPLATE = app
 
