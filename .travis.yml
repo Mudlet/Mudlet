@@ -2,7 +2,6 @@ language: cpp
 os:
   - osx
   - linux
-osx_image: xcode7.3
 dist: trusty
 sudo: false
 addons:
