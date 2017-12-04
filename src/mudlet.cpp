@@ -121,7 +121,7 @@ QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QMainWindow* mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
-const bool mudlet::scmIsDevelopmentVersion = ! QByteArray(APP_BUILD).isEmpty();
+const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
 
 QPointer<mudlet> mudlet::_self;
 
@@ -509,14 +509,12 @@ QSettings* mudlet::getQSettings()
 
 void mudlet::initEdbee()
 {
-    // We only need the single Lua lexer, probably ever
-    // Optional additional themes will be added in future
-
-    edbee::Edbee* edbee = edbee::Edbee::instance();
-    edbee->autoInit();
+    auto edbee = edbee::Edbee::instance();
+    edbee->init();
     edbee->autoShutDownOnAppExit();
 
     auto grammarManager = edbee->grammarManager();
+    // We only need the single Lua lexer, probably ever
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
 
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
@@ -579,9 +577,10 @@ void mudlet::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                                                                         "is saved at the end of the session.")));
+            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                             .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                     "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                     "is saved at the end of the session.")));
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
@@ -1317,16 +1316,10 @@ bool mudlet::setFontSize(Host* pHost, const QString& name, int size)
     }
 
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
 
-    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name)) {
         TConsole* pC = dockWindowConsoleMap.value(name);
-        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console->updateScreenView();
-        pC->console->forceUpdate();
-        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console2->updateScreenView();
-        pC->console2->forceUpdate();
+        pC->setMiniConsoleFontSize(size);
 
         return true;
     } else {
@@ -1341,9 +1334,8 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     }
 
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
 
-    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap.value(name)->console->mDisplayFont.pointSize();
     } else {
         return -1;
@@ -1418,7 +1410,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
         if (pC) {
             dockWindowConsoleMap[name] = pC;
             std::string _n = name.toStdString();
-            pC->setMiniConsoleFontSize(_n, 12);
+            pC->setMiniConsoleFontSize(12);
             return true;
         }
     } else {
@@ -1674,6 +1666,17 @@ bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int 
     } else {
         return false;
     }
+}
+
+bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisible)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(name)) {
+        dockWindowConsoleMap[name]->setScrollBarVisible(isVisible);
+        return true;
+    } else
+        return false;
 }
 
 bool mudlet::resetFormat(Host* pHost, QString& name)
@@ -3381,7 +3384,8 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 }
 
 #if defined(INCLUDE_UPDATER)
-void mudlet::checkUpdatesOnStart() {
+void mudlet::checkUpdatesOnStart()
+{
     updater->checkUpdatesOnStart();
 }
 

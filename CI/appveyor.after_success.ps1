@@ -20,6 +20,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   COPY ..\*.dic .
   COPY C:\src\luazip\luazip-master\zip.dll .
   XCOPY /S /I /Q $Env:MINGW_BASE_DIR\lib\lua\5.1 .
+  XCOPY /S /I /Q ..\..\3rdparty\lua_code_formatter lcf
 
   Remove-Item * -include *.cpp, *.o
 
