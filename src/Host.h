@@ -172,7 +172,9 @@ public:
     // it's absence permits error messages to be sent to the "main" console,
     // otherwise (partial, no capitalisation, no terminal punctation) error
     // messages will be generated to pass out to lua caller functions...
-    bool installPackage(const QString&, const int, QString* pErrorMessage = nullptr);
+    // Fourth argument for installPackage(...) is used when loading from Lua
+    // (second argument has value 3) and can set (if true) the "sync" option.
+    bool installPackage(const QString&, const int, QString* pErrorMessage = nullptr, const bool isToSync = false);
     bool uninstallPackage(const QString&, const int, QString* pErrorMessage = nullptr);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
@@ -307,6 +309,16 @@ public:
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
+    /*
+     *  The QStringList value details for the modules:
+     *  0 - absolute path and filename for module file ("filepath" in Xml)
+     *  1 - whether to sync "1" or not "0" ("globalSave" in Xml)
+     * The following is parsed into the QStringList read in:
+     * (void) XMLimport::readModulesDetailsMap(QMap<QString, QStringList>&) but
+     * is currently stored separately in mModulePriorities and not retained in
+     * here...!
+     *  2 - ("priority" in Xml)
+     */
     QMap<QString, QStringList> mInstalledModules;
     QMap<QString, int> mModulePriorities;
     QMap<QString, QStringList> modulesToWrite;

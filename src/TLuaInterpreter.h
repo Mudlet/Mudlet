@@ -378,8 +378,10 @@ public:
     static int connectExitStub(lua_State* L);
     static int getExitStubs(lua_State* L);
     static int getExitStubs1(lua_State* L);
-    static int getModulePriority(lua_State* L);
-    static int setModulePriority(lua_State* L);
+    static int getModulePriority(lua_State*);
+    static int setModulePriority(lua_State*);
+    static int getIsModuleSynced(lua_State*);
+    static int setIsModuleSynced(lua_State*);
     static int updateMap(lua_State* L);
     static int addMapEvent(lua_State* L);
     static int removeMapEvent(lua_State* L);

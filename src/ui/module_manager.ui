@@ -11,19 +11,23 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <layout class="QGridLayout" name="gridLayout" rowstretch="1,0,0" rowminimumheight="0,300,0">
-   <item row="0" column="0" colspan="2">
+  <property name="windowIcon">
+   <iconset resource="../mudlet.qrc">
+    <normaloff>:/icons/module-manager.png</normaloff>:/icons/module-manager.png</iconset>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,0">
+   <item>
     <widget class="QTableWidget" name="moduleTable">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+     <property name="minimumSize">
+      <size>
+       <width>580</width>
+       <height>170</height>
+      </size>
      </property>
      <property name="alternatingRowColors">
       <bool>true</bool>
@@ -40,6 +44,9 @@
      <property name="columnCount">
       <number>4</number>
      </property>
+     <attribute name="horizontalHeaderVisible">
+      <bool>true</bool>
+     </attribute>
      <attribute name="horizontalHeaderCascadingSectionResizes">
       <bool>false</bool>
      </attribute>
@@ -55,13 +62,25 @@
      <column/>
     </widget>
    </item>
-   <item row="1" column="0" colspan="2">
+   <item>
     <widget class="QTextEdit" name="textEdit">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>580</width>
+       <height>170</height>
+      </size>
+     </property>
+     <property name="sizeIncrement">
+      <size>
+       <width>1</width>
+       <height>1</height>
+      </size>
      </property>
      <property name="inputMethodHints">
       <set>Qt::ImhNone</set>
@@ -75,84 +94,39 @@
      <property name="sizeAdjustPolicy">
       <enum>QAbstractScrollArea::AdjustToContents</enum>
      </property>
-     <property name="html">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Modules are a way to utilize a common package across many sessions - unlike packages, which are installed per-profile.&lt;/p&gt;
-&lt;p&gt;Modules are loaded in ascending priority (1 will get loaded before 2 and so on), modules with the same priority will be loaded in alphabetical order.&lt;/p&gt;
-&lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled for a module, will, when &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt; cause the current (possibly edited) module to be written out to the file-system (otherwise changes are &lt;b&gt;not&lt;/b&gt; recorded) and to be then reloaded into all profiles which also are using the same module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;
-&lt;p&gt;&lt;i&gt;Note: &lt;b&gt;.zip&lt;/b&gt; and &lt;b&gt;.mpackage&lt;/b&gt; modules are now able to be synced as well as &lt;b&gt;.xml&lt;/b&gt; packages.&lt;/p&gt;
-&lt;p&gt;For each save operation &lt;b&gt;&lt;i&gt;.xml&lt;/i&gt;&lt;/b&gt; items are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory - however backups of the other types are NOT made, you may wish to use a &lt;i&gt;working&lt;/i&gt; copy of them rather than an original if you anticipate setting the sync option on them. To avoid confusion and data loss caused by multple profiles trying to save to the same shared (archive i.e. &lt;b&gt;&lt;i&gt;.zip&lt;/i&gt;&lt;/b&gt; or &lt;b&gt;&lt;i&gt;.mpackage&lt;/i&gt;&lt;/b&gt;) file, only set the sync option on &lt;b&gt;one&lt;/b&gt; loaded profile at a time, do any editing to that profile and then use the &amp;quot;Save Profile&amp;quot; button in the editor for that profile before switching off the Sync options on that module in that profile.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-</property>
-     <property name="acceptRichText">
+     <property name="undoRedoEnabled">
       <bool>false</bool>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Liberation Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Modules are a way to utilize a common package across many sessions - unlike packages, which are installed per-profile.&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Modules are loaded in ascending priority (1 will get loaded before 2 and so on), modules with the same priority will be loaded in alphabetical order.&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The &lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;Sync&lt;/span&gt; option, if it is enabled for a module, will, when &lt;span style=&quot; font-weight:600;&quot;&gt;this profile&lt;/span&gt; is saved &lt;span style=&quot; font-weight:600;&quot;&gt;to disk&lt;/span&gt; cause the current (possibly edited) module to be written out to the file-system (otherwise changes are &lt;span style=&quot; font-weight:600;&quot;&gt;not&lt;/span&gt; recorded) and to be then reloaded into all profiles which also are using the same module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Note: &lt;/span&gt;&lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;.zip&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt; and &lt;/span&gt;&lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;.mpackage&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt; modules are now able to be synced as well as &lt;/span&gt;&lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;.xml&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt; packages.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;For each save operation &lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;.xml&lt;/span&gt; items are backed up to a directory, &lt;span style=&quot; font-style:italic;&quot;&gt;moduleBackups&lt;/span&gt;, within your Mudlet directory - however backups of the other types are NOT made, you may wish to use a &lt;span style=&quot; font-style:italic;&quot;&gt;working&lt;/span&gt; copy of them rather than an original if you anticipate setting the sync option on them. To avoid confusion and data loss caused by multple profiles trying to save to the same shared (archive i.e. &lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;.zip&lt;/span&gt; or &lt;span style=&quot; font-weight:600; font-style:italic;&quot;&gt;.mpackage&lt;/span&gt;) file, only set the sync option on &lt;span style=&quot; font-weight:600;&quot;&gt;one&lt;/span&gt; loaded profile at a time, do any editing to that profile and then use the &amp;quot;Save Profile&amp;quot; button in the editor for that profile before switching off the Sync options on that module in that profile.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="acceptRichText">
+      <bool>true</bool>
      </property>
      <property name="textInteractionFlags">
       <set>Qt::NoTextInteraction</set>
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close|QDialogButtonBox::Help</set>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>40</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="2" column="1">
-    <widget class="QWidget" name="widget_2" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::RightToLeft</enum>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QPushButton" name="uninstallButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Uninstall</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="installButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Install</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="helpButton">
-        <property name="text">
-         <string>Module Help</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet.qrc"/>
+ </resources>
  <connections/>
 </ui>

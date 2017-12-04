@@ -243,8 +243,8 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             *pErrorMessage = errorString();
         } else {
             QString errMsg = tr("[ ERROR ] - failed to import file \"%1\", reason:\n"
-                                            "\"\".")
-                             .arg(errorString());
+                                            "\"%2\".")
+                             .arg(pfile->fileName(), errorString());
             mpHost->postMessage(errMsg);
         }
         return false;
@@ -873,9 +873,18 @@ void XMLimport::readHostPackage(Host* pHost)
                 while (it.hasNext()) {
                     it.next();
                     QStringList moduleList;
+                    // The values read into it.value() are:
+                    // 0: path and filename of module file
+                    // 1: "0" not synced; "1" synced
+                    // 2: string representation of the integer module priority ("0" by default)
                     QStringList entryList = it.value();
+                    // path and file name:
                     moduleList << entryList.at(0);
+                    // isSynced:
                     moduleList << entryList.at(1);
+                    // (re)added(?) priority - may eventually dispense with need
+                    // for Host::mModulePrioirities:
+                    moduleList << entryList.at(2);
                     pHost->mInstalledModules[it.key()] = moduleList;
                     pHost->mModulePriorities[it.key()] = entryList.at(2).toInt();
                 }
@@ -1491,17 +1500,48 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
             break;
         } else if (isStartElement()) {
             if (name() == "key") {
-                key = readElementText();
+                if (mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 1)) {
+                    // The remain details are available as attributes in later
+                    // format versions:
+                    entry << attributes().value("pathFileName").toString();
+                    // QStringRef::compare() returns 0 if the strings DO compare
+                    // which casts to a bool false
+                    entry << (static_cast<bool>(attributes().value("isSynced").compare(QLatin1String("no"), Qt::CaseInsensitive))
+                              ? QLatin1String("1")
+                              : QLatin1String("0"));
+                    entry << QString::number(attributes().value("priority").toInt());
+                    // Because we are now reading as element attributes things
+                    // that were once read later as separate entities we must
+                    // process them before we process the element text:
+                    key = readElementText();
+                    map[key] = entry;
+                    entry.clear();
+                } else {
+                    // Handle < 1.002 case
+                    key = readElementText();
+                }
             } else if (name() == "filepath") {
-                entry << readElementText();
+                if (mVersionMinor < 2 || mVersionMinor < 2) {
+                    entry << readElementText();
+                } else {
+                    Q_UNUSED(readElementText());
+                }
             } else if (name() == "globalSave") {
-                entry << readElementText();
+                if (mVersionMinor < 2 || mVersionMinor < 2) {
+                    entry << readElementText();
+                } else {
+                    Q_UNUSED(readElementText());
+                }
             } else if (name() == "priority") {
-                // The last expected detail for the entry - so store this
-                // completed entry into the QMap
-                entry << readElementText();
-                map[key] = entry;
-                entry.clear();
+                // The last expected detail for the entry in <1.002 versions
+                // so store this completed entry into the QMap
+                if (mVersionMinor < 2 || mVersionMinor < 2) {
+                    entry << readElementText();
+                    map[key] = entry;
+                    entry.clear();
+                } else {
+                    Q_UNUSED(readElementText());
+                }
             } else {
                 readUnknownHostElement();
             }

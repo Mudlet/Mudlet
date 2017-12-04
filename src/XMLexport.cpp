@@ -386,8 +386,18 @@ bool XMLexport::writeHost(Host* pHost)
             pHost->modulesToWrite.clear();
             while (it.hasNext()) {
                 it.next();
-                writeTextElement("key", it.key());
+
                 QStringList entry = it.value();
+                writeStartElement("key");
+                // Added in 1.002 to make the representation easier/quicker to
+                // parse, by putting all the details in one element:
+                writeAttribute(QLatin1String("pathFileName"), entry.at(0));
+                writeAttribute(QLatin1String("isSynced"), entry.at(1) == QLatin1String("0") ? QLatin1String("no") : QLatin1String("yes"));
+                writeAttribute(QLatin1String("priority"), QString::number(pHost->mModulePriorities.value(it.key())));
+                writeCharacters(it.key());
+                writeEndElement();
+
+                // Retain until 2.0000 for backward compatibility for parsering of <1.002
                 writeTextElement("filepath", entry.at(0));
                 writeTextElement("globalSave", entry.at(1));
                 if (entry.at(1).toInt()) {

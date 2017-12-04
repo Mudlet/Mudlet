@@ -1928,72 +1928,145 @@ int TLuaInterpreter::getModulePath(lua_State* L)
 {
     QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "getModulePath: Module be be a string");
-        lua_error(L);
+        lua_pushfstring(L, "getModulePath: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (host.mInstalledModules.contains(moduleName)) {
+        // Windows can use non-ASCII characters in paths easily and POSIX
+        // systems can sometimes be forced to...
+        lua_pushstring(L, host.mInstalledModules.value(moduleName).at(0).toUtf8().constData());
         return 1;
     } else {
-        moduleName = lua_tostring(L, 1);
+        lua_pushnil(L);
+        lua_pushfstring(L, "Module named \"%s\" not installed.", moduleName.toUtf8().constData());
+        return 2;
     }
-    Host& host = getHostFromLua(L);
-    QMap<QString, QStringList> modules = host.mInstalledModules;
-    if (modules.contains(moduleName)) {
-        QString modPath = modules[moduleName][0];
-        lua_pushstring(L, modPath.toLatin1().data());
-        return 1;
-    }
-    return 0;
 }
 
 int TLuaInterpreter::getModulePriority(lua_State* L)
 {
     QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "getModulePriority: Module be be a string");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "getModulePriority: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        moduleName = lua_tostring(L, 1);
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
     }
+
     Host& host = getHostFromLua(L);
     if (host.mModulePriorities.contains(moduleName)) {
         int priority = host.mModulePriorities[moduleName];
         lua_pushnumber(L, priority);
         return 1;
     } else {
-        lua_pushstring(L, "getModulePriority: Module doesn't exist");
-        lua_error(L);
-        return 1;
+        // Was coded as an hard error (stopping execution of lua command) but
+        // converted to a nil + error message to match other two similar
+        // commands...
+        lua_pushnil(L);
+        lua_pushfstring(L, "Module named \"%s\" not installed.", moduleName.toUtf8().constData());
+        return 2;
     }
-    return 0;
+}
+
+int TLuaInterpreter::getIsModuleSynced(lua_State* L)
+{
+    QString moduleName;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getIsModuleSynced: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (host.mInstalledModules.contains(moduleName)) {
+        // Value from at(1) should be "1" for synced and "0" for not:
+        int syncValue = host.mInstalledModules.value(moduleName).at(1).toInt();
+        lua_pushboolean(L, static_cast<bool>(syncValue));
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "Module named \"%s\" not installed.", moduleName.toUtf8().constData());
+        return 2;
+    }
+}
+
+int TLuaInterpreter::setIsModuleSynced(lua_State* L)
+{
+    QString moduleName;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setIsModuleSynced: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    bool isModuleSynced = false;
+    if (!lua_isboolean(L, 2)) {
+        lua_pushfstring(L, "setIsModuleSynced: bad argument #2 type (module is synced as boolean expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        isModuleSynced = lua_toboolean(L, 2);
+    }
+
+    Host& host = getHostFromLua(L);
+    if (host.mInstalledModules.contains(moduleName)) {
+        QStringList moduleData(host.mInstalledModules.value(moduleName));
+        moduleData[1] = isModuleSynced ? QLatin1String("1") : QLatin1String("0");
+        host.mInstalledModules[moduleName] = moduleData;
+        mudlet::self()->refreshModuleManager(&host);
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "Module named \"%s\" not installed.", moduleName.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setModulePriority(lua_State* L)
 {
     QString moduleName;
-    int modulePriority;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setModulePriority: Module be be a string");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setModulePriority: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        moduleName = lua_tostring(L, 1);
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
     }
+
+    int modulePriority = 0;
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setModulePriority: Module priority must be an integer");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setModulePriority: bad argument #2 type (module priority as integer expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     } else {
         modulePriority = lua_tonumber(L, 2);
     }
+
     Host& host = getHostFromLua(L);
+    if (host.mInstalledModules.contains(moduleName)) {
+        // We are not currently using the third value in the QtringList as the
+        // the source of the priority, but as we may be able to in the future
+        // silently maintain the data as if we were:
+        Q_ASSERT_X(host.mInstalledModules.value(moduleName).count() >= 3, "TLuaIntrpreter::setModulePriority(...)", "less than expected three data values (pathFileName, isSynced & priority) in mInstalledModules member value");
+        QStringList moduleData(host.mInstalledModules.value(moduleName));
+        moduleData[2] = QString::number(modulePriority);
+        host.mInstalledModules[moduleName] = moduleData;
+    }
+
     if (host.mModulePriorities.contains(moduleName)) {
         host.mModulePriorities[moduleName] = modulePriority;
-    } else {
-        lua_pushstring(L, "setModulePriority: Module doesn't exist");
-        lua_error(L);
+        mudlet::self()->refreshModuleManager(&host);
+        lua_pushboolean(L, true);
         return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "Module named \"%s\" not installed.", moduleName.toUtf8().constData());
+        return 2;
     }
-    return 0;
 }
 
 // Now identifies and handles XML map files...
@@ -10234,8 +10307,20 @@ int TLuaInterpreter::installPackage(lua_State* L)
     Host& host = getHostFromLua(L);
     QString errorMessage;
     if (host.installPackage(packageName, 0, &errorMessage)) {
+        // The above will also update the package manager if it happens to be
+        // open so we (no longer) have to check for and do that here.
         lua_pushboolean(L, true);
-        return 1;
+        if (errorMessage.isEmpty()) {
+            return 1;
+        } else {
+            // We will get a message, if we try to install a package already
+            // loaded - this will produce an additinoal message even though
+            // we were successful - so report it (or any other future message,
+            // like, say, an MD5 hash of the contents - a future idea!)
+            lua_pushfstring(L, "Note, during installation of package \"%s\": %s.",
+                            packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
+            return 2;
+        }
     } else {
         lua_pushnil(L);
         lua_pushfstring(L, "Failed to install package \"%s\", reason: %s.",
@@ -10263,8 +10348,18 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
     Host& host = getHostFromLua(L);
     QString errorMessage;
     if (host.uninstallPackage(packageName, 0, &errorMessage)) {
+        // The above will also update the package manager if it happens to be
+        // open so we (no longer) have to check for and do that here.
         lua_pushboolean(L, true);
-        return 1;
+        if (!errorMessage.isEmpty()) {
+            // Under some circumstances we may conceivable get a message even
+            // if succesful:
+            lua_pushfstring(L, "Note, during uninstallation of package \"%s\": %s.",
+                            packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
+            return 2;
+        } else {
+            return 1;
+        }
     } else {
         lua_pushnil(L);
         lua_pushfstring(L, "Failed to uninstall package \"%s\", reason: %s.",
@@ -10276,6 +10371,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 int TLuaInterpreter::installModule(lua_State* L)
 {
     QString moduleName;
+    bool isToSync = false;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "installModule: bad argument #1 type (module {path and/or} file name as string expected, got %s!)",
                         luaL_typename(L, 1));
@@ -10289,13 +10385,31 @@ int TLuaInterpreter::installModule(lua_State* L)
         }
     }
 
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "installModule: bad argument #2 type (module is to be synced as boolean is optional, got %s!)",
+                            luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            isToSync = lua_toboolean(L, 2);
+        }
+    }
+
     Host& host = getHostFromLua(L);
     QString errorMessage;
-    bool result = host.installPackage(moduleName, 3, &errorMessage);
-    if (result && mudlet::self()->moduleTableVisible()) {
-        mudlet::self()->layoutModules();
+    if (host.installPackage(moduleName, 3, &errorMessage, isToSync)) {
         lua_pushboolean(L, true);
-        return 1;
+        if (errorMessage.isEmpty()) {
+            return 1;
+        } else {
+            // We will get a message, if we try to install a module already
+            // loaded - this will produce an additional message even though
+            // we were successful - so report it (or any other future message,
+            // like, say, an MD5 hash of the contents - a future idea!)
+            lua_pushfstring(L, "Note, during installation of module \"%s\": %s.",
+                            moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
+            return 2;
+        }
     } else {
         lua_pushnil(L);
         lua_pushfstring(L, "Failed to install module \"%s\", reason: %s.",
@@ -10322,11 +10436,17 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString errorMessage;
-    bool result = host.uninstallPackage(moduleName, 3, &errorMessage);
-    if (result && mudlet::self()->moduleTableVisible()) {
-        mudlet::self()->layoutModules();
+    if (host.uninstallPackage(moduleName, 3, &errorMessage)) {
         lua_pushboolean(L, true);
-        return 1;
+        if (!errorMessage.isEmpty()) {
+            // Under some circumstances we may conceivable get a message even
+            // if succesful:
+            lua_pushfstring(L, "Note, during uninstallation of module \"%s\": %s.",
+                            moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
+            return 2;
+        } else {
+            return 1;
+        }
     } else {
         lua_pushnil(L);
         lua_pushfstring(L, "Failed to uninstall module \"%s\", reason: %s.",
@@ -10355,7 +10475,15 @@ int TLuaInterpreter::reloadModule(lua_State* L)
     QString errorMessage;
     if (host.reloadModule(moduleName, &errorMessage)) {
         lua_pushboolean(L, true);
-        return 1;
+        if (!errorMessage.isEmpty()) {
+            // Under some circumstances we may conceivable get a message even
+            // if succesful:
+            lua_pushfstring(L, "Note, during reloading of module \"%s\": %s.",
+                            moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
+            return 2;
+        } else {
+            return 1;
+        }
     } else {
         lua_pushnil(L);
         lua_pushfstring(L, "Failed to reload module \"%s\", reason: %s.",
@@ -12072,6 +12200,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getExitStubs1", TLuaInterpreter::getExitStubs1);
     lua_register(pGlobalLua, "setModulePriority", TLuaInterpreter::setModulePriority);
     lua_register(pGlobalLua, "getModulePriority", TLuaInterpreter::getModulePriority);
+    lua_register(pGlobalLua, "setIsModuleSynced", TLuaInterpreter::setIsModuleSynced);
+    lua_register(pGlobalLua, "getIsModuleSynced", TLuaInterpreter::getIsModuleSynced);
     lua_register(pGlobalLua, "updateMap", TLuaInterpreter::updateMap);
     lua_register(pGlobalLua, "addMapEvent", TLuaInterpreter::addMapEvent);
     lua_register(pGlobalLua, "removeMapEvent", TLuaInterpreter::removeMapEvent);

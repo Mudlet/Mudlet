@@ -114,6 +114,18 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 //          ANSI ESC codes can be included in a Lua script without breaking
 //          the XML format used to store it - prior to this embedding such
 //          codes would break or destroy the script that used it.
+// 1.002    Merged all the details for the installed modules into a single
+//          entity <MudletPackage ...>
+//                   <HostPackage>
+//                     <Host ...>
+//                       ...
+//                       <mInstalledModules>
+//                         <key ....>
+//          - suggest changing
+//          "key" to "installedModule" when version 2.000 reached!  Until then
+//          must retain other sequence of entities "filepath", "globalSave" and
+//          "priority" to retain backwards compatiblity with 1.000 to 1.001
+//          format.
 const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
 
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
@@ -481,17 +493,32 @@ void mudlet::initEdbee()
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 }
 
-bool mudlet::moduleTableVisible()
+// Used by the TLuaInterpreter to cause the package manager to update itself
+// if the former has made any changes...
+void mudlet::refreshPackageManager(Host* pHost)
 {
-    if (moduleTable) {
-        return moduleTable->isVisible();
+    if (!mpPackageListHost||!packageList||mpPackageListHost.data() != pHost) {
+        return;
     }
-    return false;
+
+    packageList->clear();
+    packageList->viewport()->update();
+    packageList->addItems(mpPackageListHost->mInstalledPackages);
+    packageList->viewport()->update();
+    // It has proven awkward to get the QDialog to redraw itself
+    mpPackageManagerDlg->raise();
+    mpPackageManagerDlg->show();
+    packageList->viewport()->repaint();
+    mpPackageManagerDlg->repaint();
+    qApp->processEvents();
 }
 
-void mudlet::layoutModules()
+// Was called layoutModules() but has been extended to be callable by Lua
+// functions as well - so that their actions cause the displayed table to be
+// updated as well, without having to
+void mudlet::refreshModuleManager(Host* pHost)
 {
-    if (!mpModuleTableHost) {
+    if (!pHost||!mpModuleTableHost||mpModuleTableHost.data() != pHost) {
         return;
     }
 
@@ -505,60 +532,61 @@ void mudlet::layoutModules()
     moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
-    //clear everything
-    for (int i = 0; i <= moduleTable->rowCount(); i++) {
-        moduleTable->removeRow(i);
-    }
+    // clear everything
+    // This removes AND deletes the QTableWidgetItems in each row:
+    moduleTable->setRowCount(0);
     //order modules by priority and then alphabetically
     QMap<int, QStringList> mOrder;
     while (it.hasNext()) {
         it.next();
-        int priority = mpModuleTableHost->mModulePriorities[it.key()];
+        int priority = mpModuleTableHost->mModulePriorities.value(it.key());
         if (mOrder.contains(priority)) {
             mOrder[priority].append(it.key());
         } else {
             mOrder[priority] = QStringList(it.key());
         }
     }
+    // Sorting can mess things up during insertion so switch it off until done
+    bool isSorted = moduleTable->isSortingEnabled();
+    moduleTable->setSortingEnabled(false);
     QMapIterator<int, QStringList> it2(mOrder);
     while (it2.hasNext()) {
         it2.next();
+        // pModules is a list of all modules with the priority of it2.key()
         QStringList pModules = it2.value();
         pModules.sort();
-        for (int i = 0; i < pModules.size(); i++) {
+        for (int i = 0, total = pModules.size(); i < total; ++i) {
             int row = moduleTable->rowCount();
             moduleTable->insertRow(row);
-            auto masterModule = new QTableWidgetItem();
+            auto itemIsSynced = new QTableWidgetItem();
             auto itemEntry = new QTableWidgetItem();
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
-            masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-            QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
+            itemIsSynced->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            QStringList moduleData = mpModuleTableHost->mInstalledModules.value(pModules.at(i));
 
-            if (moduleInfo.at(1).toInt()) {
-                masterModule->setCheckState(Qt::Checked);
-            } else {
-                masterModule->setCheckState(Qt::Unchecked);
-            }
-            masterModule->setText(QString());
-            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it is saved at the end of the session.")));
+            itemIsSynced->setCheckState(moduleData.at(1).toInt() ? Qt::Checked : Qt::Unchecked);
+            itemIsSynced->setText(QString());
+            itemIsSynced->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it is saved at the end of the session.")));
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
-            masterModule->setTextAlignment(Qt::AlignCenter);
+            itemIsSynced->setTextAlignment(Qt::AlignCenter);
 
-            QString moduleName = pModules[i];
+            QString moduleName = pModules.at(i);
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-            itemLocation->setText(moduleInfo[0]);
-            itemLocation->setToolTip(moduleInfo[0]);                          // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setText(moduleData.at(0));
+            itemLocation->setToolTip(moduleData.at(0)); // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
-            itemPriority->setData(Qt::EditRole, mpModuleTableHost->mModulePriorities[moduleName]);
+            // We may be able to move to use moduleData.at(2) to hold the priority data eventually
+            itemPriority->setData(Qt::EditRole, mpModuleTableHost->mModulePriorities.value(moduleName));
             moduleTable->setItem(row, 0, itemEntry);
             moduleTable->setItem(row, 1, itemPriority);
-            moduleTable->setItem(row, 2, masterModule);
+            moduleTable->setItem(row, 2, itemIsSynced);
             moduleTable->setItem(row, 3, itemLocation);
         }
     }
+    moduleTable->setSortingEnabled(isSorted);
     moduleTable->resizeColumnsToContents();
 }
 
@@ -584,19 +612,41 @@ void mudlet::slot_module_manager()
         }
 
         moduleTable = mpModuleDlg->findChild<QTableWidget*>("moduleTable");
-        moduleUninstallButton = mpModuleDlg->findChild<QPushButton*>("uninstallButton");
-        moduleInstallButton = mpModuleDlg->findChild<QPushButton*>("installButton");
-        moduleHelpButton = mpModuleDlg->findChild<QPushButton*>("helpButton");
+        QDialogButtonBox* pDialogButtonBox = mpModuleDlg->findChild<QDialogButtonBox*>(QStringLiteral("buttonBox"));
 
-        if (!moduleTable || !moduleUninstallButton || !moduleHelpButton) {
+        if (!moduleTable || !pDialogButtonBox) {
             return;
         }
 
-        layoutModules();
+        // Add "install" and "uninstall" buttons to a dialogButtonBox
+        // which only has "Close" and "Help" buttons
+        QPushButton* pCloseButton = pDialogButtonBox->button(QDialogButtonBox::Close);
+        // Ensure the close button is the one that gets hit if the dialog gains the focus
+        // and NOT the uninstall one!
+        pCloseButton->setDefault(true);
+
+        moduleHelpButton = pDialogButtonBox->button(QDialogButtonBox::Help);
+        moduleHelpButton->setText(tr("Module Help","this is for help on a module"));
+
+        moduleInstallButton = pDialogButtonBox->addButton(tr("Install","this is for a module"), QDialogButtonBox::ActionRole);
+        moduleInstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-add_small.png")));
+
+        moduleUninstallButton = pDialogButtonBox->addButton(tr("Uninstall","this is for a module"), QDialogButtonBox::ActionRole);
+        moduleUninstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-remove_small.png")));
+
+        // Disable the uninstall and help buttons until a module is selected:
+        moduleHelpButton->setEnabled(false);
+        moduleUninstallButton->setEnabled(false);
+
+        refreshModuleManager(mpModuleTableHost);
+        connect(pCloseButton, SIGNAL(clicked()), mpModuleDlg, SLOT(close()));
         connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
         connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
         connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
-        connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
+        // We previously used the itemClicked(QTableWidgetItem*) signal but that
+        // does NOT produce signals for *keyboard* induced movement of the
+        // selected item...
+        connect(moduleTable, SIGNAL(currentItemChanged(QTableWidgetItem*, QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
         connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
         connect(mpModuleDlg, SIGNAL(destroyed()), this, SLOT(slot_module_manager_destroyed()));
         mpModuleDlg->setWindowTitle(tr("Module Manager - %1").arg(mpModuleTableHost->getName()));
@@ -649,29 +699,43 @@ void mudlet::slot_help_module()
 
 void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
 {
-    if (!mpModuleTableHost) {
+    if (!mpModuleTableHost || !moduleTable) {
+        return;
+    }
+
+    if (!pItem) {
+        qWarning() << "mudlet::slot_module_clicked(QTableWidgetItem*) Error - supplied pointer is null, aborting...";
         return;
     }
 
     int i = pItem->row();
+    if (i < 0) {
+        qWarning() << "mudlet::slot_module_clicked(QTableWidgetItem*) Error - supplied pointer was not found in QTableWidget, aborting...";
+    } else {
+        moduleUninstallButton->setEnabled(true);
+    }
 
-    QTableWidgetItem* entry = moduleTable->item(i, 0);
-    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
+    QTableWidgetItem* itemName = moduleTable->item(i, 0);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
+    QTableWidgetItem* itemIsSynced = moduleTable->item(i, 2);
     QTableWidgetItem* itemPath = moduleTable->item(i, 3);
-    qDebug() << itemPath->text();
-    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
+    if (!itemName || !itemIsSynced || !itemPriority || !itemPath) {
+        qWarning() << "mudlet::slot_module_clicked(QTableWidgetItem*) Error - missing QTableWidgetItem on same row as supplied pointer, aborting...";
+        return;
+    }
+
+    if (!mpModuleTableHost->mInstalledModules.contains(itemName->text())) {
         moduleHelpButton->setDisabled(true);
-        if (checkStatus) {
-            checkStatus->setCheckState(Qt::Unchecked);
-            checkStatus->setFlags(Qt::NoItemFlags);
+        if (itemIsSynced) {
+            itemIsSynced->setCheckState(Qt::Unchecked);
+            itemIsSynced->setFlags(Qt::NoItemFlags);
         }
         return;
     }
 
-    if (mpModuleTableHost->moduleHelp.contains(entry->text())) {
-        moduleHelpButton->setDisabled(( !mpModuleTableHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
-                                      || mpModuleTableHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
+    if (mpModuleTableHost->moduleHelp.contains(itemName->text())) {
+        moduleHelpButton->setDisabled(( !mpModuleTableHost->moduleHelp.value(itemName->text()).contains(QStringLiteral("helpURL"))
+                                      || mpModuleTableHost->moduleHelp.value(itemName->text()).value(QStringLiteral("helpURL")).isEmpty()));
     } else {
         moduleHelpButton->setDisabled(true);
     }
@@ -679,32 +743,33 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
 
 void mudlet::slot_module_changed(QTableWidgetItem* pItem)
 {
-    if (!mpModuleTableHost) {
+    if (!mpModuleTableHost|| !moduleTable) {
         return;
     }
 
     int i = pItem->row();
 
-    QStringList moduleStringList;
-    QTableWidgetItem* entry = moduleTable->item(i, 0);
-    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
+    QStringList moduleData;
+    QTableWidgetItem* itemName = moduleTable->item(i, 0);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
-    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
+    QTableWidgetItem* itemSync = moduleTable->item(i, 2);
+    if (!itemName || !itemSync || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(itemName->text())) {
         return;
     }
-    moduleStringList = mpModuleTableHost->mInstalledModules.value(entry->text());
-    if (checkStatus->checkState() == Qt::Checked) {
-        moduleStringList[1] = QLatin1String("1");
-    } else  {
-        moduleStringList[1] = QLatin1String("0");
-    }
-    mpModuleTableHost->mInstalledModules[entry->text()] = moduleStringList;
-    mpModuleTableHost->mModulePriorities[entry->text()] = itemPriority->text().toInt();
+    moduleData = mpModuleTableHost->mInstalledModules.value(itemName->text());
+    moduleData[1] = (itemSync->checkState() == Qt::Checked) ? QLatin1String("1") : QLatin1String("0");
+    // Eventually we may be able to do away with Host::mModulePriorities
+    // and retain the priority data only as the 3rd value in the QStringList
+    // holding the module info:
+    moduleData[2] = itemPriority->text();
+
+    mpModuleTableHost->mInstalledModules[itemName->text()] = moduleData;
+    mpModuleTableHost->mModulePriorities[itemName->text()] = itemPriority->text().toInt();
 }
 
 void mudlet::slot_install_module()
 {
-    if (!mpModuleTableHost) {
+    if (!mpModuleTableHost||!moduleTable) {
         return;
     }
 
@@ -724,16 +789,14 @@ void mudlet::slot_install_module()
     if (!mpModuleTableHost->installPackage(fileName, 1)) {
         qWarning().nospace() << "mudlet::slot_install_module() Host::installPackage(" << fileName << ", 1) failed...!";
     }
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
-    }
 
-    layoutModules();
+    // No need to clear the moduleTable as refreshModuleManager does it anyway:
+    refreshModuleManager(mpModuleTableHost);
 }
 
 void mudlet::slot_uninstall_module()
 {
-    if (!mpModuleTableHost) {
+    if (!mpModuleTableHost||!moduleTable) {
         return;
     }
 
@@ -744,10 +807,13 @@ void mudlet::slot_uninstall_module()
         // produced on main console:
         mpModuleTableHost->uninstallPackage(pI->text(), 1);
     }
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
-    }
-    layoutModules();
+
+    // Clear the selection and disable the uninstall button again:
+    moduleTable->clearSelection();
+    moduleUninstallButton->setEnabled(false);
+
+    // No need to clear the moduleTable as refreshModuleManager does it anyway:
+    refreshModuleManager(mpModuleTableHost);
 }
 
 void mudlet::slot_package_manager()
@@ -757,7 +823,12 @@ void mudlet::slot_package_manager()
         return;
     }
 
+    // Now checks for and only allows one instance to be opened at a time,
+    // and tracks which Host it is for
     if (!mpPackageManagerDlg) {
+        // No dialog open, note the profile concerned
+        mpPackageListHost = pH;
+
         QUiLoader loader;
         QFile file(":/ui/package_manager.ui");
         file.open(QFile::ReadOnly);
@@ -769,17 +840,30 @@ void mudlet::slot_package_manager()
         }
 
         packageList = mpPackageManagerDlg->findChild<QListWidget*>("packageList");
-        uninstallButton = mpPackageManagerDlg->findChild<QPushButton*>("uninstallButton");
-        installButton = mpPackageManagerDlg->findChild<QPushButton*>("installButton");
-
-        if (!packageList || !uninstallButton) {
+        QDialogButtonBox* pDialogButtonBox = mpPackageManagerDlg->findChild<QDialogButtonBox*>("dialogButtonBox");
+        if (!packageList || !pDialogButtonBox) {
             return;
         }
+        // Add "install" and "uninstall" buttons to the existing dialogButtonBox
+        // which now only has a "Close" button which does the expected
+        QPushButton* pCloseButton = pDialogButtonBox->button(QDialogButtonBox::Close);
+        // Ensure this is the one that gets hit if the dialog gains the focus
+        // and NOT the uninstall one!
+        pCloseButton->setDefault(true);
+        installButton = pDialogButtonBox->addButton(tr("Install","this is for a package"), QDialogButtonBox::ActionRole);
+        installButton->setIcon(QIcon(QStringLiteral(":/icons/list-add_small.png")));
+        uninstallButton = pDialogButtonBox->addButton(tr("Uninstall","this is for a package"), QDialogButtonBox::ActionRole);
+        uninstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-remove_small.png")));
+        // Disable the uninstall button until a package is selected.
+        uninstallButton->setEnabled(false);
 
         packageList->addItems(pH->mInstalledPackages);
         connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
         connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
-        mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
+        connect(pCloseButton, SIGNAL(clicked()), mpPackageManagerDlg, SLOT(close()));
+        connect(packageList, SIGNAL(currentItemChanged(QListWidgetItem*, QListWidgetItem*)), this, SLOT(slot_package_changed(QListWidgetItem*)));
+        connect(mpPackageManagerDlg, SIGNAL(destroyed()), this, SLOT(slot_package_manager_destroyed()));
+        mpPackageManagerDlg->setWindowTitle(tr("Package Manager - %1").arg(mpPackageListHost->getName()));
         mpPackageManagerDlg->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -789,6 +873,10 @@ void mudlet::slot_package_manager()
 
 void mudlet::slot_install_package()
 {
+    if (!mpPackageListHost||!packageList) {
+        return;
+    }
+
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
@@ -800,34 +888,27 @@ void mudlet::slot_install_package()
         return;
     }
 
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-
     // Absence of (non-null) third argument will cause error messages to be
     // produced on main console:
-    if (!pH->installPackage(fileName, 1)) {
+    if (!mpPackageListHost->installPackage(fileName, 0)) {
         qWarning().nospace() << "mudlet::slot_install_package() - Host::installPackage(" << fileName << ", 1) failed...!";
     }
-    packageList->clear();
-    packageList->addItems(pH->mInstalledPackages);
+    refreshPackageManager(mpPackageListHost);
 }
 
 void mudlet::slot_uninstall_package()
 {
-    Host* pH = getActiveHost();
-    if (!pH) {
+    if (!mpPackageListHost||!packageList) {
         return;
     }
+
     QListWidgetItem* pI = packageList->currentItem();
     if (pI) {
         // Absence of (non-null) third argument will cause error messages to be
         // produced on main console:
-        pH->uninstallPackage(pI->text(), 0);
+        mpPackageListHost->uninstallPackage(pI->text(), 0);
     }
-    packageList->clear();
-    packageList->addItems(pH->mInstalledPackages);
+    refreshPackageManager(mpPackageListHost);
 }
 
 void mudlet::slot_package_exporter()
@@ -3362,6 +3443,13 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
 
 #endif // #ifdef QT_GAMEPAD_LIB
 
+void mudlet::slot_package_manager_destroyed()
+{
+    // Clear the record of the profile that had the package manager open so
+    // another profile can use it...
+    mpPackageListHost = nullptr;
+}
+
 void mudlet::slot_module_manager_destroyed()
 {
     // Clear the record of the profile that had the module manager open so
@@ -3487,4 +3575,13 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         return QStringLiteral("%1/.config/mudlet/moduleBackups/")
                 .arg(QDir::homePath());
     }
+}
+
+// We do not need to know the previous item (which the connected signal)
+// does provide
+void mudlet::slot_package_changed(QListWidgetItem* pCurrentItem)
+{
+    // Only enable the uninstall button if "something" is selected - which
+    // will not be the case after a deletion...
+    uninstallButton->setEnabled(static_cast<bool>(pCurrentItem));
 }

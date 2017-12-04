@@ -226,8 +226,8 @@ void Host::saveModules(int sync)
 
     while (it.hasNext()) {
         it.next();
-        QStringList entry = it.value();
-        QString filename_xml = entry.at(0);
+        QStringList moduleData = it.value();
+        QString filename_xml = moduleData.at(0);
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (1 of 6)
         QString moduleName = it.key();
         QString zipName;
@@ -247,18 +247,18 @@ void Host::saveModules(int sync)
                 QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
                 filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
                 int ze;
-                archive = zip_open(entry.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
+                archive = zip_open(moduleData.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
                 if (!archive) {
                     zip_error_t error;
                     zip_error_init_with_code(&error, ze);
                     postMessage(tr("[ ERROR ] - Failed to open module (archive) file \"%1\", error is: \"%2\".")
-                                         .arg(entry.at(0), QString::fromUtf8(zip_error_strerror(&error))));
+                                         .arg(moduleData.at(0), QString::fromUtf8(zip_error_strerror(&error))));
                     zip_error_fini(&error);
                     // Try again for next module...
                     continue;
                 }
 
-                zipName = entry.at(0);
+                zipName = moduleData.at(0);
                 QDir packageDir = QDir(packagePathName);
                 if (!packageDir.exists()) {
                     packageDir.mkpath(packagePathName);
@@ -292,7 +292,7 @@ void Host::saveModules(int sync)
                 file_xml.close();
 
                 // This entry will be non-zero for a "synced" module
-                if (entry.at(1).toInt()) {
+                if (moduleData.at(1).toInt()) {
                     modulesToSync << it.key();
                 }
 
@@ -318,7 +318,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to open file \"%1\" to place into module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(zip_error_strerror(pError))));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(zip_error_strerror(pError))));
                     zip_error_fini(pError);
                     zip_discard(archive);
                     archive = 0;
@@ -335,7 +335,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(zip_error_strerror(pError))));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(zip_error_strerror(pError))));
                     zip_error_fini(pError);
                     zip_source_close(zipSource);
                     zip_discard(archive);
@@ -349,7 +349,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(zip_error_strerror(pError))));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(zip_error_strerror(pError))));
                     zip_error_fini(pError);
                     zip_discard(archive);
                 } // End of error on closing archive (at the right time)
@@ -368,18 +368,18 @@ void Host::saveModules(int sync)
                 QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
                 filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
                 int ze;
-                archive = zip_open(entry.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
+                archive = zip_open(moduleData.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
                 if (!archive) {
                     // Uses system errno?
                     char errorMessageBuffer[128];
                     zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, errno);
                     postMessage(tr("[ ERROR ] - Failed to open module (archive) file \"%1\", error is: \"%2\".")
-                                         .arg(entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                         .arg(moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     // Try again for next module...
                     continue;
                 }
 
-                zipName = entry.at(0);
+                zipName = moduleData.at(0);
                 QDir packageDir = QDir(packagePathName);
                 if (!packageDir.exists()) {
                     packageDir.mkpath(packagePathName);
@@ -413,7 +413,7 @@ void Host::saveModules(int sync)
                 file_xml.close();
 
                 // This entry will be non-zero for a "synced" module
-                if (entry.at(1).toInt()) {
+                if (moduleData.at(1).toInt()) {
                     modulesToSync << it.key();
                 }
 
@@ -444,7 +444,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to open file \"%1\" to place into module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     zip_close(archive);
                     archive = 0;
                     // Try again for next module...
@@ -466,7 +466,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to find the module's Mudlet items \"%1\" file\n"
                                                "inside (archive) file \"%2\", this does not\n"
                                                "seem correct so aborting save for this module.")
-                                .arg(filename_xml, entry.at(0)));
+                                .arg(filename_xml, moduleData.at(0)));
                     zip_discard(archive);
                     // If this function is not available in your version of
                     // libzip, replace it with:
@@ -496,7 +496,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     zip_source_close(zipSource);
                     zip_close(archive);
                     archive = 0;
@@ -513,7 +513,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     // 0.11 and beyond has a command to throw away an opened archive
                     zip_discard(archive);
                 } // End of error on closing archive (at the right time)
@@ -533,18 +533,18 @@ void Host::saveModules(int sync)
                 QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
                 filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
                 int ze;
-                archive = zip_open(entry.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
+                archive = zip_open(moduleData.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
                 if (!archive) {
                     // Uses system errno?
                     char errorMessageBuffer[128];
                     zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, errno);
                     postMessage(tr("[ ERROR ] - Failed to open module (archive) file \"%1\", error is: \"%2\".")
-                                         .arg(entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                         .arg(moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     // Try again for next module...
                     continue;
                 }
 
-                zipName = entry.at(0);
+                zipName = moduleData.at(0);
                 QDir packageDir = QDir(packagePathName);
                 if (!packageDir.exists()) {
                     packageDir.mkpath(packagePathName);
@@ -578,7 +578,7 @@ void Host::saveModules(int sync)
                 file_xml.close();
 
                 // This entry will be non-zero for a "synced" module
-                if (entry.at(1).toInt()) {
+                if (moduleData.at(1).toInt()) {
                     modulesToSync << it.key();
                 }
 
@@ -609,7 +609,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to open file \"%1\" to place into module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     zip_close(archive);
                     archive = 0;
                     // Try again for next module...
@@ -635,7 +635,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to find the module's Mudlet items \"%1\" file\n"
                                                "inside (archive) file \"%2\", this does not\n"
                                                "seem correct so aborting save for this module.")
-                                .arg(filename_xml, entry.at(0)));
+                                .arg(filename_xml, moduleData.at(0)));
                     zip_close(archive);
                     // At some point between 0.11 and 1.x zip_source_close()
                     // became public but it definetly is not available in 0.10
@@ -664,7 +664,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     zip_source_free(zipSource);
                     zip_close(archive);
                     archive = 0;
@@ -681,7 +681,7 @@ void Host::saveModules(int sync)
                     postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
-                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                                .arg(filename_xml, moduleData.at(0), QString::fromUtf8(errorMessageBuffer)));
                     // There is an unavoidable memory leak here for < 0.11 - we
                     // cannot close the archive and there is no command to
                     // forcibly clear the data associated with the archive data
@@ -714,11 +714,10 @@ void Host::saveModules(int sync)
             QMapIterator<int, QStringList> it4(moduleOrder);
             while (it4.hasNext()) {
                 it4.next();
-                QStringList moduleList = it4.value();
-                for (int i = 0; i < moduleList.size(); i++) {
-                    QString moduleName = moduleList.at(i);
-                    if (modulesToSync.contains(moduleName)) {
-                        host->reloadModule(moduleName);
+                QStringListIterator itModule(it4.value());
+                while (itModule.hasNext()) {
+                    if (modulesToSync.contains(itModule.next())) {
+                        host->reloadModule(itModule.peekPrevious());
                     }
                 }
             }
@@ -728,33 +727,41 @@ void Host::saveModules(int sync)
 
 bool Host::reloadModule(const QString& moduleName, QString* pErrorMessage)
 {
-    QMap<QString, QStringList> installedModules = mInstalledModules;
-    QMapIterator<QString, QStringList> it(installedModules);
+    // A QMapIterator works from a copy of what it is iterating over so it is
+    // safe if the original gets modified!
     bool isFound = false;
     bool isError = false;
-    while (it.hasNext()) {
-        it.next();
-        QStringList entry = it.value();
-        if (it.key() == moduleName) {
-            isFound = true;
-            if (!uninstallPackage(it.key(), 2, pErrorMessage)) {
-                isError = true;
-            }
-            if (!installPackage(entry.at(0), 2, pErrorMessage)) {
-                isError = true;
-            }
-            // CHECK: surely a break can be done as there can only be one module
-            // with a given name?
+    if (mInstalledModules.contains(moduleName)) {
+        isFound = true;
+        QStringList moduleData = mInstalledModules.value(moduleName);
+        // Preserve the data to prevent it being modified by the unload and loading:
+        moduleData.detach();
+        if (moduleData.at(1).compare(QLatin1String("0"))) {
+            // If we had the module set to be synced in THIS profile
+            // AND and we had edited the data
+            // THEN we will now lose the changes made in this profile as it is
+            // overwritten by the changes made in a different profile if this
+            // has been prompted by a save of the module in the other profile...!
+            qWarning().nospace() << "Host::reloadModule(...) WARNING: The module: "
+                                 << moduleName
+                                 << " was set to be synced on saving in the: "
+                                 << getName()
+                                 << " profile but any changes are now being overwritten, either because a lua script within the profle has invoked this or because the module was set to be synced in another profile and that has just happened; in the latter case, any changes made in the named profile have been lost!";
         }
-    }
+        if (!uninstallPackage(moduleName, 2, pErrorMessage)) {
+            isError = true;
+        }
+        if (!installPackage(moduleData.at(0), 2, pErrorMessage)) {
+            isError = true;
+        }
+        if (mInstalledModules.contains(moduleName)) {
+            // Check to see that we still have the same module name
+            // Perhaps it might be instructive to compare the saved moduleData
+            // to what it is after the reload...?
 
-    //iterate through mInstalledModules again and reset the entry flag to be correct.
-    //both the installedModules and mInstalled should be in the same order now as well
-    QMapIterator<QString, QStringList> it2(mInstalledModules);
-    while (it2.hasNext()) {
-        it2.next();
-        QStringList entry = installedModules.value(it2.key());
-        mInstalledModules[it2.key()] = entry;
+            // But stuff the old data back in place:
+            mInstalledModules[moduleName] = moduleData;
+        }
     }
 
     if (!isFound) {
@@ -1127,22 +1134,30 @@ bool Host::isClosingDown()
     return mIsClosingDown;
 }
 
-bool Host::installPackage(const QString& fileName, int module, QString* pErrorMessage)
+bool Host::installPackage(const QString& fileName, const int module, QString* pErrorMessage, const bool isToSync)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidently reenter this method in the future.
     QDialog* pUnzipDialog = Q_NULLPTR;
 
-    //     Module notes:
-    //     For the module install, a module flag of 0 is a package, a flag
-    //     of 1 means the module is being installed for the first time via
-    //     the UI, a flag of 2 means the module is being synced (so it's "installed"
-    //     already), a flag of 3 means the module is being installed from
-    //     a script.  This separation is necessary to be able to reuse code
-    //     while avoiding infinite loops from script installations.
+    /*
+     * Module notes:
+     *
+     * A "module" value of:
+     * 0 - is a package
+     * 1 - means a module is being installed for the first time via the UI
+     * 2 - means the module is being synced (so it is "installed" already NOT
+     *     that it has been set to be saved when the profile is saved)
+     * 3 - means the module is being installed from a script.
+     *
+     * This separation is necessary to be able to reuse code while avoiding
+     * infinite loops from script installations.
+     */
 
     if (fileName.isEmpty()) {
+        // A lua invocation will already have detected an empty string so no
+        // need to generate a string to put into pErrorMessage
         return false;
     }
 
@@ -1177,18 +1192,40 @@ bool Host::installPackage(const QString& fileName, int module, QString* pErrorMe
     packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
     packageName.remove(QLatin1Char('\\'));
     packageName.remove(QLatin1Char('.'));
-    if (module) {
-        if ((module == 2) && (mActiveModules.contains(packageName))) {
+
+    switch(module) {
+    case 3:
+        if (mActiveModules.contains(packageName)) {
+            // Lua script driven module install - so report back but bail out early
+            if (pErrorMessage) {
+                *pErrorMessage = QLatin1String("nothing to do, module already installed");
+            }
+            return true;
+        }
+        break;
+    case 2:
+        if (mActiveModules.contains(packageName)) {
+            // CHECK: Module sync, not sure we could get any errors and even
+            // if we did whether we SHOULD report them back to the main
+            // console (as pErrorMessage will be a nullptr)...
             uninstallPackage(packageName, 2, pErrorMessage);
-        } else if ((module == 3) && (mActiveModules.contains(packageName))) {
-            // This is a nested call and we do not need/want a Lua error message here...
-            return false; //we're already installed
         }
-    } else {
+        break;
+    case 0:
         if (mInstalledPackages.contains(packageName)) {
-            // This is a nested call and we do not need/want a Lua error message here...
-            return false;
+            // This is hit by a call from TLuaInterpreter::installPackage(...)
+            // OR from the toolbar button/menu action with an existing package
+            // already loaded and it could be helpful to produce a Lua message for the
+            // first of these even though we report it was successful...
+            if (pErrorMessage) {
+                *pErrorMessage = QLatin1String("nothing to do, package already installed");
+            }
+            return true;
         }
+        break;
+    default:
+        // Includes case 1:
+        ; //No-op
     }
 
     //the extra module check is needed here to prevent infinite loops from script loaded modules
@@ -1213,6 +1250,9 @@ bool Host::installPackage(const QString& fileName, int module, QString* pErrorMe
         pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
         uiFile.close();
         if (!pUnzipDialog) {
+            if (pErrorMessage) {
+                *pErrorMessage = QLatin1String("internal error (null pUnzipDialog), please report this to Mudlet developers");
+            }
             return false;
         }
 
@@ -1264,6 +1304,14 @@ bool Host::installPackage(const QString& fileName, int module, QString* pErrorMe
             // now that the packageName changed, redo relevant checks to make sure it's still valid
             if (module) {
                 if (mActiveModules.contains(packageName)) {
+                    // We are uninstalling a module with the (potentially)
+                    // different module (though called package) name from the
+                    // config.lua name from the file - before we get to install
+                    // a new version of the module.
+                    // CHECK: this will potentially collect any error message
+                    // from the uninstall process and will put them onto the
+                    // main console or pass back a lua function - perhaps we
+                    // should pass a dummy QString to suppress such things here?
                     uninstallPackage(packageName, 2, pErrorMessage);
                 }
             } else {
@@ -1287,54 +1335,102 @@ bool Host::installPackage(const QString& fileName, int module, QString* pErrorMe
         QStringList _filterList;
         _filterList << QStringLiteral("*.xml") << QStringLiteral("*.trigger");
         QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
+
+        // Preserve these details that might get overwritten by some XML files(?)
+        QString profileName = getName();
+        QString login = getLogin();
+        QString pass = getPass();
+        bool isError = false;
+        QStringList errorMessagesList;
+
+        // This will read in a collection of .xml or .trigger files in the (root)
+        // of the archive ALL under the same module/path name, as modules is a
+        // QMap those will all be group under the same entry, but for packages
+        // each separate file will be appended to the mInstalledPackages list
+        // - which may be surprising but may also get squashed down eventually
+        // to a single entry - or not...?!?
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
-            QString profileName = getName();
-            QString login = getLogin();
-            QString pass = getPass();
             XMLimport reader(this);
             if (module) {
-                QStringList moduleEntry;
-                moduleEntry << fileName;
-                moduleEntry << QStringLiteral("0");
-                mInstalledModules[packageName] = moduleEntry;
+                QStringList moduleData;
+                moduleData << fileName;
+                if (module == 3) {
+                    moduleData << (isToSync ? QLatin1String("1") : QLatin1String("0"));
+                } else {
+                    moduleData << QLatin1String("0");
+                }
+                moduleData << QLatin1String("0"); // Add a default priority
+                mInstalledModules[packageName] = moduleData;
                 mActiveModules.append(packageName);
             } else {
                 mInstalledPackages.append(packageName);
+                mudlet::self()->refreshPackageManager(this);
             }
-            reader.importPackage(&file2, packageName, module, pErrorMessage);
-            setName(profileName);
-            setLogin(login);
-            setPass(pass);
+
+            QString thisErrorMessage;
+            if (!reader.importPackage(&file2, packageName, module, &thisErrorMessage)) {
+                // Note the error but do not give up on rest
+                errorMessagesList << thisErrorMessage;
+                isError = true;
+            };
             file2.close();
         }
+
+        // Restore any changed entries
+        setName(profileName);
+        setLogin(login);
+        setPass(pass);
+
+        if (isError && pErrorMessage) {
+            *pErrorMessage = errorMessagesList.join(QLatin1String(",\n"));
+            return false;
+        }
+
     } else {
         file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
-        //mInstalledPackages.append( packageName );
         QString profileName = getName();
         QString login = getLogin();
         QString pass = getPass();
         XMLimport reader(this);
         if (module) {
-            QStringList moduleEntry;
-            moduleEntry << fileName;
-            moduleEntry << QStringLiteral("0");
-            mInstalledModules[packageName] = moduleEntry;
+            QStringList moduleData;
+            moduleData << fileName;
+            if (module == 3) {
+                moduleData << (isToSync ? QLatin1String("1") : QLatin1String("0"));
+            } else {
+                moduleData << QLatin1String("0");
+            }
+            moduleData << QLatin1String("0"); // Add a default priority
+            mInstalledModules[packageName] = moduleData;
             mActiveModules.append(packageName);
+            mudlet::self()->refreshModuleManager(this);
         } else {
             mInstalledPackages.append(packageName);
+            mudlet::self()->refreshPackageManager(this);
         }
-        reader.importPackage(&file2, packageName, module, pErrorMessage);
+
+        if (!reader.importPackage(&file2, packageName, module, pErrorMessage)) {
+            // Oh dear, something went wrong...
+            file2.close();
+            setName(profileName);
+            setLogin(login);
+            setPass(pass);
+            return false;
+        }
+
+        file2.close();
         setName(profileName);
         setLogin(login);
         setPass(pass);
-        file2.close();
     }
+
     if (mpEditorDialog) {
         mpEditorDialog->doCleanReset();
     }
+
     if (!module) {
         saveProfile();
     }
@@ -1413,10 +1509,16 @@ bool Host::uninstallPackage(const QString& packageName, int module, QString* pEr
 
     if (module) {
         if (!mInstalledModules.contains(packageName)) {
+            if (pErrorMessage) {
+                *pErrorMessage = QLatin1String("module is not installed");
+            }
             return false;
         }
     } else {
         if (!mInstalledPackages.contains(packageName)) {
+            if (pErrorMessage) {
+                *pErrorMessage = QLatin1String("package is not installed");
+            }
             return false;
         }
     }
@@ -1460,6 +1562,7 @@ bool Host::uninstallPackage(const QString& packageName, int module, QString* pEr
     if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }
+
     mTriggerUnit.uninstall(packageName);
     mTimerUnit.uninstall(packageName);
     mAliasUnit.uninstall(packageName);
@@ -1468,7 +1571,7 @@ bool Host::uninstallPackage(const QString& packageName, int module, QString* pEr
     mKeyUnit.uninstall(packageName);
     if (module) {
         //if module == 2, this is a temporary uninstall for reloading so we exit here
-        QStringList entry = mInstalledModules.value(packageName);
+        QStringList moduleData = mInstalledModules.value(packageName);
         mInstalledModules.remove(packageName);
         mActiveModules.removeAll(packageName);
         if (module == 2) {
@@ -1477,20 +1580,33 @@ bool Host::uninstallPackage(const QString& packageName, int module, QString* pEr
         //if module == 1/3, we actually uninstall it.
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations) {
-            //we're a dual install, reinstalling package
-            mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
-            //get the pre package list so we don't get duplicates
-            installPackage(entry.at(0), 0, pErrorMessage);
+            // we're a dual install, reinstalling a (new ?) copy as a package as
+            // well but first we have to take it out of the installed package
+            // list so we don't get denied from installPackage:
+            mInstalledPackages.removeAll(packageName);
+            // Now we reinstall (overwrite?) the package version:
+            // CHECK: Should we use a dummy error message to prevent any noise from this?
+            installPackage(moduleData.at(0), 0, pErrorMessage);
         }
+        mudlet::self()->refreshModuleManager(this);
     } else {
+        // We are uninstalling a package with a given name
         mInstalledPackages.removeAll(packageName);
         if (dualInstallations) {
-            QStringList entry = mInstalledModules.value(packageName);
-            installPackage(entry.at(0), 1, pErrorMessage);
-            //restore the module edit flag
-            mInstalledModules[packageName] = entry;
+            // However the same item is ALSO present as a module and that must
+            // be preserved, so note it's details in that mode
+            QStringList moduleData = mInstalledModules.value(packageName);
+            // And so we (re)install it as a module - which should not do
+            // anything but seem to succeed
+            // CHECK: Should we use a dummy error message to prevent any noise from this?
+            installPackage(moduleData.at(0), 1, pErrorMessage);
+            // restore the module edit flag (? - is that a reference to the
+            // "isSynced" item at moduleData.at(2) ?)
+            mInstalledModules[packageName] = moduleData;
         }
+        mudlet::self()->refreshPackageManager(this);
     }
+
     if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }

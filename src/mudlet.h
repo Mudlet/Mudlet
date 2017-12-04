@@ -50,6 +50,7 @@ class QCloseEvent;
 class QMenu;
 class QLabel;
 class QListWidget;
+class QListWidgetItem;
 class QPushButton;
 class QTableWidget;
 class QTableWidgetItem;
@@ -168,7 +169,6 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     bool resetFormat(Host*, QString& name);
-    bool moduleTableVisible();
     bool mWindowMinimized;
     void doAutoLogin(const QString&);
     bool deselect(Host* pHost, const QString& name);
@@ -193,6 +193,8 @@ public:
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
+    void refreshPackageManager(Host*);
+    void refreshModuleManager(Host*);
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
@@ -325,7 +327,6 @@ public slots:
     void slot_uninstall_module();
     void slot_install_module();
     void slot_module_manager();
-    void layoutModules();
     void slot_help_module();
 
 protected:
@@ -355,7 +356,9 @@ private slots:
     void slot_gamepadDisconnected(int deviceId);
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
+    void slot_package_manager_destroyed();
     void slot_module_manager_destroyed();
+    void slot_package_changed(QListWidgetItem*);
 
 private:
     void initEdbee();
@@ -388,6 +391,7 @@ private:
 
     void check_for_mappingscript();
 
+    QPointer<Host> mpPackageListHost;
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;
     QPointer<QPushButton> installButton;
