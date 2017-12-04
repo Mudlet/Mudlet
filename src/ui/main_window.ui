@@ -100,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>18</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -138,7 +138,7 @@
      <string>About</string>
     </property>
     <addaction name="dactionAbout"/>
-    <addaction name="dactionDownload"/>
+    <addaction name="dactionUpdate"/>
    </widget>
    <widget class="QMenu" name="menuGames">
     <property name="title">
@@ -277,12 +277,9 @@
     <string>opens the (on-line) Mudlet Forum in your system web-browser</string>
    </property>
   </action>
-  <action name="dactionDownload">
+  <action name="dactionUpdate">
    <property name="text">
-    <string>Download</string>
-   </property>
-   <property name="statusTip">
-    <string>opens the Mudlet website in your system web-browser, where you can download the latest version</string>
+    <string>Check for updates...</string>
    </property>
   </action>
   <action name="dactionIRC_2">

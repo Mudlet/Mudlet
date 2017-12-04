@@ -44,10 +44,8 @@ class dlgPackageExporter
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgPackageExporter)
-
 public:
-//    explicit dlgPackageExporter(QWidget* parent = 0);
+    Q_DISABLE_COPY(dlgPackageExporter)
     explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
     void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);

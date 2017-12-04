@@ -30,6 +30,8 @@ include(../3rdparty/communi/communi.pri)
 # Include lua_yajl (run time lua module needed)
 include(../3rdparty/lua_yajl/lua_yajl.pri)
 
+include(../3rdparty/dblsqd/dblsqd-sdk-qt.pri)
+
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
 macx: {
@@ -50,7 +52,7 @@ exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.5.0
+VERSION = 3.6.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -79,7 +81,7 @@ CONFIG += c++11
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.10
 
 QT += network opengl uitools multimedia gui concurrent
 qtHaveModule(gamepad): QT += gamepad
@@ -208,6 +210,15 @@ macx {
     INCLUDEPATH += /usr/local/include
 }
 
+# use ccache if available
+unix {
+    BASE_CXX = $$QMAKE_CXX
+    # common linux location
+    exists(/usr/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+    # common macos location
+    exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+}
+
 # There does not seem to be an obvious pkg-config option for these two
 macx:LIBS += \
     -lz \
@@ -218,6 +229,10 @@ macx:LIBS += \
 # platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
+
+# Enable the built-in updater by default. Linux packagers will find it useful to disable it
+# since package managers are responsible for updates there
+DEFINES += INCLUDE_UPDATER
 
 SOURCES += \
     ActionUnit.cpp \
@@ -288,7 +303,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    updater.cpp
 
 
 HEADERS += \
@@ -365,7 +381,8 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h
+    XMLimport.h \
+    updater.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -391,7 +408,6 @@ FORMS += \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
-
 
 RESOURCES = \
     mudlet.qrc
@@ -461,6 +477,40 @@ macx: {
 
     # Set the .app's icns file
     ICON = icons/osx.icns
+
+    LIBS += -framework AppKit
+
+    # allow linker to find sparkle framework as we bundle it in
+    SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
+
+    !exists($$SPARKLE_PATH) {
+        message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
+        system("cd ../3rdparty/cocoapods && pod install");
+    }
+
+    LIBS += -F$$SPARKLE_PATH
+    LIBS += -framework Sparkle
+
+    # necessary for Sparkle to compile
+    QMAKE_LFLAGS += -F $$SPARKLE_PATH
+    QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
+
+    SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
+
+    OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
+        ../3rdparty/sparkle-glue/CocoaInitializer.mm
+
+    HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
+        ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
+        ../3rdparty/sparkle-glue/CocoaInitializer.h
+
+    # Copy Sparkle into the app bundle
+    sparkle.path = Contents/Frameworks
+    sparkle.files = $$SPARKLE_PATH/Sparkle.framework
+    QMAKE_BUNDLE_DATA += sparkle
+
+    # And add frameworks to the rpath so that the app can find the framework.
+    QMAKE_RPATHDIR += @executable_path/../Frameworks
 }
 
 win32: {

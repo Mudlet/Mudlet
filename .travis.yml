@@ -2,13 +2,14 @@ language: cpp
 os:
   - osx
   - linux
+osx_image: xcode7.3
 dist: trusty
 sudo: false
 addons:
   apt:
     sources:
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
-    - sourceline: 'ppa:beineri/opt-qt591-trusty'
+    - sourceline: 'ppa:beineri/opt-qt593-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:jonathonf/php7'
     packages:
@@ -44,6 +45,7 @@ env:
     QT_VERSION=59 # actually 5.9
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
+  - secure: XxdhHVraWpXpWo4tluD7NwJtqQT1b6LKoxX6QWKzR0fvcKgqBy2jlXMu0KVtTYtVI7M1wFdjtwSixK1UGFZyDgEYYUnDTufq7E81TWJSQ5ZhxNRaDAyO2vkLNFpH7LkwVrV/fWCPKE9t3/WiowwQnXesm9MMxAzbd2mIaeyiccY=
 matrix:
   exclude:
   - os: osx

@@ -33,9 +33,8 @@ class TSplitterHandle : public QSplitterHandle
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TSplitterHandle)
-
 public:
+    Q_DISABLE_COPY(TSplitterHandle)
     TSplitterHandle(Qt::Orientation orientation, TSplitter* parent);
     void paintEvent(QPaintEvent*) override;
 };
