@@ -530,7 +530,6 @@ OTHER_FILES += \
     ../README \
     ../COMPILE \
     ../COPYING \
-    ../Doxyfile \
     ../INSTALL \
     mac-deploy.sh
 
