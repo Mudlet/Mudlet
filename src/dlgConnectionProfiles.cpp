@@ -359,72 +359,86 @@ void dlgConnectionProfiles::slot_save_name()
             notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
         }
 
-        // code stolen from fillout_form, should be moved to its own function
-        QFont font(QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal);
-        // Some uses of QFont have a third argument such as QFont::Helvetica or
-        // QFont::Courier but that is not a valid value for that argument - it
-        // is a font weight and typically only QFont::Normal or QFont::Bold is
-        // correct there (or a number 0 to 99, the two given are 50 and 75
-        // respectively)
+        // if this was a previously deleted profile, restore it
+        auto &settings = *mudlet::self()->mpSettings;
+        auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
+        if (deletedDefaultMuds.contains(newProfileName)) {
+            deletedDefaultMuds.removeOne(newProfileName);
+            settings.setValue(QStringLiteral("deletedDefaultMuds"), deletedDefaultMuds);
+            // run fillout_form to re-create the default profile icon and description
+            fillout_form();
+            // and re-select the profile since focus is lost
+            auto newProfileIcon = profiles_tree_widget->findItems(newProfileName, Qt::MatchExactly).first();
+            profiles_tree_widget->setCurrentItem(newProfileIcon);
+            slot_item_clicked(newProfileIcon);
+        } else {
+            // code stolen from fillout_form, should be moved to its own function
+            QFont font(QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal);
+            // Some uses of QFont have a third argument such as QFont::Helvetica or
+            // QFont::Courier but that is not a valid value for that argument - it
+            // is a font weight and typically only QFont::Normal or QFont::Bold is
+            // correct there (or a number 0 to 99, the two given are 50 and 75
+            // respectively)
 
-        QString sList = newProfileName;
-        QString s = newProfileName;
-        pItem->setFont(font);
-        pItem->setForeground(QColor(Qt::white));
-        profiles_tree_widget->addItem(pItem);
-        QPixmap pb(120, 30);
-        pb.fill(Qt::transparent);
-        uint hash = qHash(sList);
-        QLinearGradient shade(0, 0, 120, 30);
-        int i = row;
-        quint8 i1 = hash % 255;
-        quint8 i2 = (hash + i) % 255;
-        quint8 i3 = (i * hash) % 255;
-        quint8 i4 = (3 * hash) % 255;
-        quint8 i5 = (hash) % 255;
-        quint8 i6 = (hash / (i + 2)) % 255; // Under some corner cases i might be -1 or 0
-        shade.setColorAt(1, QColor(i1, i2, i3, 255));
-        shade.setColorAt(0, QColor(i4, i5, i6, 255));
+            QString sList = newProfileName;
+            QString s = newProfileName;
+            pItem->setFont(font);
+            pItem->setForeground(QColor(Qt::white));
+            profiles_tree_widget->addItem(pItem);
+            QPixmap pb(120, 30);
+            pb.fill(Qt::transparent);
+            uint hash = qHash(sList);
+            QLinearGradient shade(0, 0, 120, 30);
+            int i = row;
+            quint8 i1 = hash % 255;
+            quint8 i2 = (hash + i) % 255;
+            quint8 i3 = (i * hash) % 255;
+            quint8 i4 = (3 * hash) % 255;
+            quint8 i5 = (hash) % 255;
+            quint8 i6 = (hash / (i + 2)) % 255; // Under some corner cases i might be -1 or 0
+            shade.setColorAt(1, QColor(i1, i2, i3, 255));
+            shade.setColorAt(0, QColor(i4, i5, i6, 255));
 
-        QPainter pt(&pb);
-        pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        pt.fillRect(QRect(0, 0, 120, 30), shade);
-        QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
-        pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+            QPainter pt(&pb);
+            pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
+            pt.fillRect(QRect(0, 0, 120, 30), shade);
+            QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
+            pt.drawPixmap(QRect(5, 5, 20, 20), pg);
 
-        QFont _font;
-        QImage _pm(90, 30, QImage::Format_ARGB32_Premultiplied);
-        QPainter _pt(&_pm);
-        _pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        int fs = 30;
-        for (; fs > 1; fs--) {
-            _pt.eraseRect(QRect(0, 0, 90, 30));
-            _pt.fillRect(QRect(0, 0, 90, 30), QColor(255, 0, 0, 10));
-            _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
-            _pt.setFont(_font);
+            QFont _font;
+            QImage _pm(90, 30, QImage::Format_ARGB32_Premultiplied);
+            QPainter _pt(&_pm);
+            _pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
+            int fs = 30;
+            for (; fs > 1; fs--) {
+                _pt.eraseRect(QRect(0, 0, 90, 30));
+                _pt.fillRect(QRect(0, 0, 90, 30), QColor(255, 0, 0, 10));
+                _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
+                _pt.setFont(_font);
+                QRect _r;
+                if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
+                    _pt.setPen(QColor(Qt::white));
+                } else {
+                    _pt.setPen(QColor(Qt::black));
+                }
+                _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
+                /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
+                   && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
+                if (_r.width() <= 90 && _r.height() <= 30) {
+                    break;
+                }
+            }
+            pt.setFont(_font);
             QRect _r;
             if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
-                _pt.setPen(QColor(Qt::white));
+                pt.setPen(QColor(Qt::white));
             } else {
-                _pt.setPen(QColor(Qt::black));
+                pt.setPen(QColor(Qt::black));
             }
-            _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-            /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
-			   && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
-            if (_r.width() <= 90 && _r.height() <= 30) {
-                break;
-            }
+            pt.drawText(QRect(30, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
+            QIcon mi = QIcon(pb);
+            pItem->setIcon(mi);
         }
-        pt.setFont(_font);
-        QRect _r;
-        if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
-            pt.setPen(QColor(Qt::white));
-        } else {
-            pt.setPen(QColor(Qt::black));
-        }
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-        QIcon mi = QIcon(pb);
-        pItem->setIcon(mi);
     }
 }
 
