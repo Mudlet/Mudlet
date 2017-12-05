@@ -486,7 +486,16 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
-    dir.removeRecursively(); // note: we should replace this with a function that pops up a progress dialog should the deletion be taking longer than a second
+    dir.removeRecursively();
+
+    // record the deleted default profile so it does not get re-created in the future
+    auto& settings = *mudlet::self()->mpSettings;
+    auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
+    if (!deletedDefaultMuds.contains(profile)) {
+        deletedDefaultMuds.append(profile);
+    }
+    settings.setValue(QStringLiteral("deletedDefaultMuds"), deletedDefaultMuds);
+
     fillout_form();
     profiles_tree_widget->setFocus();
 }
@@ -943,208 +952,244 @@ void dlgConnectionProfiles::fillout_form()
     // we use - unfortunately we currently need that text programmatically at
     // present to identify each item - more work is needed, and is plausable, to
     // completely resolve this. -Slysven
-    QString mudServer;
+    QString mudServer, description;
     QListWidgetItem* pM;
     QIcon mi;
 
+    auto &settings = *mudlet::self()->mpSettings;
+    auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
 
     mudServer = QStringLiteral("Avalon.de");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    QPixmap p(QStringLiteral(":/icons/avalon.png"));
-    mi = QIcon(p.scaled(QSize(120, 30)));
-    pM->setIcon(mi);
-    QString description = getDescription(QStringLiteral("avalon.mud.de"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        QPixmap p(QStringLiteral(":/icons/avalon.png"));
+        mi = QIcon(p.scaled(QSize(120, 30)));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("avalon.mud.de"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Achaea");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/achaea_120_30.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("achaea.com"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/achaea_120_30.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("achaea.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("3Kingdoms");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    QPixmap pd(QStringLiteral(":/icons/3klogo.png"));
-    QPixmap pd1 = pd.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
-    QIcon mi5(pd1);
-    pM->setIcon(mi5);
-    description = getDescription(QStringLiteral("3k.org"), 3000, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        QPixmap pd(QStringLiteral(":/icons/3klogo.png"));
+        QPixmap pd1 = pd.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
+        QIcon mi5(pd1);
+        pM->setIcon(mi5);
+        description = getDescription(QStringLiteral("3k.org"), 3000, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("3Scapes");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    QPixmap pc(QStringLiteral(":/icons/3slogo.png"));
-    QPixmap pc1 = pc.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
-    QIcon mi4(pc1);
-    pM->setIcon(mi4);
-    description = getDescription(QStringLiteral("3k.org"), 3200, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        QPixmap pc(QStringLiteral(":/icons/3slogo.png"));
+        QPixmap pc1 = pc.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
+        QIcon mi4(pc1);
+        pM->setIcon(mi4);
+        description = getDescription(QStringLiteral("3k.org"), 3200, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Lusternia");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/lusternia_120_30.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("lusternia.com"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/lusternia_120_30.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("lusternia.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("BatMUD");
-    QPixmap pb(QStringLiteral(":/icons/batmud_mud.png"));
-    QPixmap pb1 = pb.scaled(QSize(120, 30)).copy();
-    mi = QIcon(pb1);
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("batmud.bat.org"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        QPixmap pb(QStringLiteral(":/icons/batmud_mud.png"));
+        QPixmap pb1 = pb.scaled(QSize(120, 30)).copy();
+        mi = QIcon(pb1);
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("batmud.bat.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("God Wars II");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/gw2.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("godwars2.org"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/gw2.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("godwars2.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Slothmud");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/Slothmud.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("slothmud.org"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/Slothmud.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("slothmud.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Aardwolf");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/aardwolf_mud.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("aardmud.org"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/aardwolf_mud.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("aardmud.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Materia Magica");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/materiaMagicaIcon"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("materiamagica.com"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/materiaMagicaIcon"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("materiamagica.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Realms of Despair");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/120x30RoDLogo.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("realmsofdespair.com"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/120x30RoDLogo.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("realmsofdespair.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("ZombieMUD");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/zombiemud.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("zombiemud.org"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/zombiemud.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("zombiemud.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Aetolia");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/aetolia_120_30.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("aetolia.com"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/aetolia_120_30.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("aetolia.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Imperian");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QStringLiteral(":/icons/imperian_120_30.png"));
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("imperian.com"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QStringLiteral(":/icons/imperian_120_30.png"));
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("imperian.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("WoTMUD");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QPixmap(QStringLiteral(":/icons/wotmudicon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("game.wotmud.org"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/wotmudicon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                            Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("game.wotmud.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     mudServer = QStringLiteral("Midnight Sun 2");
-    pM = new QListWidgetItem(mudServer);
-    pM->setFont(font);
-    pM->setForeground(QColor(Qt::white));
-    profiles_tree_widget->addItem(pM);
-    mi = QIcon(QPixmap(QStringLiteral(":/icons/midnightsun2.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    pM->setIcon(mi);
-    description = getDescription(QStringLiteral("midnightsun2.org"), 0, mudServer);
-    if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/midnightsun2.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                              Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("midnightsun2.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
     }
 
     for (int i = 0; i < mProfileList.size(); i++) {
@@ -1156,10 +1201,9 @@ void dlgConnectionProfiles::fillout_form()
         auto pItem = new QListWidgetItem(mProfileList.at(i));
 
         // mProfileList is derived from a filesystem directory, but MacOS is not
-        // necesserily case preserving for file names so any tests on them
-        // should be case insensitive...! - Slysven
-        // Change from using a "==" test to a QString::compare( const QString )
-        // which returns a 0 on a match or +/-1 on difference
+        // necessarily case preserving for file names so any tests on them
+        // should be case insensitive
+        // skip creating icons for default MUDs as they are already created above
         if ((!mProfileList.at(i).compare(QStringLiteral("Avalon.de"), Qt::CaseInsensitive)) || (!mProfileList.at(i).compare(QStringLiteral("BatMUD"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Materia Magica"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Aardwolf"), Qt::CaseInsensitive))
