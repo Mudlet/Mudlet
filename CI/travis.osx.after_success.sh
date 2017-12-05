@@ -17,6 +17,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
     security unlock-keychain -p travis $KEYCHAIN
     security set-keychain-settings -t 3600 -u $KEYCHAIN
     security import Certificates.p12 -k $KEYCHAIN -P "$CERT_PW" -T /usr/bin/codesign
+    security set-key-partition-list -S apple-tool:,apple: -s -k travis $KEYCHAIN
     export IDENTITY="Developer ID Application"
     echo "Imported identity:"
     security find-identity
