@@ -79,6 +79,33 @@ ELSE()
   OPTION(WITH_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
 ENDIF()
 
+# Enable the inclusion of fonts currently carried in the source code by default
+# unless the environmental variable WITH_FONTS is already defined and is not
+# set to (case insenstive) "no". Linux packagers will find it useful to do this
+# since package managers may already package the relevant fonts - or are not
+# willing or able to include them.
+# Note: WITH_FONTS is an environmental value/variable (could be a number, a
+#           string, something else or not even exisit).
+#       FONT_TEST and USE_FONTS are CMake variables (probably a string and a
+#           boolean {ON or OFF} respectively).
+#       INCLUDE_FONTS is a C preprocessor symbol (i.e. the same as
+#           "#define INCLUDE_FONTS" which, in the absence of an explicitly set
+#           value, takes the numeric value of (int)1 as far as the compiler is
+#           concerned!)
+set(FONT_TEST $ENV{WITH_FONTS})
+string(TOUPPER ${FONT_TEST} FONT_TEST)
+if(FONT_TEST STREQUAL "NO")
+  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" OFF)
+else()
+  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" ON)
+  # Can download and extract latest Unbuntu font files (currently X.YY is
+  # 0.83) from:
+  # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
+  # TODO: automate the download and extraction of all the font and associate
+  # documentation but NOT the "sources" sub-directory contents into the
+  # ./src/fonts/ directory structure if this option is set to ON...
+endif()
+
 IF(APPLE)
   # Needed (just) on MacOs as an #include in luazip.h:
   ADD_SUBDIRECTORY(3rdparty/luazip)

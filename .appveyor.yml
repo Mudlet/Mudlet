@@ -6,6 +6,11 @@ environment:
   - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw492_32
     MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw492_32
+    WITH_FONTS: NO
+  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
+    MINGW_BASE_DIR: C:\Qt\Tools\mingw492_32
+    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw492_32
+    WITH_FONTS: YES
 #  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
 #    MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
 #    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32

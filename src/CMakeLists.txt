@@ -20,6 +20,11 @@
 
 SET(mudlet_RCCS mudlet.qrc)
 
+if(USE_FONTS)
+    set(mudlet_fonts_RCCS mudlet_fonts.qrc)
+    ADD_DEFINITIONS(-DINCLUDE_FONTS)
+endif()
+
 SET(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
@@ -340,6 +345,13 @@ ELSE()
   MESSAGE(STATUS "Updater code is not enabled or not available in this configuration")
 ENDIF()
 
+if(USE_FONTS)
+  message(STATUS "Font resources are included in the executable in this configuration")
+else()
+  message(STATUS "Font resources are NOT included in the executable in this configuration")
+endif()
+
+
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
 FIND_PACKAGE(Qt5OpenGL REQUIRED)
@@ -427,11 +439,15 @@ INCLUDE_DIRECTORIES( ${ZLIB_INCLUDE_DIR} )
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+if(USE_FONTS)
+    QT5_ADD_RESOURCES(mudlet_fonts_RCC_SRCS ${mudlet_fonts_RCCS})
+endif()
 
 ADD_EXECUTABLE(mudlet WIN32
     ${mudlet_SRCS}
     ${mudlet_MOC_SRCS}
     ${mudlet_RCC_SRCS}
+    ${mudlet_fonts_RCC_SRCS}
     ${mudlet_HDRS}
     ${mudlet_UIS_H}
     ${mudlet_MOC_HDRS}

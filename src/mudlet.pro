@@ -104,15 +104,27 @@ isEmpty( BUILD ) {
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
 
-FONTTEST = $$(WITH_FONTS)
-isEmpty( FONTTEST ) | !equals($$upper(FONTTEST), "NO" ) {
-# Include the font resources (by defining "INCLUDE_FONTS", like a
-# "#define INCLUDE_FONTS" C preprocessor) if WITH_FONTS is NOT defined in the
-# environment or is NOT set to a case insensitive "no"
+# Enable the inclusion of fonts currently carried in the source code by default
+# unless the environmental variable WITH_FONTS is already defined and is not
+# set to (case insenstive) "no". Linux packagers will find it useful to do this
+# since package managers may already package the relevant fonts - or are not
+# willing or able to include them.
+# Note: WITH_FONTS is an environmental value/variable (could be a number, a
+#           string, something else or not even exist).
+#       FONT_TEST is a qmake variables (probably a string).
+#       INCLUDE_FONTS is a C preprocessor symbol (i.e. the same as
+#           "#define INCLUDE_FONTS" which, in the absence of an explicitly set
+#           value, takes the numeric value of (int)1 as far as the compiler is
+#           concerned!)
+FONT_TEST = $$(WITH_FONTS)
+isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
     DEFINES += INCLUDE_FONTS
     # Can download and extract latest Unbuntu font files (currently X.YY is
     # 0.83) from:
     # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
+    # TODO: automate the download and extraction of all the font and associate
+    # documentation but NOT the "sources" sub-directory contents into the
+    # ./src/fonts/ directory structure if this option is set to ON...
 }
 
 # Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
@@ -577,4 +589,5 @@ DISTFILES += \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
     .clang-format \
-    CMakeLists.txt
+    CMakeLists.txt \
+    ../.appveyor.yml
