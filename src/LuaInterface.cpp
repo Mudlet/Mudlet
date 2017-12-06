@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QTime>
+#include <QDir>
 #include "post_guard.h"
 
 #include <setjmp.h>
@@ -41,6 +42,14 @@ LuaInterface::LuaInterface(Host* pH) : mpHost(pH), L(), depth()
     varUnit.reset(new VarUnit());
     //set our panic function
     lua_atpanic(interpreter->pGlobalLua, &onPanic);
+
+    // prepend profile path to package.path and package.cpath
+    lua_State* LS = interpreter->pGlobalLua;
+
+    luaL_dostring(LS, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(QDir::separator()).toUtf8().constData());
+    luaL_dostring(LS, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?.lua;]] .. package.path").arg(QDir::separator()).toUtf8().constData());
+
+    luaL_dostring(LS, QStringLiteral("package.cpath = getMudletHomeDir() .. [[%1?;]] .. package.cpath").arg(QDir::separator()).toUtf8().constData());
 }
 
 LuaInterface::~LuaInterface()
