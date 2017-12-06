@@ -10765,9 +10765,9 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
         return 1;
     }
     
-	QString speechCurrent;
+    QString speechCurrent;
     speechCurrent = QString::fromUtf8(lua_tostring(L, 1));
-	
+    
     speechUnit->say(speechCurrent);
     
     return 0;
@@ -10788,11 +10788,11 @@ void TLuaInterpreter::ttsBuild()
     
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
 
-	
+    
     speechUnit->setVolume(1.0);
     speechUnit->setRate(0.0);
     speechUnit->setPitch(0.0);
-	
+    
     return;
 }
 
@@ -10832,18 +10832,18 @@ int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
         fRate = -1.0;
     
     speechUnit->setRate(fRate);
-	
-	Host& host = getHostFromLua(L);
-	TEvent event;
-	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QLatin1String("rate"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QString::number(fRate));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	host.raiseEvent(event);
-	
-	return 0;
+    
+    Host& host = getHostFromLua(L);
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QLatin1String("rate"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(fRate));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    host.raiseEvent(event);
+    
+    return 0;
 }
 
 
@@ -10870,18 +10870,18 @@ int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
         fPitch = -1.0;
     
     speechUnit->setPitch(fPitch);
-	
-	TEvent event;
-	Host& host = getHostFromLua(L);
-	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QLatin1String("pitch"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QString::number(fPitch));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	host.raiseEvent(event);
-	
-	return 0;
+    
+    TEvent event;
+    Host& host = getHostFromLua(L);
+    event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QLatin1String("pitch"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(fPitch));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    host.raiseEvent(event);
+    
+    return 0;
 }
 
 
@@ -10908,18 +10908,18 @@ int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
         fVol = 0.0;
     
     speechUnit->setVolume(fVol);
-	
-	Host& host = getHostFromLua(L);
-	TEvent event;
-	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QLatin1String("volume"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QString::number(fVol));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	host.raiseEvent(event);
-	
-	return 0;
+    
+    Host& host = getHostFromLua(L);
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QLatin1String("volume"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(fVol));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    host.raiseEvent(event);
+    
+    return 0;
 }
 
 
@@ -11028,34 +11028,34 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
  */
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
-	TEvent event;
-	switch(state)
-	{
-		case QTextToSpeech::Paused : event.mArgumentList.append(QLatin1String("ttsSpeechPaused")); break;
-		case QTextToSpeech::Speaking : event.mArgumentList.append(QLatin1String("ttsSpeechStarted")); break;
-		case QTextToSpeech::BackendError : event.mArgumentList.append(QLatin1String("ttsSpeechError")); break;
-		case QTextToSpeech::Ready : event.mArgumentList.append(QLatin1String("ttsSpeechReady")); break;
-	}
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	
-	if (state == QTextToSpeech::Speaking)
-	{
-		event.mArgumentList.append(speechCurrent);
-		event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	}
-	
-	mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
-	
+    TEvent event;
+    switch(state)
+    {
+        case QTextToSpeech::Paused : event.mArgumentList.append(QLatin1String("ttsSpeechPaused")); break;
+        case QTextToSpeech::Speaking : event.mArgumentList.append(QLatin1String("ttsSpeechStarted")); break;
+        case QTextToSpeech::BackendError : event.mArgumentList.append(QLatin1String("ttsSpeechError")); break;
+        case QTextToSpeech::Ready : event.mArgumentList.append(QLatin1String("ttsSpeechReady")); break;
+    }
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    
+    if (state == QTextToSpeech::Speaking)
+    {
+        event.mArgumentList.append(speechCurrent);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    }
+    
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    
     if(state != QTextToSpeech::Ready || speechQueue.empty())
-	{
-		return;
-	}
-	
-	speechCurrent = speechQueue.takeFirst();
-	
+    {
+        return;
+    }
+    
+    speechCurrent = speechQueue.takeFirst();
+    
     speechUnit->say(speechCurrent);
-	
-	return;
+    
+    return;
 }
 
 
@@ -11066,51 +11066,51 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-	
-	if(!lua_isstring(L, 1)) {
+    
+    if(!lua_isstring(L, 1)) {
         lua_pushfstring(L, "ttsQueueText: bad argument #1 type (input as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     }
-	
-	QString inputText = lua_tostring(L, 1);
-	int index;
-	
-	if(lua_gettop(L) > 1) {
-		if(!lua_isnumber(L, 2)) {
-			lua_pushfstring(L, "ttsQueueText: bad argument #2 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
-			lua_error(L);
-			return 1;
-		}
-		
-		index = lua_tonumber(L, 2);
-		index--;
-		
-		if(index < 0)
-			index = 0;
-		
-		if(index > speechQueue.size())
-			index = speechQueue.size();
-	}
-	else {
-		index = speechQueue.size();
-	}
+    
+    QString inputText = lua_tostring(L, 1);
+    int index;
+    
+    if(lua_gettop(L) > 1) {
+        if(!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "ttsQueueText: bad argument #2 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        }
+        
+        index = lua_tonumber(L, 2);
+        index--;
+        
+        if(index < 0)
+            index = 0;
+        
+        if(index > speechQueue.size())
+            index = speechQueue.size();
+    }
+    else {
+        index = speechQueue.size();
+    }
 
-	speechQueue.insert(index, inputText);
-	
-	TEvent event;
-	Host& host = getHostFromLua(L);
-	event.mArgumentList.append(QLatin1String("ttsSpeechQueued"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(inputText);
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QString::number(index));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	host.raiseEvent(event);
-	
-	TLuaInterpreter::ttsStateChanged(speechUnit->state());
-	
-	return 0;
+    speechQueue.insert(index, inputText);
+    
+    TEvent event;
+    Host& host = getHostFromLua(L);
+    event.mArgumentList.append(QLatin1String("ttsSpeechQueued"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(inputText);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(index));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    host.raiseEvent(event);
+    
+    TLuaInterpreter::ttsStateChanged(speechUnit->state());
+    
+    return 0;
 }
 
 /** ttsGetSpeechQueue( opt. index )
@@ -11121,35 +11121,35 @@ int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
 int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-	
-	if(lua_gettop(L) > 0) {
-		if(!lua_isnumber(L, 1)) {
-			lua_pushfstring(L, "ttsGetspeechQueue. bad argument #1 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
-			lua_error(L);
-			return 1;
-		}
-		
-		int index = lua_tonumber(L, 1);
-		index--;
-		
-		if(index < 0 || index > speechQueue.size()) {
-			lua_pushboolean(L, false);
-			return 1;
-		}
-		
-		lua_pushstring(L, speechQueue.at(index).toLatin1().constData());
-		return 1;
-	}
-	
-	lua_newtable(L);
-	
-	for(int i=0;i<speechQueue.size();i++) {
+    
+    if(lua_gettop(L) > 0) {
+        if(!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, "ttsGetspeechQueue. bad argument #1 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        }
+        
+        int index = lua_tonumber(L, 1);
+        index--;
+        
+        if(index < 0 || index > speechQueue.size()) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        
+        lua_pushstring(L, speechQueue.at(index).toLatin1().constData());
+        return 1;
+    }
+    
+    lua_newtable(L);
+    
+    for(int i=0;i<speechQueue.size();i++) {
         lua_pushnumber(L, i + 1);
         lua_pushstring(L, speechQueue.at(i).toUtf8().constData());
         lua_settable(L, -3);
-	}
-	
-	return 1;
+    }
+    
+    return 1;
 }
 
 /** ttsPauseSpeech( opt. pause )
@@ -11159,52 +11159,52 @@ int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
 int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-	
-	if(!lua_isboolean(L, 1)) {
-		lua_pushfstring(L, "ttsPauseSpeech: bad argument #1 type (pause expected bool, instead got %s!)", luaL_typename(L, 1));
-		lua_error(L);
-		return 1;
-	}
-	
-	if(lua_toboolean(L, 1))
-		speechUnit->pause();
-	else
-		speechUnit->resume();
-	
-	return 0;
+    
+    if(!lua_isboolean(L, 1)) {
+        lua_pushfstring(L, "ttsPauseSpeech: bad argument #1 type (pause expected bool, instead got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+    
+    if(lua_toboolean(L, 1))
+        speechUnit->pause();
+    else
+        speechUnit->resume();
+    
+    return 0;
 }
 
 /** ttsClearQueue( opt. index )
  *  Removes an item from the speech queue at index.
  *  Returns false if invalid index provided.
- *	Clears entire queue if 
+ *    Clears entire queue if 
  */
 int TLuaInterpreter::ttsClearQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-	
-	if(lua_gettop(L) > 0) {
-		if(!lua_isnumber(L, 1)) {
-			lua_pushfstring(L, "ttsClearQueue: bad argument #1 type (optional index as int expected, got %s!)", luaL_typename(L, 1));
-			lua_error(L);
-			return 1;
-		}
-		
-		int index = lua_tonumber(L, 1);
-		index--;
-		
-		if(index < 0 || index >= speechQueue.size()) {
-			lua_pushfstring(L, "ttsClearQueue: index (%d) out of bounds for queue size %d", index+1, speechQueue.size());
-			lua_error(L);
-			return 1;
-		}
-		
-		speechQueue.remove(index);
-		return 0;
-	}
-	
-	speechQueue.clear();
-	return 0;
+    
+    if(lua_gettop(L) > 0) {
+        if(!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, "ttsClearQueue: bad argument #1 type (optional index as int expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        }
+        
+        int index = lua_tonumber(L, 1);
+        index--;
+        
+        if(index < 0 || index >= speechQueue.size()) {
+            lua_pushfstring(L, "ttsClearQueue: index (%d) out of bounds for queue size %d", index+1, speechQueue.size());
+            lua_error(L);
+            return 1;
+        }
+        
+        speechQueue.remove(index);
+        return 0;
+    }
+    
+    speechQueue.clear();
+    return 0;
 }
 
 /** ttsGetCurrentLine()
@@ -11213,14 +11213,14 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
 int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-	
-	if(speechUnit->state() == QTextToSpeech::Ready) {
-		lua_pushboolean(L, false);
-		return 1;
-	}
-	
-	lua_pushstring(L, speechCurrent.toUtf8().constData());
-	return 1;
+    
+    if(speechUnit->state() == QTextToSpeech::Ready) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
+    lua_pushstring(L, speechCurrent.toUtf8().constData());
+    return 1;
 }
 
 /** ttsGetState()
@@ -11229,18 +11229,18 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
  */
 int TLuaInterpreter::ttsGetState(lua_State* L)
 {
-	TLuaInterpreter::ttsBuild();
-	
-	switch(speechUnit->state())
-	{
-		case QTextToSpeech::Ready : lua_pushstring(L, "ready");
-		case QTextToSpeech::Paused : lua_pushstring(L, "paused");
-		case QTextToSpeech::Speaking : lua_pushstring(L, "speaking");
-		case QTextToSpeech::BackendError : lua_pushstring(L, "error");
-		default : lua_pushstring(L, "unknown");
-	}
-	
-	return 1;
+    TLuaInterpreter::ttsBuild();
+    
+    switch(speechUnit->state())
+    {
+        case QTextToSpeech::Ready : lua_pushstring(L, "ready");
+        case QTextToSpeech::Paused : lua_pushstring(L, "paused");
+        case QTextToSpeech::Speaking : lua_pushstring(L, "speaking");
+        case QTextToSpeech::BackendError : lua_pushstring(L, "error");
+        default : lua_pushstring(L, "unknown");
+    }
+    
+    return 1;
 }
 
 #endif // QT_TEXTTOSPEECH_LIB
