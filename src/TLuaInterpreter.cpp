@@ -11195,7 +11195,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
 		int index = lua_tonumber(L, 1);
 		index--;
 		
-		if(index < 0 || index > speechQueue.size()) {
+		if(index < 0 || index >= speechQueue.size()) {
 			lua_pushfstring(L, "ttsClearQueue: index (%d) out of bounds for queue size %d", index+1, speechQueue.size());
 			lua_error(L);
 			return 1;
