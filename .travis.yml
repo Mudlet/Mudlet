@@ -45,11 +45,9 @@ env:
     QT_VERSION=59
     WITH_FONTS=NO # actually 5.9
   - Q_OR_C_MAKE=cmake
-    QT_VERSION=59
-    WITH_FONTS=YES # actually 5.9
+    QT_VERSION=59 # actually Qt 5.9, if WITH_FONTS is omitted build should default to YES case
   - Q_OR_C_MAKE=qmake
-    QT_VERSION=59
-    WITH_FONTS=YES # actually 5.9
+    QT_VERSION=59 # actually Qt 5.9, if WITH_FONTS is omitted build should default to YES case
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
   - secure: XxdhHVraWpXpWo4tluD7NwJtqQT1b6LKoxX6QWKzR0fvcKgqBy2jlXMu0KVtTYtVI7M1wFdjtwSixK1UGFZyDgEYYUnDTufq7E81TWJSQ5ZhxNRaDAyO2vkLNFpH7LkwVrV/fWCPKE9t3/WiowwQnXesm9MMxAzbd2mIaeyiccY=
