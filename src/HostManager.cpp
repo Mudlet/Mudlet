@@ -132,9 +132,9 @@ void HostManager::postIrcMessage(QString a, QString b, QString c)
 // send out the events to the other hosts in a predictable and consistant order
 // and so that no one host gets an unfair advantage when emitting events. The
 // sending profile host does NOT get the event!
-void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
+void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, const bool ForceGlobal)
 {
-    if (!pHost) {
+    if (!pHost && !ForceGlobal) {
         return;
     }
 
