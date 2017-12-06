@@ -22,6 +22,7 @@
 TDockWidget::TDockWidget(Host* pH, const QString& consoleName) : QDockWidget()
 {
     mpHost = pH;
+    hasLayoutAlready = false;
     widgetConsoleName = consoleName;
 }
 

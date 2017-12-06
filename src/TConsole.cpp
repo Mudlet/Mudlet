@@ -86,6 +86,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpMapper(nullptr)
+, mpButtonMainLayer(nullptr)
 , mpScrollBar(new QScrollBar)
 
 , mRecordReplay(false)
@@ -346,18 +347,22 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
 
-    auto buttonMainLayer = new QWidget; //( layerCommandLine );
-    buttonMainLayer->setSizePolicy(sizePolicy);
-    buttonMainLayer->setContentsMargins(0, 0, 0, 0);
-    auto layoutButtonMainLayer = new QVBoxLayout(buttonMainLayer);
+    mpButtonMainLayer = new QWidget;
+    mpButtonMainLayer->setObjectName(QStringLiteral("mpButtonMainLayer"));
+    mpButtonMainLayer->setSizePolicy(sizePolicy);
+    mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
+    auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
+    layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
     layoutButtonMainLayer->setMargin(0);
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
     layoutButtonMainLayer->setSpacing(0);
-    /*buttonMainLayer->setMinimumHeight(31);
-           buttonMainLayer->setMaximumHeight(31);*/
+    /*mpButtonMainLayer->setMinimumHeight(31);
+           mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
+    buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
+    layoutButtonLayer->setObjectName(QStringLiteral("layoutButtonLayer"));
     layoutButtonLayer->setMargin(0);
     layoutButtonLayer->setSpacing(0);
 
@@ -477,7 +482,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     connect(mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
     layoutLayer2->addWidget(mpCommandLine);
-    layoutLayer2->addWidget(buttonMainLayer);
+    layoutLayer2->addWidget(mpButtonMainLayer);
     layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
     layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
     layoutButtonLayer->addWidget(mpBufferSearchDown, 0, 6);
@@ -536,8 +541,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     //buttonLayer->setMaximumWidth(31);
     buttonLayer->setMinimumWidth(400);
     buttonLayer->setMaximumWidth(400);
-    buttonMainLayer->setMinimumWidth(400);
-    buttonMainLayer->setMaximumWidth(400);
+    mpButtonMainLayer->setMinimumWidth(400);
+    mpButtonMainLayer->setMaximumWidth(400);
     setFocusPolicy(Qt::ClickFocus);
     setFocusProxy(mpCommandLine);
     console->setFocusPolicy(Qt::ClickFocus);
@@ -547,8 +552,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 
     buttonLayerSpacer->setAutoFillBackground(true);
     buttonLayerSpacer->setPalette(__pal);
-    buttonMainLayer->setAutoFillBackground(true);
-    buttonMainLayer->setPalette(__pal);
+    mpButtonMainLayer->setAutoFillBackground(true);
+    mpButtonMainLayer->setPalette(__pal);
 
     buttonLayer->setAutoFillBackground(true);
     buttonLayer->setPalette(__pal);
@@ -931,8 +936,7 @@ void TConsole::slot_toggleReplayRecording()
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (5 of 6)
-        QString mLogFileName = QStringLiteral("%1/%2.dat")
-                               .arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -1099,8 +1103,7 @@ void TConsole::setConsoleFgColor(int r, int g, int b)
 void TConsole::loadRawFile(std::string n)
 {
     QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
-    QString fileName = QStringLiteral("%1/%2")
-                       .arg(directoryLogFile, QString(n.c_str()));
+    QString fileName = QStringLiteral("%1/%2").arg(directoryLogFile, QString(n.c_str()));
     mpHost->mTelnet.loadReplay(fileName);
 }
 
@@ -1815,23 +1818,15 @@ void TConsole::_luaWrapLine(int line)
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
-bool TConsole::setMiniConsoleFontSize(std::string& buf, int size)
+bool TConsole::setMiniConsoleFontSize(int size)
 {
-    std::string key = buf;
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return false;
-        }
-        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console->updateScreenView();
-        pC->console->forceUpdate();
-        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console2->updateScreenView();
-        pC->console2->forceUpdate();
-        return true;
-    }
-    return false;
+    console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    console->updateScreenView();
+    console->forceUpdate();
+    console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    console2->updateScreenView();
+    console2->forceUpdate();
+    return true;
 }
 
 QString TConsole::getCurrentLine()
@@ -2026,6 +2021,16 @@ void TConsole::setBgColor(int r, int g, int b)
     buffer.applyBgColor(P_begin, P_end, r, g, b);
 }
 
+void TConsole::setScrollBarVisible(bool isVisible)
+{
+    if (mpScrollBar) {
+        if (isVisible)
+            mpScrollBar->show();
+        else
+            mpScrollBar->hide();
+    }
+}
+
 void TConsole::printCommand(QString& msg)
 {
     if (mTriggerEngineMode) {
@@ -2203,7 +2208,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
         std::string _n = name.toStdString();
-        pC->setMiniConsoleFontSize(_n, 12);
+        pC->setMiniConsoleFontSize(12);
         pC->show();
         return pC;
     } else {

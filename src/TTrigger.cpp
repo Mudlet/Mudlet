@@ -72,6 +72,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -106,6 +107,7 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -158,7 +160,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     bool state = true;
 
     for (int i = 0; i < regexList.size(); i++) {
-        if (regexList[i].size() < 1) {
+        if (regexList.at(i).isEmpty() && propertyList.at(i) != REGEX_PROMPT) {
             continue;
         }
 
@@ -443,7 +445,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
     if (toMatch.startsWith(regex)) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(regex.toLatin1().data());
+        captureList.emplace_back(regex.toLatin1().data());
         posList.push_back(0 + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -543,11 +545,11 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
     if (where != -1) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(regex.toLatin1().data());
+        captureList.emplace_back(regex.toLatin1().data());
         posList.push_back(where + posOffset);
         if (mPerlSlashGOption) {
             while ((where = toMatch.indexOf(regex, where + 1)) != -1) {
-                captureList.push_back(regex.toLatin1().data());
+                captureList.emplace_back(regex.toLatin1().data());
                 posList.push_back(where + posOffset);
             }
         }
@@ -748,6 +750,24 @@ bool TTrigger::match_lua_code(int regexNumber)
     return false;
 }
 
+bool TTrigger::match_prompt(int patternNumber)
+{
+    if (mpHost->mpConsole->mIsPromptLine) {
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::yellow), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> 0;
+        }
+        if (mIsMultiline) {
+            std::list<std::string> captureList;
+            std::list<int> posList;
+            updateMultistates(patternNumber, captureList, posList);
+            return true;
+        }
+        execute();
+        return true;
+    }
+    return false;
+}
+
 bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, int regexNumber, int posOffset)
 {
     QString text = toMatch;
@@ -757,7 +777,7 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
     if (text == line) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(line.toLatin1().data());
+        captureList.emplace_back(line.toLatin1().data());
         posList.push_back(0 + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::yellow), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -835,38 +855,42 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         }
 
         int size = mRegexCodePropertyList.size();
-        for (int i = 0;; i++) {
-            if (i >= size) {
+        for (int patternNumber = 0;; patternNumber++) {
+            if (patternNumber >= size) {
                 break;
             }
             ret = false;
-            switch (mRegexCodePropertyList.value(i)) {
+            switch (mRegexCodePropertyList.value(patternNumber)) {
             case REGEX_SUBSTRING:
-                ret = match_substring(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_substring(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_PERL:
-                ret = match_perl(subject, toMatch, i, posOffset);
+                ret = match_perl(subject, toMatch, patternNumber, posOffset);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                ret = match_begin_of_line_substring(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_begin_of_line_substring(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_EXACT_MATCH:
-                ret = match_exact_match(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_exact_match(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_LUA_CODE:
-                ret = match_lua_code(i);
+                ret = match_lua_code(patternNumber);
                 break;
 
             case REGEX_LINE_SPACER:
-                ret = match_line_spacer(i);
+                ret = match_line_spacer(patternNumber);
                 break;
 
             case REGEX_COLOR_PATTERN:
-                ret = match_color_pattern(line, i);
+                ret = match_color_pattern(line, patternNumber);
+                break;
+
+            case REGEX_PROMPT:
+                ret = match_prompt(patternNumber);
                 break;
             }
             // policy: one match is enough to fire on OR-trigger, but in the case of
@@ -878,7 +902,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                     break;
                 }
             } else {
-                if ((!ret) && (i >= highestCondition)) {
+                if ((!ret) && (patternNumber >= highestCondition)) {
                     break;
                 }
             }
@@ -1269,8 +1293,13 @@ void TTrigger::compile()
 bool TTrigger::setScript(const QString& script)
 {
     mScript = script;
-    mNeedsToBeCompiled = true;
-    mOK_code = compileScript();
+    if (script.isEmpty()) {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+    } else {
+        mNeedsToBeCompiled = true;
+        mOK_code = compileScript();
+    }
     return mOK_code;
 }
 
@@ -1303,6 +1332,16 @@ void TTrigger::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpLua->call_luafunction(this);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     if (mIsMultiline) {
         mpLua->callMulti(mFuncName, mName);
     } else {

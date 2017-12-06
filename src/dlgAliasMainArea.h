@@ -31,10 +31,15 @@ class dlgAliasMainArea : public QWidget, public Ui::aliases_main_area
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgAliasMainArea)
-
 public:
+    Q_DISABLE_COPY(dlgAliasMainArea)
     dlgAliasMainArea(QWidget*);
+
+    // public function allow to trim even when QLineEdit::editingFinished()
+    // is not raised. Example: When the user saves without leaving the LineEdit
+    void trimName();
+private slots:
+    void slot_editing_name_finished();
 };
 
 #endif // MUDLET_DLGALIASESMAINAREA_H

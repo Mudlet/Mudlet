@@ -146,6 +146,9 @@ public:
     void stopAllTriggers();
     void reenableAllTriggers();
 
+    // get Search Engine
+    QPair<QString, QString> getSearchEngine();
+
     void set_USE_IRE_DRIVER_BUGFIX(bool b)
     {
         mUSE_IRE_DRIVER_BUGFIX = b;
@@ -246,6 +249,10 @@ public:
     QString mEditorTheme;
     // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
+
+    // search engine URL prefix to search query
+    QMap<QString, QString> mSearchEngineData;
+    QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
     // remembering this value to show what the user has selected does have its

@@ -190,6 +190,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
+
+    // search engine load entries
+    mSearchEngineData = QMap<QString, QString>(
+    {
+                    {"Bing",       "https://www.bing.com/search?q="},
+                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
+                    {"Google",     "https://www.google.com/search?q="}
+    });
 }
 
 Host::~Host()
@@ -342,6 +350,7 @@ void Host::resetProfile()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
+    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
 
@@ -454,6 +463,14 @@ void Host::reenableAllTriggers()
     mTriggerUnit.reenableAllTriggers();
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
+}
+
+QPair<QString, QString> Host::getSearchEngine()
+{
+    if(mSearchEngineData.contains(mSearchEngineName))
+        return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
+    else
+        return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
 }
 
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
@@ -735,8 +752,10 @@ bool Host::installPackage(const QString& fileName, int module)
     QFile file2;
     if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
         QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
-        QString _dest = mudlet::getMudletPath(mudlet::profileHomePath, getName(), packageName);
-        QDir _tmpDir(_home); // home directory for the PROFILE
+        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+        // home directory for the PROFILE
+        QDir _tmpDir(_home);
+        // directory to store the expanded archive file contents
         _tmpDir.mkpath(_dest);
 
         // TODO: report failure to create destination folder for package/module in profile

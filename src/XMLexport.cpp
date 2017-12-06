@@ -354,6 +354,8 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mEditorThemeFile", pHost->mEditorThemeFile);
     writeAttribute("mThemePreviewItemID", QString::number(pHost->mThemePreviewItemID));
     writeAttribute("mThemePreviewType", pHost->mThemePreviewType);
+    writeAttribute("mSearchEngineName", pHost->mSearchEngineName);
+
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
@@ -748,31 +750,43 @@ bool XMLexport::exportTrigger(QIODevice* device)
 
 bool XMLexport::exportToClipboard(TTrigger* pT)
 {
-    setAutoFormatting(true);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpTrigger) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-    QClipboard* cb = QApplication::clipboard();
-
-    QByteArray ba = "";
-    QBuffer xmlBuffer(&ba);
-
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
     setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
+    if (hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement("MudletPackage");
     writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement("TriggerPackage");
-    writeTrigger(mpTrigger);
+    bool isOk = writeTrigger(mpTrigger);
     writeEndElement(); //TriggerPackage
 
     writeEndElement(); //MudletPackage
     writeEndDocument();
 
-    cb->setText(QString(ba), QClipboard::Clipboard);
-    setAutoFormatting(false);
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
     return true;
 }
 
@@ -848,7 +862,6 @@ bool XMLexport::writeTrigger(TTrigger* pT)
     return (isOk && (!hasError()));
 }
 
-
 bool XMLexport::exportAlias(QIODevice* device)
 {
     setDevice(device);
@@ -875,18 +888,21 @@ bool XMLexport::exportAlias(QIODevice* device)
 
 bool XMLexport::exportToClipboard(TAlias* pT)
 {
-    setAutoFormatting(true);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpAlias) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-    QClipboard* cb = QApplication::clipboard();
+    // autoFormatting is set to true in constructor
 
-    QByteArray ba = "";
-    QBuffer xmlBuffer(&ba);
-
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
     setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
     if (hasError()) {
+        xmlBuffer.close();
         return false;
     }
 
@@ -902,10 +918,16 @@ bool XMLexport::exportToClipboard(TAlias* pT)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText(QString(ba), QClipboard::Clipboard);
-    setAutoFormatting(false);
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
 
-    return (isOk && (!hasError()));
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeAlias(TAlias* pT)
@@ -967,18 +989,21 @@ bool XMLexport::exportAction(QIODevice* device)
 
 bool XMLexport::exportToClipboard(TAction* pT)
 {
-    setAutoFormatting(true);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpAction) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-    QClipboard* cb = QApplication::clipboard();
+    // autoFormatting is set to true in constructor
 
-    QByteArray ba = "";
-    QBuffer xmlBuffer(&ba);
-
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
     setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
     if (hasError()) {
+        xmlBuffer.close();
         return false;
     }
 
@@ -994,10 +1019,16 @@ bool XMLexport::exportToClipboard(TAction* pT)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText(QString(ba), QClipboard::Clipboard);
-    setAutoFormatting(false);
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
 
-    return (isOk && (!hasError()));
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeAction(TAction* pT)
@@ -1076,18 +1107,21 @@ bool XMLexport::exportTimer(QIODevice* device)
 
 bool XMLexport::exportToClipboard(TTimer* pT)
 {
-    setAutoFormatting(true);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpTimer) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-    QClipboard* cb = QApplication::clipboard();
+    // autoFormatting is set to true in constructor
 
-    QByteArray ba = "";
-    QBuffer xmlBuffer(&ba);
-
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
     setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
     if (hasError()) {
+        xmlBuffer.close();
         return false;
     }
 
@@ -1103,10 +1137,16 @@ bool XMLexport::exportToClipboard(TTimer* pT)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText(QString(ba), QClipboard::Clipboard);
-    setAutoFormatting(false);
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
 
-    return (isOk && (!hasError()));
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeTimer(TTimer* pT)
@@ -1144,7 +1184,6 @@ bool XMLexport::writeTimer(TTimer* pT)
     return (isOk && (!hasError()));
 }
 
-
 bool XMLexport::exportScript(QIODevice* device)
 {
     setDevice(device);
@@ -1171,18 +1210,21 @@ bool XMLexport::exportScript(QIODevice* device)
 
 bool XMLexport::exportToClipboard(TScript* pT)
 {
-    setAutoFormatting(true);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpScript) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-    QClipboard* cb = QApplication::clipboard();
+    // autoFormatting is set to true in constructor
 
-    QByteArray ba = "";
-    QBuffer xmlBuffer(&ba);
-
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
     setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
     if (hasError()) {
+        xmlBuffer.close();
         return false;
     }
 
@@ -1198,10 +1240,16 @@ bool XMLexport::exportToClipboard(TScript* pT)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText(QString(ba), QClipboard::Clipboard);
-    setAutoFormatting(false);
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
 
-    return (isOk && (!hasError()));
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeScript(TScript* pT)
@@ -1241,7 +1289,6 @@ bool XMLexport::writeScript(TScript* pT)
     return (isOk && (!hasError()));
 }
 
-
 bool XMLexport::exportKey(QIODevice* device)
 {
     setDevice(device);
@@ -1268,18 +1315,21 @@ bool XMLexport::exportKey(QIODevice* device)
 
 bool XMLexport::exportToClipboard(TKey* pT)
 {
-    setAutoFormatting(true);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpKey) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-    QClipboard* cb = QApplication::clipboard();
+    // autoFormatting is set to true in constructor
 
-    QByteArray ba = "";
-    QBuffer xmlBuffer(&ba);
-
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
     setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
     if (hasError()) {
+        xmlBuffer.close();
         return false;
     }
 
@@ -1295,10 +1345,16 @@ bool XMLexport::exportToClipboard(TKey* pT)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText(QString(ba), QClipboard::Clipboard);
-    setAutoFormatting(false);
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
 
-    return (isOk && (!hasError()));
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeKey(TKey* pT)

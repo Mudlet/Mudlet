@@ -55,9 +55,8 @@ class TConsole : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TConsole)
-
 public:
+    Q_DISABLE_COPY(TConsole)
     TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
     void reset();
     void resetMainConsole();
@@ -114,6 +113,7 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setBgColor(int, int, int);
+    void setScrollBarVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
@@ -141,7 +141,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(std::string&, int);
+    bool setMiniConsoleFontSize(int);
     void setBold(bool);
     void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
     void setItalics(bool);
@@ -263,6 +263,7 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     bool mSaveLayoutRequested;
+    QWidget* mpButtonMainLayer;
 
 signals:
 

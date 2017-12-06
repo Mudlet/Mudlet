@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,10 +33,12 @@
 #include <QtEvents>
 #include <QApplication>
 #include <QClipboard>
+#include <QDesktopServices>
 #include <QMenu>
 #include <QPainter>
 #include <QScrollBar>
 #include <QString>
+#include <QTextCursor>
 #include <QToolTip>
 #include "post_guard.h"
 
@@ -584,34 +587,18 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mScrollVector = 0;
         }
     }
-    if( ( ! noScroll ) && ( mScrollVector >= 0 ) && ( mScrollVector <= mScreenHeight ) && ( ! mForceUpdate ) )
-    {
-
-        if( mScrollVector*mFontHeight < mScreenMap.height()
-            && mScreenWidth*mFontWidth <= mScreenMap.width()
-            && (mScreenHeight-mScrollVector)*mFontHeight > 0
-            && (mScreenHeight-mScrollVector)*mFontHeight <= mScreenMap.height() )
-        {
-            screenPixmap = mScreenMap.copy( 0,
-                                            mScrollVector*mFontHeight,
-                                            mScreenWidth*mFontWidth,
-                                            (mScreenHeight-mScrollVector)*mFontHeight );
-            p.drawPixmap( 0, 0, screenPixmap );
+    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
+        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
+            && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
+            p.drawPixmap(0, 0, screenPixmap);
             from = mScreenHeight - mScrollVector - 1;
         }
-    }
-    else if( ( ! noScroll ) && ( mScrollVector < 0 && mScrollVector >= ((-1)*mScreenHeight) ) && ( ! mForceUpdate ) )
-    {
-        if( abs(mScrollVector)*mFontHeight < mScreenMap.height()
-            && mScreenWidth*mFontWidth <= mScreenMap.width()
-            && (mScreenHeight-abs(mScrollVector))*mFontHeight > 0
-            && (mScreenHeight-abs(mScrollVector))*mFontHeight <= mScreenMap.height() )
-        {
-            screenPixmap = mScreenMap.copy( 0,
-                                            0,
-                                            mScreenWidth*mFontWidth,
-                                            (mScreenHeight-abs(mScrollVector))*mFontHeight );
-            p.drawPixmap( 0, abs(mScrollVector)*mFontHeight, screenPixmap );
+    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
+        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
+            && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
+            p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
             y2 = abs(mScrollVector);
         }
@@ -1171,15 +1158,30 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mIsCommandPopup = false;
 
+
         QAction* action = new QAction("copy", this);
         action->setStatusTip(tr("copy selected text to clipboard"));
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
         QAction* action2 = new QAction("copy HTML", this);
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+        QAction* action3 = new QAction("select all", this);
+        action3->setStatusTip(tr("select all text in the buffer"));
+        connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
+
+        QString selectedEngine = mpHost->getSearchEngine().first;
+        QAction* action4 = new QAction(("search on " + selectedEngine), this);
+        connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+        action4->setStatusTip("search selected text on " + selectedEngine);
+
         auto popup = new QMenu(this);
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addSeparator();
+        popup->addAction(action3);
+        popup->addSeparator();
+        popup->addAction(action4);
+
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
@@ -1204,53 +1206,30 @@ void TTextEdit::slot_copySelectionToClipboard()
     copySelectionToClipboard();
 }
 
+void TTextEdit::slot_selectAll()
+{
+    mPA = QPoint(0, 0);
+    mPB = mpBuffer->getEndPos();
+    highlight();
+    update();
+}
+
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
     copySelectionToClipboardHTML();
 }
 
+void TTextEdit::slot_searchSelectionOnline()
+{
+    searchSelectionOnline();
+}
+
 
 void TTextEdit::copySelectionToClipboard()
 {
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
-    QString text;
-
-    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            QClipboard* clipboard = QApplication::clipboard();
-            clipboard->setText(text);
-            mSelectedRegion = QRegion(0, 0, 0, 0);
-            forceUpdate();
-            return;
-        }
-        // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
-        if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y()) {
-            text.append(mpBuffer->timeBuffer[y].leftRef(13));
-        }
-        int x = 0;
-        if (y == mPA.y()) {
-            x = mPA.x();
-        }
-        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            text.append(mpBuffer->lineBuffer[y].at(x));
-            if (y >= mPB.y()) {
-                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
-                    QClipboard* clipboard = QApplication::clipboard();
-                    clipboard->setText(text);
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-                    forceUpdate();
-                    return;
-                }
-            }
-            x++;
-        }
-        text.append("\n");
-    }
+    QString selectedText = getSelectedText();
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(selectedText);
 }
 
 void TTextEdit::copySelectionToClipboardHTML()
@@ -1352,6 +1331,65 @@ void TTextEdit::copySelectionToClipboardHTML()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
     return;
+}
+
+void TTextEdit::searchSelectionOnline()
+{
+    QString selectedText = getSelectedText(' ');
+    QString url = QUrl::toPercentEncoding(selectedText.trimmed());
+    url.prepend(mpHost->getSearchEngine().second);
+    QDesktopServices::openUrl(QUrl(url));
+}
+
+QString TTextEdit::getSelectedText(char newlineChar)
+{
+    // mPA QPoint where selection started
+    // mPB QPoint where selection ended
+
+    // if selection was made backwards swap
+    // right to left
+    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
+        swap(mPA, mPB);
+    }
+    // down to up
+    if (mPA.y() > mPB.y()) {
+        swap(mPA, mPB);
+    }
+
+    QString text;
+
+    // for each selected line
+    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
+        // stop if we are at the end of the buffer lines
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            mSelectedRegion = QRegion(0, 0, 0, 0);
+            forceUpdate();
+            return text;
+        }
+
+        int x = 0;
+        // if the selection started on this line
+        if (y == mPA.y()) {
+            // start from the column where the selection started
+            x = mPA.x();
+        }
+        // while we are not at the end of the buffer line
+        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
+            text.append(mpBuffer->lineBuffer[y].at(x));
+            // if the selection ended on this line
+            if (y >= mPB.y()) {
+                // stop if the selection ended on this column or the buffer line is ending
+                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+                    forceUpdate();
+                    return text;
+                }
+            }
+            x++;
+        }
+        // we never append the last character of a buffer line se we set our own
+        text.append(newlineChar);
+    }
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)

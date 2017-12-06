@@ -33,9 +33,8 @@ class TForkedProcess : public QProcess
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TForkedProcess)
-
 public:
+    Q_DISABLE_COPY(TForkedProcess)
     virtual ~TForkedProcess();
 
     static int startProcess(TLuaInterpreter*, lua_State*);

@@ -73,6 +73,8 @@ public:
     void killTimer();
 
     bool isOffsetTimer();
+    // specifies whenever the payload is Lua code as a string
+    // or a function
     bool mRegisteredAnonymousLuaFunction;
     bool exportItem;
     bool mModuleMasterFolder;

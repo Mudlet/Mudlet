@@ -167,6 +167,7 @@ SET(mudlet_HDRS
     FontManager.h
     Host.h
     HostManager.h
+    ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
     pre_guard.h
@@ -197,8 +198,12 @@ SET(mudlet_HDRS
     VarUnit.h
     XMLexport.h
     XMLimport.h
-    ircmessageformatter.h
 )
+
+IF(WITH_UPDATER)
+  LIST(APPEND mudlet_SRCS updater.cpp)
+  LIST(APPEND mudlet_MOC_HDRS updater.h)
+ENDIF(WITH_UPDATER)
 
 IF(MSVC)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
@@ -274,7 +279,7 @@ ENDIF()
 # Break each step into a separate command so any status message is output straight away
 IF(APPLE)
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
-  # we need the path to an interal header zipconf.g that it calls for using '<''>'s
+  # we need the path to an interal header zipconf.h that it calls for using '<''>'s
   # i.e. SYSTEM #include delimiters which are typically located at e.g. /usr/lib/libzip/include/zipconf.h
   # and using pkg-config is the recommended way to get the details.
   # Spotted recommendation to use pkg-config here https://github.com/Homebrew/homebrew/issues/13390
@@ -449,10 +454,14 @@ TARGET_LINK_LIBRARIES(mudlet
     edbee-lib
 )
 
-
 if (Qt5TextToSpeech_FOUND)
   TARGET_LINK_LIBRARIES(mudlet ${Qt5TextToSpeech_LIBRARIES})
 endif (Qt5TextToSpeech_FOUND)
+
+IF(WITH_UPDATER)
+    TARGET_LINK_LIBRARIES(mudlet
+        dblsqd)
+ENDIF(WITH_UPDATER)
 
 IF(Qt5Gamepad_FOUND)
     TARGET_LINK_LIBRARIES(mudlet ${Qt5Gamepad_LIBRARIES})
@@ -465,7 +474,17 @@ ELSE()
 ENDIF()
 
 IF(APPLE)
-  TARGET_LINK_LIBRARIES(mudlet luazip)
+  target_link_libraries(mudlet
+          luazip
+  )
+
+  IF(WITH_UPDATER)
+    target_link_libraries(mudlet
+          cocoa-qt-glue
+          "-framework Sparkle"
+          "-framework AppKit"
+          "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+  ENDIF()
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)

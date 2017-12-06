@@ -1173,6 +1173,7 @@ void dlgConnectionProfiles::fillout_form()
             || (!mProfileList.at(i).compare(QStringLiteral("3Kingdoms"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
+            delete pItem;
             continue;
         }
 
@@ -1335,17 +1336,21 @@ void dlgConnectionProfiles::slot_connectToServer()
         return;
     }
 
-    Host* pHost = mudlet::self()->getHostManager().getHost(profile_name);
+    HostManager & hostManager = mudlet::self()->getHostManager();
+    Host* pHost = hostManager.getHost(profile_name);
     if (pHost) {
         pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
         QDialog::accept();
         return;
     }
     // load an old profile if there is any
-    mudlet::self()->getHostManager().addHost(profile_name, port_entry->text().trimmed(), QString(), QString());
-    pHost = mudlet::self()->getHostManager().getHost(profile_name);
-
-    if (!pHost) {
+    // PLACEMARKER: Host creation (3) - normal case
+    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
+        pHost = hostManager.getHost(profile_name);
+        if (!pHost) {
+            return;
+        }
+    } else {
         return;
     }
 
@@ -1413,6 +1418,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
     }
 
+    emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
     emit signal_establish_connection(profile_name, 0);
 }
 
