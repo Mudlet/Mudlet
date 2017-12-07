@@ -392,7 +392,6 @@ FORMS += \
     ui/color_trigger.ui \
     ui/composer.ui \
     ui/connection_profiles.ui \
-    ui/delete_profile_confirmation.ui \
     ui/dlgPackageExporter.ui \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
