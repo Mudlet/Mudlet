@@ -12248,6 +12248,14 @@ void TLuaInterpreter::initLuaGlobals()
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");
 
+    QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName()));
+
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;]] .. package.path").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
+
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
+
+
 #ifdef Q_OS_MAC
     luaopen_zip(pGlobalLua);
     lua_setglobal(pGlobalLua, "zip");
