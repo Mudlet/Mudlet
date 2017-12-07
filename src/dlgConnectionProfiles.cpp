@@ -1309,7 +1309,7 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
-    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host")) {
+    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host") && profiles_tree_widget->count() > 1) {
         // if the last profile read is default_host, it means the user hasn't created
         // any profiles yet since default_host profile cannot actually be used. In this case,
         // select a random pre-defined profile to give all MUDs a fair go
