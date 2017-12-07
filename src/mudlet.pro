@@ -52,7 +52,7 @@ exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.6.0
+VERSION = 3.6.1
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -530,7 +530,6 @@ OTHER_FILES += \
     ../README \
     ../COMPILE \
     ../COPYING \
-    ../Doxyfile \
     ../INSTALL \
     mac-deploy.sh
 

@@ -72,17 +72,8 @@ TRoom::TRoom(TRoomDB* pRDB)
 
 TRoom::~TRoom()
 {
-    static double cumulativeMean = 0.0;
-    static quint64 runCount = 0;
-    QElapsedTimer timer;
-    timer.start();
     if (mpRoomDB) {
         mpRoomDB->__removeRoom(id);
-    }
-    quint64 thisTime = timer.nsecsElapsed();
-    cumulativeMean += (((thisTime * 1.0e-9) - cumulativeMean) / ++runCount);
-    if (runCount % 1000 == 0) {
-        qDebug() << "TRoom::~TRoom() took" << thisTime * 1.0e-9 << "Sec this time and after" << runCount << "times the average is" << cumulativeMean << "Sec.";
     }
 }
 
