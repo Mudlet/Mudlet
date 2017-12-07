@@ -101,7 +101,7 @@ int luaopen_yajl(lua_State*);
 using namespace std;
 
 #ifdef QT_TEXTTOSPEECH_LIB
-QTextToSpeech* speechUnit;
+QPointer<QTextToSpeech> speechUnit;
 QVector<QString> speechQueue;
 bool bSpeechBuilt;
 QString speechCurrent;
@@ -10760,7 +10760,7 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     TLuaInterpreter::ttsBuild();
     
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "ttsSpeak: wrong argument type");
+        lua_pushfstring(L, "ttsSpeak: argument expected string, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     }
@@ -10779,9 +10779,10 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
  */
 void TLuaInterpreter::ttsBuild()
 {
-    if (bSpeechBuilt)
+    if (bSpeechBuilt) {
         return;
-    
+    }
+	
     speechUnit = new QTextToSpeech();
     
     bSpeechBuilt = true;
@@ -10818,26 +10819,26 @@ int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
     
     float fRate;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "ttsSetSpeechRate: wrong argument type");
+        lua_pushfstring(L, "ttsSetSpeechRate: argument expected number, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
         fRate = lua_tonumber(L, 1);
     }
     
-    if (fRate > 1.0)
+    if (fRate > 1.0) {
         fRate = 1.0;
+	}
     
-    if (fRate < -1.0)
+	if (fRate < -1.0) {
         fRate = -1.0;
-    
+    }
+	
     speechUnit->setRate(fRate);
     
     Host& host = getHostFromLua(L);
     TEvent event;
-    event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QLatin1String("rate"));
+    event.mArgumentList.append(QLatin1String("ttsRateChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(fRate));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -10856,26 +10857,26 @@ int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
     
     float fPitch;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "ttsSetSpeechPitch: wrong argument type");
+        lua_pushfstring(L, "ttsSetSpeechPitch: argument expected number, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
         fPitch = lua_tonumber(L, 1);
     }
     
-    if (fPitch > 1.0)
+    if (fPitch > 1.0) {
         fPitch = 1.0;
+	}
     
-    if (fPitch < -1.0)
+    if (fPitch < -1.0) {
         fPitch = -1.0;
+	}
     
     speechUnit->setPitch(fPitch);
     
     TEvent event;
     Host& host = getHostFromLua(L);
-    event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QLatin1String("pitch"));
+    event.mArgumentList.append(QLatin1String("ttsPitchChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(fPitch));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -10894,26 +10895,26 @@ int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
     
     float fVol;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "ttsSetSpeechVolume: wrong argument type");
+        lua_pushfstring(L, "ttsSetSpeechVolume: argument expected number, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
         fVol = lua_tonumber(L, 1);
     }
     
-    if (fVol > 1.0)
+	if (fVol > 1.0) {
         fVol = 1.0;
-    
-    if (fVol < 0.0)
+    }
+	
+    if (fVol < 0.0) {
         fVol = 0.0;
-    
+    }
+	
     speechUnit->setVolume(fVol);
     
     Host& host = getHostFromLua(L);
     TEvent event;
-    event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QLatin1String("volume"));
+    event.mArgumentList.append(QLatin1String("ttsVolumeChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(fVol));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -10934,7 +10935,7 @@ int TLuaInterpreter::ttsGetVoices(lua_State* L)
     QVector<QVoice> speechVoices = speechUnit->availableVoices();
     int i=0;
     lua_newtable(L);
-    foreach (const QVoice &voice, speechVoices) {
+    for (const QVoice &voice: speechVoices) {
         lua_pushnumber(L, ++i);
         lua_pushstring(L, voice.name().toUtf8().constData());
         lua_settable(L, -3);
@@ -10968,7 +10969,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     QString nextVoice;
     
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "ttsSetVoiceByName: wrong argument type");
+        lua_pushfstring(L, "ttsSetVoiceByName: argument expected string, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11001,7 +11002,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
     
     int index;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "ttsSetVoiceByIndex: wrong argument type");
+        lua_pushfstring(L, "ttsSetVoiceByIndex: argument expected number, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11086,11 +11087,13 @@ int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
         index = lua_tonumber(L, 2);
         index--;
         
-        if(index < 0)
+        if(index < 0) {
             index = 0;
+		}
         
-        if(index > speechQueue.size())
+		if(index > speechQueue.size()) {
             index = speechQueue.size();
+		}
     }
     else {
         index = speechQueue.size();
@@ -11166,11 +11169,12 @@ int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
         return 1;
     }
     
-    if(lua_toboolean(L, 1))
+    if(lua_toboolean(L, 1)) {
         speechUnit->pause();
-    else
+    } else {
         speechUnit->resume();
-    
+    }
+	
     return 0;
 }
 
