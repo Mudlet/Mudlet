@@ -156,7 +156,7 @@ public:
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
-    static QMainWindow* mpDebugArea;
+    static QPointer<QMainWindow> mpDebugArea;
     static bool debugMode;
     QMap<Host*, TConsole*> mConsoleMap;
     QMap<Host*, QMap<QString, TConsole*>> mHostConsoleMap;

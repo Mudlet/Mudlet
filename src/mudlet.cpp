@@ -118,7 +118,7 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
 
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
-QMainWindow* mudlet::mpDebugArea = nullptr;
+QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
 const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
@@ -2123,8 +2123,9 @@ void mudlet::closeEvent(QCloseEvent* event)
     writeSettings();
 
     goingDown();
-    if (mpDebugConsole) {
-        mpDebugConsole->close();
+    if (mpDebugArea) {
+        mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
+        mpDebugArea->close();
     }
     foreach (TConsole* pC, mConsoleMap) {
         if (pC->mpHost->getName() != "default_host") {
