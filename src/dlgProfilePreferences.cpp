@@ -1608,10 +1608,6 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mSpellDic = dictList->currentItem()->text();
         }
 
-#if defined(INCLUDE_UPDATER)
-	    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
-#endif
-
         pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
         pHost->mWrapAt = wrap_at_spinBox->value();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
@@ -1763,6 +1759,10 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
     }
+
+#if defined(INCLUDE_UPDATER)
+    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+#endif
 
     mudlet::self()->setToolBarIconSize(MainIconSize->value());
     mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
