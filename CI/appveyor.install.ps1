@@ -197,7 +197,9 @@ function InstallLuaModules(){
   FinishPart "Installing lua modules"
 }
 
-git submodule update --init --recursive
+# This is no longer needed - we selectively pull in the wanted submodules as required:
+# git submodule update --init --recursive
+
 if (-not $(Test-Path "$workingBaseDir")) {
     New-Item "$workingBaseDir" -ItemType "directory"
 }

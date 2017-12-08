@@ -200,10 +200,10 @@ set(mudlet_HDRS
     XMLimport.h
 )
 
-if(WITH_UPDATER)
+if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
   list(APPEND mudlet_MOC_HDRS updater.h)
-endif(WITH_UPDATER)
+endif(USE_UPDATER)
 
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
@@ -334,11 +334,11 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
-if(WITH_UPDATER)
+if(USE_UPDATER)
   message(STATUS "Updater code is enabled in this configuration")
-else()
+else(USE_UPDATER)
   message(STATUS "Updater code is not enabled or not available in this configuration")
-endif()
+endif(USE_UPDATER)
 
 find_package(Qt5Multimedia REQUIRED)
 find_package(Qt5Network REQUIRED)
@@ -456,10 +456,10 @@ target_link_libraries(mudlet
     edbee-lib
 )
 
-if(WITH_UPDATER)
+if(USE_UPDATER)
     target_link_libraries(mudlet
         dblsqd)
-endif(WITH_UPDATER)
+endif(USE_UPDATER)
 
 if(Qt5Gamepad_FOUND)
     target_link_libraries(mudlet ${Qt5Gamepad_LIBRARIES})
@@ -476,13 +476,13 @@ if(APPLE)
           luazip
   )
 
-  if(WITH_UPDATER)
+  if(USE_UPDATER)
     target_link_libraries(mudlet
           cocoa-qt-glue
           "-framework Sparkle"
           "-framework AppKit"
           "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-  endif()
+  endif(USE_UPDATER)
 endif()
 
 if(PC_HUNSPELL_FOUND)

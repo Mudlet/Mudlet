@@ -30,29 +30,11 @@ include(../3rdparty/communi/communi.pri)
 # Include lua_yajl (run time lua module needed)
 include(../3rdparty/lua_yajl/lua_yajl.pri)
 
-include(../3rdparty/dblsqd/dblsqd-sdk-qt.pri)
-
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
-macx: {
+macx {
     include(../3rdparty/luazip/luazip.pri)
 }
-
-!exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
-    message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
-    system("git submodule update --init");
-}
-
-exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
-    # Include shiny, new (and quite substantial) editor widget
-    include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
-} else {
-    error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
-}
-
-# Set the current Mudlet Version, unfortunately the Qt documentation suggests
-# that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.6.1
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -86,6 +68,72 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.10
 QT += network opengl uitools multimedia gui concurrent
 qtHaveModule(gamepad): QT += gamepad
 
+############################# TEMPORARY TESTING PART ###########################
+# Tempory tests to determine what scope variables are correct, it seems that
+# they are related to the complete mkspecs base directory names
+# (e.g. linux-g++-64) the first part at least seems to match up with what we
+#  have been using so far {"macx", "win32"} "unix" seems to be an oddity.
+clear(scopes)
+cygwin {
+  scopes += "cygwin"
+}
+freebsd {
+  scopes += "freebsd"
+}
+freebsd-clang {
+  scopes += "freebsd-clang"
+}
+freebsd-g++ {
+  scopes += "freebsd-g++"
+}
+linux-clang-libc++ {
+  scopes += "linux-clang-libc++"
+}
+linux-g++-32 {
+  scopes += "linux-g++-32"
+}
+linux-g++-64 {
+# not seen when expected:
+  scopes += "linux-g++-64"
+}
+linux-llvm {
+  scopes += "linux-llvm"
+}
+linux-lsb-g++ {
+  scopes += "linux-lsb-g++"
+}
+macx-g++ {
+  scopes += "macx-g++"
+}
+macx-xcode {
+  scopes += "macx-xcode"
+}
+win32-clang-msvc {
+  scopes += "win32-clang-msvc"
+}
+win32-msvc {
+  scopes += "win32-msvc"
+}
+win64 {
+  scopes += "win64"
+}
+
+!isEmpty( scopes ) : message("Previously unreported scope variables tested and found: $${scopes} - slysven would like to know about them.")
+# Confirmed (where):
+# darwin(Travis CI), linux(local), linux-clang(local), linux-g++(local),
+# macx(Travis CI), macx-clang(Travis CI), win32(AppVeyor CI),
+# win32-g++(AppVeyor CI), unix(local)
+
+# Suspected not to work:
+# linux-g++-32, linux-g++-64
+
+
+
+########################## Version and Build setting ###########################
+# Set the current Mudlet Version, unfortunately the Qt documentation suggests
+# that only a #.#.# form without any other alphanumberic suffixes is required:
+VERSION = 3.6.1
+
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable to make identification of the used version simple
@@ -97,7 +145,7 @@ isEmpty( BUILD ) {
   BUILD = "-dev"
 }
 
-# Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
+# Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
 # be automatically rebuilt so you will need to 'touch' them...!
 # Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
@@ -115,6 +163,32 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
+
+######################### Auto Updater setting detection #######################
+# Enable the auto updater system by default
+# unless the environmental variable WITH_UPDATER is already defined and is not
+# set to (case insenstive) "no". Linux packagers will find it useful to do this
+# since package managers will want to handle updates themselves
+# Note: WITH_UPDATER is an environmental value/variable (could be a number, a
+#           string, something else or not even exist).
+#       UPDATER_TEST is a qmake variables (probably a string).
+#       INCLUDE_UPDATER is a C preprocessor symbol.
+linux|macx|win32 {
+  # We are on one of the supported platforms
+  UPDATER_TEST = $$(WITH_UPDATER)
+  isEmpty( UPDATER_TEST ) | !equals($$upper(UPDATER_TEST), "NO" ) {
+    # The environmental variable does not exist or it does and it is NOT the
+    # particular value we are looking out for - so include the updater code:
+    DEFINES += INCLUDE_UPDATER
+  }
+  # else the environment variable is the specific "don't include the updater
+  # code" setting - so don't!
+}
+# else we are on another platform which the updater code will not support so
+# don't include it either
+
+
+###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
@@ -167,7 +241,7 @@ unix:!macx {
         -lzip \
         -lz
     LUA_DEFAULT_DIR = $${DATADIR}/lua
-} else:win32: {
+} else:win32 {
     LIBS += -L"C:\\mingw32\\bin" \
         -L"C:\\mingw32\\lib" \
         -llua51 \
@@ -184,6 +258,7 @@ unix:!macx {
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
 }
+
 unix:!macx {
 #   the "target" install set is handled automagically, just not very well...
     target.path = $${BINDIR}
@@ -200,6 +275,7 @@ unix:!macx {
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
     }
 }
+
 # use pkg-config whenever possible for linking on a mac
 # the same should be done on the Linux platform as well
 macx {
@@ -230,10 +306,114 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
-# Enable the built-in updater by default. Linux packagers will find it useful to disable it
-# since package managers are responsible for updates there
-DEFINES += INCLUDE_UPDATER
 
+####################### Git Submodules check and install #######################
+# The "exists" tests and "include" directives uses qmakes internal path handling
+# (always uses '/' dirextroy separators); the git operations need to be done
+# somewhere within the main git repository (which may not be the case for
+# "shadow builds" so we now explicitly change directory using native shell
+# command before carrying them out - however Windows cmd.exe uses a different
+# command separator to Powershell (and *nix shells) so the git commands may need
+# tweaking in that situation
+
+# Edbee widget needed in all cases
+win32 {
+    # Use a check explicitly based on where the project file is in the sources
+    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+        message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
+        # Lets presume that changing the directory here only relates to the
+        # command following it and that the change does not persist, note that
+        # ';' only works for PowerShell - for cmd.exe the nearest equivalent is
+        # '&'
+        system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/edbee-lib")
+    }
+
+    # AppVeyor is used to build Windows binaries and it has to include the
+    # lua-code-formatter {a.k.a "lcf" module} - users should instead use
+    # luarocks to get this and one or two other lua modules that Mudlet looks
+    # for on profile loading/startup ..."
+    APPVEYOR_TEST = $$(APPVEYOR)
+    !isEmpty( APPVEYOR_TEST ) {
+        equals(APPVEYOR_TEST, "True") {
+            # We are running in the AppVeyor CI environment
+            !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+                message("git submodule for lua formatter for Appveyor CI build missing from source code, executing 'git submodule update --init' to get it...")
+                system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/lua-code-formatter")
+            }
+        }
+    }
+} else {
+    # Use a check explicitly based on where the project file is in the sources
+    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+        message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
+        # Lets presume that changing the directory here only relates to the
+        # command following it and that the change does not persist
+        system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/edbee-lib")
+    }
+}
+
+contains( DEFINES, INCLUDE_UPDATER ) {
+    win32 {
+        # DBLSQD updater - needed for Windows
+        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+            message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
+            system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/dblsqd")
+        }
+    } else {
+        # DBLSQD updater - needed for Linux and possibly MacOS but that needs checking
+        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+            message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
+            system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/dblsqd")
+        }
+
+        # Sparkle glue code - only needed for MacOs
+        macx {
+            !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+                message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
+                system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/sparkle-glue")
+            }
+        }
+    }
+}
+
+# Now include the submodules - and abort if the needed one are STILL missing
+exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    # Include shiny, new (and quite substantial) editor widget
+    include("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri")
+} else {
+    error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+}
+
+win32 {
+    APPVEYOR_TEST = $$(APPVEYOR)
+    !isEmpty( APPVEYOR_TEST ) {
+        equals(APPVEYOR_TEST, "True") {
+            # We are running in the AppVeyor CI environment
+            !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+                error("Cannot locate lua-code-formatter submodule source code, build abandoned!")
+            }
+        }
+    }
+}
+
+contains( DEFINES, INCLUDE_UPDATER ) {
+    # CHECK: Is dblsqd needed for macx? If not it can be excluded for that platform
+    exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        include("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
+    } else {
+        error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
+    }
+
+    macx {
+        # We do not actually have to do anything to include it here - it is
+        # pulled in by the Sparkle complation below
+        !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+            error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
+        }
+    }
+}
+
+################################## File Lists ##################################
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -303,8 +483,9 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    updater.cpp
+    XMLimport.cpp
+
+contains( DEFINES, INCLUDE_UPDATER ) : SOURCES += updater.cpp
 
 
 HEADERS += \
@@ -381,8 +562,10 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h \
-    updater.h
+    XMLimport.h
+
+contains( DEFINES, INCLUDE_UPDATER ) : HEADERS += updater.h
+
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -468,7 +651,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
 
-macx: {
+macx {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
     APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
@@ -480,40 +663,42 @@ macx: {
 
     LIBS += -framework AppKit
 
-    # allow linker to find sparkle framework as we bundle it in
-    SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
+    contains( DEFINES, INCLUDE_UPDATER ) {
+        # allow linker to find sparkle framework if we bundle it in
+        SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
 
-    !exists($$SPARKLE_PATH) {
-        message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
-        system("cd ../3rdparty/cocoapods && pod install");
+        !exists($$SPARKLE_PATH) {
+            message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
+            system("cd ../3rdparty/cocoapods && pod install");
+        }
+
+        LIBS += -F$$SPARKLE_PATH
+        LIBS += -framework Sparkle
+
+        # necessary for Sparkle to compile
+        QMAKE_LFLAGS += -F $$SPARKLE_PATH
+        QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
+
+        SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
+
+        OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
+            ../3rdparty/sparkle-glue/CocoaInitializer.mm
+
+        HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
+            ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
+            ../3rdparty/sparkle-glue/CocoaInitializer.h
+
+        # Copy Sparkle into the app bundle
+        sparkle.path = Contents/Frameworks
+        sparkle.files = $$SPARKLE_PATH/Sparkle.framework
+        QMAKE_BUNDLE_DATA += sparkle
     }
-
-    LIBS += -F$$SPARKLE_PATH
-    LIBS += -framework Sparkle
-
-    # necessary for Sparkle to compile
-    QMAKE_LFLAGS += -F $$SPARKLE_PATH
-    QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
-
-    SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
-
-    OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
-        ../3rdparty/sparkle-glue/CocoaInitializer.mm
-
-    HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
-        ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
-        ../3rdparty/sparkle-glue/CocoaInitializer.h
-
-    # Copy Sparkle into the app bundle
-    sparkle.path = Contents/Frameworks
-    sparkle.files = $$SPARKLE_PATH/Sparkle.framework
-    QMAKE_BUNDLE_DATA += sparkle
 
     # And add frameworks to the rpath so that the app can find the framework.
     QMAKE_RPATHDIR += @executable_path/../Frameworks
 }
 
-win32: {
+win32 {
     # set the Windows binary icon
     RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
 
@@ -537,7 +722,7 @@ OTHER_FILES += \
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
 # or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
-unix:!macx: {
+unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
     INSTALLS += \
         target \
@@ -560,4 +745,12 @@ DISTFILES += \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
     .clang-format \
-    CMakeLists.txt
+    CMakeLists.txt \
+    ../.appveyor.yml \
+    ../CI/travis.after_success.sh \
+    ../CI/travis.linux.after_success.sh \
+    ../CI/travis.osx.after_success.sh \
+    ../CI/appveyor.after_success.ps1 \
+    ../CI/appveyor.install.ps1 \
+    ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.build.ps1

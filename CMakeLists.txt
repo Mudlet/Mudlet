@@ -68,15 +68,38 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
-# Enable the built-in updater by default unless NO_INCLUDE_UPDATER is
-# already defined. Linux packagers will find it useful to do this since
-# package managers are responsible for updates there. Automatically exclude
-# the update stuff from FreeBSD and Cygwin because if they ever get finished
-# they have their own packaging system
-if((DEFINED ENV{NO_INCLUDE_UPDATER} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "") OR (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD") OR (CMAKE_SYSTEM_NAME STREQUAL "Cygwin"))
-  option(WITH_UPDATER "Include libraries and code to allow release versions to be updated on demand" OFF)
+# Enable the built-in updater by default on the three main supported OS
+# unless environmental variable WITH_UPDATER is already defined and set to "NO"
+# (case insensitive).
+# Linux packagers will find it useful to do this since package managers are
+# responsible for updates there. Automatically exclude the update stuff from
+# other OSs such as FreeBSD and Cygwin because if they ever get finished they
+# have their own packaging system - and we do not support updating them.
+# Note: WITH_UPDATER is an environmental value/variable (could be a number, a
+#           string, something else or not even exist).
+#       UPDATER_TEST and USE_UPDATER are cmake variables (possibly a string and
+#           NO(false) or YES(true) respectively).
+#       INCLUDE_UPDATER is a C preprocessor symbol.
+set(UPDATER_TEST $ENV{WITH_UPDATER})
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+  # We are on one of the supported platforms
+  if(DEFINED UPDATER_TEST)
+    string(TOUPPER ${UPDATER_TEST} UPDATER_TEST)
+    if(UPDATER_TEST STREQUAL "NO")
+      # The specific tested for value was seen so set the option "no don't
+      # include the updater"
+      option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" OFF)
+    else()
+      # Any other value was seen so ignore it and set "yes, include the updater"
+      option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
+    endif()
+  else()
+    # An environmental variable not detected, apply platform default of "yes, include the updater"
+    option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
+  endif()
 else()
-  option(WITH_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
+  # Option not available for other platforms
+  set(USE_UPDATER NO)
 endif()
 
 if(APPLE)
@@ -98,7 +121,17 @@ if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   endif()
 endif()
 
-if(WITH_UPDATER)
+# We do not use CMake build process on AppVeyor but if we did we would need to
+# include a test and install of the lua-code-formatter "lcf" module because we
+# would need to have it in the binary created so that it would be available.
+# Normal users should install "luarocks" (the lua package/module manager) and
+# get the module with a OS specific command - on linux it could be
+# "sudo luarocks install lcf"
+# There are one or two other Mudlet lua run-time requirements that can also be
+# satified with luarocks (used in a lua 5.1 manner to match the 5.1 interpreter
+# built into Mudlet)!
+
+if(USE_UPDATER)
   if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
     message(STATUS "git submodule for optional but wanted DBLSQD updater missing from source code, will attempt to get it...")
     execute_process(COMMAND git submodule update --init 3rdparty/dblsqd
@@ -113,7 +146,7 @@ if(WITH_UPDATER)
 endif()
 
 if(APPLE)
-  if(WITH_UPDATER)
+  if(USE_UPDATER)
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
       message(STATUS "git submodule for optional but wanted Sparkle glue for updater missing from source code, will attempt to get it...")
       execute_process(COMMAND git submodule update --init 3rdparty/sparkle-glue
@@ -134,7 +167,7 @@ elseif()
   message(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
 endif()
 
-if(WITH_UPDATER)
+if(USE_UPDATER)
   if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
     add_subdirectory(3rdparty/dblsqd)
     add_definitions(-DINCLUDE_UPDATER)
@@ -148,15 +181,16 @@ if(WITH_UPDATER)
     else()
       message(FATAL_ERROR "Cannot locate Sparkle glue for updater submodule source code, build abandoned!")
     endif()
+
+    if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+      message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
+      execute_process(TIMEOUT 30
+        WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
+        COMMAND pod install)
+    endif()
   endif()
 endif()
 
-if(APPLE AND WITH_UPDATER AND NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-  message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
-  execute_process(TIMEOUT 30
-    WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
-    COMMAND pod install)
-endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
