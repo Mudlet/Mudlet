@@ -446,7 +446,7 @@ int main(int argc, char* argv[])
     }
 #else
     QFile linkFile(homeLink);
-    if (!linkFile.exists()) {
+    if (!linkFile.exists() && first_launch) {
         QFile::link(homeDirectory, homeLink);
     }
 #endif
