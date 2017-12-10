@@ -55,7 +55,7 @@
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
-, mFontSize(pHost->mDisplayFont.pointSize())
+, mFontSize(10)
 , mpHost(pHost)
 , mpMenu(nullptr)
 {
@@ -223,6 +223,8 @@ void dlgProfilePreferences::enableHostDetails()
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
 {
+    mFontSize = pHost->mDisplayFont.pointSize();
+
     loadEditorTab();
     loadSpecialSettingsTab();
 
