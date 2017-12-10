@@ -55,7 +55,7 @@
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
-, mFontSize(10)
+, mFontSize(pHost->mDisplayFont.pointSize())
 , mpHost(pHost)
 , mpMenu(nullptr)
 {
