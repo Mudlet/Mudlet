@@ -223,8 +223,6 @@ void dlgProfilePreferences::enableHostDetails()
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
 {
-    mFontSize = pHost->mDisplayFont.pointSize();
-
     loadEditorTab();
     loadSpecialSettingsTab();
 
@@ -296,6 +294,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_specialoption->hide();
 
     fontComboBox->setCurrentFont(pHost->mDisplayFont);
+    mFontSize = pHost->mDisplayFont.pointSize();
     if (mFontSize < 0) {
         mFontSize = 10;
     }
