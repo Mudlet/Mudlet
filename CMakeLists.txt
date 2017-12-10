@@ -121,15 +121,17 @@ if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   endif()
 endif()
 
-# We do not use CMake build process on AppVeyor but if we did we would need to
-# include a test and install of the lua-code-formatter "lcf" module because we
-# would need to have it in the binary created so that it would be available.
-# Normal users should install "luarocks" (the lua package/module manager) and
-# get the module with a OS specific command - on linux it could be
-# "sudo luarocks install lcf"
-# There are one or two other Mudlet lua run-time requirements that can also be
-# satified with luarocks (used in a lua 5.1 manner to match the 5.1 interpreter
-# built into Mudlet)!
+if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
+  message(STATUS "git submodule for required lua code formatter source code missing, will attempt to get it...")
+  execute_process(COMMAND git submodule update --init 3rdparty/lcf
+    TIMEOUT 30
+    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
+    OUTPUT_VARIABLE output_text
+    ERROR_VARIABLE error_text)
+  if(output_text OR error_text)
+    message(STATUS ${output_text} ${error_text})
+  endif()
+endif()
 
 if(USE_UPDATER)
   if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
@@ -165,6 +167,33 @@ if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 elseif()
   message(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+endif()
+
+file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
+list(LENGTH lua_files lua_file_count)
+if(lua_file_count EQUAL 26)
+  message(STATUS "Found Mudlet & Geyser lua files")
+else()
+  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 26 were expected:")
+  foreach(lua_file ${lua_files})
+    message(STATUS "    ${lua_file}")
+  endforeach(lua_file)
+endif()
+
+if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
+  file(GLOB_RECURSE lcf_files RELATIVE "${CMAKE_HOME_DIRECTORY}/3rdparty/" "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/*")
+  list(REMOVE_ITEM lcf_files "lcf/.git")
+  list(LENGTH lcf_files lcf_file_count)
+  if(lcf_file_count EQUAL 288)
+    message(STATUS "Found Lua Code Formatter files")
+  else()
+    message(WARNING "Found ${lcf_file_count} Lua Code Formatter files but 288 were expected:")
+    foreach(lcf_file ${lcf_files})
+      message(STATUS "    ${lcf_file}")
+    endforeach(lcf_file)
+  endif()
+elseif()
+  message(FATAL_ERROR "Cannot locate lua code formatter submodule source code, build abandoned!")
 endif()
 
 if(USE_UPDATER)

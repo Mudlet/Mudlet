@@ -325,11 +325,19 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-find_package(Qt5Core REQUIRED)
+find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
+
+# This is not present before Qt 5.8:
+find_package(Qt5 COMPONENTS Gamepad QUIET)
+
 if (Qt5Core_VERSION VERSION_LESS 5.6)
   message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
 else()
-  message(STATUS "Qt version: ${Qt5Core_VERSION}")
+  if (Qt5Core_VERSION VERSION_LESS 5.8)
+    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.8 at a minimum")
+  else()
+      message(STATUS "Qt version: ${Qt5Core_VERSION}")
+  endif()
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -339,15 +347,6 @@ if(USE_UPDATER)
 else(USE_UPDATER)
   message(STATUS "Updater code is not enabled or not available in this configuration")
 endif(USE_UPDATER)
-
-find_package(Qt5Multimedia REQUIRED)
-find_package(Qt5Network REQUIRED)
-find_package(Qt5OpenGL REQUIRED)
-find_package(Qt5UiTools REQUIRED)
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5 COMPONENTS Concurrent)
-find_package(Qt5Concurrent REQUIRED)
-find_package(Qt5 COMPONENTS Gamepad QUIET)
 
 if(WIN32)
   set(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -379,9 +378,8 @@ find_package(Boost 1.44 COMPONENTS graph)
 add_definitions(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
 if(UNIX)
-    set(DATAROOTDIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "The platform-specific directory in which read-only data is generally installed")
-    set(DATADIR "${DATAROOTDIR}/mudlet" CACHE STRING "Directory in which mudlet installs its read-only data")
-    set(LUA_DEFAULT_DIR "${DATADIR}/lua" CACHE STRING "Directory in which mudlet installs its read-only lua scripts")
+    set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
+    set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
 endif(UNIX)
 
 # Define a preprocessor symbol with the default fallback location from which
@@ -428,14 +426,27 @@ QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
-add_executable(mudlet WIN32
-    ${mudlet_SRCS}
-    ${mudlet_MOC_SRCS}
-    ${mudlet_RCC_SRCS}
-    ${mudlet_HDRS}
-    ${mudlet_UIS_H}
-    ${mudlet_MOC_HDRS}
-)
+if(WIN32)
+    add_executable(mudlet WIN32
+        ${mudlet_SRCS}
+        ${mudlet_MOC_SRCS}
+        ${mudlet_RCC_SRCS}
+        ${mudlet_HDRS}
+        ${mudlet_UIS_H}
+        ${mudlet_MOC_HDRS}
+        ${mudlet_LUA_FILES}
+    )
+else()
+    add_executable(mudlet
+        ${mudlet_SRCS}
+        ${mudlet_MOC_SRCS}
+        ${mudlet_RCC_SRCS}
+        ${mudlet_HDRS}
+        ${mudlet_UIS_H}
+        ${mudlet_MOC_HDRS}
+        ${mudlet_LUA_FILES}
+    )
+endif()
 
 target_link_libraries(mudlet
     ${Qt5Core_LIBRARIES}
@@ -489,4 +500,34 @@ if(PC_HUNSPELL_FOUND)
   target_link_libraries(mudlet ${PC_HUNSPELL_LIBRARIES})
 else()
   target_link_libraries(mudlet ${HUNSPELL_LIBRARIES})
+endif()
+
+# *nix "make install" provision:
+if(UNIX)
+  # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
+  # variable and is prefixed onto relative DESTINATION values
+  foreach(lua_file ${lua_files})
+    get_filename_component(lua_file_name ${lua_file} NAME)
+    get_filename_component(lua_file_path ${lua_file} DIRECTORY)
+#    message(STATUS "For ${lua_file} ==> installing ${lua_file_name} in ${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/${lua_file_path}")
+    install(FILES "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/${lua_file}"
+      DESTINATION "share/mudlet/lua/${lua_file_path}"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      CONFIGURATIONS Debug Release)
+  endforeach(lua_file)
+  foreach(lcf_file ${lcf_files})
+    get_filename_component(lcf_file_name ${lcf_file} NAME)
+    get_filename_component(lcf_file_path ${lcf_file} DIRECTORY)
+#    message(STATUS "For ${lcf_file} ==> installing ${lcf_file_name} in ${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/${lcf_file_path}")
+    install(FILES "${CMAKE_HOME_DIRECTORY}/3rdparty/${lcf_file}"
+      DESTINATION "share/mudlet/lua/${lcf_file_path}"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      CONFIGURATIONS Debug Release)
+  endforeach(lcf_file)
+  install(TARGETS mudlet
+    RUNTIME
+    DESTINATION "bin"
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    CONFIGURATIONS Debug Release
+    COMPONENT All)
 endif()
