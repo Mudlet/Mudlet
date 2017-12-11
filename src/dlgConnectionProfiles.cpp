@@ -524,7 +524,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     connect(delete_profile_dialog, SIGNAL(accepted()), this, SLOT(slot_reallyDeleteProfile()));
 
     delete_profile_lineedit->setPlaceholderText(profile);
-    cancel_button->setFocus();
+    delete_profile_lineedit->setFocus();
     delete_button->setDisabled(true);
     delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profile));
 
