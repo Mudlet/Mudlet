@@ -53,6 +53,7 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
+#include <QTimer>
 #include <QFileDialog>
 #include <QRegularExpression>
 #include <QSound>
@@ -12248,12 +12249,20 @@ void TLuaInterpreter::initLuaGlobals()
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");
 
-    QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName()));
+    // prepend profile path to package.path and package.cpath
+    QTimer::singleShot(0, [this]() {
+//        QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName()));
 
-    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
-    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;]] .. package.path").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
+//        luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
+//        luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;]] .. package.path").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
 
-    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
+//        luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory).arg(QDir::separator()).toUtf8().constData());
+
+        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(QDir::separator()).toUtf8().constData());
+        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?.lua;]] .. package.path").arg(QDir::separator()).toUtf8().constData());
+
+        luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = getMudletHomeDir() .. [[%1?;]] .. package.cpath").arg(QDir::separator()).toUtf8().constData());
+    });
 
 
 #ifdef Q_OS_MAC
