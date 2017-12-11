@@ -27,7 +27,6 @@
 
 #include "pre_guard.h"
 #include <QTime>
-#include <QDir>
 #include "post_guard.h"
 
 #include <setjmp.h>
