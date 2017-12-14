@@ -10839,7 +10839,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
         return code;
     }
-    
+
     if (!validLuaCode(code)) {
         return code;
     }
@@ -12243,6 +12243,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "alert", TLuaInterpreter::alert);
     lua_register(pGlobalLua, "tempPromptTrigger", TLuaInterpreter::tempPromptTrigger);
     lua_register(pGlobalLua, "permPromptTrigger", TLuaInterpreter::permPromptTrigger);
+    lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
+    lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     luaopen_yajl(pGlobalLua);
@@ -12264,7 +12266,7 @@ void TLuaInterpreter::initLuaGlobals()
 #endif
 #ifdef Q_OS_MAC
     //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());    
+    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #endif
 
@@ -12898,4 +12900,60 @@ Host& getHostFromLua(lua_State* L)
     lua_pop(L, 1);                          // 0 - pop host ptr
     assert(h);
     return *h;
+}
+
+int TLuaInterpreter::getColumnCount( lua_State * L )
+{
+    QString windowName;
+
+    if ( ! lua_gettop( L ) ) {
+        windowName = QStringLiteral("main");
+    }
+    else if ( ! lua_isstring(L, 1) ) {
+        lua_pushfstring(L, "getColumnCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
+        lua_error( L );
+        return 1;
+    }
+    else {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    int columns;
+    Host * pHost = &getHostFromLua(L);
+
+    if ( windowName.isEmpty() || ! windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) )
+        columns = pHost->mpConsole->console->getColumnCount();
+    else
+        columns = mudlet::self()->getColumnCount(pHost, windowName);
+
+    lua_pushnumber( L, columns );
+    return 1;
+}
+
+int TLuaInterpreter::getRowCount( lua_State * L )
+{
+    QString windowName;
+
+    if ( ! lua_gettop( L ) ) {
+        windowName = QStringLiteral("main");
+    }
+    else if ( ! lua_isstring(L, 1) ) {
+        lua_pushfstring(L, "getRowCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
+        lua_error( L );
+        return 1;
+    }
+    else {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    int columns;
+    Host * pHost = &getHostFromLua(L);
+
+    if ( windowName.isEmpty() || ! windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) )
+        columns = pHost->mpConsole->console->getRowCount();
+    else
+        columns = mudlet::self()->getRowCount(pHost, windowName);
+
+    lua_pushnumber( L, columns );
+    return 1;
 }
