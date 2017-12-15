@@ -1548,13 +1548,26 @@ int TTextEdit::bufferScrollDown(int lines)
 
 int TTextEdit::getColumnCount()
 {
-    // Not using 'mFontWidth' as currently it is the with of the 'W' char and
-    // we should use the "space" width for this, as discussed on #1438
-    return width() / QFontMetrics(mpHost->mDisplayFont).width(QChar(' '));
+    int charWidth;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        charWidth = qRound(QFontMetricsF(mpHost->mDisplayFont).averageCharWidth());
+    } else {
+        charWidth = qRound(QFontMetricsF(mDisplayFont).averageCharWidth());
+    }
+
+    return width() / charWidth;
 }
 
 int TTextEdit::getRowCount()
 {
-    return height() / mFontHeight;
-}
+    int rowHeight;
 
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        rowHeight = qRound(QFontMetricsF(mpHost->mDisplayFont).lineSpacing());
+    } else {
+        rowHeight = qRound(QFontMetricsF(mDisplayFont).lineSpacing());
+    }
+
+    return height() / rowHeight;
+}

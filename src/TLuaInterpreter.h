@@ -422,8 +422,8 @@ public:
     static int alert(lua_State* L);
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
-    static int getColumnCount( lua_State * L );
-    static int getRowCount( lua_State * L );
+    static int getColumnCount(lua_State*);
+    static int getRowCount(lua_State*);
 
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
