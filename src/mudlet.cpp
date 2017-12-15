@@ -3421,26 +3421,26 @@ void mudlet::showChangelogIfUpdated()
 }
 #endif // INCLUDE_UPDATER
 
-int mudlet::getColumnCount( Host * pHost, QString & name )
+int mudlet::getColumnCount(Host* pHost, QString& name)
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
 
-    if( dockWindowConsoleMap.contains( name ) ) {
-        return dockWindowConsoleMap[name]->console->getColumnCount();
+    if (!dockWindowConsoleMap.contains(name)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+        return -1;
     }
 
-    TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesn't exist\n" >> 0;
-    return 0;
+    return dockWindowConsoleMap[name]->console->getColumnCount();
 }
 
-int mudlet::getRowCount( Host * pHost, QString & name )
+int mudlet::getRowCount(Host* pHost, QString& name)
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
 
-    if( dockWindowConsoleMap.contains( name ) ){
-        return dockWindowConsoleMap[name]->console->getRowCount();
+    if (!dockWindowConsoleMap.contains(name)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+        return -1;
     }
 
-    TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesn't exist\n" >> 0;
-    return 0;
+    return dockWindowConsoleMap[name]->console->getRowCount();
 }

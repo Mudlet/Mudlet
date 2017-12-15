@@ -12902,58 +12902,68 @@ Host& getHostFromLua(lua_State* L)
     return *h;
 }
 
-int TLuaInterpreter::getColumnCount( lua_State * L )
+int TLuaInterpreter::getColumnCount(lua_State* L)
 {
     QString windowName;
 
-    if ( ! lua_gettop( L ) ) {
+    if (!lua_gettop(L)) {
         windowName = QStringLiteral("main");
-    }
-    else if ( ! lua_isstring(L, 1) ) {
+    } else if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "getColumnCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        lua_error( L );
+        lua_error(L);
         return 1;
-    }
-    else {
+    } else {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
     int columns;
-    Host * pHost = &getHostFromLua(L);
+    Host* pHost = &getHostFromLua(L);
 
-    if ( windowName.isEmpty() || ! windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) )
+    if (windowName.isEmpty() || !windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
         columns = pHost->mpConsole->console->getColumnCount();
-    else
+    } else {
         columns = mudlet::self()->getColumnCount(pHost, windowName);
+    }
 
-    lua_pushnumber( L, columns );
+    if (columns < 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushnumber(L, columns);
     return 1;
 }
 
-int TLuaInterpreter::getRowCount( lua_State * L )
+int TLuaInterpreter::getRowCount(lua_State* L)
 {
     QString windowName;
 
-    if ( ! lua_gettop( L ) ) {
+    if (!lua_gettop(L)) {
         windowName = QStringLiteral("main");
-    }
-    else if ( ! lua_isstring(L, 1) ) {
+    } else if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "getRowCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        lua_error( L );
+        lua_error(L);
         return 1;
-    }
-    else {
+    } else {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    int columns;
-    Host * pHost = &getHostFromLua(L);
+    int rows;
+    Host* pHost = &getHostFromLua(L);
 
-    if ( windowName.isEmpty() || ! windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) )
-        columns = pHost->mpConsole->console->getRowCount();
-    else
-        columns = mudlet::self()->getRowCount(pHost, windowName);
+    if (windowName.isEmpty() || !windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+        rows = pHost->mpConsole->console->getRowCount();
+    } else {
+        rows = mudlet::self()->getRowCount(pHost, windowName);
+    }
 
-    lua_pushnumber( L, columns );
+    if (rows < 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushnumber(L, rows);
     return 1;
 }
