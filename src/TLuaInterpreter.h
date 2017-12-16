@@ -300,7 +300,7 @@ public:
     static int showUserWindow(lua_State*);
     static int hideUserWindow(lua_State*);
     static int closeUserWindow(lua_State*);
-    static int resizeUserWindow(lua_State*);
+    static int resizeWindow(lua_State*);
     static int createStopWatch(lua_State*);
     static int stopStopWatch(lua_State*);
     static int getStopWatchTime(lua_State*);

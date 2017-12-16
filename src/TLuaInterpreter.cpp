@@ -2795,11 +2795,11 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     return 0;
 }
 
-int TLuaInterpreter::resizeUserWindow(lua_State* L)
+int TLuaInterpreter::resizeWindow(lua_State* L)
 {
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "resizeUserWindow: wrong argument type");
+        lua_pushstring(L, "resizeWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -2807,7 +2807,7 @@ int TLuaInterpreter::resizeUserWindow(lua_State* L)
     }
     double x1;
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "resizeUserWindow: wrong argument type");
+        lua_pushstring(L, "resizeWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -2815,7 +2815,7 @@ int TLuaInterpreter::resizeUserWindow(lua_State* L)
     }
     double y1;
     if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "resizeUserWindow: wrong argument type");
+        lua_pushstring(L, "resizeWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -12009,7 +12009,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "startStopWatch", TLuaInterpreter::startStopWatch);
     lua_register(pGlobalLua, "resetStopWatch", TLuaInterpreter::resetStopWatch);
     lua_register(pGlobalLua, "closeUserWindow", TLuaInterpreter::closeUserWindow);
-    lua_register(pGlobalLua, "resizeWindow", TLuaInterpreter::resizeUserWindow);
+    lua_register(pGlobalLua, "resizeWindow", TLuaInterpreter::resizeWindow);
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
