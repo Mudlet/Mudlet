@@ -1642,9 +1642,15 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name) && !dockWindowMap.contains(name)) {
         dockWindowConsoleMap[name]->resize(x1, y1);
+        return true;
+    }
+
+    if (dockWindowMap.contains(name)) {
+        dockWindowMap[name]->resize(x1, y1);
         return true;
     }
 
@@ -1698,11 +1704,17 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name) && !dockWindowMap.contains(name)) {
         dockWindowConsoleMap[name]->move(x1, y1);
         dockWindowConsoleMap[name]->mOldX = x1;
         dockWindowConsoleMap[name]->mOldY = y1;
+        return true;
+    }
+
+    if (dockWindowMap.contains(name)) {
+        dockWindowMap[name]->move(x1, y1);
         return true;
     }
 
