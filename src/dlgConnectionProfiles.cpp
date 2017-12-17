@@ -39,11 +39,6 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
-// This is not liked by external Codacy analyser {https://www.codacy.com} as
-// it is formally reserved by C++ Standards for internal compiler use and
-// should not be being defined to nothing here:
-// #define _DEBUG_
-
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog( parent )
 , mProfileList( QStringList() )
