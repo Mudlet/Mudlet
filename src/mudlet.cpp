@@ -1650,6 +1650,10 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
     }
 
     if (dockWindowMap.contains(name)) {
+        if (!dockWindowMap[name]->isFloating()) {
+            return false;
+        }
+
         dockWindowMap[name]->resize(x1, y1);
         return true;
     }
@@ -1714,6 +1718,10 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     }
 
     if (dockWindowMap.contains(name)) {
+        if (!dockWindowMap[name]->isFloating()) {
+            dockWindowMap[name]->setFloating(true);
+        }
+
         dockWindowMap[name]->move(x1, y1);
         return true;
     }
