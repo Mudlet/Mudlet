@@ -27,7 +27,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
     $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
 } else {
-    git clone https://github.com/Mudlet/installers.git C:\projects\installers
+    git clone https://github.com/Mudlet/installers.git -b fix-small-windows-image C:\projects\installers
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
     nuget install squirrel.windows -ExcludeVersion
@@ -44,7 +44,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
     Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
-    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
     Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
     Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
