@@ -45,11 +45,12 @@ COPY $Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libpcre-1.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libsqlite3-0.dll .
 COPY $Env:MINGW_BASE_DIR\bin\zlib1.dll .
-XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
+XCOPY /S /I /Q /Y ..\mudlet-lua mudlet-lua
 COPY ..\*.dic .
 COPY C:\src\luazip\luazip-master\zip.dll .
-XCOPY /S /I /Q $Env:MINGW_BASE_DIR\lib\lua\5.1 .
+XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
+Start-Sleep 10
 Start-Process mudlet.exe
 
 cd $sourceDir
