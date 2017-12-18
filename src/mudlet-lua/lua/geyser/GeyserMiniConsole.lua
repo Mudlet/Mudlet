@@ -54,6 +54,18 @@ function Geyser.MiniConsole:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underlin
   setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
 end
 
+-- Enables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:enableScrollBar()
+  enableScrollBar(self.name)
+end
+
+-- Disables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:disableScrollBar()
+  disableScrollBar(self.name)
+end
+
 --- Sets bold status for this miniconsole
 -- @param bool True for bolded
 function Geyser.MiniConsole:setBold(bool)
@@ -113,6 +125,16 @@ function Geyser.MiniConsole:setLink(...)
   setLink(self.name, ...)
 end
 
+--- Returns the number of simultaneous rows that this miniconsole can show at once
+function Geyser.MiniConsole:getRowCount()
+    return getRowCount(self.name)
+end
+
+--- Returns the number of simultaneous columns (characters) that this miniconsole can show at once on a single row
+function Geyser.MiniConsole:getColumnCount()
+    return getColumnCount(self.name)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
@@ -146,6 +168,9 @@ function Geyser.MiniConsole:new (cons, container)
     me:setFontSize(container.fontSize)
   else
     me:setFontSize(8)
+  end
+  if cons.scrollBar then
+    me:enableScrollBar()
   end
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

@@ -113,6 +113,7 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setBgColor(int, int, int);
+    void setScrollBarVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
@@ -140,7 +141,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(std::string&, int);
+    bool setMiniConsoleFontSize(int);
     void setBold(bool);
     void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
     void setItalics(bool);
@@ -262,7 +263,7 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     bool mSaveLayoutRequested;
-    QWidget *mpButtonMainLayer;
+    QWidget* mpButtonMainLayer;
 
 signals:
 
@@ -278,7 +279,6 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
-
 };
 
 #endif // MUDLET_TCONSOLE_H

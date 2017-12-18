@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,12 +33,13 @@
 #include <QtEvents>
 #include <QApplication>
 #include <QClipboard>
+#include <QDesktopServices>
 #include <QMenu>
 #include <QPainter>
 #include <QScrollBar>
 #include <QString>
+#include <QTextCursor>
 #include <QToolTip>
-#include <QDesktopServices>
 #include "post_guard.h"
 
 
@@ -585,34 +587,18 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mScrollVector = 0;
         }
     }
-    if( ( ! noScroll ) && ( mScrollVector >= 0 ) && ( mScrollVector <= mScreenHeight ) && ( ! mForceUpdate ) )
-    {
-
-        if( mScrollVector*mFontHeight < mScreenMap.height()
-            && mScreenWidth*mFontWidth <= mScreenMap.width()
-            && (mScreenHeight-mScrollVector)*mFontHeight > 0
-            && (mScreenHeight-mScrollVector)*mFontHeight <= mScreenMap.height() )
-        {
-            screenPixmap = mScreenMap.copy( 0,
-                                            mScrollVector*mFontHeight,
-                                            mScreenWidth*mFontWidth,
-                                            (mScreenHeight-mScrollVector)*mFontHeight );
-            p.drawPixmap( 0, 0, screenPixmap );
+    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
+        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
+            && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
+            p.drawPixmap(0, 0, screenPixmap);
             from = mScreenHeight - mScrollVector - 1;
         }
-    }
-    else if( ( ! noScroll ) && ( mScrollVector < 0 && mScrollVector >= ((-1)*mScreenHeight) ) && ( ! mForceUpdate ) )
-    {
-        if( abs(mScrollVector)*mFontHeight < mScreenMap.height()
-            && mScreenWidth*mFontWidth <= mScreenMap.width()
-            && (mScreenHeight-abs(mScrollVector))*mFontHeight > 0
-            && (mScreenHeight-abs(mScrollVector))*mFontHeight <= mScreenMap.height() )
-        {
-            screenPixmap = mScreenMap.copy( 0,
-                                            0,
-                                            mScreenWidth*mFontWidth,
-                                            (mScreenHeight-abs(mScrollVector))*mFontHeight );
-            p.drawPixmap( 0, abs(mScrollVector)*mFontHeight, screenPixmap );
+    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
+        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
+            && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
+            p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
             y2 = abs(mScrollVector);
         }
@@ -1172,23 +1158,29 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mIsCommandPopup = false;
 
+
         QAction* action = new QAction("copy", this);
         action->setStatusTip(tr("copy selected text to clipboard"));
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
         QAction* action2 = new QAction("copy HTML", this);
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+        QAction* action3 = new QAction("select all", this);
+        action3->setStatusTip(tr("select all text in the buffer"));
+        connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
-        QString selectedEngine = mpHost->mSearchEngine.first;
-        QAction* action3 = new QAction(("search on " + selectedEngine), this);
-        connect(action3, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
-
-        action3->setStatusTip("search selected text on " + selectedEngine);
+        QString selectedEngine = mpHost->getSearchEngine().first;
+        QAction* action4 = new QAction(("search on " + selectedEngine), this);
+        connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+        action4->setStatusTip("search selected text on " + selectedEngine);
 
         auto popup = new QMenu(this);
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addSeparator();
         popup->addAction(action3);
+        popup->addSeparator();
+        popup->addAction(action4);
 
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
@@ -1212,6 +1204,14 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 void TTextEdit::slot_copySelectionToClipboard()
 {
     copySelectionToClipboard();
+}
+
+void TTextEdit::slot_selectAll()
+{
+    mPA = QPoint(0, 0);
+    mPB = mpBuffer->getEndPos();
+    highlight();
+    update();
 }
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
@@ -1337,7 +1337,7 @@ void TTextEdit::searchSelectionOnline()
 {
     QString selectedText = getSelectedText(' ');
     QString url = QUrl::toPercentEncoding(selectedText.trimmed());
-    url.prepend(mpHost->mSearchEngine.second);
+    url.prepend(mpHost->getSearchEngine().second);
     QDesktopServices::openUrl(QUrl(url));
 }
 
@@ -1544,4 +1544,30 @@ int TTextEdit::bufferScrollDown(int lines)
 
         return lines;
     }
+}
+
+int TTextEdit::getColumnCount()
+{
+    int charWidth;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        charWidth = qRound(QFontMetricsF(mpHost->mDisplayFont).averageCharWidth());
+    } else {
+        charWidth = qRound(QFontMetricsF(mDisplayFont).averageCharWidth());
+    }
+
+    return width() / charWidth;
+}
+
+int TTextEdit::getRowCount()
+{
+    int rowHeight;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        rowHeight = qRound(QFontMetricsF(mpHost->mDisplayFont).lineSpacing());
+    } else {
+        rowHeight = qRound(QFontMetricsF(mDisplayFont).lineSpacing());
+    }
+
+    return height() / rowHeight;
 }

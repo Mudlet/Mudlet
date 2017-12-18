@@ -6,6 +6,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -54,15 +55,7 @@ public:
     void drawFrame(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&);
     void updateLastLine();
-    void              drawCharacters( QPainter & painter,
-                                      const QRect & rect,
-                                      QString & text,
-                                      bool isBold,
-                                      bool isUnderline,
-                                      bool isItalics,
-                                      bool isStrikeOut,
-                                      QColor & fgColor,
-                                      QColor & bgColor );
+    void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -90,6 +83,8 @@ public:
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void copySelectionToClipboardHTML();
     void searchSelectionOnline();
+    int getColumnCount();
+    int getRowCount();
 
     QColor mBgColor;
     int mCursorY;
@@ -110,6 +105,7 @@ public:
 public slots:
     void slot_toggleTimeStamps();
     void slot_copySelectionToClipboard();
+    void slot_selectAll();
     void slot_scrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();

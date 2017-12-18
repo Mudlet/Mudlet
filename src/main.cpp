@@ -28,9 +28,9 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QDesktopWidget>
-#include <QMessageBox>
 #include <QDir>
 #include <QFile>
+#include <QMessageBox>
 #include <QPainter>
 #include <QSplashScreen>
 #include <QStringBuilder>
@@ -50,6 +50,10 @@
 using namespace std;
 
 TConsole* spDebugConsole = nullptr;
+
+#if defined(Q_OS_WIN)
+bool runUpdate();
+#endif
 
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
@@ -271,6 +275,13 @@ int main(int argc, char* argv[])
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
 
+#if defined(Q_OS_WIN)
+    auto abortLaunch = runUpdate();
+    if (abortLaunch) {
+        return 0;
+    }
+#endif
+
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -435,7 +446,7 @@ int main(int argc, char* argv[])
     }
 #else
     QFile linkFile(homeLink);
-    if (!linkFile.exists()) {
+    if (!linkFile.exists() && first_launch) {
         QFile::link(homeDirectory, homeLink);
     }
 #endif
@@ -458,7 +469,16 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
+#if defined(INCLUDE_UPDATER)
+    mudlet::self()->checkUpdatesOnStart();
+#if !defined(Q_OS_MACOS)
+    // Sparkle doesn't allow us to manually show the changelog, so leave it be for dblsqd only
+    mudlet::self()->showChangelogIfUpdated();
+#endif // Q_OS_LINUX
+#endif // INCLUDE_UPDATER
+
     app->restoreOverrideCursor();
+
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
     // click something in a parent process to the application when you are stuck
@@ -466,3 +486,32 @@ int main(int argc, char* argv[])
     // the earlier setOverrideCursor() line and this one.
     return app->exec();
 }
+
+#if defined(Q_OS_WIN)
+// small detour for Windows - check if there's an updated Mudlet
+// available to install. If there is, quit and run it - Squirrel
+// will update Mudlet and then launch it once it's done
+// return true if we should abort the current launch since the updater got started
+bool runUpdate()
+{
+    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup.exe"));
+    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup-seen.exe"));
+    QDir updateDir;
+    if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
+        if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+            qWarning() << "Couldn't delete previous installer";
+        }
+
+        if (!updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath())) {
+            qWarning() << "Failed to prep installer: couldn't rename it";
+        }
+
+        QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
+        return true;
+    } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
+        qWarning() << "Couldn't delete old uninstaller";
+    }
+    return false;
+}
+#endif

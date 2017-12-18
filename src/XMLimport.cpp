@@ -808,14 +808,11 @@ void XMLimport::readHostPackage(Host* pHost)
 
     if(attributes().hasAttribute(QLatin1String("mSearchEngineName")))
     {
-        pHost->mSearchEngine = QPair<QString, QString>(
-                    attributes().value(QLatin1String("mSearchEngineName")).toString(),
-                    attributes().value(QLatin1String("mSearchEngineURL")).toString()
-                    );
+        pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
     }
     else
     {
-        pHost->mSearchEngine = QPair<QString, QString>("Google", "https://www.google.com/search?q=");
+        pHost->mSearchEngineName = QString("Google");
     }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");

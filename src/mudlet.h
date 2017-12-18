@@ -27,19 +27,23 @@
 
 #include "HostManager.h"
 
-#include "pre_guard.h"
-#include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
+#include "ui_main_window.h"
+#if defined(INCLUDE_UPDATER)
+#include "updater.h"
+#endif
+#include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QQueue>
+#include <QSettings>
 #include <QTextOption>
 #include <QTime>
 #ifdef QT_GAMEPAD_LIB
-  #include <QGamepad>
+#include <QGamepad>
 #endif
 #include "post_guard.h"
 
@@ -80,6 +84,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
+    QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
     int getLineNumber(Host* pHost, QString& name);
@@ -118,7 +123,10 @@ public:
     bool setBackgroundImage(Host*, const QString& name, QString& path);
     bool setTextFormat(Host*, const QString& name, int, int, int, int, int, int, bool, bool, bool, bool);
     bool setLabelClickCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelDoubleClickCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelReleaseCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelMoveCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelWheelCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelOnEnter(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
@@ -141,13 +149,14 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings();
+    void readSettings(const QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
+    void checkUpdatesOnStart();
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
-    static QMainWindow* mpDebugArea;
+    static QPointer<QMainWindow> mpDebugArea;
     static bool debugMode;
     QMap<Host*, TConsole*> mConsoleMap;
     QMap<Host*, QMap<QString, TConsole*>> mHostConsoleMap;
@@ -165,6 +174,7 @@ public:
     void setMenuBarVisible(const bool);
     void replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
+    bool setScrollBarVisible(Host* pHost, const QString& name, bool isVisible);
     void replayOver();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
@@ -175,6 +185,10 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(QString s, int);
+    int getColumnCount(Host* pHost, QString& name);
+    int getRowCount(Host* pHost, QString& name);
+
+    static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
@@ -201,12 +215,14 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
-    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
+    static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
+
+    void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
@@ -214,7 +230,7 @@ public:
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
 
-    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
+    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'
@@ -283,6 +299,10 @@ public:
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
 
+#if defined(INCLUDE_UPDATER)
+    Updater* updater;
+#endif
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -295,7 +315,6 @@ public slots:
     void slot_show_help_dialog_video();
     void slot_show_help_dialog_forum();
     void slot_show_help_dialog_irc();
-    void slot_show_help_dialog_download();
     void slot_open_mappingscripts_page();
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
@@ -321,6 +340,9 @@ public slots:
     void slot_module_manager();
     void layoutModules();
     void slot_help_module();
+#if defined(INCLUDE_UPDATER)
+    void slot_check_manual_update();
+#endif
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -330,6 +352,8 @@ signals:
     void signal_profileMapReloadRequested(QList<QString>);
     void signal_setToolBarIconSize(const int);
     void signal_setTreeIconSize(const int);
+    void signal_hostCreated(Host*, const quint8);
+    void signal_hostDestroyed(Host*, const quint8);
 
 private slots:
     void slot_close_profile();
@@ -352,6 +376,9 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
     void slot_module_manager_destroyed();
+#if defined(INCLUDE_UPDATER)
+    void slot_update_installed();
+#endif
 
 private:
     void initEdbee();
@@ -366,8 +393,6 @@ private:
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
-
-
     QMenu* restoreBar;
     bool mIsGoingDown;
 
@@ -397,11 +422,12 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
+
     bool mCompactInputLine;
-
     void slot_toggle_compact_input_line();
-
     void set_compact_input_line();
+
+    QSettings* getQSettings();
 };
 
 class TConsoleMonitor : public QObject
