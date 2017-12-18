@@ -1,7 +1,8 @@
 $sourceDir = $pwd.Path
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {
-    $arguments = "-ExecutionPolicy Bypass -Command `"cd $sourceDir\CI ; & '.\appveyor.install.ps1'`""
+    $arguments = ("-ExecutionPolicy", "Bypass", "-NoExit", "cd $sourceDir\CI ; & '.\appveyor.install.ps1'")
     Start-Process powershell -Verb runAs -ArgumentList $arguments -Wait
 }
 else {
@@ -47,3 +48,5 @@ COPY C:\src\luazip\luazip-master\zip.dll .
 XCOPY /S /I /Q $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
 Start-Process mudlet.exe
+
+cd $sourceDir
