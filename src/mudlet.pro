@@ -178,8 +178,12 @@ unix:!macx {
         -lyajl \
         -lopengl32 \
         -lglut \
-        -lglu32
-    INCLUDEPATH += "C:\\mingw32\\include"
+        -lglu32 \
+        -L"$$(MINGW_BASE_DIR)\\bin"
+    INCLUDEPATH += "C:\\mingw32\\include" \
+                   "C:\\Libraries\\boost_1_60_0" \
+                   "$$(MINGW_BASE_DIR)\\include" \
+                   "$$(MINGW_BASE_DIR)\\lib\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
