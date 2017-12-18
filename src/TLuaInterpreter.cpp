@@ -12396,6 +12396,12 @@ void TLuaInterpreter::initIndenterGlobals()
     int error;
 
 #ifdef Q_OS_LINUX
+    // This only works in running from a shadow build directory if there is a
+    // symbolic link from "lcf" to "lua_code_formatter" in the "3rdparty"
+    // source directory
+    luaL_dostring(pIndenterState, QString("package.path = '%1/../3rdparty/?.lua;' .. package.path")
+                  .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pIndenterState, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
