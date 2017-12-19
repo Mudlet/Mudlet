@@ -41,6 +41,12 @@ QString nothing = "";
 
 void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
 {
+    if (mClickParams.mArgumentList.size() > 0) {
+        for (int i = 0; i < mClickParams.mArgumentList.size(); i++) {
+            if ( mClickParams.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE )
+                pHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
+        }
+    }
     mpHost = pHost;
     mClick = func;
     mClickParams = args;

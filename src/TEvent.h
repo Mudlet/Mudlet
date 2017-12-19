@@ -35,6 +35,7 @@
 #define ARGUMENT_TYPE_STRING 1
 #define ARGUMENT_TYPE_BOOLEAN 2
 #define ARGUMENT_TYPE_NIL 3
+#define ARGUMENT_TYPE_TABLE 4
 
 class TEvent
 {

@@ -374,21 +374,28 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 
     int n = lua_gettop(L);
     for (int i = 1; i <= n; i++) {
-        if (lua_isnumber(L, i)) {
-            event.mArgumentList.append(QString::number(lua_tonumber(L, i)));
+        if (lua_isnumber(L, 1)) {
+            event.mArgumentList.append(QString::number(lua_tonumber(L, 1)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        } else if (lua_isstring(L, i)) {
-            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, i)));
+            lua_remove(L, 1);
+        } else if (lua_isstring(L, 1)) {
+            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, 1)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        } else if (lua_isboolean(L, i)) {
-            event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
+            lua_remove(L, 1);
+        } else if (lua_isboolean(L, 1)) {
+            event.mArgumentList.append(QString::number(lua_toboolean(L, 1)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-        } else if (lua_isnil(L, i)) {
+            lua_remove(L, 1);
+        } else if (lua_isnil(L, 1)) {
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
+            lua_remove(L, 1);
+        } else if (lua_istable(L, 1)) {
+            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_TABLE);
         } else {
             lua_pushfstring(L,
-                            "raiseEvent: bad argument #%d type (string, number, boolean, or nil\n"
+                            "raiseEvent: bad argument #%d type (string, number, boolean, table, or nil\n"
                             "expected, got a %s!)",
                             i,
                             luaL_typename(L, i));
@@ -398,6 +405,12 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     }
 
     host.raiseEvent(event);
+
+    // After raising event, release refs to Lua Registry
+    for (int i = 0; i < event.mArgumentList.size(); i++) {
+        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE)
+             luaL_unref(L, LUA_REGISTRYINDEX, event.mArgumentList.at(i).toInt());
+    }
 
     return 0;
 }
@@ -3084,28 +3097,38 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     TEvent event;
     int n = lua_gettop(L);
+    lua_remove(L, 1);
+    lua_remove(L, 1);
     for (int i = 3; i <= n; ++i) {
-        if (lua_isnumber(L, i)) {
-            event.mArgumentList.append(QString::number(lua_tonumber(L, i)));
+        if (lua_isnumber(L, 1)) {
+            event.mArgumentList.append(QString::number(lua_tonumber(L, 1)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        } else if (lua_isstring(L, i)) {
-            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, i)));
+            lua_remove(L, 1);
+        } else if (lua_isstring(L, 1)) {
+            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, 1)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        } else if (lua_isboolean(L, i)) {
-            event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
+            lua_remove(L, 1);
+        } else if (lua_isboolean(L, 1)) {
+            event.mArgumentList.append(QString::number(lua_toboolean(L, 1)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-        } else if (lua_isnil(L, i)) {
+            lua_remove(L, 1);
+        } else if (lua_isnil(L, 1)) {
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
+            lua_remove(L, 1);
+        } else if (lua_istable(L, 1)) {
+            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_TABLE);
         } else {
             lua_pushfstring(L,
-                            "%s: bad argument #%d type (boolean, number, string or nil\n"
+                            "%s: bad argument #%d type (boolean, number, string, table or nil\n"
                             "expected, got a %s!)",
                             funcName.toUtf8().constData(),
                             i,
-                            luaL_typename(L, i));
+                            luaL_typename(L, 1));
             return lua_error(L);
         }
+
     }
 
     bool lua_result;
@@ -11616,6 +11639,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         case ARGUMENT_TYPE_NIL:
             lua_pushnil(L);
             break;
+        case ARGUMENT_TYPE_TABLE:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
         default:
             qWarning(R"(TLuaInterpreter::callEventHandler("%s", TEvent) ERROR: Unhandled ARGUMENT_TYPE: %i encountered in argument %i.)", function.toUtf8().constData(), pE.mArgumentTypeList.at(i), i);
             lua_pushnil(L);
@@ -12966,4 +12992,10 @@ int TLuaInterpreter::getRowCount(lua_State* L)
 
     lua_pushnumber(L, rows);
     return 1;
+}
+
+// Used to unref lua objects in the registry to avoid memory leaks
+// i.e. Unrefing tables passed into TLabel's event parameters.
+void TLuaInterpreter::freeLuaRegistryIndex(int index) {
+    luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
 }
