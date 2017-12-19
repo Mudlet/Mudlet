@@ -77,7 +77,7 @@ public:
     bool mouseInside;
 
 private:
-    void releaseRegistryArgs(Host* pHost, TEvent& params);
+    void releaseParams(Host* pHost, TEvent& params);
 };
 
 #endif // MUDLET_TLABEL_H

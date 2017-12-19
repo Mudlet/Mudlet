@@ -41,12 +41,7 @@ QString nothing = "";
 
 void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
 {
-    if (mClickParams.mArgumentList.size() > 0) {
-        for (int i = 0; i < mClickParams.mArgumentList.size(); i++) {
-            if ( mClickParams.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE )
-                pHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
-        }
-    }
+    releaseParams(pHost, mClickParams);
     mpHost = pHost;
     mClick = func;
     mClickParams = args;
@@ -54,6 +49,7 @@ void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::setDoubleClick(Host* pHost, const QString& func, const TEvent& args)
 {
+    releaseParams(pHost, mDoubleClickParams);
     mpHost = pHost;
     mDoubleClick = func;
     mDoubleClickParams = args;
@@ -61,6 +57,7 @@ void TLabel::setDoubleClick(Host* pHost, const QString& func, const TEvent& args
 
 void TLabel::setRelease(Host* pHost, const QString& func, const TEvent& args)
 {
+    releaseParams(pHost, mReleaseParams);
     mpHost = pHost;
     mRelease = func;
     mReleaseParams = args;
@@ -68,6 +65,7 @@ void TLabel::setRelease(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::setMove(Host* pHost, const QString& func, const TEvent& args)
 {
+    releaseParams(pHost, mMoveParams);
     mpHost = pHost;
     mMove = func;
     mMoveParams = args;
@@ -75,6 +73,7 @@ void TLabel::setMove(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::setWheel(Host* pHost, const QString& func, const TEvent& args)
 {
+    releaseParams(pHost, mWheelParams);
     mpHost = pHost;
     mWheel = func;
     mWheelParams = args;
@@ -82,6 +81,7 @@ void TLabel::setWheel(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::setEnter(Host* pHost, const QString& func, const TEvent& args)
 {
+    releaseParams(pHost, mEnterParams);
     mpHost = pHost;
     mEnter = func;
     mEnterParams = args;
@@ -89,6 +89,7 @@ void TLabel::setEnter(Host* pHost, const QString& func, const TEvent& args)
 
 void TLabel::setLeave(Host* pHost, const QString& func, const TEvent& args)
 {
+    releaseParams(pHost, mLeaveParams);
     mpHost = pHost;
     mLeave = func;
     mLeaveParams = args;
@@ -233,4 +234,13 @@ bool TLabel::forwardEventToMapper(QEvent* event)
     }
     }
     return false;
+}
+
+void TLabel::releaseParams(Host* pHost, TEvent& params) {
+    if (params.mArgumentList.size() > 0) {
+        for (int i = 0; i < params.mArgumentList.size(); i++) {
+            if ( params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE )
+                pHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
+        }
+    }
 }
