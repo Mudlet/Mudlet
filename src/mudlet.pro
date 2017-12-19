@@ -1272,4 +1272,10 @@ DISTFILES += \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.build.ps1
+    ../CI/appveyor.build.ps1 \
+    mudlet-lua/lua/ldoc.css \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/tests/README.md \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua

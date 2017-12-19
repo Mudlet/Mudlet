@@ -39,9 +39,6 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
-
-#define _DEBUG_
-
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog( parent )
 , mProfileList( QStringList() )
