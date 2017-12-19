@@ -1818,7 +1818,7 @@ int mudlet::getLineNumber(Host* pHost, QString& name)
     if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap[name]->getLineNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesnt exit\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
     }
     return -1;
 }
@@ -1829,7 +1829,7 @@ int mudlet::getColumnNumber(Host* pHost, QString& name)
     if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap[name]->getColumnNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesnt exit\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
     }
     return -1;
 }
@@ -1841,7 +1841,7 @@ int mudlet::getLastLineNumber(Host* pHost, const QString& name)
     if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap[name]->getLastLineNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesnt exit\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
     }
     return -1;
 }
@@ -3420,3 +3420,27 @@ void mudlet::showChangelogIfUpdated()
     updater->showChangelog();
 }
 #endif // INCLUDE_UPDATER
+
+int mudlet::getColumnCount(Host* pHost, QString& name)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (!dockWindowConsoleMap.contains(name)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+        return -1;
+    }
+
+    return dockWindowConsoleMap[name]->console->getColumnCount();
+}
+
+int mudlet::getRowCount(Host* pHost, QString& name)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (!dockWindowConsoleMap.contains(name)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+        return -1;
+    }
+
+    return dockWindowConsoleMap[name]->console->getRowCount();
+}

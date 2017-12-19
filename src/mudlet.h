@@ -185,6 +185,9 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(QString s, int);
+    int getColumnCount(Host* pHost, QString& name);
+    int getRowCount(Host* pHost, QString& name);
+
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
     int mReplaySpeed;

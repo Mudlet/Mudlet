@@ -1545,3 +1545,29 @@ int TTextEdit::bufferScrollDown(int lines)
         return lines;
     }
 }
+
+int TTextEdit::getColumnCount()
+{
+    int charWidth;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        charWidth = qRound(QFontMetricsF(mpHost->mDisplayFont).averageCharWidth());
+    } else {
+        charWidth = qRound(QFontMetricsF(mDisplayFont).averageCharWidth());
+    }
+
+    return width() / charWidth;
+}
+
+int TTextEdit::getRowCount()
+{
+    int rowHeight;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        rowHeight = qRound(QFontMetricsF(mpHost->mDisplayFont).lineSpacing());
+    } else {
+        rowHeight = qRound(QFontMetricsF(mDisplayFont).lineSpacing());
+    }
+
+    return height() / rowHeight;
+}
