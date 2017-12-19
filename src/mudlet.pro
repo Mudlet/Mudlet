@@ -560,4 +560,10 @@ DISTFILES += \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
     .clang-format \
-    CMakeLists.txt
+    CMakeLists.txt \
+    mudlet-lua/lua/ldoc.css \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/tests/README.md \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua
