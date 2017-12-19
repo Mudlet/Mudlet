@@ -4,6 +4,11 @@ $global:ErrorActionPreference = "Stop"
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
 $logFile = "$workingBaseDir\verbose_output.log"
+
+if (-not $(Test-Path "$workingBaseDir")) {
+    New-Item "$workingBaseDir" -ItemType "directory"
+}
+
 $64Bit = (Get-WmiObject Win32_OperatingSystem).OSArchitecture -eq "64-bit"
 if($64Bit){
   $CMakePath = "C:\Program Files (x86)\CMake\bin"
@@ -297,10 +302,6 @@ function InstallLuaModules(){
   exec "gcc" @("-O2", "-c", "-o", "src/luazip.o", "-I`"$Env:MINGW_BASE_DIR/include`"", "src/luazip.c")
   exec "gcc" @("-shared", "-o", "zip.dll", "src/luazip.o", "-L`"$Env:MINGW_BASE_DIR/lib`"", "-lzzip", "-lz", "`"$Env:MINGW_BASE_DIR/bin/lua51.dll`"", "-lm")
   FinishPart "Installing lua modules"
-}
-
-if (-not $(Test-Path "$workingBaseDir")) {
-    New-Item "$workingBaseDir" -ItemType "directory"
 }
 
 # install dependencies
