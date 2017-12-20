@@ -53,6 +53,7 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
+#include <QTimer>
 #include <QFileDialog>
 #include <QRegularExpression>
 #include <QSound>
@@ -12249,6 +12250,19 @@ void TLuaInterpreter::initLuaGlobals()
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");
+
+    // prepend profile path to package.path and package.cpath
+    // with a singleShot Timer to avoid crash on startup.
+    // crash caused by calling Host::getName() too early.
+    QTimer::singleShot(0, [this]() {
+        QChar separator = QDir::separator();
+
+        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(separator).toUtf8().constData());
+        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?.lua;]] .. package.path").arg(separator).toUtf8().constData());
+
+        luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = getMudletHomeDir() .. [[%1?;]] .. package.cpath").arg(separator).toUtf8().constData());
+    });
+
 
 #ifdef Q_OS_MAC
     luaopen_zip(pGlobalLua);
