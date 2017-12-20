@@ -3326,7 +3326,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         }
     }
 
-    if (windowName.isEmpty() || !windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         TConsole* pC = host.mpConsole;
         pC->mFormatCurrent.bgR = colorComponents.at(0);
         pC->mFormatCurrent.bgG = colorComponents.at(1);
@@ -5024,7 +5024,7 @@ int TLuaInterpreter::setBold(lua_State* L)
         isAtttributeEnabled = lua_toboolean(L, s);
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setBold(isAtttributeEnabled);
     } else {
         mudlet::self()->setBold(&host, windowName, isAtttributeEnabled);
@@ -5061,7 +5061,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
         isAtttributeEnabled = lua_toboolean(L, s);
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setItalics(isAtttributeEnabled);
     } else {
         mudlet::self()->setItalics(&host, windowName, isAtttributeEnabled);
@@ -5098,7 +5098,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
         isAtttributeEnabled = lua_toboolean(L, s);
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setUnderline(isAtttributeEnabled);
     } else {
         mudlet::self()->setUnderline(&host, windowName, isAtttributeEnabled);
@@ -5135,7 +5135,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
         isAtttributeEnabled = lua_toboolean(L, s);
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setStrikeOut(isAtttributeEnabled);
     } else {
         mudlet::self()->setStrikeOut(&host, windowName, isAtttributeEnabled);
@@ -12933,7 +12933,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     int columns;
     Host* pHost = &getHostFromLua(L);
 
-    if (windowName.isEmpty() || !windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         columns = pHost->mpConsole->console->getColumnCount();
     } else {
         columns = mudlet::self()->getColumnCount(pHost, windowName);
@@ -12966,7 +12966,7 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     int rows;
     Host* pHost = &getHostFromLua(L);
 
-    if (windowName.isEmpty() || !windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         rows = pHost->mpConsole->console->getRowCount();
     } else {
         rows = mudlet::self()->getRowCount(pHost, windowName);
