@@ -323,14 +323,23 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # all cases. (The code is built into a lcf module within
 # TLuaInterpreter::initIndenterGlobals() on demand) - and we need to get the
 # git submodule from Mudlet's own GitHub server...
+
+# NOTE: It does SEEM possible to prebuild and install this into a system wide
+# luarocks installation by changing to the "./3rdparty/lcf" directory with the
+# files checked out by git (which is currently the "5.1" branch on the "Mudlet"
+# repository) and creating a "lcf" "rock" using:
+# "luarocks make lcf-scn-1.rockspec" {run via "sudo" on Linux!}
+# there, this will result in the customised "lcf" rock being installed with a
+# version of "scm-1" and it will then be handled in the same way as the other
+# lua packages used via the luarocks sub-system, most specifically "utf8".  This
+# method has NOT been checked thoroughly though, so YMMV.
 win32 {
     # Use a check explicitly based on where the project file is in the sources
     !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
-        # Lets presume that changing the directory here only relates to the
-        # command following it and that the change does not persist, note that
-        # ';' only works for PowerShell - for cmd.exe the nearest equivalent is
-        # '&'
+        # Changing the directory here only relates to the command following it
+        # and that the change does not persist, note that ';' only works for
+        # PowerShell - for cmd.exe the nearest equivalent is '&'
         system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/edbee-lib")
     }
 
@@ -339,11 +348,8 @@ win32 {
         system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/lcf")
     }
 } else {
-    # Use a check explicitly based on where the project file is in the sources
     !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
-        # Lets presume that changing the directory here only relates to the
-        # command following it and that the change does not persist
         system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/edbee-lib")
     }
     !exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
@@ -360,7 +366,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
             system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/dblsqd")
         }
     } else {
-        # DBLSQD updater - needed for Linux and possibly MacOS but that needs checking
+        # DBLSQD updater - needed for Linux and MacOS
         !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
             system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/dblsqd")
@@ -389,7 +395,7 @@ exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
-    # CHECK: Is dblsqd needed for macx? If not it can be excluded for that platform
+    # dblsqd is needed for all update-able platforms:
     exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
         include("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
     } else {
@@ -590,9 +596,11 @@ RESOURCES = \
 TEMPLATE = app
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
-# following lists of files EXPLICITLY stated - IT IS NOT WORKABLE IF ONLY
-# A PATH IS GIVEN AS AN ENTRY TO THE .files LIST - as was the case for a
-# previous incarnation for macs.
+# following lists of files EXPLICITLY stated - IT DOESN'T WORK IF A WILD-CARD
+# PATH IS GIVEN AS AN ENTRY TO THE .files LIST as the needed relative positions
+# (sub-directories) for each file is not preserved in that case. This is not
+# apparently an issue for or applies in the inclusion of the Lua files in the
+# macOs bundle case!
 #
 # Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
 # choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
@@ -645,10 +653,9 @@ LUA_GEYSER.depends = mudlet
 
 # Our customised 5.1 Lua Code Formatter files, unfortunately to get the Qt
 # makefile constructor to reproduce the exact directory structure we have to
-# list EVERY SINGLE B****Y FILE in a per directory grouping...
-# Unfortunately in reproducing the path names in the variable names below there
-# are limits to the characters that can be use, so that '_' represents '/'
-# and '__' represents '_':
+# list EVERY SINGLE B****Y FILE in a per directory grouping; also in reproducing
+# the path names in the variable names below there are limits to the characters
+# that can be use, so that '_' represents '/' and '__' represents '_':
 LUA_LCF.files = \
     $${PWD}/../3rdparty/lcf/get_ast.lua \
     $${PWD}/../3rdparty/lcf/get_formatter_ast.lua \
