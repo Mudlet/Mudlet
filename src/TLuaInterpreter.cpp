@@ -393,10 +393,13 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
         } else if (lua_istable(L, 1)) {
             event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_TABLE);
+        } else if (lua_isfunction(L, 1)) {
+            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_FUNCTION);
         } else {
             lua_pushfstring(L,
-                            "raiseEvent: bad argument #%d type (string, number, boolean, table, or nil\n"
-                            "expected, got a %s!)",
+                            "raiseEvent: bad argument #%d type (string, number, boolean, table,\n"
+                            "function, or nil expected, got a %s!)",
                             i,
                             luaL_typename(L, i));
             lua_error(L);
@@ -406,9 +409,11 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 
     host.raiseEvent(event);
 
-    // After raising event, release refs to Lua Registry
+    // After the event has been raised but before 'event' goes out of scope,
+    // we need to safely dereference the members of 'event' that point to
+    // values in the Lua registry
     for (int i = 0; i < event.mArgumentList.size(); i++) {
-        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE)
+        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
              luaL_unref(L, LUA_REGISTRYINDEX, event.mArgumentList.at(i).toInt());
     }
 
@@ -3097,6 +3102,9 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     TEvent event;
     int n = lua_gettop(L);
+    // Pop the first two values off the stack (should be the label name and event
+    // name as referenced above). This is necessary because storing a reference to
+    // a Lua table or function requires that object to be at the top of the stack.
     lua_remove(L, 1);
     lua_remove(L, 1);
     for (int i = 3; i <= n; ++i) {
@@ -3119,6 +3127,9 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         } else if (lua_istable(L, 1)) {
             event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_TABLE);
+        } else if (lua_isfunction(L, 1)) {
+            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_FUNCTION);
         } else {
             lua_pushfstring(L,
                             "%s: bad argument #%d type (boolean, number, string, table or nil\n"
@@ -11640,6 +11651,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_pushnil(L);
             break;
         case ARGUMENT_TYPE_TABLE:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
+        case ARGUMENT_TYPE_FUNCTION:
             lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
             break;
         default:
