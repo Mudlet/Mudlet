@@ -241,12 +241,14 @@ bool TLabel::forwardEventToMapper(QEvent* event)
 // Lua registry, and correctly dereferences them. This allows
 // the parameters to be safely overwritten.
 void TLabel::releaseParams(Host* pHost, TEvent& params) {
-    if (params.mArgumentList.isEmpty())
+    if (params.mArgumentList.isEmpty()) {
         return;
+    }
 
     for (int i = 0; i < params.mArgumentList.size(); i++) {
-        if ( params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
+        if ( params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION) {
             pHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
+        }
     }
 
 }

@@ -373,35 +373,39 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     TEvent event;
 
     int n = lua_gettop(L);
-    for (int i = 1; i <= n; i++) {
-        if (lua_isnumber(L, 1)) {
-            event.mArgumentList.append(QString::number(lua_tonumber(L, 1)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            lua_remove(L, 1);
-        } else if (lua_isstring(L, 1)) {
-            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, 1)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            lua_remove(L, 1);
-        } else if (lua_isboolean(L, 1)) {
-            event.mArgumentList.append(QString::number(lua_toboolean(L, 1)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-            lua_remove(L, 1);
-        } else if (lua_isnil(L, 1)) {
-            event.mArgumentList.append(QString());
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
-            lua_remove(L, 1);
-        } else if (lua_istable(L, 1)) {
-            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_TABLE);
-        } else if (lua_isfunction(L, 1)) {
-            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_FUNCTION);
+    // We go from the top of the stack down, because luaL_ref will
+    // only reference the object at the top of the stack
+    for (int i = n; i >= 1; i--) {
+        if (lua_isnumber(L, -1)) {
+            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
+            lua_pop(L, 1);
+        } else if (lua_isstring(L, -1)) {
+            event.mArgumentList.prepend(QString::fromUtf8(lua_tostring(L, -1)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
+            lua_pop(L, 1);
+        } else if (lua_isboolean(L, -1)) {
+            event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
+            lua_pop(L, 1);
+        } else if (lua_isnil(L, -1)) {
+            event.mArgumentList.prepend(QString());
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NIL);
+            lua_pop(L, 1);
+        } else if (lua_istable(L, -1)) {
+            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_TABLE);
+            // luaL_ref pops the object, so we don't have to
+        } else if (lua_isfunction(L, -1)) {
+            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_FUNCTION);
+            // luaL_ref pops the object, so we don't have to
         } else {
             lua_pushfstring(L,
                             "raiseEvent: bad argument #%d type (string, number, boolean, table,\n"
                             "function, or nil expected, got a %s!)",
                             i,
-                            luaL_typename(L, i));
+                            luaL_typename(L, -1));
             lua_error(L);
             return 1;
         }
@@ -414,7 +418,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     // values in the Lua registry
     for (int i = 0; i < event.mArgumentList.size(); i++) {
         if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
-             luaL_unref(L, LUA_REGISTRYINDEX, event.mArgumentList.at(i).toInt());
+             host.getLuaInterpreter()->freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
     }
 
     return 0;
@@ -3090,6 +3094,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
             lua_pushfstring(L, "%s: bad argument #1 value (label name cannot be an empty string.)", funcName.toUtf8().constData());
             return 2;
         }
+        lua_remove(L, 1);
     }
 
     QString eventName;
@@ -3097,46 +3102,46 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_pushfstring(L, "%s: bad argument #2 type (event name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 2));
         return lua_error(L);
     } else {
-        eventName = QString::fromUtf8(lua_tostring(L, 2));
+        eventName = QString::fromUtf8(lua_tostring(L, 1));
+        lua_remove(L, 1);
     }
 
     TEvent event;
     int n = lua_gettop(L);
-    // Pop the first two values off the stack (should be the label name and event
-    // name as referenced above). This is necessary because storing a reference to
-    // a Lua table or function requires that object to be at the top of the stack.
-    lua_remove(L, 1);
-    lua_remove(L, 1);
-    for (int i = 3; i <= n; ++i) {
-        if (lua_isnumber(L, 1)) {
-            event.mArgumentList.append(QString::number(lua_tonumber(L, 1)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            lua_remove(L, 1);
-        } else if (lua_isstring(L, 1)) {
-            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, 1)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            lua_remove(L, 1);
-        } else if (lua_isboolean(L, 1)) {
-            event.mArgumentList.append(QString::number(lua_toboolean(L, 1)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-            lua_remove(L, 1);
-        } else if (lua_isnil(L, 1)) {
-            event.mArgumentList.append(QString());
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
-            lua_remove(L, 1);
-        } else if (lua_istable(L, 1)) {
-            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_TABLE);
-        } else if (lua_isfunction(L, 1)) {
-            event.mArgumentList.append(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_FUNCTION);
+    // Iterate from the top down thru the stack because luaL_ref requires
+    // the object (table or function in our case) to be on top
+    for (int i = n; i >= 1; --i) {
+        if (lua_isnumber(L, -1)) {
+            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
+            lua_pop(L, 1);
+        } else if (lua_isstring(L, -1)) {
+            event.mArgumentList.prepend(QString::fromUtf8(lua_tostring(L, -1)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
+            lua_pop(L, 1);
+        } else if (lua_isboolean(L, -1)) {
+            event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
+            lua_pop(L, 1);
+        } else if (lua_isnil(L, -1)) {
+            event.mArgumentList.prepend(QString());
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NIL);
+            lua_pop(L, 1);
+        } else if (lua_istable(L, -1)) {
+            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_TABLE);
+            // luaL_ref pops the object, so we don't have to
+        } else if (lua_isfunction(L, -1)) {
+            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
+            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_FUNCTION);
+            // luaL_ref pops the object, so we don't have to
         } else {
             lua_pushfstring(L,
-                            "%s: bad argument #%d type (boolean, number, string, table or nil\n"
-                            "expected, got a %s!)",
+                            "%s: bad argument #%d type (boolean, number, string, table, function,\n"
+                            "or nil expected, got a %s!)",
                             funcName.toUtf8().constData(),
                             i,
-                            luaL_typename(L, 1));
+                            luaL_typename(L, -1));
             return lua_error(L);
         }
 
