@@ -12406,39 +12406,54 @@ void TLuaInterpreter::initIndenterGlobals()
     luaopen_yajl(pIndenterState);
     lua_setglobal(pIndenterState, "yajl");
 
-    QString n;
-    int error;
 
-#ifdef Q_OS_LINUX
+
+#if defined(Q_OS_UNIX)
+    // Need to tweak the lua path for the installed *nix case and to allow
+    // running from a shadow build directory, the latter means we HAVE to rename
+    // where the module code is stored or use a symbolic link from "lcf" to
+    // "lua_code_formatter" in the "3rdparty" source directory - a rename was
+    // choosen.
+    luaL_dostring(pIndenterState, QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/../3rdparty/?.lua;' .. package.path")
+                  .arg(QCoreApplication::applicationDirPath())
+                  .toUtf8().constData());
+
+    luaL_dostring(pIndenterState, "package.path = package.path");
+
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pIndenterState, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
-    luaL_dostring(pIndenterState, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#endif
-#ifdef Q_OS_MAC
+    luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
+                  .arg(QCoreApplication::applicationDirPath())
+                  .toUtf8().constData());
+
+#elif defined(Q_OS_MAC)
     //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pIndenterState, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-    luaL_dostring(pIndenterState, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+    luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
+                  .arg(QCoreApplication::applicationDirPath())
+                  .toUtf8().constData());
+    luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
+                  .arg(QCoreApplication::applicationDirPath())
+                  .toUtf8().constData());
 #endif
 
-
-    error = luaL_dostring(pIndenterState, R"(
+    int error = luaL_dostring(pIndenterState, R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
       get_formatted_code = request('!.formats.lua.save')
     )");
-    if (error != 0) {
+    if (error) {
         string e = "no error message available from Lua";
         if (lua_isstring(pIndenterState, -1)) {
             e = "Lua error:";
             e += lua_tostring(pIndenterState, -1);
         }
-        QString msg = "[ ERROR ] - Cannot load code indenter, indenting functionality won't be available.\n";
-        msg.append(e.c_str());
+        QString msg = QStringLiteral("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n%1")
+                      .arg(QString::fromStdString(e));
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua code indenter loaded.";
+        QString msg = "[  OK  ]  - Lua code formatter loaded.";
         mpHost->postMessage(msg);
     }
 

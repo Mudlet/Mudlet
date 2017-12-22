@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -487,7 +487,7 @@ int main(int argc, char* argv[])
     return app->exec();
 }
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
 // small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done
