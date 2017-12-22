@@ -1429,7 +1429,7 @@ function ansi2decho(text, ansi_default_color)
     return table.concat(output)
   end)
 
-  return result
+  return result, lastColour
 end
 
 --- Form of setFgColor that accepts a hex color string instead of decimal values
