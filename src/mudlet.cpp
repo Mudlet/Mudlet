@@ -328,7 +328,9 @@ mudlet::mudlet()
     QAction* actionStopAllTriggers = new QAction(QIcon(QStringLiteral(":/icons/edit-bomb.png")), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
 
-    QAction* actionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
+    // This will get renamed to mpActionAbout in GUI translation PR that is
+    // currently outstanding
+    actionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction(actionAbout);
     actionAbout->setObjectName(QStringLiteral("about_action"));
@@ -455,6 +457,7 @@ mudlet::mudlet()
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
+    connect(updater, &Updater::updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
 #if defined(Q_OS_MACOS)
     // ensure that 'Check for updates' is under the Applications menu per convention
@@ -3413,6 +3416,19 @@ void mudlet::checkUpdatesOnStart()
 void mudlet::slot_check_manual_update()
 {
     updater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_updateAvailable()
+{
+    // Removes the normal click to activate "About Mudlet" action and move it
+    // to a new menu which also contains a "goto updater" option
+    disconnect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
+    actionAbout->setIcon(QIcon(QStringLiteral(":/icons/mudlet_important.png")));
+    actionAbout->setToolTip(tr("About Mudlet - <i>Note: an <b>updated version</b> is now available!</i>"));
+    QMenu* pUpdateMenu = new QMenu();
+    pUpdateMenu->addAction(tr("About Mudlet"), this, SLOT(slot_show_about_dialog()));
+    pUpdateMenu->addAction(tr("Review update..."), this, SLOT(slot_check_manual_update()));
+    actionAbout->setMenu(pUpdateMenu);
 }
 
 void mudlet::slot_update_installed()

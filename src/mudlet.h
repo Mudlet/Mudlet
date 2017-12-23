@@ -378,6 +378,7 @@ private slots:
     void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
+    void slot_updateAvailable();
 #endif
 
 private:
@@ -405,6 +406,7 @@ private:
     QTimer* replayTimer;
     QToolBar* replayToolBar;
 
+    QAction* actionAbout;
     QAction* actionReconnect;
 
     void check_for_mappingscript();

@@ -74,6 +74,7 @@ private:
 
 signals:
     void updateInstalled();
+    void updateAvailable();
 
 public slots:
     void installOrRestartClicked(QAbstractButton* button, QString filePath);
