@@ -3229,10 +3229,10 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         windowName = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    QVector<int> colorComponents(6); // 0-2 RGB foreground, 3-5 RGB background
+    QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (red foreground color component as number\n"
+                        "setTextFormat: bad argument #%d type (red background color component as number\n"
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
@@ -3244,7 +3244,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (green foreground color component as number\n"
+                        "setTextFormat: bad argument #%d type (green background color component as number\n"
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
@@ -3256,7 +3256,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (blue foreground color component as number\n"
+                        "setTextFormat: bad argument #%d type (blue background color component as number\n"
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
@@ -3268,7 +3268,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (red background color component as number\n"
+                        "setTextFormat: bad argument #%d type (red foreground color component as number\n"
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
@@ -3280,7 +3280,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (green background color component as number\n"
+                        "setTextFormat: bad argument #%d type (green foreground color component as number\n"
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
@@ -3292,7 +3292,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (blue background color component as number\n"
+                        "setTextFormat: bad argument #%d type (blue foreground color component as number\n"
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
