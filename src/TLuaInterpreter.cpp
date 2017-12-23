@@ -3367,12 +3367,12 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         TConsole* pC = host.mpConsole;
-        pC->mFormatCurrent.bgR = colorComponents.at(0);
-        pC->mFormatCurrent.bgG = colorComponents.at(1);
-        pC->mFormatCurrent.bgB = colorComponents.at(2);
-        pC->mFormatCurrent.fgR = colorComponents.at(3);
-        pC->mFormatCurrent.fgG = colorComponents.at(4);
-        pC->mFormatCurrent.fgB = colorComponents.at(5);
+        pC->mFormatCurrent.bgR = colorComponents.at(3);
+        pC->mFormatCurrent.bgG = colorComponents.at(4);
+        pC->mFormatCurrent.bgB = colorComponents.at(5);
+        pC->mFormatCurrent.fgR = colorComponents.at(0);
+        pC->mFormatCurrent.fgG = colorComponents.at(1);
+        pC->mFormatCurrent.fgB = colorComponents.at(2);
         int flags = (bold ? TCHAR_BOLD : 0) + (underline ? TCHAR_UNDERLINE : 0) + (italics ? TCHAR_ITALICS : 0) + (strikeout ? TCHAR_STRIKEOUT : 0);
         pC->mFormatCurrent.flags &= ~(TCHAR_BOLD | TCHAR_UNDERLINE | TCHAR_ITALICS | TCHAR_STRIKEOUT);
         pC->mFormatCurrent.flags |= flags;
@@ -3381,12 +3381,12 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         lua_pushboolean(L,
                         mudlet::self()->setTextFormat(&host,
                                                       windowName,
-                                                      colorComponents.at(0),
-                                                      colorComponents.at(1),
-                                                      colorComponents.at(2),
                                                       colorComponents.at(3),
                                                       colorComponents.at(4),
                                                       colorComponents.at(5),
+                                                      colorComponents.at(0),
+                                                      colorComponents.at(1),
+                                                      colorComponents.at(2),
                                                       bold,
                                                       underline,
                                                       italics,
