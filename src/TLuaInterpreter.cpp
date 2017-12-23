@@ -3099,7 +3099,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
 
     QString eventName;
-    if (!lua_isstring(L, 2)) {
+    if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "%s: bad argument #2 type (event name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 2));
         return lua_error(L);
     } else {
