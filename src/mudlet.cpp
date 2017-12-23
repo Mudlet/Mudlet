@@ -118,7 +118,7 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
 
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
-QMainWindow* mudlet::mpDebugArea = nullptr;
+QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
 const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
@@ -1642,9 +1642,19 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name) && !dockWindowMap.contains(name)) {
         dockWindowConsoleMap[name]->resize(x1, y1);
+        return true;
+    }
+
+    if (dockWindowMap.contains(name)) {
+        if (!dockWindowMap[name]->isFloating()) {
+            return false;
+        }
+
+        dockWindowMap[name]->resize(x1, y1);
         return true;
     }
 
@@ -1698,11 +1708,21 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name) && !dockWindowMap.contains(name)) {
         dockWindowConsoleMap[name]->move(x1, y1);
         dockWindowConsoleMap[name]->mOldX = x1;
         dockWindowConsoleMap[name]->mOldY = y1;
+        return true;
+    }
+
+    if (dockWindowMap.contains(name)) {
+        if (!dockWindowMap[name]->isFloating()) {
+            dockWindowMap[name]->setFloating(true);
+        }
+
+        dockWindowMap[name]->move(x1, y1);
         return true;
     }
 
@@ -1818,7 +1838,7 @@ int mudlet::getLineNumber(Host* pHost, QString& name)
     if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap[name]->getLineNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesnt exit\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
     }
     return -1;
 }
@@ -1829,7 +1849,7 @@ int mudlet::getColumnNumber(Host* pHost, QString& name)
     if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap[name]->getColumnNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesnt exit\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
     }
     return -1;
 }
@@ -1841,7 +1861,7 @@ int mudlet::getLastLineNumber(Host* pHost, const QString& name)
     if (dockWindowConsoleMap.contains(name)) {
         return dockWindowConsoleMap[name]->getLastLineNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesnt exit\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
     }
     return -1;
 }
@@ -2123,8 +2143,9 @@ void mudlet::closeEvent(QCloseEvent* event)
     writeSettings();
 
     goingDown();
-    if (mpDebugConsole) {
-        mpDebugConsole->close();
+    if (mpDebugArea) {
+        mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
+        mpDebugArea->close();
     }
     foreach (TConsole* pC, mConsoleMap) {
         if (pC->mpHost->getName() != "default_host") {
@@ -3419,3 +3440,27 @@ void mudlet::showChangelogIfUpdated()
     updater->showChangelog();
 }
 #endif // INCLUDE_UPDATER
+
+int mudlet::getColumnCount(Host* pHost, QString& name)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (!dockWindowConsoleMap.contains(name)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+        return -1;
+    }
+
+    return dockWindowConsoleMap[name]->console->getColumnCount();
+}
+
+int mudlet::getRowCount(Host* pHost, QString& name)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (!dockWindowConsoleMap.contains(name)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+        return -1;
+    }
+
+    return dockWindowConsoleMap[name]->console->getRowCount();
+}

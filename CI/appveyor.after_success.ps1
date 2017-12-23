@@ -20,7 +20,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   COPY ..\*.dic .
   COPY C:\src\luazip\luazip-master\zip.dll .
   XCOPY /S /I /Q $Env:MINGW_BASE_DIR\lib\lua\5.1 .
-  XCOPY /S /I /Q ..\..\3rdparty\lua_code_formatter lcf
+  XCOPY /S /I /Q ..\..\3rdparty\lcf lcf
 
   Remove-Item * -include *.cpp, *.o
 
@@ -44,7 +44,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
     Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
     nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
-    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
+    .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
     Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
     Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 

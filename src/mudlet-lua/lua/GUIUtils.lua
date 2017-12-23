@@ -1301,9 +1301,13 @@ local grayscaleComponents = {
 }
 
 local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
--- function for converting raw ANSI string into something decho can process
--- bold, italics, underline not currently supported since decho doesn't support them
-function ansi2decho(text)
+-- function for converting a raw ANSI string into something decho can process
+-- italics and underline not currently supported since decho doesn't support them
+-- bold is emulated so it is supported, up to an extent
+function ansi2decho(text, ansi_default_color)
+  local coloursToUse = colours
+  local lastColour = ansi_default_color
+
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
   local result = rex.gsub(text, ansiPattern, function(s)
@@ -1317,6 +1321,7 @@ function ansi2decho(text)
       -- code from Mudlets own decoding in TBuffer::translateToPlainText
 
       local rgb
+
       if tag < 8 then
         rgb = colours[tag]
       elseif tag < 16 then
@@ -1341,15 +1346,17 @@ function ansi2decho(text)
     local fg, bg
     local i = 1
     local floor = math.floor
-    local coloursToUse = colours
+
     while i <= #t do
       local code = t[i]
+      local isColorCode = false
 
       if code == '0' or code == '00' then
         -- reset attributes
         output[#output + 1] = "<r>"
         fg, bg = nil, nil
         coloursToUse = colours
+        lastColour = ansi_default_color
       elseif code == "1" then
         -- light or bold
         coloursToUse = lightColours
@@ -1357,11 +1364,14 @@ function ansi2decho(text)
         -- not light or bold
         coloursToUse = colours
       else
+        isColorCode = true
+
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
         --                      4 is back
         local cmd = code - (layerCode * 10) -- extract the actual "command"
         -- 0-7 is a colour, 8 is xterm256
         local colour = nil
+
         if cmd == 8 and t[i + 1] == '5' then
           -- xterm256, colour indexed
           colour = convertindex(tonumber(t[i + 2]))
@@ -1371,7 +1381,6 @@ function ansi2decho(text)
           -- xterm256, rgb
           colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
           i = i + 4
-
         elseif layerCode == 9 or layerCode == 10 then
           --light colours
           colour = lightColours[cmd]
@@ -1384,20 +1393,33 @@ function ansi2decho(text)
 
         if layerCode == 3 or layerCode == 9 then
           fg = colour
+          lastColour = cmd
         elseif layerCode == 4 or layerCode == 10 then
           bg = colour
         end
-
       end
+
+      -- If isColorCode is false it means that we've encountered a SGBR
+      -- code such as 'bold' or 'dim'.
+      -- In those cases, if there's a previous color, we are supposed to
+      -- modify it
+      if not isColorCode and lastColour then
+        fg = coloursToUse[lastColour]
+      end
+
       i = i + 1
     end
+
     -- assemble and return the data
     if fg or bg then
       output[#output + 1] = '<'
+
       if fg then
         output[#output + 1] = table.concat(fg, ",")
       end
+
       output[#output + 1] = ':'
+
       if bg then
         output[#output + 1] = table.concat(bg, ",")
       end
@@ -1407,7 +1429,7 @@ function ansi2decho(text)
     return table.concat(output)
   end)
 
-  return result
+  return result, lastColour
 end
 
 --- Form of setFgColor that accepts a hex color string instead of decimal values

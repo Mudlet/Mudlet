@@ -4946,6 +4946,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pItem->pushButton_fgColor->show();
                 pItem->pushButton_bgColor->show();
                 pItem->pushButton_prompt->hide();
+                // Although not shown it holds the data about the colours selected:
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->hide();
                 if (!pT->mColorPatternList[i]) {
                     break;

@@ -156,7 +156,7 @@ public:
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
-    static QMainWindow* mpDebugArea;
+    static QPointer<QMainWindow> mpDebugArea;
     static bool debugMode;
     QMap<Host*, TConsole*> mConsoleMap;
     QMap<Host*, QMap<QString, TConsole*>> mHostConsoleMap;
@@ -185,6 +185,9 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(QString s, int);
+    int getColumnCount(Host* pHost, QString& name);
+    int getRowCount(Host* pHost, QString& name);
+
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
     int mReplaySpeed;

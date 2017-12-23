@@ -94,6 +94,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         clearHostDetails();
     }
 
+#if defined(INCLUDE_UPDATER)
+    if (mudlet::scmIsDevelopmentVersion) {
+        // tick the box and make it be "un-untickable" as automatic updates are
+        // disabled in dev builds
+        checkbox_noAutomaticUpdates->setChecked(true);
+        checkbox_noAutomaticUpdates->setDisabled(true);
+        checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
+    } else {
+        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
+    }
+#else
+    groupBox_updates->hide();
+#endif
+
     // Enforce selection of the first tab - despite any cock-ups when using the
     // Qt Designer utility when the dialog was saved with a different one
     // on top! 8-)
@@ -224,7 +238,13 @@ void dlgProfilePreferences::enableHostDetails()
 void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
-    loadSpecialSettingsTab();
+
+    // search engine load
+    search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
+
+    // set to saved value or default to Google
+    int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
+    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
@@ -294,6 +314,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_specialoption->hide();
 
     fontComboBox->setCurrentFont(pHost->mDisplayFont);
+    mFontSize = pHost->mDisplayFont.pointSize();
     if (mFontSize < 0) {
         mFontSize = 10;
     }
@@ -431,6 +452,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
+    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
+
     connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
     connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
 
@@ -716,32 +739,6 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidget->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
-}
-
-void dlgProfilePreferences::loadSpecialSettingsTab()
-{
-    // search engine load
-    search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
-
-    // set to saved value or default to Google
-    int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
-    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
-
-    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
-
-
-#if !defined(INCLUDE_UPDATER)
-    groupBox_updates->hide();
-#else
-    if (mudlet::scmIsDevelopmentVersion) {
-        // tick the box and make it be untickable as automatic updates are disabled in dev builds
-        checkbox_noAutomaticUpdates->setChecked(true);
-        checkbox_noAutomaticUpdates->setDisabled(true);
-        checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
-    } else {
-        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
-    }
-#endif
 }
 
 void dlgProfilePreferences::setColors()
@@ -1612,10 +1609,6 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mSpellDic = dictList->currentItem()->text();
         }
 
-#if defined(INCLUDE_UPDATER)
-	    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
-#endif
-
         pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
         pHost->mWrapAt = wrap_at_spinBox->value();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
@@ -1767,6 +1760,10 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
     }
+
+#if defined(INCLUDE_UPDATER)
+    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+#endif
 
     mudlet::self()->setToolBarIconSize(MainIconSize->value());
     mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());

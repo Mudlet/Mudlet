@@ -19,22 +19,22 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-IF(POLICY CMP0020)
-  CMAKE_POLICY(SET CMP0020 NEW)
-ENDIF()
+if(POLICY CMP0020)
+  cmake_policy(SET CMP0020 NEW)
+endif()
 
-PROJECT(communi)
+project(communi)
 
-FIND_PACKAGE(Qt5Core REQUIRED)
-FIND_PACKAGE(Qt5Network REQUIRED)
+find_package(Qt5Core REQUIRED)
+find_package(Qt5Network REQUIRED)
 
-INCLUDE_DIRECTORIES(
+include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcCore
   ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcModel
   ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcUtil
 )
 
-SET(SRCS
+set(SRCS
   src/core/irc.cpp
   src/core/irccommand.cpp
   src/core/ircconnection.cpp
@@ -63,7 +63,7 @@ SET(SRCS
   src/util/irctoken.cpp
   src/util/ircutil.cpp
 )
-SET(HDRS
+set(HDRS
   include/IrcCore/irccommand_p.h
   include/IrcCore/ircconnection_p.h
   include/IrcCore/ircdebug_p.h
@@ -81,7 +81,7 @@ SET(HDRS
   include/IrcUtil/irccommandqueue_p.h
   include/IrcUtil/irccommandparser_p.h
 )
-SET(MOC_HDRS
+set(MOC_HDRS
   include/IrcCore/irc.h
   include/IrcCore/irccommand.h
   include/IrcCore/ircconnection.h
@@ -102,7 +102,7 @@ SET(MOC_HDRS
   include/IrcUtil/irctextformat.h
   include/IrcUtil/ircutil.h
 )
-SET(PUB_HDRS
+set(PUB_HDRS
   ${MOC_HDRS}
   include/IrcCore/irccore.h
   include/IrcCore/ircfilter.h
@@ -155,61 +155,61 @@ QT5_GENERATE_MOC(include/IrcUtil/irclagtimer_p.h ${CMAKE_CURRENT_BINARY_DIR}/Irc
 QT5_GENERATE_MOC(include/IrcUtil/irctextformat.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irctextformat.cpp)
 QT5_GENERATE_MOC(include/IrcUtil/ircpalette.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_ircpalette.cpp)
 
-SET_PROPERTY(SOURCE src/core/irc.cpp
+set_property(SOURCE src/core/irc.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_irc.cpp)
-SET_PROPERTY(SOURCE src/core/irccommand.cpp
+set_property(SOURCE src/core/irccommand.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_irccommand.cpp)
-SET_PROPERTY(SOURCE src/core/ircconnection.cpp
+set_property(SOURCE src/core/ircconnection.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircconnection.cpp)
-SET_PROPERTY(SOURCE src/core/ircmessage.cpp
+set_property(SOURCE src/core/ircmessage.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircmessage.cpp)
-SET_PROPERTY(SOURCE src/core/ircmessagecomposer.cpp
+set_property(SOURCE src/core/ircmessagecomposer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircmessagecomposer_p.cpp)
-SET_PROPERTY(SOURCE src/core/ircnetwork.cpp
+set_property(SOURCE src/core/ircnetwork.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircnetwork.cpp)
-SET_PROPERTY(SOURCE src/core/ircprotocol.cpp
+set_property(SOURCE src/core/ircprotocol.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircprotocol.cpp)
-SET_PROPERTY(SOURCE src/model/ircusermodel.cpp
+set_property(SOURCE src/model/ircusermodel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
-SET_PROPERTY(SOURCE src/model/ircchannel.cpp
+set_property(SOURCE src/model/ircchannel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircchannel.cpp)
-SET_PROPERTY(SOURCE src/model/ircbuffer.cpp
+set_property(SOURCE src/model/ircbuffer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffer.cpp)
-SET_PROPERTY(SOURCE src/model/ircbuffermodel.cpp 
+set_property(SOURCE src/model/ircbuffermodel.cpp 
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel.cpp)
-SET_PROPERTY(SOURCE src/model/ircbuffermodel.cpp 
+set_property(SOURCE src/model/ircbuffermodel.cpp 
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel_p.cpp)
-SET_PROPERTY(SOURCE src/model/ircuser.cpp
+set_property(SOURCE src/model/ircuser.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircuser.cpp)
-SET_PROPERTY(SOURCE src/model/ircusermodel.cpp 
+set_property(SOURCE src/model/ircusermodel.cpp 
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
-SET_PROPERTY(SOURCE src/util/irccompleter.cpp
+set_property(SOURCE src/util/irccompleter.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccompleter.cpp)
-SET_PROPERTY(SOURCE src/util/irccommandparser.cpp
+set_property(SOURCE src/util/irccommandparser.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandparser.cpp)
-SET_PROPERTY(SOURCE src/util/irccommandqueue.cpp
+set_property(SOURCE src/util/irccommandqueue.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue.cpp)
-SET_PROPERTY(SOURCE src/util/irccommandqueue.cpp
+set_property(SOURCE src/util/irccommandqueue.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue_p.cpp)
-SET_PROPERTY(SOURCE src/util/irclagtimer.cpp
+set_property(SOURCE src/util/irclagtimer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer.cpp)
-SET_PROPERTY(SOURCE src/util/irclagtimer.cpp
+set_property(SOURCE src/util/irclagtimer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer_p.cpp)
-SET_PROPERTY(SOURCE src/util/irctextformat.cpp
+set_property(SOURCE src/util/irctextformat.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irctextformat.cpp)
-SET_PROPERTY(SOURCE src/util/ircpalette.cpp
+set_property(SOURCE src/util/ircpalette.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_ircpalette.cpp)
 
-ADD_LIBRARY(communi STATIC ${SRCS} ${HDRS} ${PUB_HDRS})
+add_library(communi STATIC ${SRCS} ${HDRS} ${PUB_HDRS})
 
-TARGET_LINK_LIBRARIES(communi ${Qt5Core_LIBRARIES} ${Qt5Network_LIBRARIES})
+target_link_libraries(communi ${Qt5Core_LIBRARIES} ${Qt5Network_LIBRARIES})
 
-TARGET_INCLUDE_DIRECTORIES(communi PRIVATE
+target_include_directories(communi PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/IrcCore
   ${CMAKE_CURRENT_BINARY_DIR}/IrcModel
   ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil
 )
-TARGET_INCLUDE_DIRECTORIES(communi PUBLIC
+target_include_directories(communi PUBLIC
   ${Qt5Core_INCLUDE_DIRS}
   ${Qt5Network_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcCore

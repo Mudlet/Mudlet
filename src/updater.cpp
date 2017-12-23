@@ -338,7 +338,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (!updateAutomatically()) {
+    if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
         return false;
     }
 
