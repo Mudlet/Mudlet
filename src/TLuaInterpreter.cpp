@@ -12453,7 +12453,16 @@ void TLuaInterpreter::initIndenterGlobals()
 
 
 
-#if defined(Q_OS_UNIX)
+#if defined(Q_OS_MAC)
+        //macOS app bundle would like the search path to also be set to the current binary directory
+        luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
+                      .arg(QCoreApplication::applicationDirPath())
+                      .toUtf8().constData());
+        luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
+                      .arg(QCoreApplication::applicationDirPath())
+                      .toUtf8().constData());
+
+#elif defined(Q_OS_UNIX)
     // Need to tweak the lua path for the installed *nix case and to allow
     // running from a shadow build directory, the latter means we HAVE to rename
     // where the module code is stored or use a symbolic link from "lcf" to
@@ -12470,15 +12479,6 @@ void TLuaInterpreter::initIndenterGlobals()
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
-                  .arg(QCoreApplication::applicationDirPath())
-                  .toUtf8().constData());
-
-#elif defined(Q_OS_MAC)
-    //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
-                  .arg(QCoreApplication::applicationDirPath())
-                  .toUtf8().constData());
-    luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
 #endif
