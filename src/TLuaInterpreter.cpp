@@ -3348,7 +3348,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     }
 
     bool strikeout = false;
-    if (s > n) // s has not been incremented yet so this means we still have another argument!
+    if (s < n) // s has not been incremented yet so this means we still have another argument!
     {
         if (lua_isboolean(L, ++s)) {
             strikeout = lua_toboolean(L, s);
