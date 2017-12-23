@@ -128,7 +128,7 @@ void Updater::setupOnWindows()
         auto updates = feed->getUpdates();
         if (updates.isEmpty()) {
             return;
-        } elseif (!updateAutomatically()) {
+        } else if (!updateAutomatically()) {
             emit updateAvailable();
         } else {
             feed->downloadRelease(updates.first());
