@@ -131,9 +131,11 @@ else()
   # Can download and extract latest Unbuntu font files (currently X.YY is
   # 0.83) from:
   # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
-  # TODO: automate the download and extraction of all the font and associate
-  # documentation but NOT the "sources" sub-directory contents into the
-  # ./src/fonts/ directory structure if this option is set to ON...
+  # It would be nice if we could automate the download and extraction of all
+  # the font and associate documentation (but NOT the "sources" sub-directory)
+  # contents into the ./src/fonts/ directory structure only if this option is
+  # set to ON; however that would be plaform specific and add more complexity
+  # and it is not obvious that there is a demand to do this currenly.
 endif()
 
 if(APPLE)

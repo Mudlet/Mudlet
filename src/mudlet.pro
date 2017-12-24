@@ -128,6 +128,7 @@ win64 {
 # linux-g++-32, linux-g++-64
 
 
+TEMPLATE = app
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
@@ -152,6 +153,20 @@ isEmpty( BUILD ) {
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
 
+# Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
+macx {
+    TARGET = Mudlet
+} else {
+    TARGET = mudlet
+}
+
+# Create a record of what the executable will be called by hand
+# NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
+# executables with an ".exe" extension!
+DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
+
+
+################## DejuVu and Ubuntu Fonts inclusion detection #################
 # Enable the inclusion of fonts currently carried in the source code by default
 # unless the environmental variable WITH_FONTS is already defined and is not
 # set to (case insenstive) "no". Linux packagers will find it useful to do this
@@ -170,23 +185,12 @@ isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
     # Can download and extract latest Unbuntu font files (currently X.YY is
     # 0.83) from:
     # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
-    # TODO: automate the download and extraction of all the font and associate
-    # documentation but NOT the "sources" sub-directory contents into the
-    # ./src/fonts/ directory structure if this option is set to ON...
+    # It would be nice if we could automate the download and extraction of all
+    # the font and associate documentation (but NOT the "sources" sub-directory)
+    # contents into the ./src/fonts/ directory structure only if this option is
+    # set to ON; however that would be plaform specific and add more complexity
+    # and it is not obvious that there is a demand to do this currenly.
 }
-
-# Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
-macx {
-    TARGET = Mudlet
-} else {
-    TARGET = mudlet
-}
-
-# Create a record of what the executable will be called by hand
-# NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
-# executables with an ".exe" extension!
-DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
-
 
 ######################### Auto Updater setting detection #######################
 # Enable the auto updater system by default
@@ -507,8 +511,6 @@ SOURCES += \
     XMLexport.cpp \
     XMLimport.cpp
 
-contains( DEFINES, INCLUDE_UPDATER ) : SOURCES += updater.cpp
-
 
 HEADERS += \
     ActionUnit.h \
@@ -586,7 +588,6 @@ HEADERS += \
     XMLexport.h \
     XMLimport.h
 
-contains( DEFINES, INCLUDE_UPDATER ) : HEADERS += updater.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -617,12 +618,22 @@ FORMS += \
 RESOURCES = mudlet.qrc
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += mudlet_fonts.qrc
-    message("Including additional font resources within the Mudlet executable.")
+    message("Including additional font resources within the Mudlet executable")
 } else {
-    message("No font resources are to be included within the Mudlet executable.")
+    message("No font resources are to be included within the Mudlet executable")
 }
 
-TEMPLATE = app
+linux|macx|win32 {
+    contains( DEFINES, INCLUDE_UPDATER ) {
+       HEADERS += updater.h
+       SOURCES += updater.cpp
+       message("The updater code is included in this configuration")
+    } else {
+       message("The updater code is excluded from this configuration")
+    }
+} else {
+    message("The Updater code is excluded as on-line updating is not available on this platform")
+}
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
 # following lists of files EXPLICITLY stated - IT DOESN'T WORK IF A WILD-CARD
