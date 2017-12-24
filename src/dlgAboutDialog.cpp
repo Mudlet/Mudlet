@@ -99,7 +99,6 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
     mudletTitleLabel->setPixmap(QPixmap::fromImage(splashImage));
     // clang-format off
-    // Do not let code reformatting tool mess this around!
 
     /*
      * Have moved the texts in from the dialog definitions - as it makes it
@@ -791,5 +790,4 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
 
     // clang-format on
-    // Restore normal setting for code reformatting tool
 }
