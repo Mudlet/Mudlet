@@ -145,14 +145,14 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
                                        QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                                .arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
                                                     tr("<b>Room</b> Weight of destination: %1.",
-                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                             .arg(pExitToRoom->getWeight())));
             } else {
                 mpEditItem->setToolTip(0,
                                        QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                                .arg(tr("Exit to unnamed room is valid"),
                                                     tr("<b>Room</b> Weight of destination: %1.",
-                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                             .arg(pExitToRoom->getWeight())));
             }
         } else {
@@ -721,13 +721,13 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
             nw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             nw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (!text.isEmpty()) {
@@ -777,13 +777,13 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
             n->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             n->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -829,13 +829,13 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
             ne->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             ne->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -881,13 +881,13 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
             up->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             up->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -933,13 +933,13 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
             w->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             w->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -985,13 +985,13 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
             e->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             e->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1037,13 +1037,13 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
             down->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                      .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                           tr("<b>Room</b> Weight of destination: %1.",
-                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                   .arg(exitToRoom->getWeight())));
         } else {
             down->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                      .arg(tr("Exit to unnamed room is valid"),
                                           tr("<b>Room</b> Weight of destination: %1.",
-                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                   .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1089,13 +1089,13 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
             sw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             sw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1141,13 +1141,13 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
             s->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             s->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1193,13 +1193,13 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
             se->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             se->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1245,13 +1245,13 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
             in->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             in->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1297,13 +1297,13 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
             out->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                     .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                          tr("<b>Room</b> Weight of destination: %1.",
-                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                  .arg(exitToRoom->getWeight())));
         } else {
             out->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                     .arg(tr("Exit to unnamed room is valid"),
                                          tr("<b>Room</b> Weight of destination: %1.",
-                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                  .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1774,13 +1774,13 @@ void dlgRoomExits::initExit(int roomId,
             exitLineEdit->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                              .arg(tr(R"(Exit to "%1".)").arg(pExitR->name),
                                                   tr("<b>Room</b> Weight of destination: %1.",
-                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                           .arg(pExitR->getWeight())));
         } else {
             exitLineEdit->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                              .arg(tr("Exit to unnamed room is valid"),
                                                   tr("<b>Room</b> Weight of destination: %1.",
-                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                           .arg(pExitR->getWeight())));
         }
         noRoute->setEnabled(true); //Enable speedwalk lock control
@@ -1892,14 +1892,14 @@ void dlgRoomExits::init(int id)
                                QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                        .arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
                                             tr("<b>Room</b> Weight of destination: %1.",
-                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                     .arg(pExitToRoom->getWeight())));
             } else {
                 pI->setToolTip(0,
                                QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                        .arg(tr("Exit to unnamed room is valid"),
                                             tr("<b>Room</b> Weight of destination: %1.",
-                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                     .arg(pExitToRoom->getWeight())));
             }
         } else {
@@ -1973,7 +1973,7 @@ void dlgRoomExits::init(int id)
 
         //7 is new, but holds the script that was in 2
         pI->setText(7, dir);
-        // Not relevent for special exits but better initialise it
+        // Not relevant for special exits but better initialise it
         auto exit = originalSpecialExits.value(dir);
         if (exit) {
             exit->hasStub = false;

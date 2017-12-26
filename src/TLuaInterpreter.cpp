@@ -122,7 +122,7 @@ TLuaInterpreter::~TLuaInterpreter()
 // profile was closed - importantly the documentation for the signal
 // QNetworkReply::finished() which is connected to this SLOT stresses that
 // delete() must NOT be called in this slot (it wasn't as it happens), but
-// deleteLater() - which is now done to free the reasources when appropriate...
+// deleteLater() - which is now done to free the resources when appropriate...
 // - Slysven
 // The code now raises additional sysDownloadError Events on failure to process
 // the local file, the second argument is "failureToWriteLocalFile" and besides
@@ -1919,7 +1919,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
 // Previously would throw a lua error on non-existent room - now returns nil
 // plus error message (as does other run-time errors) - previously would return
 // just a nil on NO exit stubs but now returns a notification error message as
-// well, to aide disabiguation of the nil value.
+// well, to aide disambiguation of the nil value.
 int TLuaInterpreter::getExitStubs(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -2994,7 +2994,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 // * true on sucessfully changing logging state; nil otherwise
 // * an internationalizable/translated message
 // * the log pathAndFile name involved (or nil if there wasn't one)
-// * a numeric code indicating what happend:
+// * a numeric code indicating what happened:
 //    0 = logging was just stopped
 //    1 = logging has just started
 //   -1 = logging was already in progress so no change in logging state

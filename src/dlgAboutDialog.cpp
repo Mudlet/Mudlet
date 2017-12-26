@@ -52,7 +52,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
             // Start work in this text item
             QTextLine versionTextline = versionTextLayout.createLine();
             // First draw (one line from) the text we have put in on the layout to
-            // see how wide it is..., assuming accutally that it will only take one
+            // see how wide it is..., assuming actually that it will only take one
             // line of text
             versionTextline.setLineWidth(280);
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
