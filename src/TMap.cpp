@@ -1028,8 +1028,17 @@ bool TMap::findPath(int from, int to)
     return false;
 }
 
-bool TMap::serialize(QDataStream& ofs)
+bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
+    // clamp version values
+    if (saveVersion < 0) saveVersion = 0;
+    else if (saveVersion > mMaxVersion) saveVersion = mMaxVersion;
+
+    // if 0 we default to mDefaultVersion
+    if (saveVersion == 0) mSaveVersion = mDefaultVersion;
+    // else we use saveVersion
+    else mSaveVersion = saveVersion;
+
     if (mSaveVersion != mVersion) {
         QString message = tr("[ ALERT ] - Saving map in a format {%1} that is different than the one it was\n"
                              "loaded as {%2}. This may be an issue if you want to share the resulting\n"
@@ -1232,6 +1241,9 @@ bool TMap::serialize(QDataStream& ofs)
         ofs << pR->getExitWeights();
         ofs << pR->doors;
     }
+
+    // reset to default map version
+    mSaveVersion = mDefaultVersion;
     return true;
 }
 

@@ -1777,6 +1777,8 @@ int TLuaInterpreter::deleteLine(lua_State* L)
 int TLuaInterpreter::saveMap(lua_State* L)
 {
     string location = "";
+    int saveVersion = 0;
+
     if (lua_gettop(L) == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "saveMap: where do you want to save to?");
@@ -1787,10 +1789,27 @@ int TLuaInterpreter::saveMap(lua_State* L)
         }
     }
 
+    if (lua_gettop(L) == 2) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushstring(L, "saveMap: wrong argument location.");
+            lua_error(L);
+            return 1;
+        } else {
+            location = lua_tostring(L, 1);
+        }
+        if (!lua_isnumber(L, 2)) {
+            lua_pushstring(L, "saveMap: wrong argument version.");
+            lua_error(L);
+            return 1;
+        } else {
+            saveVersion = lua_tointeger(L, 2);
+        }
+    }
+
     QString _location(location.c_str());
     Host& host = getHostFromLua(L);
 
-    bool error = host.mpConsole->saveMap(_location);
+    bool error = host.mpConsole->saveMap(_location, saveVersion);
     lua_pushboolean(L, error);
     return 1;
 }
