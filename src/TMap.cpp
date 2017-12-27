@@ -1292,13 +1292,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             appendErrorMsgWithNoLf(infoMsg, false);
             postMessage(infoMsg);
             canRestore = false;
-            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
+            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
         } else {
             // Less than (but not less than 4) or equal to default version
             QString infoMsg = tr("[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait...").arg(mVersion).arg(file.fileName());
             appendErrorMsg(tr(R"([ INFO ]  - Reading map (format version:%1) file: "%2".)").arg(mVersion).arg(file.fileName()), false);
             postMessage(infoMsg);
-            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
+            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
         }
 
         // As all but the room reading have version checks the fact that sub-4
