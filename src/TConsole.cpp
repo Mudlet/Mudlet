@@ -1439,7 +1439,7 @@ void TConsole::skipLine()
 
 // TODO: It may be worth considering moving the (now) three following methods
 // to the TMap class...?
-bool TConsole::saveMap(const QString& location)
+bool TConsole::saveMap(const QString& location, int saveVersion)
 {
     QDir dir_map;
     QString filename_map;
@@ -1458,7 +1458,7 @@ bool TConsole::saveMap(const QString& location)
     QFile file_map(filename_map);
     if (file_map.open(QIODevice::WriteOnly)) {
         QDataStream out(&file_map);
-        mpHost->mpMap->serialize(out);
+        mpHost->mpMap->serialize(out, saveVersion);
         file_map.close();
     } else {
         return false;

@@ -159,7 +159,7 @@ public:
     void _luaWrapLine(int);
     QString getCurrentLine();
     void selectCurrentLine();
-    bool saveMap(const QString&);
+    bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
 
