@@ -240,15 +240,13 @@ int TLuaInterpreter::Wait(lua_State* L)
     int n = lua_gettop(L);
     if (n != 1) {
         lua_pushstring(L, "Wait: wrong number of arguments");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     int luaSleepMsec;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "Wait: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSleepMsec = lua_tointeger(L, 1);
     }
@@ -407,8 +405,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
                             "function, or nil expected, got a %s!)",
                             i,
                             luaL_typename(L, -1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
     }
 
@@ -444,8 +441,7 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
     int n = lua_gettop(L);
     if (!n) {
         lua_pushstring(L, "raiseGlobalEvent: missing argument #1 (eventName as, probably, a string expected!)");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     TEvent event;
@@ -476,8 +472,7 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
                             "expected, got a %s!)",
                             i,
                             luaL_typename(L, i));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
     }
 
@@ -512,8 +507,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     if (lua_gettop(L) > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             // We cannot yet properly handle non-ASCII windows names but we will eventually!
             windowName = QString::fromUtf8(lua_tostring(L, s));
@@ -529,8 +523,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     QString searchText;
     if (!lua_isstring(L, s)) {
         lua_pushfstring(L, "selectString: bad argument #%d type (text to select as string expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         searchText = QString::fromUtf8(lua_tostring(L, s));
         // CHECK: Do we need to qualify this for a non-blank string?
@@ -540,8 +533,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     qint64 numOfMatch = 0;
     if (!lua_isnumber(L, s)) {
         lua_pushfstring(L, "selectString: bad argument #%d type (match count as number {1 for first} expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         numOfMatch = lua_tointeger(L, s);
     }
@@ -562,8 +554,7 @@ int TLuaInterpreter::selectCurrentLine(lua_State* L)
     } else {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "selectCurrentLine: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
         }
@@ -581,8 +572,7 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "isAnsiFgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         ansiFg = lua_tointeger(L, 1);
     }
@@ -683,8 +673,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "isAnsiBgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         ansiFg = lua_tointeger(L, 1);
     }
@@ -785,8 +774,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
     } else {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "getFgColor: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
         }
@@ -809,8 +797,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
     } else {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "getBgColor: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
         }
@@ -833,8 +820,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     if (n > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "wrapLine: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -844,8 +830,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     int luaNumOfMatch;
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "wrapLine: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaNumOfMatch = lua_tointeger(L, s);
     }
@@ -869,8 +854,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
     int luaNumOfMatch;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "selectCaptureGroup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaNumOfMatch = lua_tointeger(L, 1);
     }
@@ -916,8 +900,7 @@ int TLuaInterpreter::getLines(lua_State* L)
     int luaFrom;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getLines: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFrom = lua_tointeger(L, 1);
     }
@@ -925,8 +908,7 @@ int TLuaInterpreter::getLines(lua_State* L)
     int luaTo;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "getLines: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaTo = lua_tointeger(L, 2);
     }
@@ -947,8 +929,7 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "loadRawFile: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -966,8 +947,7 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
     } else {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "getCurrentLine: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
         }
@@ -1045,8 +1025,7 @@ int TLuaInterpreter::addMapMenu(lua_State* L)
     QStringList menuList;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "addMapMenu: wrong first argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         uniqueName = lua_tostring(L, 1);
     }
@@ -1076,8 +1055,7 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
     QString uniqueName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "removeMapMenu: wrong first argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         uniqueName = lua_tostring(L, 1);
     }
@@ -1158,15 +1136,13 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
     QStringList actionInfo;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "addMapEvent: bad argument #1 type (uniquename as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         uniqueName = QString::fromUtf8(lua_tostring(L, 1));
     }
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "addMapEvent: bad argument #2 type (event name as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         actionInfo << QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -1201,8 +1177,7 @@ int TLuaInterpreter::removeMapEvent(lua_State* L)
     QString displayName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "removeMapEvent: wrong first argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         displayName = lua_tostring(L, 1);
     }
@@ -1267,8 +1242,7 @@ int TLuaInterpreter::centerview(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
     }
@@ -1382,16 +1356,14 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setWindowWrap: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     int luaFrom;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setWindowWrap: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFrom = lua_tointeger(L, 2);
     }
@@ -1411,16 +1383,14 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setWindowWrapIndent: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     int luaFrom;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setWindowWrapIndent: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFrom = lua_tointeger(L, 2);
     }
@@ -1467,8 +1437,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
     int watchID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getStopWatchTime: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         watchID = lua_tointeger(L, 1);
     }
@@ -1491,8 +1460,7 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
     int watchID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "stopStopWatch: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         watchID = lua_tointeger(L, 1);
     }
@@ -1507,8 +1475,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
     int watchID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "startStopWatch: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         watchID = lua_tointeger(L, 1);
     }
@@ -1523,8 +1490,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
     int watchID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "resetStopWatch: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         watchID = lua_tointeger(L, 1);
     }
@@ -1543,8 +1509,7 @@ int TLuaInterpreter::selectSection(lua_State* L)
     if (n > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "selectSection: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -1553,8 +1518,7 @@ int TLuaInterpreter::selectSection(lua_State* L)
     int luaFrom;
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "selectSection: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFrom = lua_tointeger(L, s);
         s++;
@@ -1563,8 +1527,7 @@ int TLuaInterpreter::selectSection(lua_State* L)
     int luaTo;
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "selectSection: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaTo = lua_tointeger(L, s);
     }
@@ -1591,8 +1554,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     if (n > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "moveCursor: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -1601,8 +1563,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     int luaFrom;
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "moveCursor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFrom = lua_tointeger(L, s);
         s++;
@@ -1611,8 +1572,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     int luaTo;
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "moveCursor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaTo = lua_tointeger(L, s);
     }
@@ -1636,8 +1596,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     if (n > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -1646,8 +1605,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int luaFrom;
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFrom = lua_tointeger(L, s);
         s++;
@@ -1656,8 +1614,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int luaTo;
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaTo = lua_tointeger(L, s);
     }
@@ -1680,8 +1637,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "enableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = lua_tostring(L, 1);
         }
@@ -1700,8 +1656,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "disableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = lua_tostring(L, 1);
         }
@@ -1722,8 +1677,7 @@ int TLuaInterpreter::replace(lua_State* L)
     int s = 1;
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "replace: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         a1 = lua_tostring(L, s);
         s++;
@@ -1734,8 +1688,7 @@ int TLuaInterpreter::replace(lua_State* L)
     if (n > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "replace: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a2 = lua_tostring(L, s);
         }
@@ -1756,8 +1709,7 @@ int TLuaInterpreter::deleteLine(lua_State* L)
     if (lua_gettop(L) == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "deleteLine: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             name = lua_tostring(L, 1);
         }
@@ -1776,40 +1728,29 @@ int TLuaInterpreter::deleteLine(lua_State* L)
 
 int TLuaInterpreter::saveMap(lua_State* L)
 {
-    string location = "";
+    QString location = "";
     int saveVersion = 0;
 
-    if (lua_gettop(L) == 1) {
+    if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "saveMap: where do you want to save to?");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "saveMap: bad argument #1 type (save location path and file name "
+                           "as optional string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         } else {
-            location = lua_tostring(L, 1);
-        }
-    }
-
-    if (lua_gettop(L) == 2) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "saveMap: wrong argument location.");
-            lua_error(L);
-            return 1;
-        } else {
-            location = lua_tostring(L, 1);
+            location = QString::fromUtf8(lua_tostring(L, 1));
         }
         if (!lua_isnumber(L, 2)) {
-            lua_pushstring(L, "saveMap: wrong argument version.");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "saveMap: bad argument #2 type (map format version as optional "
+                              "integer expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
         } else {
             saveVersion = lua_tointeger(L, 2);
         }
     }
 
-    QString _location(location.c_str());
     Host& host = getHostFromLua(L);
 
-    bool error = host.mpConsole->saveMap(_location, saveVersion);
+    bool error = host.mpConsole->saveMap(location, saveVersion);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -1821,21 +1762,18 @@ int TLuaInterpreter::setExitStub(lua_State* L)
     bool status;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setExitStub: Need a room number as first argument");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tonumber(L, 1);
     }
     dirType = dirToNumber(L, 2);
     if (!dirType) {
         lua_pushstring(L, "setExitStub: Need a dir number as 2nd argument");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     if (!lua_isboolean(L, 3)) {
         lua_pushstring(L, "setExitStub: Need a true/false for third argument");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         status = lua_toboolean(L, 3);
     }
@@ -1847,13 +1785,11 @@ int TLuaInterpreter::setExitStub(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushstring(L, "setExitStub: RoomId doesn't exist");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     if (dirType > 12 || dirType < 1) {
         lua_pushstring(L, "setExitStub: dirType must be between 1 and 12");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     pR->setExitStub(dirType, status);
     return 0;
@@ -1872,16 +1808,14 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
     int roomsGiven = 0;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "connectExitStub: Need a room number as first argument");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tonumber(L, 1);
     }
     dirType = dirToNumber(L, 2);
     if (!dirType) {
         lua_pushstring(L, "connectExitStub: Need a direction number (or room id) as 2nd argument");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     if (!lua_isnumber(L, 3) && !lua_isstring(L, 3)) {
         roomsGiven = 0;
@@ -1891,8 +1825,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
         dirType = dirToNumber(L, 3);
         if (!dirType) {
             lua_pushstring(L, "connectExitStub: Invalid direction entered.");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
     }
     Host& host = getHostFromLua(L);
@@ -1902,28 +1835,24 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushstring(L, "connectExitStub: RoomId doesn't exist");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     if (!pR->exitStubs.contains(dirType)) {
         lua_pushstring(L, "connectExitStubs: ExitStub doesn't exist");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     if (roomsGiven) {
         TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(toRoom);
         if (!pR_to) {
             lua_pushstring(L, "connectExitStubs: toRoom doesn't exist");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
         Host& host = getHostFromLua(L);
         lua_pushboolean(L, host.mpMap->setExit(roomId, toRoom, dirType));
     } else {
         if (!pR->exitStubs.contains(dirType)) {
             lua_pushstring(L, "connectExitStubs: ExitStub doesn't exist");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
         host.mpMap->connectExitStub(roomId, dirType);
         // Nothing has yet been put onto stack for a LUA return value in this case,
@@ -1951,8 +1880,7 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getExitStubs: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tonumber(L, 1);
     }
@@ -1993,8 +1921,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getExitStubs1: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tonumber(L, 1);
     }
@@ -2028,8 +1955,7 @@ int TLuaInterpreter::getModulePath(lua_State* L)
     QString moduleName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "getModulePath: Module be be a string");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         moduleName = lua_tostring(L, 1);
     }
@@ -2048,8 +1974,7 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
     QString moduleName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "getModulePriority: Module be be a string");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         moduleName = lua_tostring(L, 1);
     }
@@ -2060,8 +1985,7 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
         return 1;
     } else {
         lua_pushstring(L, "getModulePriority: Module doesn't exist");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     return 0;
 }
@@ -2072,15 +1996,13 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
     int modulePriority;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setModulePriority: Module be be a string");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         moduleName = lua_tostring(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setModulePriority: Module priority must be an integer");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         modulePriority = lua_tonumber(L, 2);
     }
@@ -2089,8 +2011,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
         host.mModulePriorities[moduleName] = modulePriority;
     } else {
         lua_pushstring(L, "setModulePriority: Module doesn't exist");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     return 0;
 }
@@ -2107,8 +2028,7 @@ int TLuaInterpreter::loadMap(lua_State* L)
                             "loadMap: bad argument #1 type (Map pathFile as string is optional {loads last\n"
                             "stored map if omitted}, got %s!)",
                             luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             location = QString::fromUtf8(lua_tostring(L, 1));
         }
@@ -2143,8 +2063,7 @@ int TLuaInterpreter::enableTimer(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "enableTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2161,8 +2080,7 @@ int TLuaInterpreter::disableTimer(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "disableTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2224,8 +2142,7 @@ int TLuaInterpreter::enableAlias(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "enableAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2242,8 +2159,7 @@ int TLuaInterpreter::disableAlias(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "disableAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2259,8 +2175,7 @@ int TLuaInterpreter::killAlias(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "killAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2276,8 +2191,7 @@ int TLuaInterpreter::enableTrigger(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "enableTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2294,8 +2208,7 @@ int TLuaInterpreter::disableTrigger(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "disableTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2312,8 +2225,7 @@ int TLuaInterpreter::killTimer(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "killTimer: killTimer requires a string ID");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2328,8 +2240,7 @@ int TLuaInterpreter::killTrigger(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "killTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2478,8 +2389,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "openUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2500,37 +2410,32 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     int x, y, width, height;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tonumber(L, 3);
     }
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         width = lua_tonumber(L, 4);
     }
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         height = lua_tonumber(L, 5);
     }
@@ -2545,8 +2450,7 @@ int TLuaInterpreter::createLabel(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2554,36 +2458,31 @@ int TLuaInterpreter::createLabel(lua_State* L)
     bool fillBackground = false;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tonumber(L, 3);
     }
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         width = lua_tonumber(L, 4);
     }
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         height = lua_tonumber(L, 5);
     }
     if (!lua_isnumber(L, 6)) {
         lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fillBackground = lua_toboolean(L, 6);
     }
@@ -2598,29 +2497,25 @@ int TLuaInterpreter::createMapper(lua_State* L)
     int x, y, width, height;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "createMapper: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "createMapper: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tonumber(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "createMapper: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         width = lua_tonumber(L, 3);
     }
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createMapper: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         height = lua_tonumber(L, 4);
     }
@@ -2635,8 +2530,7 @@ int TLuaInterpreter::createButton(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createButton: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2644,36 +2538,31 @@ int TLuaInterpreter::createButton(lua_State* L)
     bool fillBackground = false;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "createButton: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "createButton: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tonumber(L, 3);
     }
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createButton: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         width = lua_tonumber(L, 4);
     }
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "createButton: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         height = lua_tonumber(L, 5);
     }
     if (!lua_isnumber(L, 6)) {
         lua_pushstring(L, "createButton: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fillBackground = lua_toboolean(L, 6);
     }
@@ -2690,8 +2579,7 @@ int TLuaInterpreter::createBuffer(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createBuffer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2724,8 +2612,7 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "closeUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2741,8 +2628,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "hideUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -2758,8 +2644,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
     int x1;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setBorderTop: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 1);
     }
@@ -2779,8 +2664,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
     int x1;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setBorderBottom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 1);
     }
@@ -2800,8 +2684,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
     int x1;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setBorderLeft: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 1);
     }
@@ -2821,8 +2704,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     int x1;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setBorderRight: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 1);
     }
@@ -2842,24 +2724,21 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "resizeWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     double x1;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "resizeWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 2);
     }
     double y1;
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "resizeWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y1 = lua_tonumber(L, 3);
     }
@@ -2876,24 +2755,21 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "moveWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     double x1;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "moveWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 2);
     }
     double y1;
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "moveWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y1 = lua_tonumber(L, 3);
     }
@@ -2910,16 +2786,14 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
     int x1;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setMainWindowSize: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 1);
     }
     int y1;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setMainWindowSize: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y1 = lua_tonumber(L, 2);
     }
@@ -2934,40 +2808,35 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     double x1;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x1 = lua_tonumber(L, 2);
     }
     double y1;
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y1 = lua_tonumber(L, 3);
     }
     double x2;
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x2 = lua_tonumber(L, 4);
     }
     double y2;
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y2 = lua_tonumber(L, 5);
     }
@@ -2997,8 +2866,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     int x = 0;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "calcFontSize: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, 1);
     }
@@ -3025,8 +2893,7 @@ int TLuaInterpreter::startLogging(lua_State* L)
     bool logOn = true;
     if (!lua_isboolean(L, 1)) {
         lua_pushfstring(L, "startLogging: bad argument #1 type (turn logging on/off, as boolean expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         logOn = lua_toboolean(L, 1);
     }
@@ -3077,16 +2944,14 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setBackgroundImage: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     string luaName = "";
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "setBackgroundImage: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaName = lua_tostring(L, 2);
     }
@@ -3242,8 +3107,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "empty string for main console} expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         windowName = QString::fromUtf8(lua_tostring(L, s));
     }
@@ -3255,8 +3119,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         colorComponents[0] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
     }
@@ -3267,8 +3130,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         colorComponents[1] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
     }
@@ -3279,8 +3141,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         colorComponents[2] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
     }
@@ -3291,8 +3152,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         colorComponents[3] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
     }
@@ -3303,8 +3163,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         colorComponents[4] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
     }
@@ -3315,8 +3174,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         colorComponents[5] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
     }
@@ -3332,8 +3190,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "non-zero is true} expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     bool underline;
@@ -3347,8 +3204,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "non-zero is true} expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     bool italics;
@@ -3362,8 +3218,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                         "non-zero is true} expected, got %s!)",
                         s,
                         luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     bool strikeout = false;
@@ -3379,8 +3234,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                             "non-zero is true} optional, got %s!)",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
     }
 
@@ -3420,8 +3274,7 @@ int TLuaInterpreter::raiseWindow(lua_State* L)
     QString windowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "raiseWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
@@ -3435,8 +3288,7 @@ int TLuaInterpreter::lowerWindow(lua_State* L)
     QString windowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "lowerWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
@@ -3450,8 +3302,7 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "showUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -3468,30 +3319,26 @@ int TLuaInterpreter::setMapperView(lua_State* L)
 
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, 1);
     }
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tonumber(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         z = lua_tonumber(L, 3);
     }
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         zoom = lua_tonumber(L, 4);
     }
@@ -3506,15 +3353,13 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
     int id, env;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setRoomEnv: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setRoomEnv: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         env = lua_tonumber(L, 2);
     }
@@ -3539,8 +3384,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setRoomName: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
@@ -3548,8 +3392,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
     QString name;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "setRoomName: bad argument #2 type (room name as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         name = QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -3578,8 +3421,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getRoomName: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
@@ -3600,16 +3442,14 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setRoomWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
     int w;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setRoomWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         w = lua_tonumber(L, 2);
     }
@@ -3692,16 +3532,14 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setRoomIDbyHash: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
     string hash;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "setRoomIDbyHash: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         hash = lua_tostring(L, 2);
     }
@@ -3715,8 +3553,7 @@ int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
     string hash;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "getRoomIDbyHash() wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         hash = lua_tostring(L, 1);
     }
@@ -3746,8 +3583,7 @@ int TLuaInterpreter::roomLocked(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "roomLocked: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
@@ -3769,16 +3605,14 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "lockRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
 
     if (!lua_isboolean(L, 2)) {
         lua_pushstring(L, "lockRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         b = lua_toboolean(L, 2);
     }
@@ -3801,8 +3635,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     int dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "lockExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
@@ -3810,14 +3643,12 @@ int TLuaInterpreter::lockExit(lua_State* L)
     dir = dirToNumber(L, 2);
     if (!dir) {
         lua_pushstring(L, "lockExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     if (!lua_isboolean(L, 3)) {
         lua_pushstring(L, "lockExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         b = lua_toboolean(L, 3);
     }
@@ -3837,32 +3668,28 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     std::string dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "lockSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "lockSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         to = lua_tonumber(L, 2);
     }
 
     if (!lua_isstring(L, 3)) {
         lua_pushstring(L, "lockSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         dir = lua_tostring(L, 3);
     }
 
     if (!lua_isboolean(L, 4)) {
         lua_pushstring(L, "lockSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         b = lua_toboolean(L, 4);
     }
@@ -3882,8 +3709,7 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
     std::string dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "hasSpecialExitLock: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
@@ -3891,15 +3717,13 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "hasSpecialExitLock: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         to = lua_tonumber(L, 2);
     }
     if (!lua_isstring(L, 3)) {
         lua_pushstring(L, "hasSpecialExitLock: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         dir = lua_tostring(L, 3);
     }
@@ -3919,8 +3743,7 @@ int TLuaInterpreter::hasExitLock(lua_State* L)
     int dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "hasExitLock: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
@@ -3928,8 +3751,7 @@ int TLuaInterpreter::hasExitLock(lua_State* L)
     dir = dirToNumber(L, 2);
     if (!dir) {
         lua_pushstring(L, "hasExitLock: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     Host& host = getHostFromLua(L);
@@ -3946,8 +3768,7 @@ int TLuaInterpreter::getRoomExits(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getRoomExits: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
@@ -4101,21 +3922,18 @@ int TLuaInterpreter::searchRoom(lua_State* L)
                         exactMatch = lua_toboolean(L, 3);
                     } else {
                         lua_pushfstring(L, R"(searchRoom: bad argument #3 type ("exact match" as boolean is optional, got %s!))", luaL_typename(L, 3));
-                        lua_error(L);
-                        return 1;
+                        return lua_error(L);
                     }
                 }
             } else {
                 lua_pushfstring(L, R"(searchRoom: bad argument #2 type ("case sensitive" as boolean is optional, got %s!))", luaL_typename(L, 2));
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             }
         }
         room = QString::fromUtf8(lua_tostring(L, 1));
     } else {
         lua_pushfstring(L, R"(searchRoom: bad argument #1 ("room name" as string expected, got %s!))", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     if (gotRoomID) {
@@ -4182,8 +4000,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
     if (lua_gettop(L)) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, R"(searchRoomUserData: bad argument #1 ("key" as string is optional, got %s!))", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             key = QString::fromUtf8(lua_tostring(L, 1));
         }
@@ -4191,8 +4008,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
         if (lua_gettop(L) > 1) {
             if (!lua_isstring(L, 2)) {
                 lua_pushfstring(L, R"(searchRoomUserData: bad argument #2 ("value" as string is optional, got %s!))", luaL_typename(L, 2));
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             } else {
                 value = QString::fromUtf8(lua_tostring(L, 2));
             }
@@ -4288,8 +4104,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
     if (lua_gettop(L)) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, R"(searchAreaUserData: bad argument #1 ("key" as string is optional, got %s!))", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             key = QString::fromUtf8(lua_tostring(L, 1));
         }
@@ -4297,8 +4112,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
         if (lua_gettop(L) > 1) {
             if (!lua_isstring(L, 2)) {
                 lua_pushfstring(L, R"(searchAreaUserData: bad argument #2 ("value" as string is optional, got %s!))", luaL_typename(L, 2));
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             } else {
                 value = QString::fromUtf8(lua_tostring(L, 2));
             }
@@ -4427,8 +4241,7 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
     int area;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getAreaRooms: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tonumber(L, 1);
     }
@@ -4489,8 +4302,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     if (n > 1) {
         if (!lua_isboolean(L, 2)) {
             lua_pushfstring(L, "getAreaExits: bad argument #2 type (full data wanted as boolean is optional, got %s!)", luaL_typename(L, 2));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             isFullDataRequired = lua_toboolean(L, 2);
         }
@@ -4549,8 +4361,7 @@ int TLuaInterpreter::getRoomWeight(lua_State* L)
     if (lua_gettop(L) > 0) {
         if (!lua_isnumber(L, 1)) {
             lua_pushstring(L, "getRoomWeight: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             roomId = lua_tonumber(L, 1);
         }
@@ -4572,8 +4383,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     int targetRoomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "gotoRoom: bad argument #1 type (target room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         targetRoomId = lua_tonumber(L, 1);
     }
@@ -4607,8 +4417,7 @@ int TLuaInterpreter::getPath(lua_State* L)
     int originRoomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getPath: bad argument #1 type (starting room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         originRoomId = lua_tonumber(L, 1);
     }
@@ -4616,8 +4425,7 @@ int TLuaInterpreter::getPath(lua_State* L)
     int targetRoomId;
     if (!lua_isnumber(L, 2)) {
         lua_pushfstring(L, "getPath: bad argument #2 type (target room id as number expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         targetRoomId = lua_tonumber(L, 2);
     }
@@ -4659,8 +4467,7 @@ int TLuaInterpreter::deselect(lua_State* L)
     if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, R"(deselect: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             // We cannot yet properly handle non-ASCII windows names but we will eventually!
             windowName = QString::fromUtf8(lua_tostring(L, 1));
@@ -4690,8 +4497,7 @@ int TLuaInterpreter::resetFormat(lua_State* L)
     if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, R"(resetFormat: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             // We cannot yet properly handle non-ASCII windows names but we will eventually!
             windowName = QString::fromUtf8(lua_tostring(L, 1));
@@ -4725,8 +4531,7 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
     string luaWindowName = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "echoUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaWindowName = lua_tostring(L, 1);
     }
@@ -4734,8 +4539,7 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "echoUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 2);
     }
@@ -4770,8 +4574,7 @@ int TLuaInterpreter::playSoundFile(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "playSoundFile: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -4818,8 +4621,7 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
     string luaWindowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "getLastLineNumber: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaWindowName = lua_tostring(L, 1);
     }
@@ -4895,8 +4697,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "setTriggerStayOpen: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             luaWindowName = lua_tostring(L, s);
             s++;
@@ -4904,8 +4705,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     }
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setTriggerStayOpen: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         b = lua_tonumber(L, s);
     }
@@ -4926,8 +4726,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     if (lua_gettop(L) > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "setLink: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             luaWindowName = lua_tostring(L, s);
             s++;
@@ -4936,16 +4735,14 @@ int TLuaInterpreter::setLink(lua_State* L)
 
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "setLink: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         linkFunction = lua_tostring(L, s);
         s++;
     }
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "setLink: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         linkHint = lua_tostring(L, s);
         s++;
@@ -4979,8 +4776,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     if (n > 4) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "setPopup: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -4988,8 +4784,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     }
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "setPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         a2 = lua_tostring(L, s);
         s++;
@@ -4997,8 +4792,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     if (!lua_istable(L, s)) {
         lua_pushstring(L, "setPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
@@ -5014,8 +4808,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     }
     if (!lua_istable(L, s)) {
         lua_pushstring(L, "setPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
@@ -5040,8 +4833,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     QString name = a1.c_str();
     if (_commandList.size() != _hintList.size()) {
         lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     if (a1 == "") {
@@ -5066,8 +4858,7 @@ int TLuaInterpreter::setBold(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5076,8 +4867,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     bool isAtttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setBold: bad argument #%d type (enable bold attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAtttributeEnabled = lua_toboolean(L, s);
     }
@@ -5103,8 +4893,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5113,8 +4902,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     bool isAtttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setItalics: bad argument #%d type (enable italic attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAtttributeEnabled = lua_toboolean(L, s);
     }
@@ -5140,8 +4928,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5150,8 +4937,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     bool isAtttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setUnderline: bad argument #%d type (enable underline attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAtttributeEnabled = lua_toboolean(L, s);
     }
@@ -5177,8 +4963,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!)",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5187,8 +4972,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     bool isAtttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setStrikeOut: bad argument #%d type (enable strikeout attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAtttributeEnabled = lua_toboolean(L, s);
     }
@@ -5226,8 +5010,7 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
     string luaWindowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "hideToolBar: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaWindowName = lua_tostring(L, 1);
     }
@@ -5243,8 +5026,7 @@ int TLuaInterpreter::showToolBar(lua_State* L)
     string luaWindowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "showToolBar: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaWindowName = lua_tostring(L, 1);
     }
@@ -5260,8 +5042,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     string msg;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "sendATCP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         msg = lua_tostring(L, 1);
     }
@@ -5269,8 +5050,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     string what;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "sendATCP: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         what = lua_tostring(L, 2);
     }
@@ -5296,8 +5076,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     string msg;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "sendGMCP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         msg = lua_tostring(L, 1);
     }
@@ -5337,8 +5116,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     string variable;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "sendMSDP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         variable = lua_tostring(L, 1);
     }
@@ -5369,8 +5147,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     string msg;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "sendTelnetChannel102: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         msg = lua_tostring(L, 1);
     }
@@ -5443,8 +5220,7 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     double luaTimeout;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "tempTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaTimeout = lua_tonumber(L, 1);
     }
@@ -5463,8 +5239,7 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     }
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "tempTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     QString luaCodeAsString = QString::fromUtf8(lua_tostring(L, 2));
@@ -5819,22 +5594,19 @@ int TLuaInterpreter::tempButton(lua_State* L)
     int orientation;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "tempButton: wrong first arg");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         toolbar = lua_tostring(L, 1);
     }
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "tempButton: wrong second arg");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         name = lua_tostring(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "tempButton: wrong third arg");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         orientation = lua_tonumber(L, 3);
     }
@@ -5927,22 +5699,19 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "tempButtonToolbar: wrong first arg");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         name = lua_tostring(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "tempButtonToolbar: wrong first arg");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         location = lua_tonumber(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "tempButtonToolbar: wrong first arg");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         orientation = lua_tonumber(L, 3);
     }
@@ -6020,8 +5789,7 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     string luaRegex;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "tempAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaRegex = lua_tostring(L, 1);
     }
@@ -6029,8 +5797,7 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     string luaFunction;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "tempAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFunction = lua_tostring(L, 2);
     }
@@ -6049,16 +5816,14 @@ int TLuaInterpreter::exists(lua_State* L)
     string _name;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "exists: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         _name = lua_tostring(L, 1);
     }
     string _type;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "exists: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         _type = lua_tostring(L, 2);
     }
@@ -6085,16 +5850,14 @@ int TLuaInterpreter::isActive(lua_State* L)
     string _name;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "isActive: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         _name = lua_tostring(L, 1);
     }
     string _type;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "isActive: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         _type = lua_tostring(L, 2);
     }
@@ -6146,8 +5909,7 @@ int TLuaInterpreter::permAlias(lua_State* L)
     string luaName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "permAlias: need a name for this alias");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaName = lua_tostring(L, 1);
     }
@@ -6155,8 +5917,7 @@ int TLuaInterpreter::permAlias(lua_State* L)
     string luaParent;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "permAlias: need a parent alias/group to add this alias to");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaParent = lua_tostring(L, 2);
     }
@@ -6164,8 +5925,7 @@ int TLuaInterpreter::permAlias(lua_State* L)
     string luaRegex;
     if (!lua_isstring(L, 3)) {
         lua_pushstring(L, "permAlias: need the pattern for the alias");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaRegex = lua_tostring(L, 3);
     }
@@ -6173,8 +5933,7 @@ int TLuaInterpreter::permAlias(lua_State* L)
     string luaFunction;
     if (!lua_isstring(L, 4)) {
         lua_pushstring(L, "permAlias: need Lua code for this alias");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFunction = lua_tostring(L, 4);
     }
@@ -6195,16 +5954,14 @@ int TLuaInterpreter::permTimer(lua_State* L)
     string luaName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaName = lua_tostring(L, 1);
     }
     string luaParent;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaParent = lua_tostring(L, 2);
     }
@@ -6212,8 +5969,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
     double luaTimeout;
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaTimeout = lua_tonumber(L, 3);
     }
@@ -6221,8 +5977,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
     string luaFunction;
     if (!lua_isstring(L, 4)) {
         lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFunction = lua_tostring(L, 4);
     }
@@ -6242,8 +5997,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     string name;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         name = lua_tostring(L, 1);
     }
@@ -6251,16 +6005,14 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     string parent;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         parent = lua_tostring(L, 2);
     }
     QStringList _regList;
     if (!lua_istable(L, 3)) {
         lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, 3) != 0) {
@@ -6277,8 +6029,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     string luaFunction;
     if (!lua_isstring(L, 4)) {
         lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFunction = lua_tostring(L, 4);
     }
@@ -6417,8 +6168,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     string name;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         name = lua_tostring(L, 1);
     }
@@ -6426,16 +6176,14 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     string parent;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         parent = lua_tostring(L, 2);
     }
     QStringList _regList;
     if (!lua_istable(L, 3)) {
         lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, 3) != 0) {
@@ -6452,8 +6200,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     string luaFunction;
     if (!lua_isstring(L, 4)) {
         lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFunction = lua_tostring(L, 4);
     }
@@ -6473,8 +6220,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     string name;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         name = lua_tostring(L, 1);
     }
@@ -6482,16 +6228,14 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     string parent;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         parent = lua_tostring(L, 2);
     }
     QStringList _regList;
     if (!lua_istable(L, 3)) {
         lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, 3) != 0) {
@@ -6508,8 +6252,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     string luaFunction;
     if (!lua_isstring(L, 4)) {
         lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaFunction = lua_tostring(L, 4);
     }
@@ -6530,16 +6273,14 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
     bool luaDir = false; //default is to choose a directory
     if (!lua_isboolean(L, 1)) {
         lua_pushstring(L, "invokeFileDialog: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaDir = lua_toboolean(L, 1);
     }
     string luaTitle;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "invokeFileDialog: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaTitle = lua_tostring(L, 2);
     }
@@ -6572,8 +6313,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 
     if (!lua_isnumber(L, n)) {
         lua_pushstring(L, "getTimestamp: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaLine = lua_tointeger(L, n);
     }
@@ -6607,24 +6347,21 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     int luaBlue;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setBorderColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaRed = lua_tointeger(L, 1);
     }
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setBorderColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaGreen = lua_tointeger(L, 2);
     }
 
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "setBorderColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaBlue = lua_tointeger(L, 3);
     }
@@ -6647,32 +6384,28 @@ int TLuaInterpreter::setRoomCoordinates(lua_State* L)
     int z;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tointeger(L, 2);
     }
 
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tointeger(L, 3);
     }
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         z = lua_tointeger(L, 4);
     }
@@ -6691,40 +6424,35 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int alpha;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         r = lua_tointeger(L, 2);
     }
 
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         g = lua_tointeger(L, 3);
     }
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         b = lua_tointeger(L, 4);
     }
 
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         alpha = lua_tointeger(L, 5);
     }
@@ -6790,14 +6518,12 @@ int TLuaInterpreter::setAreaName(lua_State* L)
                         "setAreaName: bad argument #1 type (area id as number or area name as string\n"
                         "expected, got %s!)",
                         luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "setAreaName: bad argument #2 type (area name as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         newName = QString::fromUtf8(lua_tostring(L, 2)).trimmed();
         // Now allow non-Ascii names but eliminate any leading or trailing spaces
@@ -6870,8 +6596,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
                             "getRoomAreaName: bad argument #1 type (area id as number or area name as string\n"
                             "expected, got %s!)",
                             luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             name = QString::fromUtf8(lua_tostring(L, 1));
         }
@@ -6910,8 +6635,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "addAreaName: bad argument #1 type (area name as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         name = QString::fromUtf8(lua_tostring(L, 1)).trimmed();
     }
@@ -6994,8 +6718,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
                         "deleteArea: bad argument #1 type (area Id as number or area name as string\n"
                         "expected, got %s!)",
                         luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     bool result = false;
@@ -7027,8 +6750,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
         }
     } else {
         lua_pushstring(L, "deleteRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     Host& host = getHostFromLua(L);
@@ -7043,24 +6765,21 @@ int TLuaInterpreter::setExit(lua_State* L)
     int dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         from = lua_tointeger(L, 1);
     }
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         to = lua_tointeger(L, 2);
     }
     dir = dirToNumber(L, 3);
     if (!dir) {
         lua_pushstring(L, "setExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     Host& host = getHostFromLua(L);
@@ -7074,8 +6793,7 @@ int TLuaInterpreter::getRoomCoordinates(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getRoomCoordinates: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
@@ -7100,8 +6818,7 @@ int TLuaInterpreter::getRoomArea(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getRoomArea: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
@@ -7122,8 +6839,7 @@ int TLuaInterpreter::roomExists(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1) || !lua_isstring(L, 1)) {
         lua_pushstring(L, "roomExists: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
@@ -7143,8 +6859,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "addRoom: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
@@ -7199,8 +6914,7 @@ int TLuaInterpreter::unHighlightRoom(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "unHighlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
@@ -7228,77 +6942,67 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
     float radius;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fgr = lua_tointeger(L, 2);
     }
 
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fgg = lua_tointeger(L, 3);
     }
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fgb = lua_tointeger(L, 4);
     }
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         bgr = lua_tointeger(L, 5);
     }
 
     if (!lua_isnumber(L, 6)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         bgg = lua_tointeger(L, 6);
     }
 
     if (!lua_isnumber(L, 7)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         bgb = lua_tointeger(L, 7);
     }
     if (!lua_isnumber(L, 8)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         radius = lua_tonumber(L, 8);
     }
     int alpha1, alpha2;
     if (!lua_isnumber(L, 9)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         alpha1 = lua_tointeger(L, 9);
     }
     if (!lua_isnumber(L, 10)) {
         lua_pushstring(L, "highlightRoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         alpha2 = lua_tointeger(L, 10);
     }
@@ -7340,88 +7044,77 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     int args = lua_gettop(L);
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tointeger(L, 1);
     }
 
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         text = lua_tostring(L, 2);
     }
 
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         posx = lua_tonumber(L, 3);
     }
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         posy = lua_tonumber(L, 4);
     }
 
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         posz = lua_tonumber(L, 5);
     }
 
     if (!lua_isnumber(L, 6)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fgr = lua_tointeger(L, 6);
     }
 
     if (!lua_isnumber(L, 7)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fgg = lua_tointeger(L, 7);
     }
 
     if (!lua_isnumber(L, 8)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         fgb = lua_tointeger(L, 8);
     }
 
     if (!lua_isnumber(L, 9)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         bgr = lua_tointeger(L, 9);
     }
 
     if (!lua_isnumber(L, 10)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         bgg = lua_tointeger(L, 10);
     }
 
     if (!lua_isnumber(L, 11)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         bgb = lua_tointeger(L, 11);
     }
@@ -7429,23 +7122,20 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     if (args > 11) {
         if (!lua_isnumber(L, 12)) {
             lua_pushstring(L, "createMapLabel: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             zoom = lua_tonumber(L, 12);
         }
         if (!lua_isnumber(L, 13)) {
             lua_pushstring(L, "createMapLabel: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             fontSize = lua_tointeger(L, 13);
         }
         if (args > 13) {
             if (!lua_isboolean(L, 14)) {
                 lua_pushstring(L, "createMapLabel: wrong argument type");
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             } else {
                 showOnTop = lua_toboolean(L, 14);
             }
@@ -7453,8 +7143,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
         if (args > 14) {
             if (!lua_isboolean(L, 15)) {
                 lua_pushstring(L, "createMapLabel: wrong argument type");
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             } else {
                 noScaling = lua_toboolean(L, 15);
             }
@@ -7474,8 +7163,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
     int zoom = 3;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setMapZoom: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         zoom = lua_tointeger(L, 1);
     }
@@ -7501,72 +7189,63 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     // N/U:     int args = lua_gettop(L);
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tointeger(L, 1);
     }
 
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         text = lua_tostring(L, 2);
     }
 
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         posx = lua_tonumber(L, 3);
     }
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         posy = lua_tonumber(L, 4);
     }
 
     if (!lua_isnumber(L, 5)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         posz = lua_tonumber(L, 5);
     }
 
     if (!lua_isnumber(L, 6)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         width = lua_tonumber(L, 6);
     }
 
     if (!lua_isnumber(L, 7)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         height = lua_tonumber(L, 7);
     }
 
     if (!lua_isnumber(L, 8)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         zoom = lua_tonumber(L, 8);
     }
 
     if (!lua_isboolean(L, 9)) {
         lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         showOnTop = lua_toboolean(L, 9);
     }
@@ -7613,8 +7292,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
     TRoom* pR;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setDoor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
         pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -7628,8 +7306,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
     QString exitCmd;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "setDoor: bad argument #2 type (door command as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         exitCmd = QString::fromUtf8(lua_tostring(L, 2));
         if (exitCmd.compare(QStringLiteral("n")) && exitCmd.compare(QStringLiteral("e")) && exitCmd.compare(QStringLiteral("s")) && exitCmd.compare(QStringLiteral("w"))
@@ -7689,8 +7366,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
                         "setDoor: bad argument #3 type (door type as number expected {0=\"none\",\n"
                         "1=\"open\", 2=\"closed\", 3=\"locked\"}, got %s!)",
                         luaL_typename(L, 3));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         doorStatus = lua_tointeger(L, 3);
         if (doorStatus < 0 || doorStatus > 3) {
@@ -7727,8 +7403,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
     TRoom* pR;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getDoors: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
         pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -7758,22 +7433,19 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
     QString text;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setExitWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomID = lua_tointeger(L, 1);
     }
     text = dirToString(L, 2);
     if (text.isEmpty()) {
         lua_pushstring(L, "setExitWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "setExitWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         weight = lua_tonumber(L, 3);
     }
@@ -7799,15 +7471,13 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     bool arrow = false;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "addCustomLine: First argument must be room number");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id_from = lua_tointeger(L, 1);
     }
     if (!lua_isnumber(L, 2) && !lua_istable(L, 2)) {
         lua_pushstring(L, "addCustomLine: Second argument must be room number or coordinate list");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else if (lua_isnumber(L, 2)) {
         id_to = lua_tointeger(L, 2);
         Host& host = getHostFromLua(L);
@@ -7822,16 +7492,14 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         while (lua_next(L, 2) != 0) {
             if (lua_type(L, -1) != LUA_TTABLE) {
                 lua_pushstring(L, "addCustomLine: Coordinate list must be a table of tabled coordinates");
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             }
             lua_pushnil(L);
             int j = 1;
             while (lua_next(L, -2) != 0) {
                 if (lua_type(L, -1) != LUA_TNUMBER) {
                     lua_pushstring(L, "addCustomLine: Coordinates must be numeric.");
-                    lua_error(L);
-                    return 1;
+                    return lua_error(L);
                 }
                 if (j == 1) {
                     x.append(lua_tonumber(L, -1));
@@ -7849,8 +7517,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     direction = dirToString(L, 3);
     if (direction.isEmpty()) {
         lua_pushstring(L, "addCustomLine: Third argument must be direction");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     if (lua_isstring(L, 4)) {
         QStringList validLines;
@@ -7862,8 +7529,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         line_style = QString(lua_tostring(L, 4));
         if (!validLines.contains(line_style)) {
             lua_pushstring(L, R"(addCustomLine: Valid line styles: "solid line", "dot line", "dash line", "dash dot line" or "dash dot dot line".)");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
     }
     if (lua_istable(L, 5)) {
@@ -7872,8 +7538,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         while (lua_next(L, 5) != 0) {
             if (lua_type(L, -1) != LUA_TNUMBER) {
                 lua_pushstring(L, "addCustomLine: Colors must be a number between 0 and 255");
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             }
             if (tind == 0) {
                 r = lua_tonumber(L, -1);
@@ -7896,8 +7561,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             lz = z.at(i);
         } else if (lz != z.at(i)) {
             lua_pushstring(L, "addCustomLine: All z values must be on same level.");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
         points.append(QPointF(x.at(i), y.at(i)));
     }
@@ -7923,8 +7587,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
     int roomID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getCustomLines: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomID = lua_tointeger(L, 1);
     }
@@ -7988,8 +7651,7 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
     int roomID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getExitWeights: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomID = lua_tointeger(L, 1);
     }
@@ -8013,15 +7675,13 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
     int area, labelID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "deleteMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tointeger(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "deleteMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         labelID = lua_tointeger(L, 2);
     }
@@ -8035,8 +7695,7 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
     int area;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getMapLabels: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tointeger(L, 1);
     }
@@ -8060,15 +7719,13 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     QString labelText;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tointeger(L, 1);
     }
     if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
         lua_pushstring(L, "getMapLabel: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         if (lua_isnumber(L, 2)) {
             labelId = lua_tointeger(L, 2);
@@ -8108,8 +7765,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
                 lua_settable(L, -3);
             } else {
                 lua_pushstring(L, "getMapLabel: labelId doesn't exist");
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             }
         } else {
             QMapIterator<int, TMapLabel> it(host.mpMap->mapLabels[area]);
@@ -8160,22 +7816,19 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     string dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "addSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id_from = lua_tointeger(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "addSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id_to = lua_tointeger(L, 2);
     }
     if (!lua_isstring(L, 3)) {
         lua_pushstring(L, "addSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         dir = lua_tostring(L, 3);
     }
@@ -8196,15 +7849,13 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     string dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "removeSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "removeSpecialExit: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         dir = lua_tostring(L, 2);
     }
@@ -8232,8 +7883,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "clearRoomUserData: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
     }
@@ -8273,8 +7923,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
                         "clearRoomUserDataItem: bad argument #1 type (room id as number expected,\n"
                         "got %s!)",
                         luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
     }
@@ -8282,8 +7931,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     QString key = QString(); // This assigns the null value which is different from an empty one
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, R"(clearRoomUserDataItem: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -8323,8 +7971,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
     int areaId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "clearAreaUserData: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         areaId = lua_tointeger(L, 1);
     }
@@ -8358,8 +8005,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
     int areaId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "clearAreaUserDataItem: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         areaId = lua_tointeger(L, 1);
     }
@@ -8367,8 +8013,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
     QString key = QString(); // This assigns the null value which is different from an empty one
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, R"(clearAreaUserDataItem: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -8424,8 +8069,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     QString key = QString(); // This assigns the null value which is different from an empty one
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, R"(clearMapUserDataItem: bad argument #1 type ("key" as string expected, got %s!))", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 1));
         if (key.isEmpty()) {
@@ -8444,8 +8088,7 @@ int TLuaInterpreter::clearSpecialExits(lua_State* L)
     int id_from;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "clearSpecialExits: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id_from = lua_tointeger(L, 1);
     }
@@ -8462,8 +8105,7 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
     int id_from;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getSpecialExits: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id_from = lua_tointeger(L, 1);
     }
@@ -8506,8 +8148,7 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
     int id_from;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getSpecialExitsSwap: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id_from = lua_tointeger(L, 1);
     }
@@ -8548,8 +8189,7 @@ int TLuaInterpreter::getRoomEnv(lua_State* L)
     int roomID;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getRoomEnv: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomID = lua_tointeger(L, 1);
     }
@@ -8586,8 +8226,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getRoomUserData: bad argument #1 (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
     }
@@ -8595,8 +8234,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     QString key;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "getRoomUserData: bad argument #2 (key as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -8608,8 +8246,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
                             "getRoomUserData: bad argument #3 (enableFullErrorReporting as boolean {default\n"
                             "= false} is optional, got %s!)",
                             luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             isBackwardCompatibilityRequired = !lua_toboolean(L, 3);
         }
@@ -8648,8 +8285,7 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     int areaId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getAreaUserData: bad argument #1 (area id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         areaId = lua_tointeger(L, 1);
     }
@@ -8657,8 +8293,7 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     QString key;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "getAreaUserData: bad argument #2 (key as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 2));
         if (key.isEmpty()) {
@@ -8711,8 +8346,7 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
     QString key;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "getMapUserData: bad argument #1 (key as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 1));
     }
@@ -8739,8 +8373,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setRoomUserData: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
     }
@@ -8748,8 +8381,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
     QString key;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, R"(setRoomUserData: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         // Ideally should reject empty keys but this could break existing scripts so we can't
         key = QString::fromUtf8(lua_tostring(L, 2));
@@ -8758,8 +8390,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
     QString value;
     if (!lua_isstring(L, 3)) {
         lua_pushfstring(L, R"(setRoomUserData: bad argument #3 type ("value" as string expected, got %s!))", luaL_typename(L, 3));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         value = QString::fromUtf8(lua_tostring(L, 3));
     }
@@ -8782,8 +8413,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     int areaId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setAreaUserData: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         areaId = lua_tointeger(L, 1);
     }
@@ -8791,8 +8421,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     QString key;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, R"(setAreaUserData: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 2));
         if (key.isEmpty()) {
@@ -8807,8 +8436,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     QString value;
     if (!lua_isstring(L, 3)) {
         lua_pushfstring(L, R"(setAreaUserData: bad argument #3 type ("value" as string expected, got %s!))", luaL_typename(L, 3));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         value = QString::fromUtf8(lua_tostring(L, 3));
     }
@@ -8862,8 +8490,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     QString key;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, R"(setMapUserData: bad argument #1 type ("key" as string expected, got %s!))", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         key = QString::fromUtf8(lua_tostring(L, 1));
         if (key.isEmpty()) {
@@ -8876,8 +8503,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     QString value;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, R"(setMapUserData: bad argument #2 type ("value" as string expected, got %s!))", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         value = QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -8921,8 +8547,7 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getRoomUserDataKeys: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
     }
@@ -8961,8 +8586,7 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
     int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getAllRoomUserData: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         roomId = lua_tointeger(L, 1);
     }
@@ -9000,8 +8624,7 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
     int areaId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getAllAreaUserData: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         areaId = lua_tointeger(L, 1);
     }
@@ -9057,8 +8680,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     QString localFile;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "downloadFile: bad argument #1 type (local filename as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         localFile = QString::fromUtf8(lua_tostring(L, 1));
     }
@@ -9066,8 +8688,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     QString urlString;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "downloadFile: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         urlString = QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -9116,8 +8737,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setRoomArea: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
         if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
@@ -9162,8 +8782,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
                         "setRoomArea: bad argument #2 type (area Id as number or area name as string\n"
                         "expected, got %s!)",
                         luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     bool result = host.mpMap->setRoomArea(id, areaId, false);
@@ -9188,8 +8807,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "resetRoomArea: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
@@ -9227,15 +8845,13 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     string c;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         c = lua_tostring(L, 2);
     }
@@ -9243,8 +8859,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
         lua_pushstring(L, "setRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         if (c.size() >= 1) {
             pR->c = c[0];
@@ -9258,8 +8873,7 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
@@ -9267,8 +8881,7 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
         lua_pushstring(L, "getRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         QString c = (QString)pR->c;
         lua_pushstring(L, c.toLatin1().data());
@@ -9283,29 +8896,25 @@ int TLuaInterpreter::getRoomsByPosition(lua_State* L)
     int area, x, y, z;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tointeger(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tointeger(L, 2);
     }
     if (!lua_isnumber(L, 3)) {
         lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tointeger(L, 3);
     }
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         z = lua_tointeger(L, 4);
     }
@@ -9336,15 +8945,13 @@ int TLuaInterpreter::setGridMode(lua_State* L)
     bool gridMode = false;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setGridMode: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         area = lua_tointeger(L, 1);
     }
     if (!lua_isboolean(L, 2)) {
         lua_pushstring(L, "setGridMode: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         gridMode = lua_toboolean(L, 2);
     }
@@ -9388,8 +8995,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setFgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaRed = lua_tointeger(L, s);
         s++;
@@ -9397,8 +9003,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setFgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaGreen = lua_tointeger(L, s);
         s++;
@@ -9406,8 +9011,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setFgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaBlue = lua_tointeger(L, s);
     }
@@ -9438,8 +9042,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setBgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaRed = lua_tointeger(L, s);
         s++;
@@ -9447,8 +9050,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setBgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaGreen = lua_tointeger(L, s);
         s++;
@@ -9456,8 +9058,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
     if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setBgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaBlue = lua_tointeger(L, s);
     }
@@ -9496,8 +9097,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     }
     if (sL.size() < 4) {
         lua_pushstring(L, "insertLink: wrong number of params or wrong type of params");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     QString _name(sL[0]);
@@ -9530,8 +9130,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     if (n > 4) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "insertPopup: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -9539,8 +9138,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "insertPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         a2 = lua_tostring(L, s);
         s++;
@@ -9548,8 +9146,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 
     if (!lua_istable(L, s)) {
         lua_pushstring(L, "insertPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
@@ -9565,8 +9162,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
     if (!lua_istable(L, s)) {
         lua_pushstring(L, "insertPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
@@ -9589,8 +9185,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     QString name = a1.c_str();
     if (_commandList.size() != _hintList.size()) {
         lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     if (a1 == "") {
@@ -9610,8 +9205,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     int s = 1;
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "insertText: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         a1 = lua_tostring(L, s);
         s++;
@@ -9621,8 +9215,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     if (n > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "insertText: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a2 = lua_tostring(L, s);
         }
@@ -9641,8 +9234,7 @@ int TLuaInterpreter::insertHTML(lua_State* L)
     string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "insertHTML: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -9656,8 +9248,7 @@ int TLuaInterpreter::addSupportedTelnetOption(lua_State* L)
     int option;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "addSupportedTelnetOption: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         option = lua_tointeger(L, 1);
     }
@@ -9738,8 +9329,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     if (n > 4) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "echoPopup: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -9747,8 +9337,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     }
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "echoPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         a2 = lua_tostring(L, s);
         s++;
@@ -9758,8 +9347,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
 
     {
         lua_pushstring(L, "echoPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
@@ -9775,8 +9363,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     }
     if (!lua_istable(L, s)) {
         lua_pushstring(L, "echoPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
@@ -9799,8 +9386,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     QString name = a1.c_str();
     if (_commandList.size() != _hintList.size()) {
         lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     if (a1 == "") {
@@ -9827,8 +9413,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "echoLink: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         a1 = lua_tostring(L, s);
         s++;
@@ -9836,8 +9421,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     if (n > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "echoLink: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a2 = lua_tostring(L, s);
             s++;
@@ -9846,8 +9430,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     if (n > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "echoLink: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a3 = lua_tostring(L, s);
             s++;
@@ -9866,8 +9449,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     if (n > 4) {
         if (!lua_isboolean(L, s)) {
             lua_pushstring(L, "echoLink: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a5 = lua_toboolean(L, s);
             gotBool = true;
@@ -9904,8 +9486,7 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
     for (int i = 1; i <= n; i++) {
         if (!lua_isstring(L, i)) {
             lua_pushfstring(L, "setMergeTables: bad argument #%d (string expected, got %s)", i, luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         }
         modulesList << QString(lua_tostring(L, i));
     }
@@ -9921,8 +9502,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
     string luaName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "pasteWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaName = lua_tostring(L, 1);
     }
@@ -9950,8 +9530,7 @@ int TLuaInterpreter::openUrl(lua_State* L)
     string luaName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "openUrl: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaName = lua_tostring(L, 1);
     }
@@ -9965,16 +9544,14 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setLabelStyleSheet: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
     string a2;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "setLabelStyleSheet: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         a2 = lua_tostring(L, 2);
     }
@@ -10044,8 +9621,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         qWarning() << "TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly set on compilation,\n"
                    << "   is the VERSION value in the project file present?";
         lua_pushstring(L, "getMudletVersion: sorry, version information not available.");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     bool ok = true;
@@ -10065,8 +9641,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         qWarning("TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly parsed,\n"
                  "   was the VERSION value in the project file correct at compilation time?");
         lua_pushstring(L, "getMudletVersion: sorry, version information corrupted.");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
 
     int n = lua_gettop(L);
@@ -10161,8 +9736,7 @@ int TLuaInterpreter::getTime(lua_State* L)
         if (n > 1) {
             if (!lua_isstring(L, 2)) {
                 lua_pushstring(L, "getTime: wrong argument type");
-                lua_error(L);
-                return 1;
+                return lua_error(L);
             } else {
                 fmt = lua_tostring(L, 2);
             }
@@ -10211,8 +9785,7 @@ int TLuaInterpreter::appendBuffer(lua_State* L)
     if (n > 0) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "appendBuffer: wrong argument type");
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a1 = lua_tostring(L, s);
             s++;
@@ -10235,8 +9808,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "appendCmdLine(): wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -10263,8 +9835,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
     string event;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "installPackage(): wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         event = lua_tostring(L, 1);
     }
@@ -10279,8 +9850,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
     string event;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "uninstallPackage(): wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         event = lua_tostring(L, 1);
     }
@@ -10295,8 +9865,7 @@ int TLuaInterpreter::installModule(lua_State* L)
     string modName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "installModule: wrong first argument (should be a path to module)");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         modName = lua_tostring(L, 1);
     }
@@ -10313,8 +9882,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
     string modName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "uninstallModule: wrong first argument (should be a module name)");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         modName = lua_tostring(L, 1);
     }
@@ -10331,8 +9899,7 @@ int TLuaInterpreter::reloadModule(lua_State* L)
     string modName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "reloadModule(): wrong first argument (should be a module name)");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         modName = lua_tostring(L, 1);
     }
@@ -10405,16 +9972,14 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
     string event;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "registerAnonymousEventHandler(): wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         event = lua_tostring(L, 1);
     }
     string func;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "registerAnonymousEventHandler(): wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         func = lua_tostring(L, 2);
     }
@@ -10431,8 +9996,7 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "expandAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -10454,8 +10018,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "printCmdLine: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -10480,8 +10043,7 @@ int TLuaInterpreter::sendRaw(lua_State* L)
     string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendRaw: bad argument #1 (string expected, got %s)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -10489,8 +10051,7 @@ int TLuaInterpreter::sendRaw(lua_State* L)
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
             lua_pushfstring(L, "sendRaw: bad argument #2 (boolean expected, got %s)", luaL_typename(L, 2));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             wantPrint = lua_toboolean(L, 2);
         }
@@ -10505,8 +10066,7 @@ int TLuaInterpreter::sendSocket(lua_State* L)
     string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "sendSocket: wrong argument type");
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -12958,8 +12518,7 @@ int TLuaInterpreter::alert(lua_State* L)
     if (lua_gettop(L) > 0) {
         if (!lua_isnumber(L, 1)) {
             lua_pushfstring(L, "alert: bad argument #1 type (alert duration in seconds as number expected, got %s!)", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             luaAlertDuration = lua_tonumber(L, 1);
 
@@ -13003,8 +12562,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
         windowName = QStringLiteral("main");
     } else if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "getColumnCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
@@ -13036,8 +12594,7 @@ int TLuaInterpreter::getRowCount(lua_State* L)
         windowName = QStringLiteral("main");
     } else if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "getRowCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
