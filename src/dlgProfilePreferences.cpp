@@ -1455,7 +1455,7 @@ void dlgProfilePreferences::copyMap()
         }
     }
     // otherProfileCurrentRoomId will be -1 if tried and failed to get it from
-    // current running profile, > 0 on sucess or 0 if not running as another profile
+    // current running profile, > 0 on success or 0 if not running as another profile
 
     // Ensure the setting is already made as the value could be used in the
     // code following after

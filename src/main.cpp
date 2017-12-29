@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
             // Start work in this text item
             QTextLine versionTextline = versionTextLayout.createLine();
             // First draw (one line from) the text we have put in on the layout to
-            // see how wide it is..., assuming accutally that it will only take one
+            // see how wide it is..., assuming actually that it will only take one
             // line of text
             versionTextline.setLineWidth(280);
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
@@ -482,7 +482,7 @@ int main(int argc, char* argv[])
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
     // click something in a parent process to the application when you are stuck
-    // with some OS's choice of wait cursor - you might wish to temparily disable
+    // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
     return app->exec();
 }

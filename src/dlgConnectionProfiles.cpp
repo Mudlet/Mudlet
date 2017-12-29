@@ -583,7 +583,7 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 }
 
 // Use the URL so we can use the same descriptions for user generated copies of
-// predefined MUDs - but also need the port number to disabiguate the 3K ones!
+// predefined MUDs - but also need the port number to disambiguate the 3K ones!
 QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name)
 {
     if (hostUrl == QLatin1String("realmsofdespair.com")) {

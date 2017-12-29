@@ -346,7 +346,7 @@ void GLWidget::initializeGL()
     is2DView = false;
 }
 
-// Replaces setArea() - now fed the coordinates of the room choosen as the
+// Replaces setArea() - now fed the coordinates of the room chosen as the
 // view center in the area given from the set operation in the 2D Map
 void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {

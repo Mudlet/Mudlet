@@ -4259,7 +4259,7 @@ void dlgTriggerEditor::saveAction()
 
     // This is an unnecessary level of indentation but has been retained to
     // reduce the noise in a git commit/diff caused by the removal of a
-    // redundent "if( pITem )" - can be removed next time the file is modified
+    // redundant "if( pITem )" - can be removed next time the file is modified
     int actionID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
