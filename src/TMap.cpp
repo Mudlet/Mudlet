@@ -1031,13 +1031,26 @@ bool TMap::findPath(int from, int to)
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
     // clamp version values
-    if (saveVersion < 0) saveVersion = 0;
-    else if (saveVersion > mMaxVersion) saveVersion = mMaxVersion;
+    if (saveVersion < 0) {
+        saveVersion = 0;
+    } else if (saveVersion > mMaxVersion) {
+        saveVersion = mMaxVersion;
+        QString errMsg = tr("[ ERROR ] -  The format {%1} you are trying to save the map with is too new\n"
+                            "for this version of mudlet that only supports formats up to version {%2}.")
+                                .arg(saveVersion).arg(mMaxVersion);
+        appendErrorMsg(errMsg);
+        postMessage(errMsg);
+        return false;
+    }
 
     // if 0 we default to mDefaultVersion
-    if (saveVersion == 0) mSaveVersion = mDefaultVersion;
+    if (saveVersion == 0) {
+        mSaveVersion = mDefaultVersion;
+    }
     // else we use saveVersion
-    else mSaveVersion = saveVersion;
+    else  {
+        mSaveVersion = saveVersion;
+    }
 
     if (mSaveVersion != mVersion) {
         QString message = tr("[ ALERT ] - Saving map in a format {%1} that is different than the one it was\n"
