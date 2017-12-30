@@ -51,7 +51,7 @@ int LuaInterface::onPanic(lua_State* L)
 {
     QString error = "Lua Panic, No error information";
     if (lua_isstring(L, -1)) {
-        error = lua_tostring(L, -1);
+        error = QString::fromUtf8(lua_tostring(L, -1));
         //there's never anything but the error on the stack, nothing to report
     }
     //FIXME: report error to user qDebug()<<"PANIC ERROR:"<<error;
@@ -379,7 +379,7 @@ bool LuaInterface::setValue(TVar* var)
     luaL_loadstring(L, variableChangeCode.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        QString emsg = lua_tostring(L, -1);
+        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
         //FIXME: report error to user qDebug()<<"error msg"<<emsg;
         return false;
     }
@@ -403,7 +403,7 @@ void LuaInterface::deleteVar(TVar* var)
     luaL_loadstring(L, oldName.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        QString emsg = lua_tostring(L, -1);
+        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
         //FIXME: report error to userqDebug()<<"error msg"<<emsg;
     }
 }
@@ -597,7 +597,7 @@ void LuaInterface::renameVar(TVar* var)
     luaL_loadstring(L, variableRenameCode.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        QString emsg = lua_tostring(L, -1);
+        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
         var->clearNewName();
         return;
     }
@@ -606,7 +606,7 @@ void LuaInterface::renameVar(TVar* var)
     luaL_loadstring(L, oldVariableDeleteCode.toUtf8().constData());
     error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        QString emsg = lua_tostring(L, -1);
+        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
         //FIXME: report error to userqDebug()<<"error msg"<<emsg;
     }
     var->clearNewName();
@@ -633,7 +633,7 @@ QString LuaInterface::getValue(TVar* var)
         if (vType == LUA_TBOOLEAN) {
             value = lua_toboolean(L, -1) == 0 ? "false" : "true";
         } else if (vType == LUA_TNUMBER || vType == LUA_TSTRING) {
-            value = lua_tostring(L, -1);
+            value = QString::fromUtf8(lua_tostring(L, -1));
         }
         lua_pop(L, pCount);
         return value;
@@ -656,7 +656,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             lrefs.append(keyName.toInt());
             var->setReference(true);
         } else {
-            keyName = lua_tostring(L, -1);
+            keyName = QString::fromUtf8(lua_tostring(L, -1));
             if (kType == LUA_TFUNCTION && keyName.isEmpty()) {
                 //we lost the reference
                 keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
@@ -702,7 +702,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             }
         } else if (vType == LUA_TSTRING || vType == LUA_TNUMBER) {
             lua_pushvalue(L, -1);
-            valueName = lua_tostring(L, -1);
+            valueName = QString::fromUtf8(lua_tostring(L, -1));
             var->setValue(valueName);
             lua_pop(L, 1);
         } else if (vType == LUA_TBOOLEAN) {
