@@ -342,40 +342,41 @@ bool LuaInterface::setCValue(QList<TVar*> vars)
     return false;
 }
 
+// sets the value of a Lua variable by running dynamically-generated Lua code
 bool LuaInterface::setValue(TVar* var)
 {
     //This function assumes the var has been modified and then called
     L = interpreter->pGlobalLua;
 
     QList<TVar*> vars = varOrder(var);
-    QString newName = vars[0]->getName();
+    QString variableChangeCode = vars[0]->getName();
     for (int i = 1; i < vars.size(); i++) {
         if (vars[i]->isReference()) {
             return setCValue(vars);
         }
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
-            newName.append("[" + vars[i]->getName() + "]");
+            variableChangeCode.append("[" + vars[i]->getName() + "]");
         } else {
-            newName.append(R"([")" + vars[i]->getName() + R"("])");
+            variableChangeCode.append(R"([")" + vars[i]->getName() + R"("])");
         }
     }
     switch (var->getValueType()) {
     case LUA_TSTRING:
-        newName.append(QString(" = [[" + var->getValue() + "]]"));
+        variableChangeCode.append(QString(" = [[" + var->getValue() + "]]"));
         break;
     case LUA_TNUMBER:
-        newName.append(QString(" = " + var->getValue()));
+        variableChangeCode.append(QString(" = " + var->getValue()));
         break;
     case LUA_TBOOLEAN:
-        newName.append(QString(" = " + var->getValue()));
+        variableChangeCode.append(QString(" = " + var->getValue()));
         break;
     case LUA_TTABLE:
-        newName.append(QString(" = {}"));
+        variableChangeCode.append(QString(" = {}"));
         break;
     default:
         return false;
     }
-    luaL_loadstring(L, newName.toLatin1().data());
+    luaL_loadstring(L, variableChangeCode.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
         QString emsg = lua_tostring(L, -1);
