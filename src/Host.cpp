@@ -1061,7 +1061,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
 
-    int error = luaL_loadstring(L, strings.join("\n").toLatin1().data());
+    int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
     if (!error) {
         error = lua_pcall(L, 0, 0, 0);
