@@ -400,7 +400,7 @@ void LuaInterface::deleteVar(TVar* var)
     }
     //delete it
     oldName.append(QString(" = nil"));
-    luaL_loadstring(L, oldName.toLatin1().data());
+    luaL_loadstring(L, oldName.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
         QString emsg = lua_tostring(L, -1);
