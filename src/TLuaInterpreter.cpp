@@ -10241,33 +10241,29 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
 
 int TLuaInterpreter::installPackage(lua_State* L)
 {
-    string event;
+    QString location;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "installPackage(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "installPackage: bad argument #1 (package location path and file name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        event = lua_tostring(L, 1);
+        location =  QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString package = event.c_str();
-    host.installPackage(package, 0);
+    host.installPackage(location, 0);
     return 0;
 }
 
 int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
-    string event;
+    QString packageName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "uninstallPackage(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "uninstallPackage: bad argument #1 (package name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        event = lua_tostring(L, 1);
+        packageName =  QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString package = event.c_str();
-    host.uninstallPackage(package, 0);
+    host.uninstallPackage(packageName, 0);
     return 0;
 }
 
