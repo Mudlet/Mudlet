@@ -640,6 +640,17 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
         return QLatin1String(
                 "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong "
                 "sense of community.");
+    } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
+        return QLatin1String(
+                "The oldest Spanish free mud with more than 20 years of running history.\n\n"
+                "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the mischiefs of the gods after "
+                "more than a thousand years of contempt and hideous war amongst their zealous mortal pawns.\n\n"
+                "History is written on a day per day basis, taking into consideration the players' choices "
+                "to decide the irreversible aftermath of this everlasting struggle.\n\n"
+                "This is a PvP MUD which allows the player to set how high are the stakes: the more you risk losing upon death, the more glory to be earned by your heroism. RP, while "
+                "not enforced, is rewarded with non-PvP oriented perks and unique treasure.\n\n"
+                "A powerful character customization system allows you to choose your deity -or fully disregard the gods- and join one of the player-run realms that govern the land "
+                "to explore a breathing world, delve into the secrets of the oceans, shape your legacy, craft forgotten marvels for you -or your allies- and fight for faith, glory or coin.");
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -709,6 +720,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             host_url = QStringLiteral("midnightsun2.org");
         }
+        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
+            host_url = QStringLiteral("reinosdeleyenda.es");
+        }
     }
     host_name_entry->setText(host_url);
 
@@ -762,6 +776,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             host_port = QStringLiteral("3000");
+        }
+        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
+            host_port = QStringLiteral("23");
         }
     }
     port_entry->setText(host_port);
@@ -831,6 +848,12 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             val = QStringLiteral("<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>");
+        }
+        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
+            val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
+                                 "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
+                                 "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n"
+                                 );
         }
     }
     website_entry->setText(val);
@@ -1203,6 +1226,20 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+    mudServer = QStringLiteral("Reinos de Leyenda");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/reinosdeleyenda_mud.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("reinosdeleyenda.es"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
     for (int i = 0; i < mProfileList.size(); i++) {
         QString s = mProfileList.at(i);
         if (s.isEmpty()) {
@@ -1227,6 +1264,7 @@ void dlgConnectionProfiles::fillout_form()
             || (!mProfileList.at(i).compare(QStringLiteral("3Scapes"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("3Kingdoms"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
+            || (!mProfileList.at(i).compare(QStringLiteral("Reinos de Leyenda"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
             delete pItem;
             continue;
