@@ -665,8 +665,8 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                 "to decide the irreversible aftermath of this everlasting struggle.\n\n"
                 "This is a PvP MUD which allows the player to set how high are the stakes: the more you risk losing upon death, the more glory to be earned by your heroism. RP, while "
                 "not enforced, is rewarded with non-PvP oriented perks and unique treasure.\n\n"
-                "A powerful character customization system allows you to choose your deity -or fully disregard the gods- and join one of the player-run realms that govern the land "
-                "to explore a breathing world, delve into the secrets of the oceans, shape your legacy, craft forgotten marvels for you -or your allies- and fight for faith, glory or coin.");
+                "A powerful character customization system allows you to choose your deity –or fully disregard the gods– and join one of the player-run realms that govern the land "
+                "to explore a breathing world, delve into the secrets of the oceans, shape your legacy, craft forgotten marvels for you –or your allies– and fight for faith, glory or coin.");
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
