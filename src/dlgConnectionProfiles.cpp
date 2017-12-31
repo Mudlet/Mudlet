@@ -642,6 +642,22 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                 "sense of community.");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
         return QLatin1String(
+                /**
+                 * Translation to the following text to Spanish as per request from SlyVen on PR #1505.
+                 * -- begin translation --
+                 * El mud Español gratis con más de 20 años de historia.
+                 *
+                 * Reinos de Leyenda toma lugar en el siempre cambiante mundo de Eirea, devastado por las intrigas de los dioses tras más de un millar de años de desprecio y cruenta guerra entre sus fanáticos peones mortales.
+                 *
+                 * La historia se escribe día a día, tomando en consideración las elecciones de los jugadores para decidir las consecuencias irreversibles de este conflicto imperecedero.
+                 *
+                 * Éste es un MUD con PvP que permite al jugador establecer cuánto quiere arriesgar al morir: a más riesgo, más gloria ganará por sus heroicidades. La interpretación (Rol) no está obligada, pero si recompensada
+                 * con habilidades especiales -no orientadas al combate- y tesoros únicos.
+                 *
+                 * El detallado creador del juego te permitirá elegir tu deidad -o renegar completamente de los dioses- y unirte a uno de los reinos que los jugadores se encargan de gobernar para explorar un mundo viviente, sumergirte en los misterios del océano,
+                 * dar forma a tu legado, forjar maravillas olvidadas para ti -o tus aliados- y luchar por fe, gloria o dinero.
+                 * -- end translation --
+                 */
                 "The oldest Spanish free mud with more than 20 years of running history.\n\n"
                 "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the mischiefs of the gods after "
                 "more than a thousand years of contempt and hideous war amongst their zealous mortal pawns.\n\n"
