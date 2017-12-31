@@ -77,15 +77,6 @@ clear(scopes)
 cygwin {
   scopes += "cygwin"
 }
-freebsd {
-  scopes += "freebsd"
-}
-freebsd-clang {
-  scopes += "freebsd-clang"
-}
-freebsd-g++ {
-  scopes += "freebsd-g++"
-}
 linux-clang-libc++ {
   scopes += "linux-clang-libc++"
 }
@@ -123,6 +114,7 @@ win64 {
 # darwin(Travis CI), linux(local), linux-clang(local), linux-g++(local),
 # macx(Travis CI), macx-clang(Travis CI), win32(AppVeyor CI),
 # win32-g++(AppVeyor CI), unix(local)
+# freebsd(local) freebsd-clang(local) freebsd-g++(local)
 
 # Suspected not to work:
 # linux-g++-32, linux-g++-64

@@ -260,15 +260,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
 
     QString path;
-#ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
-        path = "/usr/share/hunspell/";
+    // This is duplicated (and should be the same as) the code in:
+    // TCommandLine::TCommandLine(Host*, TConsole*, QWidget*)
+#if defined(Q_OS_MAC)
+    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_FREEBSD)
+    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/local/share/hunspell/");
+    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
     } else {
-        path = "./";
+        path = QLatin1String("./");
     }
-#elif defined(Q_OS_MAC)
-    path = QCoreApplication::applicationDirPath() + "/../Resources/";
+#elif defined(Q_OS_LINUX)
+    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
+    } else {
+        path = QLatin1String("./");
+    }
 #else
+    // Probably Windows!
     path = "./";
 #endif
 
@@ -277,7 +288,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
     entries = entries.filter(rex);
     for (int i = 0; i < entries.size(); i++) {
-        QString n = entries[i].replace(QStringLiteral(".dic"), "");
+        // This is a file name and to support macOs platforms should not be case sensitive:
+        entries[i].remove(QLatin1String(".dic"), Qt::CaseInsensitive);
         auto item = new QListWidgetItem(entries[i]);
         dictList->addItem(item);
         if (entries[i] == pHost->mSpellDic) {
