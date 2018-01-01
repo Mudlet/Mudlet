@@ -641,7 +641,16 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                 "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong "
                 "sense of community.");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
-        return QLatin1String(
+        return QStringLiteral(
+                "The oldest Spanish free mud with more than 20 years of running history.\n\n"
+                "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the mischiefs of the gods after "
+                "more than a thousand years of contempt and hideous war amongst their zealous mortal pawns.\n\n"
+                "History is written on a day per day basis, taking into consideration the players' choices "
+                "to decide the irreversible aftermath of this everlasting struggle.\n\n"
+                "This is a PvP MUD which allows the player to set how high are the stakes: the more you risk losing upon death, the more glory to be earned by your heroism. RP, while "
+                "not enforced, is rewarded with non-PvP oriented perks and unique treasure.\n\n"
+                "A powerful character customization system allows you to choose your deity –or fully disregard the gods– and join one of the player-run realms that govern the land "
+                "to explore a breathing world, delve into the secrets of the oceans, shape your legacy, craft forgotten marvels for you –or your allies– and fight for faith, glory or coin.");
                 /**
                  * Translation to the following text to Spanish as per request from SlyVen on PR #1505.
                  * -- begin translation --
@@ -658,15 +667,6 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                  * dar forma a tu legado, forjar maravillas olvidadas para ti -o tus aliados- y luchar por fe, gloria o dinero.
                  * -- end translation --
                  */
-                "The oldest Spanish free mud with more than 20 years of running history.\n\n"
-                "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the mischiefs of the gods after "
-                "more than a thousand years of contempt and hideous war amongst their zealous mortal pawns.\n\n"
-                "History is written on a day per day basis, taking into consideration the players' choices "
-                "to decide the irreversible aftermath of this everlasting struggle.\n\n"
-                "This is a PvP MUD which allows the player to set how high are the stakes: the more you risk losing upon death, the more glory to be earned by your heroism. RP, while "
-                "not enforced, is rewarded with non-PvP oriented perks and unique treasure.\n\n"
-                "A powerful character customization system allows you to choose your deity –or fully disregard the gods– and join one of the player-run realms that govern the land "
-                "to explore a breathing world, delve into the secrets of the oceans, shape your legacy, craft forgotten marvels for you –or your allies– and fight for faith, glory or coin.");
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
