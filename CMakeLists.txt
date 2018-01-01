@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -69,17 +69,14 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # Enable the built-in updater by default on the three main supported OS
-# unless environmental variable WITH_UPDATER is already defined and set to "NO"
-# (case insensitive).
-# Linux packagers will find it useful to do this since package managers are
-# responsible for updates there. Automatically exclude the update stuff from
-# other OSs such as FreeBSD and Cygwin because if they ever get finished they
-# have their own packaging system - and we do not support updating them.
-# Note: WITH_UPDATER is an environmental value/variable (could be a number, a
-#           string, something else or not even exist).
-#       UPDATER_TEST and USE_UPDATER are cmake variables (possibly a string and
-#           NO(false) or YES(true) respectively).
-#       INCLUDE_UPDATER is a C preprocessor symbol.
+# unless environmental variable WITH_UPDATER is defined and set to "NO" (case
+# insensitive). Linux packagers will find it useful to do this since they are
+# likely to be responsible for updates there. Automatically exclude the
+# update stuff from other OSs such as FreeBSD and Cygwin because if they ever
+# get finished they have their own packaging system - and we do not support
+# updating them.
+# WITH_UPDATER is an environmental value/variable (so could be a number, a
+# string, something else or not even exist).
 set(UPDATER_TEST $ENV{WITH_UPDATER})
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
   # We are on one of the supported platforms
@@ -103,18 +100,12 @@ else()
 endif()
 
 # Enable the inclusion of fonts currently carried in the source code by default
-# unless the environmental variable WITH_FONTS is already defined and is not
-# set to (case insenstive) "no". Linux packagers will find it useful to do this
+# unless the environmental variable WITH_FONTS is defined and is not set to
+# (case insensitive) "NO". Linux packagers will find it useful to do this
 # since package managers may already package the relevant fonts - or are not
 # willing or able to include them.
-# Note: WITH_FONTS is an environmental value/variable (could be a number, a
-#           string, something else or not even exisit).
-#       FONT_TEST and USE_FONTS are CMake variables (probably a string and a
-#           boolean {ON or OFF} respectively).
-#       INCLUDE_FONTS is a C preprocessor symbol (i.e. the same as
-#           "#define INCLUDE_FONTS" which, in the absence of an explicitly set
-#           value, takes the numeric value of (int)1 as far as the compiler is
-#           concerned!)
+# WITH_FONTS is an environmental value/variable (so could be a number, a string,
+# something else or not even exist).
 set(FONT_TEST $ENV{WITH_FONTS})
 if(DEFINED FONT_TEST)
     string(TOUPPER ${FONT_TEST} FONT_TEST)

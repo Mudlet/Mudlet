@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017 by Stephen Lyons                        #
+#    Copyright (C) 2013-2015, 2017-2018 by Stephen Lyons                   #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -167,18 +167,15 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
 
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
-# Enable the inclusion of fonts currently carried in the source code by default
-# unless the environmental variable WITH_FONTS is already defined and is not
-# set to (case insenstive) "no". Linux packagers will find it useful to do this
-# since package managers may already package the relevant fonts - or are not
-# willing or able to include them.
-# Note: WITH_FONTS is an environmental value/variable (could be a number, a
-#           string, something else or not even exist).
-#       FONT_TEST is a qmake variables (probably a string).
-#       INCLUDE_FONTS is a C preprocessor symbol (i.e. the same as
-#           "#define INCLUDE_FONTS" which, in the absence of an explicitly set
-#           value, takes the numeric value of (int)1 as far as the compiler is
-#           concerned!)
+# Setting an environmental variable WITH_FONTS to the case insensitive value
+# "no" will stop the inclusion of the fonts present in the source code in the
+# compiled binary. Linux packagers or other parties may not want to include the
+# fonts since such resources may already be available in other ways or are not
+# wanted in their binaries.
+# Note: as WITH_FONTS could be a number, a string, something else (or not even
+# exist) we need to be careful in checking it exists before doing much else
+# with it. Also as an environmental variable it is tricky to handle unless we
+# read it into a qmake variable first:
 FONT_TEST = $$(WITH_FONTS)
 isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
     DEFINES += INCLUDE_FONTS
@@ -192,25 +189,25 @@ isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
     # and it is not obvious that there is a demand to do this currenly.
 }
 
-######################### Auto Updater setting detection #######################
-# Enable the auto updater system by default
-# unless the environmental variable WITH_UPDATER is already defined and is not
-# set to (case insenstive) "no". Linux packagers will find it useful to do this
-# since package managers will want to handle updates themselves
-# Note: WITH_UPDATER is an environmental value/variable (could be a number, a
-#           string, something else or not even exist).
-#       UPDATER_TEST is a qmake variables (probably a string).
-#       INCLUDE_UPDATER is a C preprocessor symbol.
+######################### Auto Updater setting detection #########,#############
+# Enable the auto updater system by default on supported platforms. unless the
+# environmental variable WITH_UPDATER is already defined and is not
+# set to (case insenstive) "no". This is for Linux packagers and others who will
+# want to handle updates themselves.
+# Note: as WITH_UPDATER could be a number, a string, something else (or not even
+# exist) we need to be careful in checking it exists before doing much else
+# with it. Also as an environmental variable it is tricky to handle unless we
+# read it into a qmake variable first:
 linux|macx|win32 {
-  # We are on one of the supported platforms
-  UPDATER_TEST = $$(WITH_UPDATER)
-  isEmpty( UPDATER_TEST ) | !equals($$upper(UPDATER_TEST), "NO" ) {
-    # The environmental variable does not exist or it does and it is NOT the
-    # particular value we are looking out for - so include the updater code:
-    DEFINES += INCLUDE_UPDATER
-  }
-  # else the environment variable is the specific "don't include the updater
-  # code" setting - so don't!
+    # We are on one of the supported platforms
+    UPDATER_TEST = $$(WITH_UPDATER)
+    isEmpty( UPDATER_TEST ) | !equals($$upper(UPDATER_TEST), "NO" ) {
+       # The environmental variable does not exist or it does and it is NOT the
+       # particular value we are looking out for - so include the updater code:
+       DEFINES += INCLUDE_UPDATER
+    }
+    # else the environment variable is the specific "don't include the updater
+    # code" setting - so don't!
 }
 # else we are on another platform which the updater code will not support so
 # don't include it either
@@ -618,21 +615,34 @@ FORMS += \
 RESOURCES = mudlet.qrc
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += mudlet_fonts.qrc
-    message("Including additional font resources within the Mudlet executable")
+    !build-pass{
+        # On windows or on platforms that support CONFIG having debug_and_release"
+        # then there can be three passes through this file and we only want the
+        # message once (the non build-pass in that case):
+        message("Including additional font resources within the Mudlet executable")
+    }
 } else {
-    message("No font resources are to be included within the Mudlet executable")
+    !build-pass{
+        message("No font resources are to be included within the Mudlet executable")
+    }
 }
 
 linux|macx|win32 {
     contains( DEFINES, INCLUDE_UPDATER ) {
-       HEADERS += updater.h
-       SOURCES += updater.cpp
-       message("The updater code is included in this configuration")
+        HEADERS += updater.h
+        SOURCES += updater.cpp
+        !build-pass{
+            message("The updater code is included in this configuration")
+        }
     } else {
-       message("The updater code is excluded from this configuration")
+        !build-pass{
+            message("The updater code is excluded from this configuration")
+        }
     }
 } else {
-    message("The Updater code is excluded as on-line updating is not available on this platform")
+    !build-pass{
+        message("The Updater code is excluded as on-line updating is not available on this platform")
+    }
 }
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
@@ -653,11 +663,15 @@ linux|macx|win32 {
 # without the DOUBLE quotes but with the SINGLE quotes, assuming /usr/bin is the
 # location of "make"
 #
+# Modify the "Build Environment" (and/or) the "Run Environment" so that there
+# is a SUDO_ASKPASS entry with a value that points to a "ssh-askpass" or
+# similar GUI password requester utility.
+#
 # This then will run "make install" via sudo with root privileges when you use
 # the relevant "Deploy" option on the "Build" menu - and will ask you for YOUR
 # password via a GUI dialog if needed - so that the files can be placed in the
 # specified system directories to which a normal user (you?) does not have write
-# access normally.
+# access to normally.
 
 # Main lua files:
 LUA.files = \

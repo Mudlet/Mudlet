@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2014, 2017-2018 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -150,9 +151,9 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                    "<p><span style=\"color:#bc8942;\"><b>Blaine von Roeder</b></span> () joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</p>\n"
                    "<p><span style=\"color:#bc8942;\"><b>Bruno Bigras</b></span> (<span style=\"color:#0000ff;\">bruno@burnbox.net</span>) developed the original cmake build script and he has committed a number of patches.</p>\n"
                    "<p><span style=\"color:#bc8942;\"><b>Carter Dewey</b></span> (<span style=\"color:#0000ff;\">eldarerathis@gmail.com</span>) contributions to the Lua API.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Erik Pettis</b></span> (<span style=\"color:#40b040;\">Oneymus</span>) developed the Vzyor GUI Manager for Mudlet.</p>\n"
+                   "<p><span style=\"color:#bc8942;\"><b>Erik Pettis</b></span> (<span style=\"color:#40b040;\">Oneymus</span>) developed the Vyzor GUI Manager for Mudlet.</p>\n"
                    "<p><span style=\"color:#bc8942;\"><b>\"ItsTheFae\"</b></span> (<span style=\"color:#40b040;\">Kae</span>) someone who has worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>\"dicene\"</b></span> (<span style=\"color:#40b040;\">Ian</span>) joining us 2017 they have given us some useful C++ and Lua contributions.</p>\n"
+                   "<p><span style=\"color:#bc8942;\"><b>Ian Adkins</b></span> (<span style=\"color:#40b040;\">dicene</span> <span style=\"color:#0000ff;\">ieadkins@gmail.com</span>) joining us 2017 they have given us some useful C++ and Lua contributions.</p>\n"
                    "<p><span style=\"color:#bc8942;\"><b>James Younquist</b></span> (<span style=\"color:#0000ff;\">daemacles@yahoo.com</span>) contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</p>\n"
                    "<p><span style=\"color:#bc8942;\"><b>John Dahlström</b></span> (<span style=\"color:#0000ff;\">email@johndahlstrom.se</span>) helped develop and debug the Lua API. </p>\n"
                    "<p><span style=\"color:#bc8942;\"><b>Karsten Bock</span> (<span style=\"color:#40b040;\">Beliaar</span>) contributed several improvements and new features for Geyser.</p>\n"
@@ -162,7 +163,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                    "<p><span style=\"color:#bc8942;\"><b>Thorsten Wilms</b></span> (<span style=\"color:#0000ff;\">t_w_@freenet.de</span>) has designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.</p>\n"
                    "<p>Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the <b><a href=\"https://launchpad.net/~mudlet-makers/+members#active\">Mudlet Makers</a></b> list (on our former bug-tracking site), or for on-going contributors they may well be included in the <b><a href=\"https://github.com/Mudlet/Mudlet/graphs/contributors\">Contributors</a></b> list on GitHub.</p>\n"
                    "<br>\n"
-                   "<p>Many icons are taken from the <span style=\"color:#bc8942;\"><b><u>KDE4 oxygen icon theme</u></b></span> at <a href=\"https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/\">www.oxygen-icons.org<sup><small>{wayback machine archive}</small></sup></a> or <a href=\"http://www.kde.org\">www.kde.org</a>.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten's work with the other sources.</p>\n"
+                   "<p>Many icons are taken from the <span style=\"color:#bc8942;\"><b><u>KDE4 oxygen icon theme</u></b></span> at <a href=\"https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/\">www.oxygen-icons.org <sup>{wayback machine archive}</sup></a> or <a href=\"http://www.kde.org\">www.kde.org</a>.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten's work with the other sources.</p>\n"
                    "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Brett Duzevich</b></span> and <span style=\"color:#bc8942;\"><b>Ronny Ho</b></span>. They have contributed many good ideas and thus helped improve the scripting framework substantially.</p>\n"
                    "<p>Thanks to <span style=\"color:#bc8942;\"><b>Tomas Mecir</b></span> (<span style=\"color:#0000ff;\">kmuddy@kmuddy.com</span>) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (<a href=\"https://cgit.kde.org/kmuddy.git/\">cgit.kde.org/kmuddy.git/</a>).</p>\n"
                    "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
@@ -470,7 +471,10 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     // Only the introductory text at the top and interspersed between is to be
     // translated - the Licences themselves MUST NOT be translated:
     QString thirdPartiesHeader(
-                tr("<h3>Mudlet makes use of some third-party <i>non</i>-GPL software libraries which are listed here with their license information:</h3>"));
+                tr("<h3>Mudlet is built up the shoulders of others in the FOSS world; as well as making "
+                   "use of many GPL components (which we do not have to mention) some third-party "
+                   "parts that are <i>non</i>-GPL software do need to be listed here along with their "
+                   "license information:</h3>"));
 
     // This one needs something about the name of the original copyright holder
     // and possible contributors as it includes a %1 placeholder in the text
@@ -527,6 +531,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                                "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
                                "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
 
+#if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     QString APACHE2_Body(
                 QStringLiteral("<h4>Apache Licence</h4>"
                                "<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); "
@@ -538,6 +543,8 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                                "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the "
                                "License for the specific language governing permissions and limitations under "
                                "the License.</p>"));
+#endif
+
     QString MIT_Body(
                 QStringLiteral("<h4>The MIT License</h4>"
                                "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
@@ -673,12 +680,13 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                                "All rights reserved.</h3>"));
 
     QString RubyHeader(tr("<h2><u>Ruby BSDL</u></h2>"
-                          "<h3>Copyright © 1993-2013 Yukihiro Matsumoto. All rights reserved.</h3>"));
+                          "<h3>Copyright © 1993-2013 Yukihiro Matsumoto.<br>"
+                          "All rights reserved.</h3>"));
 
     QString QsLogHeader(tr("<h2><u>Qt-Components, QsLog</u></h2>"
                            "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></a>"
-                           "<small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\">{&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
-                           "Copyright © 2013, Razvan Petru</br>"
+                           "<small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
+                           "Copyright © 2013, Razvan Petru<br>"
                            "All rights reserved.</h3>"));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)

@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -56,6 +56,7 @@ set(mudlet_SRCS
     glwidget.cpp
     Host.cpp
     HostManager.cpp
+    ircmessageformatter.cpp
     KeyUnit.cpp
     LuaInterface.cpp
     main.cpp
@@ -94,7 +95,6 @@ set(mudlet_SRCS
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp
-    ircmessageformatter.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -332,14 +332,14 @@ endif()
 
 find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 
-# This is not present before Qt 5.8:
+# This is not present before Qt 5.7:
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 
 if (Qt5Core_VERSION VERSION_LESS 5.6)
   message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
 else()
-  if (Qt5Core_VERSION VERSION_LESS 5.8)
-    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.8 at a minimum")
+  if (Qt5Core_VERSION VERSION_LESS 5.7)
+    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.7 at a minimum")
   else()
       message(STATUS "Qt version: ${Qt5Core_VERSION}")
   endif()
@@ -440,9 +440,10 @@ include_directories( ${ZLIB_INCLUDE_DIR} )
 
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 if(USE_FONTS)
-    QT5_ADD_RESOURCES(mudlet_fonts_RCC_SRCS ${mudlet_fonts_RCCS})
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
+else()
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 endif()
 
 if(WIN32)
