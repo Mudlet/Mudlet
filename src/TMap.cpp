@@ -1265,8 +1265,10 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         QDataStream ifs(&file);
         ifs >> mVersion;
         if (mVersion > mMaxVersion) {
-            QString errMsg = tr("[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
-                                "Mudlet can handle (%2)!  The file is:\n\"%3\".")
+            QString errMsg = tr("[ ERROR ] - Map file is newer than this version of Mudlet can handle,\n"
+                                "it's format version number %1 is higher then the maximum %2 of\n"
+                                "this edition of Mudlet understands!  The file is:\n"
+                                "\"%3\".")
                                      .arg(mVersion)
                                      .arg(mMaxVersion)
                                      .arg(file.fileName());

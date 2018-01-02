@@ -107,29 +107,31 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host)
                                                "should reflect the translations used elsewhere and the <i>Add files</i> one "
                                                "should match the text used for a button elsewhere on the dialog/form.")));
 
-    // The previously added "Close" button has been replaced by a "Cancel"
-    // buttonBox button that has the intrinsic "Cancel"/"Reject" role and has
-    // been wired up to the dialog close() function.
-    // The close button has been re-added but is disabled below so that it can
-    // be reactivated for the user to manually dismiss the dialog when a result
-    // message has been displayed (there is no automatic timeout now!)
+    // The close button in the QDialogButtonBox has been "wired up" to the
+    // dialog "reject" slot in the dlgPackageExporter.ui dialog/form so does not
+    // have a connect(...) here.
+
     // The previously added "Export" button has been replaced by an "Reset"
     // buttonBox button that has the intrinsic "Reset" role but which is renamed
     // to say "Export" - note that we do not use the "Ok", "Yes" or "Accept"
     // role buttons as they all automagically cause the dialog to close and we
-    // do NOT want that as we want it to stay for a short while to show the
-    // results message...
-
-    cancelButton = buttonBox->button(QDialogButtonBox::Cancel);
-
-    closeButton = buttonBox->button(QDialogButtonBox::Close);
-    closeButton->setEnabled(false);
-
+    // do NOT want that as we want it to stay to show the results message until
+    // the close button is hit.
     exportButton = buttonBox->button(QDialogButtonBox::Reset);
     exportButton->setText(tr("&Export"));
 
     addFilesButton = buttonBox->button(QDialogButtonBox::Apply);
     addFilesButton->setText(tr("&Add files"));
+
+    // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
+    // is already a Qt provided icon on a predefined button
+    mudlet::self()->setIconsShownOnDialogButtonBoxes(!exportButton->icon().isNull());
+
+    if (mudlet::self()->isIconsShownOnDialogButtonBoxes()) {
+        // Provide replacement icons if needed
+        exportButton->setIcon(QIcon(QStringLiteral(":/icons/application-zip.png")));
+        addFilesButton->setIcon(QIcon(QStringLiteral(":/icons/insert-documents-multiple.png")));
+    }
 
     // This widget was called filePath but it shadowed a QString class member of
     // the same name when the class was switched over to using the "Multiple
@@ -325,7 +327,7 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
         return false;
     }
 
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
     if (zip_file_add(archive, archiveFileName.toStdString().c_str(), s, ZIP_FL_ENC_UTF_8) == -1) {
 #else
     // We were using zip_add(...) but that is obsolete (and does not necessarily
@@ -346,10 +348,8 @@ void dlgPackageExporter::slot_export_package()
     exportButton->setCheckable(true);
     exportButton->setChecked(true);
     exportButton->setEnabled(false);
-    // Also disable the cancel and add file buttons to direct the user to the
-    // close one which gets enabled at the end...
+
     addFilesButton->setEnabled(false);
-    cancelButton->setEnabled(false);
 
     QFile file_xml(QStringLiteral("%1/%2").arg(mStagingDir.path(), mXmlFile));
     QList<QTreeWidgetItem*> trigList;
@@ -527,7 +527,7 @@ void dlgPackageExporter::slot_export_package()
             // be clear and obvious about it...
             zip* archive;
             if (mIsOverWriteEnabled) {
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR >=1 || LIBZIP_VERSION_MINOR >= 11)
+#if (LIBZIP_VERSION_MAJOR >=1 || LIBZIP_VERSION_MINOR >= 11)
                 archive = zip_open(mZipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &ze);
 #else
                 // The wanted ZIP_TRUNCATE flag is not present before 0.11 *sigh*
@@ -556,7 +556,7 @@ void dlgPackageExporter::slot_export_package()
                 ;
             } else if (!archive) {
                 // Failed to open/create archive file
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
                 // A better error handling system (not requiring a previously
                 // defined finite-sized char type buffer {which obviously can
                 // have string buffer overflow issues} is available in 1.x
@@ -653,7 +653,7 @@ void dlgPackageExporter::slot_export_package()
                     QString directoryName = itDirectoryName.next();
                     // zip_add_dir()/zip_dir_add(...) returns the index of the
                     // added item in the archive or -1 on error:
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
                     if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
 #else
                     // using zip_dir_add(...) is obsolete (and does not necessarily
@@ -733,7 +733,7 @@ void dlgPackageExporter::slot_export_package()
                     if (ze != 0) {
                         displayResultMessage(tr("Failed to populate and then close module (archive) file, error is: \"%1\".")
                                              .arg(QString::fromUtf8(zip_strerror(archive))), false);
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MICRO) && (LIBZIP_VERSION_MAJOR >= 1 || LIBZIP_VERSION_MINOR >= 11)
+#if (LIBZIP_VERSION_MAJOR >= 1 || LIBZIP_VERSION_MINOR >= 11)
                         // In 0.11 a function was added to clean up (deallocate)
                         // the memory associated with an archive - which would
                         // normally occur upon a sucessful close - before then
@@ -757,9 +757,6 @@ void dlgPackageExporter::displayResultMessage(const QString& html, bool const is
 {
     infoLabel->setText(QStringLiteral("<html><head/><body><p><font color='%1'><b><big>%2</big><b></font></p></body></html>")
                        .arg(isSuccessMessage ? QLatin1String("blue") : QLatin1String("red"), html));
-
-    // Enable close button:
-    closeButton->setEnabled(true);
 }
 
 void dlgPackageExporter::slot_addFiles()

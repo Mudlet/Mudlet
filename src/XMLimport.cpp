@@ -173,14 +173,15 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                     // Minor check is not currently relevant, just abort on 2.000f or more
 
                     if (pErrorMessage) {
-                        *pErrorMessage = QStringLiteral("failed to import package as it has a version number of %1 which is too late to "
-                                                        "be understood by this version of Mudlet, it seems you need a newer one")
+                        *pErrorMessage = QStringLiteral("failed to import package as it has a version number of %1 which is too new to "
+                                                        "be understood by this version of Mudlet, it seems you need a more recent "
+                                                        "edition of this MUD client")
                                          .arg(versionString);
                     } else {
                         QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
                                              "\"%1\"\n"
                                              "reports it has a version (%2) it must have come from a later Mudlet version,\n"
-                                             "and this one cannot read it, you need a newer Mudlet!")
+                                             "and this one cannot read it, you need a more recent edition of this MUD client!")
                                                   .arg(pfile->fileName(), versionString);
                         mpHost->postMessage(moanMsg);
                     }

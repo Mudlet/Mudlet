@@ -2029,11 +2029,11 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
     }
 }
 
-int TLuaInterpreter::getIsModuleSynced(lua_State* L)
+int TLuaInterpreter::isModuleSynced(lua_State* L)
 {
     QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getIsModuleSynced: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "isModuleSynced: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         moduleName = QString::fromUtf8(lua_tostring(L, 1));
@@ -2052,28 +2052,45 @@ int TLuaInterpreter::getIsModuleSynced(lua_State* L)
     }
 }
 
-int TLuaInterpreter::setIsModuleSynced(lua_State* L)
+int TLuaInterpreter::syncModule(lua_State* L)
 {
     QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setIsModuleSynced: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "syncModule: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         moduleName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    bool isModuleSynced = false;
-    if (!lua_isboolean(L, 2)) {
-        lua_pushfstring(L, "setIsModuleSynced: bad argument #2 type (module is synced as boolean expected, got %s!)", luaL_typename(L, 2));
+    Host& host = getHostFromLua(L);
+    if (host.mInstalledModules.contains(moduleName)) {
+        QStringList moduleData(host.mInstalledModules.value(moduleName));
+        moduleData[1] = QLatin1String("1");
+        host.mInstalledModules[moduleName] = moduleData;
+        mudlet::self()->refreshModuleManager(&host);
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "Module named \"%s\" not installed.", moduleName.toUtf8().constData());
+        return 2;
+    }
+}
+
+int TLuaInterpreter::unsyncModule(lua_State* L)
+{
+    QString moduleName;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "unsyncModule: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
-        isModuleSynced = lua_toboolean(L, 2);
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
     Host& host = getHostFromLua(L);
     if (host.mInstalledModules.contains(moduleName)) {
         QStringList moduleData(host.mInstalledModules.value(moduleName));
-        moduleData[1] = isModuleSynced ? QLatin1String("1") : QLatin1String("0");
+        moduleData[1] = QLatin1String("0");
         host.mInstalledModules[moduleName] = moduleData;
         mudlet::self()->refreshModuleManager(&host);
         lua_pushboolean(L, true);
@@ -10276,7 +10293,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     QString packageName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "installPackage: bad argument #1 type (package {path and/or} file name as string expected, got %s!)",
+        lua_pushfstring(L, "installPackage: bad argument #1 type (package file name {may include a path} as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -10298,7 +10315,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
             return 1;
         } else {
             // We will get a message, if we try to install a package already
-            // loaded - this will produce an additinoal message even though
+            // loaded - this will produce an additional message even though
             // we were successful - so report it (or any other future message,
             // like, say, an MD5 hash of the contents - a future idea!)
             lua_pushfstring(L, "Note, during installation of package \"%s\": %s.",
@@ -10357,7 +10374,7 @@ int TLuaInterpreter::installModule(lua_State* L)
     QString moduleName;
     bool isToSync = false;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "installModule: bad argument #1 type (module {path and/or} file name as string expected, got %s!)",
+        lua_pushfstring(L, "installModule: bad argument #1 type (module file name {may include a path} as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -12382,8 +12399,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getExitStubs1", TLuaInterpreter::getExitStubs1);
     lua_register(pGlobalLua, "setModulePriority", TLuaInterpreter::setModulePriority);
     lua_register(pGlobalLua, "getModulePriority", TLuaInterpreter::getModulePriority);
-    lua_register(pGlobalLua, "setIsModuleSynced", TLuaInterpreter::setIsModuleSynced);
-    lua_register(pGlobalLua, "getIsModuleSynced", TLuaInterpreter::getIsModuleSynced);
+    lua_register(pGlobalLua, "syncModule", TLuaInterpreter::syncModule);
+    lua_register(pGlobalLua, "unsyncModule", TLuaInterpreter::unsyncModule);
+    lua_register(pGlobalLua, "isModuleSynced", TLuaInterpreter::isModuleSynced);
     lua_register(pGlobalLua, "updateMap", TLuaInterpreter::updateMap);
     lua_register(pGlobalLua, "addMapEvent", TLuaInterpreter::addMapEvent);
     lua_register(pGlobalLua, "removeMapEvent", TLuaInterpreter::removeMapEvent);

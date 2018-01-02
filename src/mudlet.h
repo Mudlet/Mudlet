@@ -305,6 +305,8 @@ public:
         moduleBackupsPath
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    bool isIconsShownOnDialogButtonBoxes() const;
+    void setIconsShownOnDialogButtonBoxes(const bool);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -390,8 +392,12 @@ private slots:
 
 private:
     void initEdbee();
-
     void goingDown() { mIsGoingDown = true; }
+    void check_for_mappingscript();
+    void slot_toggle_compact_input_line();
+    void set_compact_input_line();
+    QSettings* getQSettings();
+
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
@@ -415,7 +421,6 @@ private:
 
     QAction* actionReconnect;
 
-    void check_for_mappingscript();
 
     QPointer<Host> mpPackageListHost;
     QPointer<QListWidget> packageList;
@@ -434,10 +439,13 @@ private:
     bool mshowMapAuditErrors;
 
     bool mCompactInputLine;
-    void slot_toggle_compact_input_line();
-    void set_compact_input_line();
-
-    QSettings* getQSettings();
+    // More modern Desktop styles no longer include icons on the buttons in
+    // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
+    // does use them - use this flag to determine whether we should apply our
+    // icons to override some of them. Set the first flag when we have checked
+    // and set the second to what the "native" style does.
+    bool mIsIconShownOnDialogButtonBoxesTested;
+    bool mIsIconShownOnDialogButtonBoxes;
 };
 
 class TConsoleMonitor : public QObject

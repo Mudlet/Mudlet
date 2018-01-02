@@ -177,6 +177,8 @@ mudlet::mudlet()
 , mpProfilePreferencesDlg(nullptr)
 , mpDlgPackageExporter(nullptr)
 , mshowMapAuditErrors(false)
+, mIsIconShownOnDialogButtonBoxesTested(false)
+, mIsIconShownOnDialogButtonBoxes(true)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -665,12 +667,17 @@ void mudlet::slot_module_manager()
         moduleHelpButton = pDialogButtonBox->button(QDialogButtonBox::Help);
         moduleHelpButton->setText(tr("Module Help","this is for help on a module"));
 
+        // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
+        // is already a Qt provided icon on a predefined button
+        setIconsShownOnDialogButtonBoxes(!moduleHelpButton->icon().isNull());
+
         moduleInstallButton = pDialogButtonBox->addButton(tr("Install","this is for a module"), QDialogButtonBox::ActionRole);
-        moduleInstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-add_small.png")));
-
         moduleUninstallButton = pDialogButtonBox->addButton(tr("Uninstall","this is for a module"), QDialogButtonBox::ActionRole);
-        moduleUninstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-remove_small.png")));
 
+        if (isIconsShownOnDialogButtonBoxes()) {
+            moduleInstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-add_small.png")));
+            moduleUninstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-remove_small.png")));
+        }
         // Disable the uninstall and help buttons until a module is selected:
         moduleHelpButton->setEnabled(false);
         moduleUninstallButton->setEnabled(false);
@@ -888,9 +895,17 @@ void mudlet::slot_package_manager()
         // and NOT the uninstall one!
         pCloseButton->setDefault(true);
         installButton = pDialogButtonBox->addButton(tr("Install","this is for a package"), QDialogButtonBox::ActionRole);
-        installButton->setIcon(QIcon(QStringLiteral(":/icons/list-add_small.png")));
         uninstallButton = pDialogButtonBox->addButton(tr("Uninstall","this is for a package"), QDialogButtonBox::ActionRole);
-        uninstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-remove_small.png")));
+
+        // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
+        // is already a Qt provided icon on a predefined button
+        setIconsShownOnDialogButtonBoxes(!pCloseButton->icon().isNull());
+
+        if (isIconsShownOnDialogButtonBoxes()) {
+            installButton->setIcon(QIcon(QStringLiteral(":/icons/list-add_small.png")));
+            uninstallButton->setIcon(QIcon(QStringLiteral(":/icons/list-remove_small.png")));
+        }
+
         // Disable the uninstall button until a package is selected.
         uninstallButton->setEnabled(false);
 
@@ -3183,7 +3198,7 @@ QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& de
     archive = zip_open(archivePath.toStdString().c_str(), ZIP_CHECKCONS, &ze);
     QString errMsg;
     if (!archive) {
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
         zip_error_t error;
         zip_error_init_with_code(&error, ze);
         if (isFullMessage) {
@@ -3272,7 +3287,7 @@ QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& de
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
             if (!zf) {
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
                 zip_error_t* pError;
                 pError = zip_get_error(archive);
                 if (isFullMessage) {
@@ -3348,7 +3363,7 @@ QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& de
             while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
                 zip_int64_t len = zip_fread(zf, buffer, sizeof(buffer));
                 if (len < 0) {
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
                     zip_error_t* pError;
                     pError = zip_get_error(archive);
                     if (isFullMessage) {
@@ -3395,7 +3410,7 @@ QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& de
                 }
 
                 if (fd.write(buffer, len) == -1) {
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
                     zip_error_t* pError;
                     pError = zip_get_error(archive);
                     if (isFullMessage) {
@@ -3449,7 +3464,7 @@ QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& de
     // This shouldn't be a possible point of failure as we are only reading from
     // the archive not writing to it...
     if (zip_close(archive) == -1) {
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+#if (LIBZIP_VERSION_MAJOR >= 1)
         zip_error_t* pError = zip_get_error(archive);
         if (isFullMessage) {
             errMsg = tr("[ WARN ]  - Failure to close archive file \"%1\" cleanly,\n"
@@ -3750,3 +3765,17 @@ void mudlet::showChangelogIfUpdated()
     updater->showChangelog();
 }
 #endif // INCLUDE_UPDATER
+
+void mudlet::setIconsShownOnDialogButtonBoxes(const bool state)
+{
+    if (!mIsIconShownOnDialogButtonBoxesTested) {
+        qDebug() << "mudlet::setIconsShownOnDialogButtonBoxes(" << state << ") INFO - was called and state set for rest of run.";
+        mIsIconShownOnDialogButtonBoxes = state;
+        mIsIconShownOnDialogButtonBoxesTested = true;
+    }
+}
+
+bool mudlet::isIconsShownOnDialogButtonBoxes() const
+{
+    return mIsIconShownOnDialogButtonBoxes;
+}

@@ -86,8 +86,6 @@ private:
     QPointer<Host> mpHost;
     QString mHostName;
     QPushButton* addFilesButton;
-    QPushButton* cancelButton;
-    QPushButton* closeButton;
     QPushButton* exportButton;
     QString mPackageName;
     QString mZipFile;

@@ -61,9 +61,16 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
-    abort->setIcon(QIcon(QStringLiteral(":/icons/dialog-close.png")));
+
+    // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
+    // is already a Qt provided icon on a predefined button
+    mudlet::self()->setIconsShownOnDialogButtonBoxes(!abort->icon().isNull());
+
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    connect_button->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
+    if (mudlet::self()->isIconsShownOnDialogButtonBoxes()) {
+        abort->setIcon(QIcon(QStringLiteral(":/icons/dialog-close.png")));
+        connect_button->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
+    }
 
     connect(connect_button, SIGNAL(clicked()), this, SLOT(accept()));
     connect(abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
