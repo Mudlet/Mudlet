@@ -81,32 +81,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host)
 // directory persist beyond the lifetime of this class
 //    mTempDir.setAutoRemove(false);
 
-    textLabel_informationText->setText(QStringLiteral("<html><head/><body>%1</body></html>")
-                                       .arg(tr("<p>Select the Mudlet items above that you wish to include in the package/module "
-                                               "- unlike the <i>Export</i> action in the main Editor you may include different "
-                                               "types of Mudlet item (<i>Aliases</i>, <i>Buttons</i>, <i>Key bindings</i> etc. "
-                                               "but <b>not <i>variables</i></b>), into one unit that can be shared (and "
-                                               "synchronised) between different profiles and can be shared with other Mudlet "
-                                               "users.</p>"
-                                               "<p>If you want to add additional files to the package e.g. images, icons, "
-                                               "sounds, etc. that the above items or other packages/modules can use, then "
-                                               "the <i>Add files</i> button brings up a system file explorer window pointing "
-                                               "a temporary directory (which will be automatically deleted after the package"
-                                               "/module has been created). Copy all the files (and folders) that you want "
-                                               "to add to the package into this temporary directory and the structure will "
-                                               "be replicated in the finished package/module.</p>"
-                                               "<p><b>Do not move or edit the \"config.lua\" file that will be present - it "
-                                               "is used internally by the Mudlet package/module system.</b></p>"
-                                               "<p>When you are happy with the content click on the <i>Export</i> button "
-                                               "below to start the creation of the package/module named below; a result "
-                                               "message should appear shortly afterwards indicating whether the process was "
-                                               "successful or not - if a temporary stage directory was selected it will "
-                                               "dissappear when this dialog is closed...</p>",
-                                               "Please try and preserve the HTML tags in any translation, note that </p><p> "
-                                               "are used to separate adjacent paragraphs. The terms in italics (<i>...</i>) "
-                                               "should reflect the translations used elsewhere and the <i>Add files</i> one "
-                                               "should match the text used for a button elsewhere on the dialog/form.")));
-
     // The close button in the QDialogButtonBox has been "wired up" to the
     // dialog "reject" slot in the dlgPackageExporter.ui dialog/form so does not
     // have a connect(...) here.
@@ -292,6 +266,52 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host)
         out.flush();
         configFile.close();
     }
+
+    QString stagingAreaText1;
+    // Left null for case where "temporary" directory is NOT deleted:
+    QString stagingAreaText2;
+    if (mIsToKeepStagedFiles) {
+        stagingAreaText1 = tr("<p>If you want to add additional files to the package e.g. images, icons, "
+                             "sounds, etc. that the above items or other packages/modules can use, then "
+                             "the <i>Add files</i> button brings up a system file explorer window pointing "
+                             "a directory (which will retained after the package/module has been created "
+                             "as the <i>Retain staged files?</i> option was checked when the package "
+                             "details were entered before). Copy all the files (and folders) that you want "
+                             "to add to the package into this temporary directory and the structure will "
+                             "be replicated in the finished package/module.</p>");
+    } else {
+        stagingAreaText1 = tr("<p>If you want to add additional files to the package e.g. images, icons, "
+                             "sounds, etc. that the above items or other packages/modules can use, then "
+                             "the <i>Add files</i> button brings up a system file explorer window pointing "
+                             "a directory (which will be automatically deleted after the package"
+                             "/module has been created as the <i>Retain staged files?</i> option was not "
+                             "checked when the package details were entered before). Copy all the files "
+                             "(and folders) that you want to add to the package into this temporary "
+                             "directory and the structure will be replicated in the finished "
+                             "package/module.</p>");
+        stagingAreaText2 = tr("<p><i>The temporary staging directory will disappear when this dialog is closed...</i></p>");
+    }
+
+    textLabel_informationText->setText(QStringLiteral("<html><head/><body>%1</body></html>")
+                                       .arg(tr("<p>Select the Mudlet items above that you wish to include in the package/module "
+                                               "- unlike the <i>Export</i> action in the main Editor you may include different "
+                                               "types of Mudlet item (<i>Aliases</i>, <i>Buttons</i>, <i>Key bindings</i> etc. "
+                                               "but <b>not <i>variables</i></b>), into one unit that can be shared (and "
+                                               "synchronised) between different profiles and can be shared with other Mudlet "
+                                               "users.</p>"
+                                               "%1"
+                                               "<p><b>Do not move or edit the \"config.lua\" file that will be present - it "
+                                               "is used internally by the Mudlet package/module system.</b></p>"
+                                               "<p>When you are happy with the content click on the <i>Export</i> button "
+                                               "below to start the creation of the package/module named below; a result "
+                                               "message should appear shortly afterwards indicating whether the process was "
+                                               "successful or not.</p>"
+                                               "%2",
+                                               "Please try and preserve the HTML tags in any translation, note that </p><p> "
+                                               "are used to separate adjacent paragraphs. The terms in italics (<i>...</i>) "
+                                               "should reflect the translations used elsewhere and the <i>Add files</i> one "
+                                               "should match the text used for a button elsewhere on the dialog/form.")
+                                            .arg(stagingAreaText1, stagingAreaText2)));
 
     connect(addFilesButton, SIGNAL(clicked()), this, SLOT(slot_addFiles()));
     connect(exportButton, SIGNAL(clicked()), this, SLOT(slot_export_package()));
