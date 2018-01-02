@@ -78,14 +78,14 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 
 // A crude and simplistic commandline options processor - note that Qt deals
 // with its options automagically!
-#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC))
+#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC) || defined(Q_OS_FREEBSD))
     // Handle other currently unconsidered OSs - what are they - by returning the
     // normal GUI type application handle.
     return new QApplication(argc, argv);
 #endif
 
     for (int i = 1; i < argc; ++i) {
-#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
+#if defined(Q_OS_UNIX) || defined(Q_OS_MAC)
         if (qstrcmp(argv[i], "--") == 0) {
             break; // Bail out on end of option type arguments
         }
@@ -93,7 +93,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 
         char argument = 0;
         bool isOption = false;
-#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
+#if defined(Q_OS_UNIX) || defined(Q_OS_MAC)
         if (strlen(argv[i]) > 2 && strncmp(argv[i], "--", 2) == 0) {
             argument = argv[i][2];
             isOption = true;
@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
             std::cout << "                       file are relative to the Style Sheet file's path." << std::endl;
             std::cout << "        " << OPT_PREFIX << "stylesheet stylesheet" << std::endl;
             std::cout << "                       is the same as listed above." << std::endl;
-#if defined(Q_OS_UNIX)
+#if defined(Q_OS_UNIX) && ! defined(Q_OS_MAC)
             std::cout << "        " << OPT_PREFIX << "sync          runs Mudlet in X synchronous mode. Synchronous mode" << std::endl;
             std::cout << "                       forces the X server to perform each X client request" << std::endl;
             std::cout << "                       immediately and not use buffer optimization. It makes" << std::endl;
