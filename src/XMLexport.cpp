@@ -780,6 +780,8 @@ bool XMLexport::exportToClipboard(TTrigger* pT)
     Q_UNUSED(pT);
 
     QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
@@ -918,6 +920,8 @@ bool XMLexport::exportToClipboard(TAlias* pT)
     // autoFormatting is set to true in constructor
 
     QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
@@ -1017,6 +1021,8 @@ bool XMLexport::exportToClipboard(TAction* pT)
     // autoFormatting is set to true in constructor
 
     QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
@@ -1133,6 +1139,8 @@ bool XMLexport::exportToClipboard(TTimer* pT)
     // autoFormatting is set to true in constructor
 
     QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
@@ -1234,6 +1242,8 @@ bool XMLexport::exportToClipboard(TScript* pT)
     // autoFormatting is set to true in constructor
 
     QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
@@ -1337,6 +1347,8 @@ bool XMLexport::exportToClipboard(TKey* pT)
     // autoFormatting is set to true in constructor
 
     QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();

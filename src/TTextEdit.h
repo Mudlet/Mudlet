@@ -83,6 +83,8 @@ public:
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void copySelectionToClipboardHTML();
     void searchSelectionOnline();
+    int getColumnCount();
+    int getRowCount();
 
     QColor mBgColor;
     int mCursorY;

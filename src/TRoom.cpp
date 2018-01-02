@@ -72,17 +72,8 @@ TRoom::TRoom(TRoomDB* pRDB)
 
 TRoom::~TRoom()
 {
-    static double cumulativeMean = 0.0;
-    static quint64 runCount = 0;
-    QElapsedTimer timer;
-    timer.start();
     if (mpRoomDB) {
         mpRoomDB->__removeRoom(id);
-    }
-    quint64 thisTime = timer.nsecsElapsed();
-    cumulativeMean += (((thisTime * 1.0e-9) - cumulativeMean) / ++runCount);
-    if (runCount % 1000 == 0) {
-        qDebug() << "TRoom::~TRoom() took" << thisTime * 1.0e-9 << "Sec this time and after" << runCount << "times the average is" << cumulativeMean << "Sec.";
     }
 }
 
@@ -166,7 +157,7 @@ void TRoom::setWeight(int w)
     weight = w;
 }
 
-// Previous implimentations did not allow for REMOVAL of an exit weight (by
+// Previous implementations did not allow for REMOVAL of an exit weight (by
 // setting it to zero)
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
@@ -413,7 +404,7 @@ void TRoom::setExitLock(int exit, bool state)
     }
 }
 
-// The need for "to" seems superflous here, cmd is the decisive factor
+// The need for "to" seems superfluous here, cmd is the decisive factor
 void TRoom::setSpecialExitLock(int to, const QString& cmd, bool doLock)
 {
     QMapIterator<int, QString> it(other);
@@ -561,7 +552,7 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
             }
         }
     }
-    // Have definately removed the existing case of this command
+    // Have definitely removed the existing case of this command
     // Now add it to map if wanted
 
     if (to > 1) {
@@ -1113,7 +1104,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                                 .arg(auditKey),
                         true);
                 it.remove();
-                // We cannot have a door or anything else on a non-existant special exit
+                // We cannot have a door or anything else on a non-existent special exit
                 doors.remove(exitName);
                 exitWeights.remove(exitName);
                 customLines.remove(exitName);
@@ -1445,7 +1436,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         customLinesStyle.remove(customLine);
         customLinesArrow.remove(customLine);
         // Whether we have a stub or not we have handled all the things that we
-        // want to check the existance of so take them out of the pools of
+        // want to check the existence of so take them out of the pools of
         // things left to check after all the exits have been looked at
         exitLocksPool.remove(dirCode);
         exitWeightsPool.remove(doorAndWeight);
@@ -1527,7 +1518,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         customLinesStyle.remove(customLine);
         customLinesArrow.remove(customLine);
         // Whether we have a stub or not we have handled all the things that we
-        // want to check the existance of so take them out of the pools of
+        // want to check the existence of so take them out of the pools of
         // things left to check after all the exits have been looked at
 
         doorsPool.remove(doorAndWeight); // Can still have a door on a stub

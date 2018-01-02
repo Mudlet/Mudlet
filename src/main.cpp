@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
             // Start work in this text item
             QTextLine versionTextline = versionTextLayout.createLine();
             // First draw (one line from) the text we have put in on the layout to
-            // see how wide it is..., assuming accutally that it will only take one
+            // see how wide it is..., assuming actually that it will only take one
             // line of text
             versionTextline.setLineWidth(280);
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
@@ -446,7 +446,7 @@ int main(int argc, char* argv[])
     }
 #else
     QFile linkFile(homeLink);
-    if (!linkFile.exists()) {
+    if (!linkFile.exists() && first_launch) {
         QFile::link(homeDirectory, homeLink);
     }
 #endif
@@ -482,12 +482,12 @@ int main(int argc, char* argv[])
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
     // click something in a parent process to the application when you are stuck
-    // with some OS's choice of wait cursor - you might wish to temparily disable
+    // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
     return app->exec();
 }
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
 // small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done

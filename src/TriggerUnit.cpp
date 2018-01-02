@@ -222,7 +222,7 @@ void TriggerUnit::removeTrigger(TTrigger* pT)
     mTriggerMap.remove(pT->getID());
 }
 
-// trigger matching order is permantent trigger objects first, temporary objects second
+// trigger matching order is permanent trigger objects first, temporary objects second
 // after package import or module sync this order needs to be reset
 void TriggerUnit::reorderTriggersAfterPackageImport()
 {
