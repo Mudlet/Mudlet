@@ -355,23 +355,23 @@ bool LuaInterface::setValue(TVar* var)
             return setCValue(vars);
         }
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
-            variableChangeCode.append("[" + vars[i]->getName() + "]");
+            variableChangeCode.append(QStringLiteral("[%1]").arg(vars.at(i)->getName()));
         } else {
-            variableChangeCode.append(R"([")" + vars[i]->getName() + R"("])");
+            variableChangeCode.append(QStringLiteral(R"(["%1"])").arg(vars.at(i)->getName()));
         }
     }
     switch (var->getValueType()) {
     case LUA_TSTRING:
-        variableChangeCode.append(QString(" = [[" + var->getValue() + "]]"));
+        variableChangeCode.append(QStringLiteral(" = [[%1]]").arg(var->getValue()));
         break;
     case LUA_TNUMBER:
-        variableChangeCode.append(QString(" = " + var->getValue()));
+        variableChangeCode.append(QStringLiteral(" = %1").arg(var->getValue()));
         break;
     case LUA_TBOOLEAN:
-        variableChangeCode.append(QString(" = " + var->getValue()));
+        variableChangeCode.append(QStringLiteral(" = %1").arg(var->getValue()));
         break;
     case LUA_TTABLE:
-        variableChangeCode.append(QString(" = {}"));
+        variableChangeCode.append(QLatin1String(" = {}"));
         break;
     default:
         return false;
@@ -566,7 +566,7 @@ void LuaInterface::renameVar(TVar* var)
     //this assumes anything like reparenting has been done
     L = interpreter->pGlobalLua;
     QList<TVar*> vars = varOrder(var);
-    QString oldVariableDeleteCode = vars[0]->getName();
+    QString oldVariableDeleteCode = vars.at(0)->getName();
     QString newName;
     if (vars.size() > 1) {
         newName = vars[0]->getName();
@@ -574,7 +574,7 @@ void LuaInterface::renameVar(TVar* var)
     for (int i = 1; i < vars.size(); i++) {
         int kType = vars[i]->getKeyType();
         if (kType == LUA_TNUMBER) {
-            oldVariableDeleteCode.append("[" + vars[i]->getName() + "]");
+            oldVariableDeleteCode.append(QStringLiteral("[%1]").arg(vars.at(i)->getName()));
             if (i < vars.size() - 1) {
                 newName.append("[" + vars[i]->getName() + "]");
             }
@@ -582,19 +582,18 @@ void LuaInterface::renameVar(TVar* var)
             renameCVar(vars);
             return;
         } else {
-            oldVariableDeleteCode.append(R"([")" + vars[i]->getName() + R"("])");
+            oldVariableDeleteCode.append(QStringLiteral("[\"%1\"]").arg(vars.at(i)->getName()));
             if (i < vars.size() - 1) {
-                newName.append(R"([")" + vars[i]->getName() + R"("])");
+                newName.append(QStringLiteral("[\"%1\"]").arg(vars.at(i)->getName()));
             }
         }
     }
     if (var->getNewKeyType() == LUA_TNUMBER) {
-        newName.append("[" + vars.back()->getNewName() + "]");
+        newName.append(QStringLiteral("[%1]").arg(vars.back()->getNewName()));
     } else {
-        newName.append(R"([")" + vars.back()->getNewName() + R"("])");
+        newName.append(QStringLiteral("[\"%1\"]").arg(vars.back()->getNewName()));
     }
-    QString variableRenameCode = QString(newName + " = " + oldVariableDeleteCode);
-    luaL_loadstring(L, variableRenameCode.toUtf8().constData());
+    luaL_loadstring(L, QStringLiteral("%1 = %2").arg(newName, oldVariableDeleteCode).toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
         QString emsg = QString::fromUtf8(lua_tostring(L, -1));
@@ -602,8 +601,7 @@ void LuaInterface::renameVar(TVar* var)
         return;
     }
     //delete it
-    oldVariableDeleteCode.append(QString(" = nil"));
-    luaL_loadstring(L, oldVariableDeleteCode.toUtf8().constData());
+    luaL_loadstring(L, oldVariableDeleteCode.append(QLatin1String(" = nil")).toUtf8().constData());
     error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
         QString emsg = QString::fromUtf8(lua_tostring(L, -1));
@@ -618,27 +616,27 @@ QString LuaInterface::getValue(TVar* var)
         L = interpreter->pGlobalLua;
         QList<TVar*> vars = varOrder(var);
         if (vars.empty()) {
-            return "";
+            return QString();
         }
         int pCount = vars.size(); //how many things we need to pop at the end
         //load from _G first
         lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
         for (int i = 1; i < vars.size(); i++) {
             if (!loadValue(L, vars[i], -2)) {
-                return "";
+                return QString();
             }
         }
         int vType = lua_type(L, -1);
-        QString value = "";
+        QString value;
         if (vType == LUA_TBOOLEAN) {
-            value = lua_toboolean(L, -1) == 0 ? "false" : "true";
+            value = lua_toboolean(L, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
         } else if (vType == LUA_TNUMBER || vType == LUA_TSTRING) {
             value = QString::fromUtf8(lua_tostring(L, -1));
         }
         lua_pop(L, pCount);
         return value;
     }
-    return "";
+    return QString();
 }
 
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
