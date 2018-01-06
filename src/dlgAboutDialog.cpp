@@ -468,13 +468,12 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                 .arg(htmlHead, headerText, gplText));
 
     // TAB 3 - Third party items
-    // Only the introductory text at the top and interspersed between is to be
-    // translated - the Licences themselves MUST NOT be translated:
+    // Only the introductory text at the top and interspersed between items are
+    // to be translated - the Licences themselves MUST NOT be translated:
     QString thirdPartiesHeader(
-                tr("<h3>Mudlet is built up the shoulders of others in the FOSS world; as well as making "
-                   "use of many GPL components (which we do not have to mention) some third-party "
-                   "parts that are <i>non</i>-GPL software do need to be listed here along with their "
-                   "license information:</h3>"));
+                tr("<p align=\"center\"><b>Mudlet</b> is built upon the shoulders of other projects in the FOSS world; "
+                   "as well as using many GPL components we also make use of some third-party software "
+                   "with other licenses:</p>"));
 
     // This one needs something about the name of the original copyright holder
     // and possible contributors as it includes a %1 placeholder in the text
@@ -565,7 +564,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
     QString UbuntuFontText(
-                QStringLiteral("<h4>UBUNTU FONT LICENCE Version 1.0</h4>"
+                QStringLiteral("<h3>UBUNTU FONT LICENCE Version 1.0</h3>"
                                "<p>PREAMBLE</p>"
                                "<p>This licence allows the licensed fonts to be used, studied, modified and "
                                "redistributed freely. The fonts, including any derivative works, can be "
@@ -791,7 +790,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr>%31")
-                                  .arg(UbuntuFontText));               // 32 - Ubuntu Font Text - not translatable
+                                  .arg(UbuntuFontText));               // 31 - Ubuntu Font Text - not translatable
 #endif
     license_3rdParty_texts.append(QLatin1String("</body></html>"));
 
