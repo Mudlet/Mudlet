@@ -3402,6 +3402,8 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // when saving/resyncing packages/modules - ends in a '/'
         return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
     }
+    Q_UNREACHABLE();
+    return QString();
 }
 
 #if defined(INCLUDE_UPDATER)

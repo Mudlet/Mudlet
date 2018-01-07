@@ -1390,6 +1390,8 @@ QString TTextEdit::getSelectedText(char newlineChar)
         // we never append the last character of a buffer line se we set our own
         text.append(newlineChar);
     }
+    qDebug() << "TTextEdit::getSelectedText(...) INFO - unexpectedly hit bottom of method so returning:" << text;
+    return text;
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
