@@ -321,6 +321,7 @@ function table.save( sfile, t )
   table.insert( tables, t )
   local lookup = { [t] = 1 }
   local file = io.open( sfile, "w" )
+  if not file then return nil, msg end
   file:write( "return {" )
   for i, v in ipairs( tables ) do
     table.pickle( v, file, tables, lookup )
