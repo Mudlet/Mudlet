@@ -100,10 +100,10 @@ else()
 endif()
 
 # Enable the inclusion of fonts currently carried in the source code by default
-# unless the environmental variable WITH_FONTS is defined and is not set to
-# (case insensitive) "NO". Linux packagers will find it useful to do this
-# since package managers may already package the relevant fonts - or are not
-# willing or able to include them.
+# unless the environmental variable WITH_FONTS is defined AND is set to a
+# (case insensitive) value of "NO". Linux packagers will find it useful to do
+# this since package managers may already package the relevant fonts - or are
+# not willing or able to include them.
 # WITH_FONTS is an environmental value/variable (so could be a number, a string,
 # something else or not even exist).
 set(FONT_TEST $ENV{WITH_FONTS})
