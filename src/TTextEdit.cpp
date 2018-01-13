@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
@@ -25,6 +26,7 @@
 #include "TTextEdit.h"
 
 
+#include "mudlet.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -1160,27 +1162,42 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
 
         QAction* action = new QAction("copy", this);
-        action->setStatusTip(tr("copy selected text to clipboard"));
+        action->setToolTip(tr("copy selected text to clipboard"));
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
         QAction* action2 = new QAction("copy HTML", this);
-        action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
+        action2->setToolTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
         QAction* action3 = new QAction("select all", this);
-        action3->setStatusTip(tr("select all text in the buffer"));
+        action3->setToolTip(tr("select all text in the buffer"));
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(("search on " + selectedEngine), this);
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
-        action4->setStatusTip("search selected text on " + selectedEngine);
+        action4->setToolTip(tr("search selected text on %1").arg(selectedEngine));
 
         auto popup = new QMenu(this);
+        popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
         popup->addSeparator();
         popup->addAction(action3);
         popup->addSeparator();
         popup->addAction(action4);
+
+        if (mudlet::self()->isControlless()) {
+            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
+            connect(actionRestoreMainMenu, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainMenu()));
+            actionRestoreMainMenu->setToolTip(tr("use this to restore the Main menu to get access to controls!"));
+
+            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
+            connect(actionRestoreMainToolBar, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainToolBar()));
+            actionRestoreMainToolBar->setToolTip(tr("use this to restore the Main Toolbar to get access to controls!"));
+
+            popup->addSeparator();
+            popup->addAction(actionRestoreMainMenu);
+            popup->addAction(actionRestoreMainToolBar);
+        }
 
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();

@@ -1,8 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017 by Stephen Lyons                        *
- *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2014, 2017-2018 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
@@ -61,6 +61,11 @@
 #define DEBUG
 
 using namespace std;
+
+char loadBuffer[100001];
+int loadedBytes;
+QDataStream replayStream;
+QFile replayFile;
 
 
 cTelnet::cTelnet(Host* pH)
@@ -160,6 +165,16 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+    if (loadingReplay) {
+        // If we are doing a replay we had better abort it so that if we are
+        // NOT the "last profile standing" the replay system gets reset for
+        // another profile to use:
+        loadingReplay = false;
+        replayFile.close();
+        qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";
+        mudlet::self()->replayOver();
+    }
+
     if (messageStack.size()) {
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
         foreach (QString message, messageStack) {
@@ -1535,11 +1550,6 @@ void cTelnet::recordReplay()
     timeOffset.start();
 }
 
-char loadBuffer[100001];
-int loadedBytes;
-QDataStream replayStream;
-QFile replayFile;
-
 void cTelnet::loadReplay(QString& name)
 {
     replayFile.setFileName(name);
@@ -1550,8 +1560,14 @@ void cTelnet::loadReplay(QString& name)
         postMessage(msg);
         replayStream.setDevice(&replayFile);
         loadingReplay = true;
-        mudlet::self()->replayStart();
-        _loadReplay();
+        if (mudlet::self()->replayStart()) {
+            _loadReplay();
+        } else {
+            loadingReplay = false;
+            QString msg = tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
+                             "try again when it has finished...!");
+            postMessage(msg);
+        }
     } else {
         QString msg = tr("[ ERROR ]  - Unable to open replay file:\n"
                          "\"%1\".")

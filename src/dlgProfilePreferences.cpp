@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2017 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -80,11 +80,26 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
     TEFolderIconSize->setValue(mudlet::self()->mEditorTreeWidgetIconSize);
-    showMenuBar->setChecked(mudlet::self()->mShowMenuBar);
-    if (!showMenuBar->isChecked()) {
-        showToolbar->setChecked(true);
-    } else {
-        showToolbar->setChecked(mudlet::self()->mShowToolbar);
+    switch (mudlet::self()->menuBarVisibility()) {
+    case mudlet::visibleNever:
+        comboBox_menuBarVisibility->setCurrentIndex(0);
+        break;
+    case mudlet::visibleOnlyWithoutLoadedProfile:
+        comboBox_menuBarVisibility->setCurrentIndex(1);
+        break;
+    default:
+        comboBox_menuBarVisibility->setCurrentIndex(2);
+    }
+
+    switch (mudlet::self()->toolBarVisibility()) {
+    case mudlet::visibleNever:
+        comboBox_toolBarVisibility->setCurrentIndex(0);
+        break;
+    case mudlet::visibleOnlyWithoutLoadedProfile:
+        comboBox_toolBarVisibility->setCurrentIndex(1);
+        break;
+    default:
+        comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
     if (pHost) {
@@ -118,6 +133,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
     connect(mudlet::self(), SIGNAL(signal_hostCreated(Host*,quint8)), this, SLOT(slot_handleHostAddition(Host*,quint8)));
     connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*,quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
+    connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
+    connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -1763,8 +1780,26 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     mudlet::self()->setToolBarIconSize(MainIconSize->value());
     mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
-    mudlet::self()->setMenuBarVisible(showMenuBar->isChecked());
-    mudlet::self()->setToolBarVisible(showToolbar->isChecked());
+    switch (comboBox_menuBarVisibility->currentIndex()) {
+    case 0:
+        mudlet::self()->setMenuBarVisibility(mudlet::visibleNever);
+        break;
+    case 1:
+        mudlet::self()->setMenuBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        break;
+    default:
+        mudlet::self()->setMenuBarVisibility(mudlet::visibleAlways);
+    }
+    switch (comboBox_toolBarVisibility->currentIndex()) {
+    case 0:
+        mudlet::self()->setToolBarVisibility(mudlet::visibleNever);
+        break;
+    case 1:
+        mudlet::self()->setToolBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        break;
+    default:
+        mudlet::self()->setToolBarVisibility(mudlet::visibleAlways);
+    }
 
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (checkBox_USE_SMALL_SCREEN->isChecked()) {
@@ -2259,5 +2294,27 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         clearHostDetails();
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
+    }
+}
+
+// These next two prevent BOTH controls being set to never to prevent the lose
+// of access to the setting/controls completely - once there is a profile loaded
+// access to the settings/controls can be overriden by a context menu action on
+// any TConsole instance:
+void dlgProfilePreferences::slot_changeShowMenuBar(const int newIndex)
+{
+    if (!newIndex && !comboBox_toolBarVisibility->currentIndex()) {
+        // This control has been set to the "Never" setting but so is the other
+        // control - so force it back to the "Only if no profile one
+        comboBox_menuBarVisibility->setCurrentIndex(1);
+    }
+}
+
+void dlgProfilePreferences::slot_changeShowToolBar(const int newIndex)
+{
+    if (!newIndex && !comboBox_menuBarVisibility->currentIndex()) {
+        // This control has been set to the "Never" setting but so is the other
+        // control - so force it back to the "Only if no profile one
+        comboBox_toolBarVisibility->setCurrentIndex(1);
     }
 }
