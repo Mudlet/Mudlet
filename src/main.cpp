@@ -293,7 +293,10 @@ int main(int argc, char* argv[])
 
     bool show_splash = !(startupAction & 4); // Not --quiet.
 
-    QImage splashImage(":/Mudlet_splashscreen_main.png");
+    QImage splashImage((QByteArray(APP_BUILD)==QStringLiteral("-dev"))
+                       ? QStringLiteral(":/Mudlet_splashscreen_development.png")
+                       : QStringLiteral(":/Mudlet_splashscreen_main.png"));
+
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
