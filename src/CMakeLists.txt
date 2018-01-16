@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -19,6 +19,11 @@
 ############################################################################
 
 set(mudlet_RCCS mudlet.qrc)
+
+if(USE_FONTS)
+    set(mudlet_fonts_RCCS mudlet_fonts.qrc)
+    add_definitions(-DINCLUDE_FONTS)
+endif()
 
 set(mudlet_SRCS
     ActionUnit.cpp
@@ -51,6 +56,7 @@ set(mudlet_SRCS
     glwidget.cpp
     Host.cpp
     HostManager.cpp
+    ircmessageformatter.cpp
     KeyUnit.cpp
     LuaInterface.cpp
     main.cpp
@@ -89,7 +95,6 @@ set(mudlet_SRCS
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp
-    ircmessageformatter.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -327,14 +332,14 @@ endif()
 
 find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 
-# This is not present before Qt 5.8:
+# This is not present before Qt 5.7:
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 
 if (Qt5Core_VERSION VERSION_LESS 5.6)
   message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
 else()
-  if (Qt5Core_VERSION VERSION_LESS 5.8)
-    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.8 at a minimum")
+  if (Qt5Core_VERSION VERSION_LESS 5.7)
+    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.7 at a minimum")
   else()
       message(STATUS "Qt version: ${Qt5Core_VERSION}")
   endif()
@@ -342,11 +347,22 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
-if(USE_UPDATER)
-  message(STATUS "Updater code is enabled in this configuration")
-else(USE_UPDATER)
-  message(STATUS "Updater code is not enabled or not available in this configuration")
-endif(USE_UPDATER)
+if(USE_FONTS)
+  message(STATUS "Including additional font resources within the Mudlet executable")
+else()
+  message(STATUS "No font resources are to be included within the Mudlet executable")
+endif()
+
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+  if(USE_UPDATER)
+    message(STATUS "The updater code is included in this configuration")
+  else(USE_UPDATER)
+    message(STATUS "The updater code is excluded from this configuration")
+  endif(USE_UPDATER)
+else()
+  message(STATUS "The Updater code is excluded as on-line updating is not available on this platform")
+endif()
+
 
 if(WIN32)
   set(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -424,7 +440,11 @@ include_directories( ${ZLIB_INCLUDE_DIR} )
 
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+if(USE_FONTS)
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
+else()
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+endif()
 
 if(WIN32)
     add_executable(mudlet WIN32
