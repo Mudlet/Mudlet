@@ -159,7 +159,8 @@ if package.config:sub(1,1) == '\\' then
   for i, path in ipairs(prefixes) do
     prefixes[i] = string.gsub(path, '/', '\\')
     if debugLoading then
-      echo("Directory separator conversion: \"" .. path .. "\" becomes: \"" .. prefixes[i] .. "\"\n")
+      echo([[Directory separator conversion: "]] .. path .. [[" becomes: "]] .. prefixes[i] .. [["
+]])
     end
   end
 else
@@ -167,20 +168,22 @@ else
   for i, path in ipairs(prefixes) do
     prefixes[i] = string.gsub(path, '\\', '/')
     if debugLoading then
-      echo("Directory separator conversion: \"" .. path .. "\" becomes: \"" .. prefixes[i] .. "\"\n")
+      echo([[Directory separator conversion: "]] .. path .. [[" becomes: "]] .. prefixes[i] .. [["
+]])
     end
   end
 end
 
 if debugLoading then
-  echo("Current directory is: \"" .. lfs.currentdir() .. "\".\n")
+  echo([[Current directory is: "]] .. lfs.currentdir() .. [[".
+]])
 end
 
 local prefix
 for i = 1, #prefixes do
   -- lfs.attributes returns a table if the given file-system object exists
   if debugLoading then
-    echo("Testing: \"" .. prefixes[i] .. "LuaGlobal.lua\"...")
+    echo([[Testing: "]] .. prefixes[i] .. [[LuaGlobal.lua"...]])
   end
   if lfs.attributes(prefixes[i] .. "LuaGlobal.lua") then
     if debugLoading then
@@ -195,21 +198,15 @@ for i = 1, #prefixes do
   end
 end
 
--- For some reason on windows, mudlet-lua/lua/ does not register as a directory
--- with the above strategy. Thus, if chosen we need to append a slash.
--- Now changed to \ to reflect need to accomodate windows backwardness in
--- regard to specifying paths and files...
-if prefix == "mudlet-lua\\lua" then
-  prefix = prefix .. "\\"
-end
-
 if not prefix then
-  echo("Error locating Lua files from LuaGlobal - we're looking from '" .. lfs.currentdir() .. "'.\n")
+  echo([[Error locating Lua files from LuaGlobal.lua - we are looking from ']] .. lfs.currentdir() .. [['.
+]])
   return
 end
 
 if debugLoading then
-  echo("Locating other Lua files from LuaGlobal.lua - we are looking from '" .. lfs.currentdir() .. "'.\n")
+  echo([[Locating other Lua files from LuaGlobal.lua - we are looking from ']] .. lfs.currentdir() .. [['.
+]])
 end
 
 for _, package in ipairs(packages) do
