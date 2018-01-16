@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2017 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2016-2018 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -85,15 +85,12 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 #endif
 
     for (int i = 1; i < argc; ++i) {
-#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
         if (qstrcmp(argv[i], "--") == 0) {
             break; // Bail out on end of option type arguments
         }
-#endif
 
         char argument = 0;
         bool isOption = false;
-#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
         if (strlen(argv[i]) > 2 && strncmp(argv[i], "--", 2) == 0) {
             argument = argv[i][2];
             isOption = true;
@@ -101,13 +98,6 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
             argument = argv[i][1];
             isOption = true;
         }
-#elif defined(Q_OS_WIN32)
-        // TODO: Do Qt builds for Windows use Unix '-' as option prefix or is the normal (for them) '/' used - as assumed here and in the help text
-        if (strlen(argv[i]) > 1 && strncmp(argv[i], "/", 1) == 0) {
-            argument = argv[i][1];
-            isOption = true;
-        }
-#endif
 
         if (isOption) {
             if (tolower(argument) == 'v') {
@@ -127,8 +117,13 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     }
 
     if ((action) & (1 | 2)) {
-        // Ah, we're gonna bail out early, just need a command-line application
+        // Ah, we're gonna bail out early, if Windows we still need a GUI Application
+#if defined(Q_OS_WIN32)
+        return new QApplication(argc, argv);
+#else
+        // otherwise, just need a command-line application
         return new QCoreApplication(argc, argv);
+#endif
     } else {
 #if defined(Q_OS_MACOS)
         // Workaround for horrible mac rendering issues once the mapper widget is open
@@ -192,84 +187,115 @@ int main(int argc, char* argv[])
     Q_INIT_RESOURCE(mudlet);
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
-
     QApplication* app = qobject_cast<QApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-    if (!app) {
-        if (startupAction & 2) {
-            // Do "version" action - wording and format is quite tightly specified by the coding standards
-            std::cout << APP_TARGET << " " << APP_VERSION << APP_BUILD << std::endl;
-            std::cout << "Qt libraries " << QT_VERSION_STR << "(compilation) " << qVersion() << "(runtime)" << std::endl;
-            std::cout << "Copyright (C) 2008-" << std::string(__DATE__).substr(7, 4) << " Mudlet devs." << std::endl;
-            std::cout << "Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>" << std::endl;
-            std::cout << "This is free software: you are free to change and redistribute it." << std::endl;
-            std::cout << "There is NO WARRANTY, to the extent permitted by law." << std::endl;
-        }
-        if (startupAction & 1) {
-            // Do "help" action -
-            std::cout << "Usage: " << std::string(APP_TARGET) << "[OPTION...]" << std::endl;
+	QStringList texts;
+    if (startupAction & 2) {
+        // Do "version" action - wording and format is quite tightly specified by the coding standards
+#if defined(QT_DEBUG)
+        texts << QByteArray(APP_TARGET " " APP_VERSION APP_BUILD " (debug symbols, no optimisations)\n");
+#else
+        texts << QByteArray(APP_TARGET " " APP_VERSION APP_BUILD " \n");
+#endif
+        texts << QStringLiteral("Qt libraries " QT_VERSION_STR " (compilation) %1 (runtime)\n").arg(qVersion());
+        texts << QStringLiteral("Copyright (C) 2008-%1  Mudlet devs.\n").arg(QStringLiteral(__DATE__).mid(7, 4));
 #if defined(Q_OS_WIN32)
-            std::cout << "   /h, /help           displays this message." << std::endl;
-            std::cout << "   /v, /version        displays version information." << std::endl;
-            std::cout << "   /q, /quiet          no splash screen on startup." << std::endl;
-#define OPT_PREFIX '/'
+        texts << QStringLiteral("Licence GPLv2+: GNU GPL version 2 or later<br>"
+                                "<a href=\"http://www.gnu.org/licenses/gpl.html\">www.gnu.org/licenses/gpl.html</a>.\n");
 #else
-            std::cout << "   -h, --help          displays this message." << std::endl;
-            std::cout << "   -v, --version       displays version information." << std::endl;
-            std::cout << "   -q, --quiet         no splash screen on startup." << std::endl;
-#define OPT_PREFIX '-'
+        texts << QStringLiteral("Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>.\n");
 #endif
-            std::cout << "There are other inherited options that arise from the Qt Libraries which" << std::endl;
-            std::cout << "are not likely to be useful for normal use of this application:" << std::endl;
-            // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
-            std::cout << "       " << OPT_PREFIX << "dograb         ignore any implicit or explicit -nograb." << std::endl;
-            std::cout << "                       " << OPT_PREFIX << "dograb wins over " << OPT_PREFIX << "nograb even when" << std::endl;
-            std::cout << "                       " << OPT_PREFIX << "nograb is last on the command line." << std::endl;
-            std::cout << "       " << OPT_PREFIX << "nograb         the application should never grab the mouse or the" << std::endl;
+        texts << QByteArray("This is free software: you are free to change and redistribute it.\n");
+        texts << QByteArray("There is NO WARRANTY, to the extent permitted by law.\n");
+#if defined(Q_OS_WIN32)
+        // On Windows have to dump the information to a QMessageBox, we do have a GUI application...
+        QMessageBox msgBox;
+        msgBox.setWindowTitle(QStringLiteral("Mudlet - Version Information"));
+        msgBox.setIconPixmap(QPixmap(QStringLiteral(":/icons/mudlet_information.png")));
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(texts.join(QLatin1String("<br>")));
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        app->processEvents();
+        msgBox.exec();
+#else
+        std::cout << texts.join(QString()).toStdString();
+#endif
+        return 0;
+    } else if (startupAction & 1) {
+        // Do "help" action -
+        texts << QByteArray(    "Usage: " APP_TARGET " [OPTION...]\n");
+        texts << QStringLiteral("       -h, --help      displays this message.\n");
+        texts << QStringLiteral("       -v, --version   displays version information.\n");
+        texts << QStringLiteral("       -q, --quiet     no splash screen on startup.\n");
+        texts << QStringLiteral("There are other inherited options that arise from the Qt Libraries which\n"
+                                "are not likely to be useful for normal use of this application:\n");
+        // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
+        texts << QStringLiteral("       --dograb        ignore any implicit or explicit -nograb.\n"
+                                "                       --dograb wins over --nograb even when\n"
+                                "                       --nograb is last on the command line.\n");
 #if defined(Q_OS_LINUX)
-            std::cout << "                       keyboard. This option is set by default when Mudlet is" << std::endl;
-            std::cout << "                       running in the gdb debugger under Linux." << std::endl;
+        texts << QStringLiteral("       --nograb        the application should never grab the mouse or the\n"
+                                "                       keyboard. This option is set by default when Mudlet is\n"
+                                "                       running in the gdb debugger under Linux.\n");
+        texts << QStringLiteral("                       keyboard.\n");
 #else
-            std::cout << "                       keyboard." << std::endl;
+        texts << QStringLiteral("       --nograb        the application should never grab the mouse or the\n"
+                                "                       keyboard.\n");
 #endif
-            std::cout << "        " << OPT_PREFIX << "reverse       sets the application's layout direction to" << std::endl;
-            std::cout << "                       right to left." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "style= style  sets the application GUI style. Possible values depend" << std::endl;
-            std::cout << "                       on your system configuration. If Qt was compiled with" << std::endl;
-            std::cout << "                       additional styles or has additional styles as plugins" << std::endl;
-            std::cout << "                       these will be available to the -style command line" << std::endl;
-            std::cout << "                       option. You can also set the style for all Qt" << std::endl;
-            std::cout << "                       applications by setting the QT_STYLE_OVERRIDE environment" << std::endl;
-            std::cout << "                       variable." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "style style   is the same as listed above." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "stylesheet= stylesheet" << std::endl;
-            std::cout << "                       sets the application styleSheet." << std::endl;
-            std::cout << "                       The value must be a path to a file that contains the" << std::endl;
-            std::cout << "                       Style Sheet. Note: Relative URLs in the Style Sheet" << std::endl;
-            std::cout << "                       file are relative to the Style Sheet file's path." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "stylesheet stylesheet" << std::endl;
-            std::cout << "                       is the same as listed above." << std::endl;
+        texts << QStringLiteral("       --reverse       sets the application's layout direction to\n"
+                                "                       right to left.\n");
+        texts << QStringLiteral("       --style= style  sets the application GUI style. Possible values depend\n"
+                                "                       on your system configuration. If Qt was compiled with\n"
+                                "                       additional styles or has additional styles as plugins\n"
+                                "                       these will be available to the -style command line\n"
+                                "                       option. You can also set the style for all Qt\n"
+                                "                       applications by setting the QT_STYLE_OVERRIDE environment\n"
+                                "                       variable.\n");
+        texts << QStringLiteral("       --style style   is the same as listed above.\n");
+        texts << QStringLiteral("       --stylesheet= stylesheet\n"
+                                "                       sets the application styleSheet.\n"
+                                "                       The value must be a path to a file that contains the\n"
+                                "                       Style Sheet. Note: Relative URLs in the Style Sheet\n"
+                                "                       file are relative to the Style Sheet file's path.\n");
+        texts << QStringLiteral("       --stylesheet stylesheet\n"
+                                "                       is the same as listed above.\n");
 #if defined(Q_OS_UNIX)
-            std::cout << "        " << OPT_PREFIX << "sync          runs Mudlet in X synchronous mode. Synchronous mode" << std::endl;
-            std::cout << "                       forces the X server to perform each X client request" << std::endl;
-            std::cout << "                       immediately and not use buffer optimization. It makes" << std::endl;
-            std::cout << "                       the program easier to debug and often much slower. The" << std::endl;
-            std::cout << "                       -sync option is only valid for the X11 version of Qt." << std::endl;
+        texts << QStringLiteral("       --sync          runs Mudlet in X synchronous mode. Synchronous mode\n"
+                                "                       forces the X server to perform each X client request\n"
+                                "                       immediately and not use buffer optimization. It makes\n"
+                                "                       the program easier to debug and often much slower. The\n"
+                                "                       -sync option is only valid for the X11 version of Qt.\n");
 #endif
-            std::cout << "        " << OPT_PREFIX << "widgetcount   prints debug message at the end about number of widgets" << std::endl;
-            std::cout << "                       left undestroyed and maximum number of widgets existing" << std::endl;
-            std::cout << "                       at the same time." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "qmljsdebugger=1234[,block]" << std::endl;
-            std::cout << "                       activates the QML/JS debugger with a specified port." << std::endl;
-            std::cout << "                       The number is the port value and block is optional" << std::endl;
-            std::cout << "                       and will make the application wait until a debugger" << std::endl;
-            std::cout << "                       connects to it." << std::endl;
-            std::cout << std::endl;
-            std::cout << "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>" << std::endl;
-            std::cout << "pkg home page: <http://www.mudlet.org/>" << std::endl;
-        }
+#if ! defined(Q_OS_WIN32)
+        // It is probably impossible to actually get to see this on Windows...!
+        texts << QStringLiteral("       --widgetcount   prints debug message at the end about number of widgets\n"
+                                "                       left undestroyed and maximum number of widgets existing\n"
+                                "                       at the same time.\n");
+#endif
+        texts << QStringLiteral("       --qmljsdebugger=1234[,block]\n"
+                                "                       activates the QML/JS debugger with a specified port.\n"
+                                "                       The number is the port value and block is optional\n"
+                                "                       and will make the application wait until a debugger\n"
+                                "                       connects to it.\n\n");
+#if defined(Q_OS_WIN32)
+        texts << QStringLiteral("Report bugs to: <a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a>\n");
+        texts << QStringLiteral("pkg home page: <a href=\"https://www.mudlet.org/\">www.mudlet.org<\a>.\n");
+        // On Windows have to dump the information to a QMessageBox
+        QMessageBox msgBox;
+        msgBox.setWindowTitle(QStringLiteral("Mudlet - Command Line Help"));
+        msgBox.setIconPixmap(QPixmap(QStringLiteral(":/icons/mudlet_information.png")));
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(texts.join(QLatin1String("<br>")));
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        app->processEvents();
+        msgBox.exec();
+#else
+        texts << QStringLiteral("Report bugs to: <https://github.com/Mudlet/Mudlet/issues>\n");
+        texts << QStringLiteral("pkg home page: <http://www.mudlet.org/>.\n");
+        std::cout << texts.join(QString()).toStdString();
+#endif
         return 0;
     }
 
