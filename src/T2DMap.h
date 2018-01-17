@@ -211,7 +211,7 @@ private:
     // modified or be the center of those
     // modifications. {for slot_spread(),
     // slot_shrink(), slot_setUserData() - if ever
-    // implimented, slot_setExits(),
+    // implemented, slot_setExits(),
     // slot_movePosition(), etc.}
     int mMultiSelectionHighlightRoomId;
 

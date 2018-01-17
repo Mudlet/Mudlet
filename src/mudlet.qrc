@@ -6,20 +6,6 @@
         <file>echo.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
-        <file>fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT</file>
-        <file>fonts/ttf-bitstream-vera-1.10/local.conf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/README.TXT</file>
-        <file>fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT</file>
-        <file>fonts/ttf-bitstream-vera-1.10/Vera.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraBd.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraBI.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraIt.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraMono.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraSe.ttf</file>
-        <file>fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf</file>
         <file>generic_mapper_script.xml</file>
         <file>icons/120x30RoDLogo.png</file>
         <file>icons/3klogo.png</file>
@@ -113,6 +99,7 @@
         <file>icons/media-seek-forward.png</file>
         <file>icons/media-tape.png</file>
         <file>icons/midnightsun2.png</file>
+        <file>icons/reinosdeleyenda_mud.png</file>
         <file>icons/module-manager.png</file>
         <file>icons/mudlet_configure.png</file>
         <file>icons/mudlet_custom_exit.png</file>

@@ -1137,7 +1137,7 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
           0xE8-0xFF: 232 - 255 grayscale from black to white in 24 steps
 
       Also note that for the 38 and 48 codes the parameter elements SHOULD be
-      separated by ':' but some interpretations erronously use ';'.  Also
+      separated by ':' but some interpretations erroneously use ';'.  Also
       "empty" parameter elements represent a default value and that empty
       elements at the end can be omitted.
  */
@@ -1370,10 +1370,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     fgColorLightB = b * 51;
                                 } else {
                                     // black + 23 tone grayscale from dark to light gray
-                                    // Similiar to RGB case the multipler is a bit off
+                                    // Similar to RGB case the multiplier is a bit off
                                     // we have been using 10 but 23 x 10 = 230
                                     // whereas 23 should map to 255, this requires
-                                    // a non-integer multiplier, instead of mulipling
+                                    // a non-integer multiplier, instead of multiplying
                                     // and rounding we, for speed, can use a look-up table:
                                     int value;
                                     switch( tag )
@@ -2286,7 +2286,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     // locally generated material from Lua feedTriggers(...)
                     if (isFromServer) {
 #if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:" << utf8SequenceLength
+                        qDebug() << "TBuffer::translateToPlainText(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
                                  << " but we currently only have: " << localBuffer.substr(localBufferPosition).length() << " bytes (which we will store for next call to this method)...";
 #endif
                         mIncompleteUtf8SequenceBytes = localBuffer.substr(localBufferPosition);
@@ -3840,7 +3840,7 @@ QString TBuffer::bufferToHtml(QPoint P1, QPoint P2, bool allowedTimestamps, int 
     s.append(QStringLiteral("<br>\n"));
     // Needed to reproduce empty lines in capture, as this method is called for
     // EACH line, even the empty ones, the spans are styled as "pre" so literal
-    // linefeeds would be treated as such THERE but we deleberately place the
+    // linefeeds would be treated as such THERE but we deliberately place the
     // line-feeds OUTSIDE so they come under the <body>s no wrap and as such
     // line-feeds can be used to break the HTML over lots of lines (which is
     // easier to hand edit and examine afterwards) without impacting the

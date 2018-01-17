@@ -11,4 +11,4 @@ XCOPY /S /I /Q /Y ..\mudlet-lua mudlet-lua
 COPY ..\*.dic .
 COPY C:\src\luazip\luazip-master\zip.dll .
 XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
-XCOPY /S /I /Q /Y ..\..\3rdparty\lua_code_formatter lcf
+XCOPY /S /I /Q /Y ..\..\3rdparty\lcf lcf

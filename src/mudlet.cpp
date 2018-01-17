@@ -1642,9 +1642,19 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name) && !dockWindowMap.contains(name)) {
         dockWindowConsoleMap[name]->resize(x1, y1);
+        return true;
+    }
+
+    if (dockWindowMap.contains(name)) {
+        if (!dockWindowMap[name]->isFloating()) {
+            return false;
+        }
+
+        dockWindowMap[name]->resize(x1, y1);
         return true;
     }
 
@@ -1698,11 +1708,21 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
+    if (dockWindowConsoleMap.contains(name) && !dockWindowMap.contains(name)) {
         dockWindowConsoleMap[name]->move(x1, y1);
         dockWindowConsoleMap[name]->mOldX = x1;
         dockWindowConsoleMap[name]->mOldY = y1;
+        return true;
+    }
+
+    if (dockWindowMap.contains(name)) {
+        if (!dockWindowMap[name]->isFloating()) {
+            dockWindowMap[name]->setFloating(true);
+        }
+
+        dockWindowMap[name]->move(x1, y1);
         return true;
     }
 
@@ -3375,13 +3395,15 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         }
     case editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
-        // an edbee edtor widget theme:
+        // an edbee editor widget theme:
         return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath());
     case moduleBackupsPath:
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
     }
+    Q_UNREACHABLE();
+    return QString();
 }
 
 #if defined(INCLUDE_UPDATER)

@@ -143,13 +143,15 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     }
 }
 
-void copyFont(const QString& pathName, const QString& fileName)
+#if defined(INCLUDE_FONTS)
+void copyFont(const QString& externalPathName, const QString& resourcePathName, const QString& fileName)
 {
-    if (!QFile::exists(QStringLiteral("%1/%2").arg(pathName, fileName))) {
-        QFile fileToCopy(QStringLiteral(":/fonts/ttf-bitstream-vera-1.10/%1").arg(fileName));
-        fileToCopy.copy(QStringLiteral("%1/%2").arg(pathName, fileName));
+    if (!QFile::exists(QStringLiteral("%1/%2").arg(externalPathName, fileName))) {
+        QFile fileToCopy(QStringLiteral(":/%1/%2").arg(resourcePathName,fileName));
+        fileToCopy.copy(QStringLiteral("%1/%2").arg(externalPathName, fileName));
     }
 }
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -275,7 +277,7 @@ int main(int argc, char* argv[])
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -305,7 +307,7 @@ int main(int argc, char* argv[])
             // Start work in this text item
             QTextLine versionTextline = versionTextLayout.createLine();
             // First draw (one line from) the text we have put in on the layout to
-            // see how wide it is..., assuming accutally that it will only take one
+            // see how wide it is..., assuming actually that it will only take one
             // line of text
             versionTextline.setLineWidth(280);
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
@@ -369,7 +371,6 @@ int main(int argc, char* argv[])
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
     QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
-    QString fontDirectory = mudlet::getMudletPath(mudlet::mainFontsPath);
     QDir dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
@@ -377,36 +378,71 @@ int main(int argc, char* argv[])
         first_launch = true;
     }
 
-    if (!dir.exists(fontDirectory)) {
-        dir.mkpath(fontDirectory);
-    }
 
+#if defined(INCLUDE_FONTS)
     if (show_splash) {
         splash_message.append("Done.\n\nLoading font files... ");
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
 
+    QString bitstreamVeraFontDirectory(QStringLiteral("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    if (!dir.exists(bitstreamVeraFontDirectory)) {
+        dir.mkpath(bitstreamVeraFontDirectory);
+    }
+    QString ubuntuFontDirectory(QStringLiteral("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    if (!dir.exists(ubuntuFontDirectory)) {
+        dir.mkpath(ubuntuFontDirectory);
+    }
+
     // The original code plonks the fonts AND the Copyright into the MAIN mudlet
     // directory - but the Copyright statement is specifically for the fonts
-    // so now they all go into a "./fonts/" subdirectory - I note that
+    // so now they all go into "./fonts/" subdirectories - I note that
     // the Debian packager already removes these fonts anyhow as they are
     // already present in a shared form in the OS anyhow so our copy is
-    // ancient and superfluous (they are using 2.37 compared to our 1.10) ...!
-    copyFont(fontDirectory, QLatin1String("COPYRIGHT.TXT"));
-    copyFont(fontDirectory, QLatin1String("RELEASENOTES.TXT"));
-    copyFont(fontDirectory, QLatin1String("README.TXT"));
-    copyFont(fontDirectory, QLatin1String("local.conf"));
-    copyFont(fontDirectory, QLatin1String("Vera.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraBd.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraBI.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraIt.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraMono.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraMoBd.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraMoBI.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraMoIt.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraSe.ttf"));
-    copyFont(fontDirectory, QLatin1String("VeraSeBd.ttf"));
+    // superfluous...!
+    // Note that the ubuntu fonts have *just* entered the Unstable "non-free"
+    // Debian version as of Dec 2017:
+    // https://anonscm.debian.org/cgit/pkg-fonts/fonts-ubuntu.git/
+    // but there is a term in the Ubuntu licence that makes them currently (and
+    // for the prior seven years) not quite the right side of the Debian Free
+    // Software Guidelines.
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("COPYRIGHT.TXT"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("local.conf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("README.TXT"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("RELEASENOTES.TXT"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("Vera.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraBd.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraBI.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraIt.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraMoBd.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraMoBI.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraMoIt.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraMono.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraSe.ttf"));
+    copyFont(bitstreamVeraFontDirectory, QLatin1String("fonts/ttf-bitstream-vera-1.10"), QLatin1String("VeraSeBd.ttf"));
+
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("CONTRIBUTING.txt"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("copyright.txt"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("FONTLOG.txt"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("LICENCE-FAQ.txt"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("LICENCE.txt"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("README.txt"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("TRADEMARKS.txt"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-B.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-BI.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-C.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-L.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-LI.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-M.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-MI.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-R.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("Ubuntu-RI.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-B.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-BI.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
+    copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
+#endif
 
     if (show_splash) {
         splash_message.append("Done.\n\n"
@@ -417,8 +453,11 @@ int main(int argc, char* argv[])
     }
 
     mudlet::debugMode = false;
+#if defined(INCLUDE_FONTS)
     FontManager fm;
     fm.addFonts();
+#endif
+
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
 #ifdef Q_OS_WIN32
     /*
@@ -482,12 +521,12 @@ int main(int argc, char* argv[])
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
     // click something in a parent process to the application when you are stuck
-    // with some OS's choice of wait cursor - you might wish to temparily disable
+    // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
     return app->exec();
 }
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
 // small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done

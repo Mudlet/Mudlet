@@ -105,7 +105,7 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
 
     if (!mpTAction->mUseCustomLayout) {
         // tool bar mButtonColumns > 0 -> autolayout
-        // case == 0: use individual button placment for user defined layouts
+        // case == 0: use individual button placement for user defined layouts
         int columns = mpTAction->getButtonColumns();
         if (columns <= 0) {
             columns = 1;

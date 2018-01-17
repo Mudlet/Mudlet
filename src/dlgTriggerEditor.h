@@ -120,7 +120,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     };
 
     // Classify the search result - so we know where to position the cursor as
-    // we impliment moving the focus to the origin of the result:
+    // we implement moving the focus to the origin of the result:
     enum SearchDataResultType {
         // Unset (?):
                SearchResultIsUnknown = 0x0,
