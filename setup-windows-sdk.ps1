@@ -15,9 +15,6 @@ cd "$sourceDir"
 SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 
-Write-Output "Updating git submodules"
-git submodule update --init --recursive
-
 cd "$sourceDir\src"
 
 Write-Output "Running qmake"
