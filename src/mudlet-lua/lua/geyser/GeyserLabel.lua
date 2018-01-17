@@ -28,7 +28,7 @@ Geyser.Label.numChildren = 0
 --               specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
-  self.message = self.message
+  self.message = message
   format = format or self.format
   self.format = format
   color = color or self.fgColor
