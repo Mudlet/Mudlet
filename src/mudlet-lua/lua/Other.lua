@@ -217,31 +217,6 @@ function xor(a, b)
 end
 
 
-
---- Determine operating system.
----
---- @usage
----   <pre>
----   if "linux" == getOS() then
----       echo("We are using GNU/Linux!")
----   end
----   </pre>
----
---- @return "linux", "mac" or "windows" string
-function getOS()
-  if string.char(getMudletHomeDir():byte()) == "/" then
-    if io.exists("/Applications") then
-      return "mac"
-    else
-      return "linux"
-    end
-  else
-    return "windows"
-  end
-end
-
-
-
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
 --- Variables are automatically unpacked into the global namespace when the profile is loaded.
 --- They are saved to "SavedVariables.lua" when the profile is closed or saved.
