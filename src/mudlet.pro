@@ -1331,4 +1331,8 @@ DISTFILES += \
     mudlet-lua/tests/README.md \
     mudlet-lua/tests/DB.lua \
     mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua
+    mudlet-lua/tests/Other.lua \
+    ../mudlet.desktop \
+    ../mudlet.png \
+    ../mudlet.svg \
+    ../README.md

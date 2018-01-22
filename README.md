@@ -21,11 +21,11 @@ Mudlet features a scripting framework using [Lua](https://www.lua.org/) – a sm
 
 ## Cross-Platform love
 
-We believe in making Mudlet available to people on all major platforms, and we work on keeping cross-platform compatibility right from start. Mudlet will be available on Linux (both 32bit and 64bit), Windows, and Macs.
+We believe in making Mudlet available to people on all major platforms, and we work on keeping cross-platform compatibility right from start. Mudlet is available on Linux (both 32bit and 64bit), Windows, and Macs; work is currently in progress by one interested developer to add support for FreeBSD as a secondary platform i.e. we think it will work but the testing may be limited and *your milage may vary*.
 
 ## And many other things…
 
-Such as package creation / sharing, 3D mapper are in our plans. You’re welcome to suggest ideas, too!
+Such as package creation / sharing, 3D mapper are in our plans. You’re welcome to suggest ideas, too (and if you can impliment them, that is even greater)!
 
 ## Compiling
 
