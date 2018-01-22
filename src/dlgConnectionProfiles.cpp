@@ -640,6 +640,37 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
         return QLatin1String(
                 "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong "
                 "sense of community.");
+    } else if (hostUrl == QStringLiteral("luminarimud.com")) {
+        return QLatin1String("Luminari is a deep, engaging game set in the world of the Luminari - A place where magic is entwined with the fabric of reality and the forces of evil and destruction "
+                             "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
+                             "or any of the many RPG systems based on the d20 ruleset.");
+    } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
+        return QStringLiteral(
+                "The oldest Spanish free mud with more than 20 years of running history.\n\n"
+                "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the mischiefs of the gods after "
+                "more than a thousand years of contempt and hideous war amongst their zealous mortal pawns.\n\n"
+                "History is written on a day per day basis, taking into consideration the players' choices "
+                "to decide the irreversible aftermath of this everlasting struggle.\n\n"
+                "This is a PvP MUD which allows the player to set how high are the stakes: the more you risk losing upon death, the more glory to be earned by your heroism. RP, while "
+                "not enforced, is rewarded with non-PvP oriented perks and unique treasure.\n\n"
+                "A powerful character customization system allows you to choose your deity –or fully disregard the gods– and join one of the player-run realms that govern the land "
+                "to explore a breathing world, delve into the secrets of the oceans, shape your legacy, craft forgotten marvels for you –or your allies– and fight for faith, glory or coin.");
+        /**
+                 * Translation to the following text to Spanish as per request from SlyVen on PR #1505.
+                 * -- begin translation --
+                 * El mud Español gratis con más de 20 años de historia.
+                 *
+                 * Reinos de Leyenda toma lugar en el siempre cambiante mundo de Eirea, devastado por las intrigas de los dioses tras más de un millar de años de desprecio y cruenta guerra entre sus fanáticos peones mortales.
+                 *
+                 * La historia se escribe día a día, tomando en consideración las elecciones de los jugadores para decidir las consecuencias irreversibles de este conflicto imperecedero.
+                 *
+                 * Éste es un MUD con PvP que permite al jugador establecer cuánto quiere arriesgar al morir: a más riesgo, más gloria ganará por sus heroicidades. La interpretación (Rol) no está obligada, pero si recompensada
+                 * con habilidades especiales -no orientadas al combate- y tesoros únicos.
+                 *
+                 * El detallado creador del juego te permitirá elegir tu deidad -o renegar completamente de los dioses- y unirte a uno de los reinos que los jugadores se encargan de gobernar para explorar un mundo viviente, sumergirte en los misterios del océano,
+                 * dar forma a tu legado, forjar maravillas olvidadas para ti -o tus aliados- y luchar por fe, gloria o dinero.
+                 * -- end translation --
+                 */
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -709,6 +740,12 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             host_url = QStringLiteral("midnightsun2.org");
         }
+        if (profile_name == QStringLiteral("Luminari")) {
+            host_url = QStringLiteral("luminarimud.com");
+        }
+        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
+            host_url = QStringLiteral("reinosdeleyenda.es");
+        }
     }
     host_name_entry->setText(host_url);
 
@@ -762,6 +799,12 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             host_port = QStringLiteral("3000");
+        }
+        if (profile_name == QStringLiteral("Luminari")) {
+            host_port = QStringLiteral("4100");
+        }
+        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
+            host_port = QStringLiteral("23");
         }
     }
     port_entry->setText(host_port);
@@ -831,6 +874,15 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             val = QStringLiteral("<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>");
+        }
+        if (profile_name == QStringLiteral("Luminari")) {
+            val = QStringLiteral("<center><a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a></center>");
+        }
+        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
+            val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
+                                 "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
+                                 "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n"
+                                 );
         }
     }
     website_entry->setText(val);
@@ -1203,6 +1255,35 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+    mudServer = QStringLiteral("Luminari");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/luminari_icon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                              Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("luminarimud.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
+    mudServer = QStringLiteral("Reinos de Leyenda");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/reinosdeleyenda_mud.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("reinosdeleyenda.es"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
     for (int i = 0; i < mProfileList.size(); i++) {
         QString s = mProfileList.at(i);
         if (s.isEmpty()) {
@@ -1227,6 +1308,8 @@ void dlgConnectionProfiles::fillout_form()
             || (!mProfileList.at(i).compare(QStringLiteral("3Scapes"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("3Kingdoms"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
+            || (!mProfileList.at(i).compare(QStringLiteral("Luminari"), Qt::CaseInsensitive))
+            || (!mProfileList.at(i).compare(QStringLiteral("Reinos de Leyenda"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
             delete pItem;
             continue;

@@ -44,6 +44,12 @@ env:
     QT_VERSION=59 # actually Qt 5.9
 #  - Q_OR_C_MAKE=cmake
 #    QT_VERSION=59
+#    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
+#  - Q_OR_C_MAKE=qmake
+#    QT_VERSION=59
+#    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
+#  - Q_OR_C_MAKE=cmake
+#    QT_VERSION=59
 #    WITH_UPDATER=NO # actually Qt 5.9, non-default without updater
 #  - Q_OR_C_MAKE=qmake
 #    QT_VERSION=59
