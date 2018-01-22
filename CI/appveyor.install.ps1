@@ -116,9 +116,9 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 # installation functions
 function InstallSevenZ() {
   if($64Bit){
-    $downloadUrl = "http://www.7-zip.org/a/7z1701-x64.exe"
+    $downloadUrl = "http://www.7-zip.org/a/7z1604-x64.exe"
   } else {
-    $downloadUrl = "http://www.7-zip.org/a/7z1701.exe"
+    $downloadUrl = "http://www.7-zip.org/a/7z1604.exe"
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
@@ -126,7 +126,7 @@ function InstallSevenZ() {
 }
 
 function InstallCmake() {
-  DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.4-win32-x86.msi" "cmake-installer.msi"
+  DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.6-win32-x86.msi" "cmake-installer.msi"
   Step "installing cmake"
   exec "msiexec.exe" @("/q", "/li", "$workingBaseDir\cmake-installer.log", "/i", "cmake-installer.msi")
   if(Test-Path -Path "$workingBaseDir\cmake-installer.log" -PathType Leaf){
