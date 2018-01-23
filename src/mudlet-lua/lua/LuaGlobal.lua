@@ -134,10 +134,13 @@ local packages = {
 -- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
 -- on Mac, it's set to LuaGlobals location - or the Applications folder, or something else...
 -- So work out where to load Lua files from using some heuristics
--- Addition of "../src/" to front of first path allows things to work when "Shadow Building"
+-- Addition of "../src/" to front of path allows things to work when "Shadow Building"
 -- option of Qt Creator is used (separates object code from source code in directories
 -- beside the latter, allowing parallel builds against different Qt Library versions
--- or {Release|Debug} types).
+-- or {Release|Debug} types).  A further "../../src/" does the same when the
+-- qmake CONFIG has both "debug_and_release" (default on Windows) and
+-- "debug_and_release_target" (default on all platforms) options which puts the
+-- executable in a further sub-directory down when shadow building!
 -- TODO: extend to support common Lua code being placed in system shared directory
 -- tree as ought to happen for *nix install builds.
 local prefixes = { "./../../src/mudlet-lua/lua/",
@@ -154,23 +157,13 @@ if getMudletLuaDefaultPaths then
   end
 end
 
-if package.config:sub(1,1) == '\\' then
-  -- this is a windows platform, make all the path separators be '\\'
-  for i, path in ipairs(prefixes) do
-    prefixes[i] = string.gsub(path, '/', '\\')
-    if debugLoading then
-      echo([[Directory separator conversion: "]] .. path .. [[" becomes: "]] .. prefixes[i] .. [["
+-- this is based on directory separators only ever being '/' or '\\' which does
+-- seem to cover the cases that we are likely to encounter...!
+for i, path in ipairs(prefixes) do
+  prefixes[i] = string.gsub(path, '[/\\]', package.config:sub(1,1))
+  if debugLoading then
+    echo([[Directory separator conversion: "]] .. path .. [[" becomes: "]] .. prefixes[i] .. [["
 ]])
-    end
-  end
-else
-  -- this is a non-windows platform make all the path separators be '/'
-  for i, path in ipairs(prefixes) do
-    prefixes[i] = string.gsub(path, '\\', '/')
-    if debugLoading then
-      echo([[Directory separator conversion: "]] .. path .. [[" becomes: "]] .. prefixes[i] .. [["
-]])
-    end
   end
 end
 
