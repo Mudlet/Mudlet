@@ -208,7 +208,7 @@ int main(int argc, char* argv[])
         texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
 #endif // ! defined(QT_DEBUG)
         texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n").arg(QLatin1String(QT_VERSION_STR), qVersion());
-        texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet devs.\n").arg(QStringLiteral(__DATE__).mid(7, 4));
+        texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
 #if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
         texts << QStringLiteral("%1 <a href=\"http://www.gnu.org/licenses/gpl.html\">www.gnu.org/licenses/gpl.html</a>")
                  .arg(QCoreApplication::translate("main", "Licence: GPLv2+ - GNU General Public License version 2.0 (or at your option, any later version)."));
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
         msgBox.setWindowTitle(QCoreApplication::translate("main", "Mudlet - Version Information"));
         msgBox.setIconPixmap(QPixmap(QStringLiteral(":/icons/mudlet_information.png")));
         msgBox.setTextFormat(Qt::RichText);
-        msgBox.setText(texts.join(QLatin1String("<br>")).prepend(QLatin1String("<center>")).append(QLatin1String("</center>")));
+        msgBox.setText(texts.join(QLatin1String("<br>")));
         msgBox.setStandardButtons(QMessageBox::Ok);
         app->processEvents();
         msgBox.exec();
@@ -233,7 +233,7 @@ int main(int argc, char* argv[])
         return 0;
     } else if (startupAction & 1) {
         // Do "help" action
-#if defined(Q_OS_WINDOWS) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
+#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
         // &#8209; is the non-breaking hyphen...!
         texts << QStringLiteral("<html><head/><body><table cellpadding=\"1\"><tr><td colspan=\"2\" style=\"width:100%\"><kdb>%1</kdb></td></tr>"
                                 "<tr><td align=\"center\" style=\"width:25%\"><kdb>%2</kdb></td><td style=\"width:75%\">%3</td></tr>"
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
         msgBox.setStandardButtons(QMessageBox::Ok);
         app->processEvents();
         msgBox.exec();
-#else // ! (defined(Q_OS_WINDOWS) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
+#else // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         texts << QCoreApplication::translate("main", "Usage: %1 [OPTION...]\n"
                                                      "       -h, --help      displays this message.\n"
                                                      "       -v, --version   displays version information.\n"
@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
         texts << QCoreApplication::translate("main", "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>.\n");
         texts << QCoreApplication::translate("main", "Project home page: <http://www.mudlet.org/>.\n");
         std::cout << texts.join(QString()).toStdString();
-#endif // ! (defined(Q_OS_WINDOWS) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
+#endif // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         return 0;
     }
 
