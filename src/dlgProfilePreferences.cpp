@@ -262,7 +262,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QString path;
     // This is duplicated (and should be the same as) the code in:
     // TCommandLine::TCommandLine(Host*, TConsole*, QWidget*)
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_FREEBSD)
     if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {

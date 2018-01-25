@@ -85,7 +85,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 
 // A crude and simplistic commandline options processor - note that Qt deals
 // with its options automagically!
-#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC) || defined(Q_OS_FREEBSD))
+#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MACOS) || defined(Q_OS_FREEBSD))
     // Handle other currently unconsidered OSs - what are they - by returning the
     // normal GUI type application handle.
     return new QApplication(argc, argv);
