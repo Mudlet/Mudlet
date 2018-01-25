@@ -55,7 +55,7 @@ private:
 #if defined(Q_OS_LINUX)
     void setupOnLinux();
     void untarOnLinux(const QString& fileName);
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
 #elif defined(Q_OS_MACOS)
