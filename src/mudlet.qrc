@@ -145,6 +145,7 @@
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
         <file>mudlet-mapper.xml</file>
+        <file>Mudlet_splashscreen_development.png</file>
         <file>Mudlet_splashscreen_main.png</file>
         <file>run-lua-code-v4.xml</file>
         <file>ui/custom_lines.ui</file>

@@ -41,7 +41,9 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
     // Copied from main():
 
-    QImage splashImage(":/Mudlet_splashscreen_main.png");
+    QImage splashImage((QByteArray(APP_BUILD)==QStringLiteral("-dev"))
+                       ? QStringLiteral(":/Mudlet_splashscreen_development.png")
+                       : QStringLiteral(":/Mudlet_splashscreen_main.png"));
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
