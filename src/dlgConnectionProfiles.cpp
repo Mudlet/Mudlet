@@ -640,6 +640,10 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
         return QLatin1String(
                 "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong "
                 "sense of community.");
+    } else if (hostUrl == QStringLiteral("luminarimud.com")) {
+        return QLatin1String("Luminari is a deep, engaging game set in the world of the Luminari - A place where magic is entwined with the fabric of reality and the forces of evil and destruction "
+                             "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
+                             "or any of the many RPG systems based on the d20 ruleset.");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
         return QStringLiteral(
                 "The oldest Spanish free mud with more than 20 years of running history.\n\n"
@@ -651,7 +655,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                 "not enforced, is rewarded with non-PvP oriented perks and unique treasure.\n\n"
                 "A powerful character customization system allows you to choose your deity –or fully disregard the gods– and join one of the player-run realms that govern the land "
                 "to explore a breathing world, delve into the secrets of the oceans, shape your legacy, craft forgotten marvels for you –or your allies– and fight for faith, glory or coin.");
-                /**
+        /**
                  * Translation to the following text to Spanish as per request from SlyVen on PR #1505.
                  * -- begin translation --
                  * El mud Español gratis con más de 20 años de historia.
@@ -736,6 +740,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             host_url = QStringLiteral("midnightsun2.org");
         }
+        if (profile_name == QStringLiteral("Luminari")) {
+            host_url = QStringLiteral("luminarimud.com");
+        }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             host_url = QStringLiteral("reinosdeleyenda.es");
         }
@@ -792,6 +799,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             host_port = QStringLiteral("3000");
+        }
+        if (profile_name == QStringLiteral("Luminari")) {
+            host_port = QStringLiteral("4100");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             host_port = QStringLiteral("23");
@@ -864,6 +874,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
             val = QStringLiteral("<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>");
+        }
+        if (profile_name == QStringLiteral("Luminari")) {
+            val = QStringLiteral("<center><a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a></center>");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
@@ -980,7 +993,7 @@ void dlgConnectionProfiles::fillout_form()
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
         // macOS requires 15px more width to get 3 columns of MUD listings in
         resize(minimumSize().width() + 15, 300);
 #else
@@ -1242,6 +1255,21 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+    mudServer = QStringLiteral("Luminari");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/luminari_icon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                              Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("luminarimud.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
     mudServer = QStringLiteral("Reinos de Leyenda");
     if (!deletedDefaultMuds.contains(mudServer)) {
         pM = new QListWidgetItem(mudServer);
@@ -1280,6 +1308,7 @@ void dlgConnectionProfiles::fillout_form()
             || (!mProfileList.at(i).compare(QStringLiteral("3Scapes"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("3Kingdoms"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
+            || (!mProfileList.at(i).compare(QStringLiteral("Luminari"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Reinos de Leyenda"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
             delete pItem;

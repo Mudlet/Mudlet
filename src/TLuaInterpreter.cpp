@@ -4832,7 +4832,7 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 {
     int index = 1;
     lua_newtable(L);
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     lua_createtable(L, 3, 0);
 #else
     lua_createtable(L, 2, 0);
@@ -4841,7 +4841,7 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
     QString nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/");
     lua_pushstring(L, nativePath.toUtf8().constData());
     lua_rawseti(L, -2, index++);
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     // add macOS lua path relative to the binary itself, which is part of the Mudlet.app package
     nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/");
     lua_pushstring(L, nativePath.toUtf8().constData());
@@ -10827,6 +10827,45 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::getOS(lua_State* L)
+{
+#if defined(Q_OS_CYGWIN)
+    // Try for this one before Q_OS_WIN32 as both are likely to be defined on
+    // a Cygwin platform
+    // CHECK: hopefully will NOT be triggered on mingw/msys
+    lua_pushstring(L, "cygwin");
+#elif defined(Q_OS_WIN32)
+    lua_pushstring(L, "windows");
+#elif defined(Q_OS_MACOS)
+    lua_pushstring(L, "mac");
+#elif defined(Q_OS_HURD)
+    // One can hope/dream!
+    lua_pushstring(L, "hurd");
+#elif defined(Q_OS_FREEBSD)
+    // Only defined on FreeBSD but NOT Debian kFreeBSD so we should check for
+    // this first
+    lua_pushstring(L, "freebsd");
+#elif defined(Q_OS_FREEBSD_KERNEL)
+    // Defined for BOTH Debian kFreeBSD hybrid with a GNU userland and
+    // main FreeBSD so it must be after Q_OS_FREEBSD check; included for Debian
+    // packager who may want to have this!
+    lua_pushstring(L, "kfreebsd");
+#elif defined(Q_OS_OPENBSD)
+    lua_pushstring(L, "openbsd");
+#elif defined(Q_OS_NETBSD)
+    lua_pushstring(L, "netbsd");
+#elif defined(Q_OS_BSD4)
+    // Generic *nix - must be before unix and after other more specific results
+    lua_pushstring(L, "bsd4");
+#elif defined(Q_OS_UNIX)
+    // Most generic *nix - must be after bsd4 and other more specific results
+    lua_pushstring(L, "unix");
+#else
+    lua_pushstring(L, "unknown");
+#endif
+    return 1;
+}
+
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
     if (code.size() < 1) {
@@ -12287,6 +12326,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "permPromptTrigger", TLuaInterpreter::permPromptTrigger);
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
+    lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     luaopen_yajl(pGlobalLua);
@@ -12449,7 +12489,7 @@ void TLuaInterpreter::initIndenterGlobals()
 
 
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
         //macOS app bundle would like the search path to also be set to the current binary directory
         luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
                       .arg(QCoreApplication::applicationDirPath())
@@ -12504,7 +12544,7 @@ void TLuaInterpreter::initIndenterGlobals()
 
 void TLuaInterpreter::loadGlobal()
 {
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     // Load relatively to MacOS inside Resources when we're in a .app bundle,
     // as mudlet-lua always gets copied in by the build script into the bundle
     QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
