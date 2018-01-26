@@ -3398,13 +3398,15 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         }
     case editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
-        // an edbee edtor widget theme:
+        // an edbee editor widget theme:
         return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath());
     case moduleBackupsPath:
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
     }
+    Q_UNREACHABLE();
+    return QString();
 }
 
 #if defined(INCLUDE_UPDATER)

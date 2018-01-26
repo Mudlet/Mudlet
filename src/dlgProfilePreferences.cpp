@@ -452,8 +452,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
-    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
-
     connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
     connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
 
@@ -588,8 +586,6 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_saveMap, SIGNAL(clicked()));
 
     disconnect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)));
-
-    disconnect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)));
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -1459,7 +1455,7 @@ void dlgProfilePreferences::copyMap()
         }
     }
     // otherProfileCurrentRoomId will be -1 if tried and failed to get it from
-    // current running profile, > 0 on sucess or 0 if not running as another profile
+    // current running profile, > 0 on success or 0 if not running as another profile
 
     // Ensure the setting is already made as the value could be used in the
     // code following after

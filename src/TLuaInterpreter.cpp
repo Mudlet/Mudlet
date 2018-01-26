@@ -122,7 +122,7 @@ TLuaInterpreter::~TLuaInterpreter()
 // profile was closed - importantly the documentation for the signal
 // QNetworkReply::finished() which is connected to this SLOT stresses that
 // delete() must NOT be called in this slot (it wasn't as it happens), but
-// deleteLater() - which is now done to free the reasources when appropriate...
+// deleteLater() - which is now done to free the resources when appropriate...
 // - Slysven
 // The code now raises additional sysDownloadError Events on failure to process
 // the local file, the second argument is "failureToWriteLocalFile" and besides
@@ -1919,7 +1919,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
 // Previously would throw a lua error on non-existent room - now returns nil
 // plus error message (as does other run-time errors) - previously would return
 // just a nil on NO exit stubs but now returns a notification error message as
-// well, to aide disabiguation of the nil value.
+// well, to aide disambiguation of the nil value.
 int TLuaInterpreter::getExitStubs(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -2994,7 +2994,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 // * true on sucessfully changing logging state; nil otherwise
 // * an internationalizable/translated message
 // * the log pathAndFile name involved (or nil if there wasn't one)
-// * a numeric code indicating what happend:
+// * a numeric code indicating what happened:
 //    0 = logging was just stopped
 //    1 = logging has just started
 //   -1 = logging was already in progress so no change in logging state
@@ -3099,8 +3099,8 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
 
     QString eventName;
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "%s: bad argument #2 type (event name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 2));
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "%s: bad argument #2 type (function name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
     } else {
         eventName = QString::fromUtf8(lua_tostring(L, 1));
@@ -10241,33 +10241,29 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
 
 int TLuaInterpreter::installPackage(lua_State* L)
 {
-    string event;
+    QString location;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "installPackage(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "installPackage: bad argument #1 (package location path and file name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        event = lua_tostring(L, 1);
+        location =  QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString package = event.c_str();
-    host.installPackage(package, 0);
+    host.installPackage(location, 0);
     return 0;
 }
 
 int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
-    string event;
+    QString packageName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "uninstallPackage(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "uninstallPackage: bad argument #1 (package name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        event = lua_tostring(L, 1);
+        packageName =  QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString package = event.c_str();
-    host.uninstallPackage(package, 0);
+    host.uninstallPackage(packageName, 0);
     return 0;
 }
 
@@ -10828,6 +10824,45 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
         lua_pushstring(L, host.mTelnet.getEncodingsList().at(i).toLatin1().data());
         lua_settable(L, -3);
     }
+    return 1;
+}
+
+int TLuaInterpreter::getOS(lua_State* L)
+{
+#if defined(Q_OS_CYGWIN)
+    // Try for this one before Q_OS_WIN32 as both are likely to be defined on
+    // a Cygwin platform
+    // CHECK: hopefully will NOT be triggered on mingw/msys
+    lua_pushstring(L, "cygwin");
+#elif defined(Q_OS_WIN32)
+    lua_pushstring(L, "windows");
+#elif defined(Q_OS_MACOS)
+    lua_pushstring(L, "mac");
+#elif defined(Q_OS_HURD)
+    // One can hope/dream!
+    lua_pushstring(L, "hurd");
+#elif defined(Q_OS_FREEBSD)
+    // Only defined on FreeBSD but NOT Debian kFreeBSD so we should check for
+    // this first
+    lua_pushstring(L, "freebsd");
+#elif defined(Q_OS_FREEBSD_KERNEL)
+    // Defined for BOTH Debian kFreeBSD hybrid with a GNU userland and
+    // main FreeBSD so it must be after Q_OS_FREEBSD check; included for Debian
+    // packager who may want to have this!
+    lua_pushstring(L, "kfreebsd");
+#elif defined(Q_OS_OPENBSD)
+    lua_pushstring(L, "openbsd");
+#elif defined(Q_OS_NETBSD)
+    lua_pushstring(L, "netbsd");
+#elif defined(Q_OS_BSD4)
+    // Generic *nix - must be before unix and after other more specific results
+    lua_pushstring(L, "bsd4");
+#elif defined(Q_OS_UNIX)
+    // Most generic *nix - must be after bsd4 and other more specific results
+    lua_pushstring(L, "unix");
+#else
+    lua_pushstring(L, "unknown");
+#endif
     return 1;
 }
 
@@ -12291,6 +12326,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "permPromptTrigger", TLuaInterpreter::permPromptTrigger);
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
+    lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     luaopen_yajl(pGlobalLua);
@@ -12453,7 +12489,16 @@ void TLuaInterpreter::initIndenterGlobals()
 
 
 
-#if defined(Q_OS_UNIX)
+#if defined(Q_OS_MAC)
+        //macOS app bundle would like the search path to also be set to the current binary directory
+        luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
+                      .arg(QCoreApplication::applicationDirPath())
+                      .toUtf8().constData());
+        luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
+                      .arg(QCoreApplication::applicationDirPath())
+                      .toUtf8().constData());
+
+#elif defined(Q_OS_UNIX)
     // Need to tweak the lua path for the installed *nix case and to allow
     // running from a shadow build directory, the latter means we HAVE to rename
     // where the module code is stored or use a symbolic link from "lcf" to
@@ -12470,15 +12515,6 @@ void TLuaInterpreter::initIndenterGlobals()
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
-                  .arg(QCoreApplication::applicationDirPath())
-                  .toUtf8().constData());
-
-#elif defined(Q_OS_MAC)
-    //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
-                  .arg(QCoreApplication::applicationDirPath())
-                  .toUtf8().constData());
-    luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
 #endif

@@ -75,7 +75,7 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host* pHost); //throws exeption ExObjNoCreate
+    TTrigger(const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
     QString getCommand() { return mCommand; }
     void compileAll();
     void setCommand(const QString& b) { mCommand = b; }

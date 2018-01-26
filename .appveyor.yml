@@ -10,17 +10,17 @@ environment:
     MINGW_BASE_DIR: C:\Qt\Tools\mingw492_32
     MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw492_32
     WITH_UPDATER: NO # Check for build WITHOUT updater code
-#  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
-#    MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
-#    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
+# Qt 5.9 doesn't work for us currently
 #  - QT_BASE_DIR: C:\Qt\5.9\mingw53_32
 #    MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
 #    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
 install:
-- powershell ".\CI\appveyor.install.ps1"
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- powershell ".\appveyor.install.ps1"
 
 build_script:
-- powershell ".\CI\appveyor.build.ps1"
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- powershell ".\appveyor.build.ps1"
 
 on_failure:
 - cd C:\src
