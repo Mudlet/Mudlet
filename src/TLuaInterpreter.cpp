@@ -949,7 +949,7 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
     QString replayFileName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "loadRawFile: bad argument #1 type (replay file name, {may include a relative to \n"
-                           "profile's \"logs\" sub-directory, or absolute an path}, as string expected, \n"
+                           "profile's \"logs\" sub-directory, or an absolute path}, as string expected, \n"
                            "got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
