@@ -177,6 +177,7 @@ mudlet::mudlet()
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName("mpMainToolBar");
+    mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
     addToolBarBreak();
@@ -453,6 +454,8 @@ mudlet::mudlet()
 
     mpSettings = getQSettings();
     readSettings(*mpSettings);
+    // The previous line will set an option used in the slot method:
+    connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -2321,6 +2324,21 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
     mToolbarVisibility = state;
 
     adjustToolBarVisibility();
+}
+
+// Override the main window context menu action to prevent the main tool bar
+// from being hidden if we do not want it to be (or it is not safe - no profile
+// loaded so no TConsoles with a "rescue" context menu):
+void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
+{
+    if (! isVisible) {
+        // Only need to worry about it DIS-appearing
+        if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways)
+                ||(mToolbarVisibility & visibleMaskNormally)) {
+
+            mpMainToolBar->show();
+        }
+    }
 }
 
 void mudlet::adjustToolBarVisibility()
