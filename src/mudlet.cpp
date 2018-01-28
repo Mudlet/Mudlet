@@ -1180,9 +1180,8 @@ void mudlet::disableToolbarButtons()
     // The menu items will not show tool-tips unless the parent menu is set to
     // show tool-tips which is likely to be done in near future when there are
     // more texts to show {the default is to repeat the menu text which is not
-    // useful} with:
-    //     menuEditor->setToolTipsVisible(true);
-    dactionReplay->setToolTip(mpActionReplay->toolTip());
+    // useful} with a call to menuEditor->setToolTipsVisible(true);
+    // dactionReplay->setToolTip(mpActionReplay->toolTip());
 
     dactionReplay->setEnabled(false);
     actionReconnect->setEnabled(false);
@@ -1214,9 +1213,8 @@ void mudlet::enableToolbarButtons()
         // The menu items will not show tool-tips unless the parent menu is set to
         // show tool-tips which is likely to be done in near future when there are
         // more texts to show {the default is to repeat the menu text which is not
-        // useful} with:
-        //     menuEditor->setToolTipsVisible(true);
-        dactionReplay->setToolTip(mpActionReplay->toolTip());
+        // useful} with a call to menuEditor->setToolTipsVisible(true);
+        // dactionReplay->setToolTip(mpActionReplay->toolTip());
     }
 
     actionReconnect->setEnabled(true);
@@ -2338,13 +2336,13 @@ void mudlet::adjustToolBarVisibility()
     }
 }
 
-bool mudlet::isControlless() const
+bool mudlet::isControlsVisible() const
 {
     // Use the real state of the controlled things in case the logic to
     // control their state (mToolbarVisibility & mMenuBarVisibility) are out of
     // sync with reality:
 
-    return !(mpMainToolBar->isVisible() || menuBar()->isVisible());
+    return mpMainToolBar->isVisible() || menuBar()->isVisible();
 }
 
 void mudlet::writeSettings()
@@ -2687,19 +2685,16 @@ void mudlet::slot_replay()
         return;
     }
 
-    QString home = getMudletPath(profileReplayAndLogFilesPath, pHost->getName());
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), home, tr("*.dat"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
+                                                    getMudletPath(profileReplayAndLogFilesPath, pHost->getName()),
+                                                    tr("*.dat"));
     if (fileName.isEmpty()) {
+        // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Select Replay"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    pHost->mTelnet.loadReplay(fileName);
+    // No third argument causes error messages to be sent to pHost's main console:
+    loadReplay(pHost, fileName);
 }
 
 void mudlet::printSystemMessage(Host* pH, const QString& s)
@@ -2956,6 +2951,7 @@ void mudlet::toggleFullScreenView()
     }
 }
 
+// Called from the ctelnet instance for the host concerned:
 bool mudlet::replayStart()
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
@@ -3051,7 +3047,7 @@ void mudlet::replayOver()
     mpToolBarReplay->removeAction(mpActionReplaySpeedDown);
     mpToolBarReplay->removeAction(mpActionSpeedDisplay);
     removeToolBar(mpToolBarReplay);
-    mpActionReplaySpeedUp->deleteLater(); // Had previously ommitted these, causing a reasource leak!
+    mpActionReplaySpeedUp->deleteLater(); // Had previously omitted these, causing a resource leak!
     mpActionReplaySpeedUp = nullptr;
     mpActionReplaySpeedDown->deleteLater();
     mpActionReplaySpeedDown = nullptr;
@@ -3066,7 +3062,7 @@ void mudlet::replayOver()
     mpToolBarReplay->deleteLater();
     mpToolBarReplay = nullptr;
 
-    // Unlock the replay button/menu item
+    // Unlock/uncheck the replay button/menu item
     mpActionReplay->setChecked(false);
     dactionReplay->setChecked(false);
     mpActionReplay->setCheckable(false);
@@ -3558,4 +3554,42 @@ int mudlet::getRowCount(Host* pHost, QString& name)
     }
 
     return dockWindowConsoleMap[name]->console->getRowCount();
+}
+
+// Can be called from lua sub-system OR from slot_replay(), the presence of a
+// non-NULLPTR pErrMsg indicates the former; also the replayFileName CAN be
+// relative (to the profiles ./log sub-directory where replays are stored) if
+// sourced from the lua sub-system.
+bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pErrMsg)
+{
+    // Do not proceed if there is a problem with the main toolbar (it isn't there)
+    // OR if there is already a replay toolbar in existance (a replay is already
+    // in progress)...
+    if (!mpMainToolBar || mpToolBarReplay) {
+        // This was in (bool) ctelnet::loadReplay(const QString&, QString*)
+        // but is needed here to prevent getting into there otherwise a lua call
+        // to start a replay would mess up (QFile) ctelnet::replayFile for a
+        // replay already in progess in the SAME profile.  Technically there
+        // could be a very small chance of a race condition if a lua call of
+        // loadRawFile happens at the same time as a file was selected for a
+        // replay after the toolbar/menu command to do a reaply for the same
+        // profile - but the window for this is likely to be a fraction of a
+        // second...
+        if (pErrMsg) {
+            *pErrMsg = QStringLiteral("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
+        } else {
+            pHost->postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
+                                  "try again when it has finished."));
+        }
+        return false;
+    }
+
+    QString absoluteReplayFileName;
+    if (QFileInfo(replayFileName).isRelative()) {
+        absoluteReplayFileName = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
+    } else {
+        absoluteReplayFileName = replayFileName;
+    }
+
+    return pHost->mTelnet.loadReplay(absoluteReplayFileName, pErrMsg);
 }

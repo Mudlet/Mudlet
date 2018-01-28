@@ -109,8 +109,8 @@ public:
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
     void recordReplay();
-    void loadReplay(QString&);
-    void _loadReplay();
+    bool loadReplay(const QString&, QString* pErrMsg = nullptr);
+    void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
@@ -137,7 +137,7 @@ public:
 public slots:
     void setDownloadProgress(qint64, qint64);
     void replyFinished(QNetworkReply*);
-    void readPipe();
+    void slot_processReplayChunk();
     void handle_socket_signal_hostFound(QHostInfo);
     void handle_socket_signal_connected();
     void handle_socket_signal_disconnected();
@@ -212,6 +212,8 @@ private:
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
     bool loadingReplay;
+    // Used to disable the TConsole ending messages if run from lua:
+    bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
 };

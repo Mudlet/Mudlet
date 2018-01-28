@@ -308,7 +308,8 @@ public:
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
-    bool isControlless() const;
+    bool isControlsVisible() const;
+    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;

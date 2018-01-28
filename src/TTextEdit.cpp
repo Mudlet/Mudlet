@@ -1185,7 +1185,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         popup->addSeparator();
         popup->addAction(action4);
 
-        if (mudlet::self()->isControlless()) {
+        if (!mudlet::self()->isControlsVisible()) {
             QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
             connect(actionRestoreMainMenu, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainMenu()));
             actionRestoreMainMenu->setToolTip(tr("use this to restore the Main menu to get access to controls!"));

@@ -942,20 +942,38 @@ int TLuaInterpreter::getLines(lua_State* L)
     return 1;
 }
 
+// Should have been called loadReplay(...) but this name is already in the
+// published Lua API
 int TLuaInterpreter::loadRawFile(lua_State* L)
 {
-    string luaSendText = "";
+    QString replayFileName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "loadRawFile: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "loadRawFile: bad argument #1 type (replay file name, {may include a relative to \n"
+                           "profile's \"logs\" sub-directory, or absolute an path}, as string expected, \n"
+                           "got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        replayFileName = QString::fromUtf8(lua_tostring(L, 1));
+        if (replayFileName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "a blank string is not a valid replay file name");
+            return 2;
+        }
     }
 
     Host& host = getHostFromLua(L);
-    host.mpConsole->loadRawFile(luaSendText);
-    return 0;
+    QString errMsg;
+    if (mudlet::self()->loadReplay(&host, replayFileName, &errMsg)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        // Although we only use English text for Lua messages the errMsg could
+        // contain a Windows pathFileName which may use non-ASCII characters:
+        lua_pushfstring(L, "unable to start replay, reason: '%s'", errMsg.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::getCurrentLine(lua_State* L)
