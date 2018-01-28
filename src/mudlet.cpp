@@ -1179,7 +1179,7 @@ void mudlet::disableToolbarButtons()
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                .arg(tr("<p>Load a Mudlet replay.</p>"
-                                       "<p><i>Disabled until a profile is loaded!</i></p>")));
+                                       "<p><i>Disabled until a profile is loaded.</i></p>")));
     // The menu items will not show tool-tips unless the parent menu is set to
     // show tool-tips which is likely to be done in near future when there are
     // more texts to show {the default is to repeat the menu text which is not

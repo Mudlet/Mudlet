@@ -1162,19 +1162,27 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
 
         QAction* action = new QAction("copy", this);
-        action->setToolTip(tr("copy selected text to clipboard"));
+        // According to the Qt Documentation:
+        // "This text is used for the tooltip."
+        // "If no tooltip is specified, the action's text is used."
+        // "By default, this property contains the action's text."
+        // So it seems that if we turn on tooltips (for all QAction) on a menu
+        // (with QMenu::setToolTipsVisible(true)) we should forcible clear
+        // the tooltip contents which are presumable filled with the default
+        // in the QAction constructor:
+        action->setToolTip(QString());
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
         QAction* action2 = new QAction("copy HTML", this);
-        action2->setToolTip(tr("copy selected text with colors as HTML (for web browsers)"));
+        action2->setToolTip(QString());
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
         QAction* action3 = new QAction("select all", this);
-        action3->setToolTip(tr("select all text in the buffer"));
+        action3->setToolTip(QString());
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(("search on " + selectedEngine), this);
+        action3->setToolTip(QString());
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
-        action4->setToolTip(tr("search selected text on %1").arg(selectedEngine));
 
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true); // Not the default...
@@ -1188,11 +1196,13 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         if (!mudlet::self()->isControlsVisible()) {
             QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
             connect(actionRestoreMainMenu, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainMenu()));
-            actionRestoreMainMenu->setToolTip(tr("use this to restore the Main menu to get access to controls!"));
+            actionRestoreMainMenu->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                              .arg(tr("Use this to restore the Main menu to get access to controls.")));
 
             QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
             connect(actionRestoreMainToolBar, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainToolBar()));
-            actionRestoreMainToolBar->setToolTip(tr("use this to restore the Main Toolbar to get access to controls!"));
+            actionRestoreMainToolBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                 .arg(tr("Use this to restore the Main Toolbar to get access to controls.")));
 
             popup->addSeparator();
             popup->addAction(actionRestoreMainMenu);
