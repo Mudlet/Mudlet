@@ -1181,7 +1181,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(("search on " + selectedEngine), this);
-        action3->setToolTip(QString());
+        action4->setToolTip(QString());
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
 
         auto popup = new QMenu(this);
