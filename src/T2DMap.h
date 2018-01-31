@@ -78,8 +78,8 @@ public:
     QPointer<Host> mpHost;
     int xzoom;
     int yzoom;
-    int _rx;
-    int _ry;
+    int mRX;
+    int mRY;
     QPoint mPHighlight;
     bool mPick;
     int mTarget;
@@ -92,9 +92,11 @@ public:
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
 
-    QPoint mMoveTarget;
     bool mRoomBeingMoved;
-    QPoint mPHighlightMove;
+    // These are the on-screen width and height pixel numbers of the area for a
+    // room symbol, (for the non-grid map mode case what gets filled in is
+    // multipled by rsize which is 1.0 to exactly fill space between adjacent
+    // coordinates):
     float mTX;
     float mTY;
     int mChosenRoomColor;
@@ -108,8 +110,7 @@ public:
 
     QRectF mMultiRect;
     bool mPopupMenu;
-    QSet<int> mMultiSelectionSet; // was mMultiSelectList
-    QPoint mOldMousePos;
+    QSet<int> mMultiSelectionSet;
     bool mNewMoveAction;
     QRectF mMapInfoRect;
     int mFontHeight;
@@ -136,8 +137,6 @@ public:
     QColor mCurrentLineColor;
     QCheckBox* mpCurrentLineArrow;
     bool mCurrentLineArrow;
-    bool mShowGrid;
-    QPointF mLastMouseClick;
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
     bool mLabelHilite;
@@ -147,7 +146,6 @@ public:
     int mCustomLineSelectedPoint;
     QTreeWidget mMultiSelectionListWidget;
     bool mSizeLabel;
-    bool gridMapSizeChange;
     bool isCenterViewCall;
     QString mHelpMsg;
 
