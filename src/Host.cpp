@@ -32,6 +32,7 @@
 #include "TScript.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
+#include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -181,8 +182,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogStream.setDevice(&mErrorLogFile);
 
     QTimer::singleShot(0, [this]() {
+        qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
         if (mpMap->restore(QString(), false)) {
             mpMap->audit();
+            if (mpMap->mpMapper) {
+                mpMap->mpMapper->mp2dMap->init();
+                mpMap->mpMapper->updateAreaComboBox();
+                mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMap->mpMapper->show();
+            }
         }
     });
 

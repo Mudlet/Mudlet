@@ -220,6 +220,9 @@ private:
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames;
+    // The initialisation cannot be completed until both Host and TMap classes
+    // are setup - this gets set once init() has been done:
+    bool mIsInitialised;
 };
 
 #endif // MUDLET_T2DMAP_H

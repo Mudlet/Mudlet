@@ -117,6 +117,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mIsSelectionSorting(true)
 , mIsSelectionSortByNames()
 , mIsSelectionUsingNames(false)
+, mIsInitialised()
 {
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -148,11 +149,13 @@ T2DMap::T2DMap(QWidget* parent)
 
 void T2DMap::init()
 {
-    isCenterViewCall = false;
-
-    if (!mpMap) {
+    if (!mpHost || !mpMap || mIsInitialised) {
         return;
     }
+
+    mIsInitialised = true;
+
+    isCenterViewCall = false;
 
     eSize = mpMap->mpHost->mLineSize;
     rSize = mpMap->mpHost->mRoomSize;
