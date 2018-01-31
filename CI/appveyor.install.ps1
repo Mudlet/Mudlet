@@ -1,6 +1,10 @@
 # Exit the script whenever an error in a cmdlet occurs
 $global:ErrorActionPreference = "Stop"
 
+# activate higher TLS version. Seems PS only uses 1.0 by default
+# credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
+[Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
+
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
 $logFile = "$workingBaseDir\verbose_output.log"
