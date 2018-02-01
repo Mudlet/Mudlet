@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
+*   Copyright (C) 2013-2018 by Stephen Lyons - slysven@virginmedia.com    *
 *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
 *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
 *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -9207,57 +9207,152 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     int id;
     string c;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomChar: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
+
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomChar: bad argument #2 type (room character as single latin1 character expected, got %s!)",
+                       luaL_typename(L, 2));
+        return lua_error(L);
     } else {
         c = lua_tostring(L, 2);
     }
+
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushstring(L, "setRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
         if (c.size() >= 1) {
-            pR->c = c[0];
+            if (c[0] == ' ') {
+                pR->mSymbol.clear();
+                lua_pushboolean(L, true);
+                return 1;
+            } else if (c[0] >= 33) {
+                pR->mSymbol = c[0];
+                lua_pushboolean(L, true);
+                return 1;
+            } else {
+                lua_pushnil(L);
+                lua_pushfstring(L, "invalid first character code: %d in supplied room character", c[0]);
+                return 2;
+            }
+        } else {
+            // Allow an empty string to be used to clear the symbol:
+            pR->mSymbol.clear();
+            lua_pushboolean(L, true);
+            return 1;
         }
     }
-    return 0;
 }
 
 int TLuaInterpreter::getRoomChar(lua_State* L)
 {
     int id;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "getRoomChar: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
+
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushstring(L, "getRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
-        QString c = (QString)pR->c;
-        lua_pushstring(L, c.toLatin1().data());
-        return 1;
+        if (pR->mSymbol.isEmpty()) {
+            lua_pushstring(L, "");
+            return 1;
+        } else if (pR->mSymbol.length() >1) {
+            lua_pushstring(L, "?");
+            lua_pushfstring(L, "the symbol for the room cannot be represented as a single ASCII character, use getRoomSymbol(roomId) instead");
+            return 2;
+        } else if (pR->mSymbol.at(0).row()) {
+            lua_pushstring(L, "?");
+            lua_pushfstring(L, "the symbol for the room cannot be represented as a single ASCII character, use getRoomSymbol(roomId) instead");
+            return 2;
+        } else {
+            char character[2];
+            character[0] = pR->mSymbol.at(0).toLatin1();
+            character[1] = '\0';
+            lua_pushstring(L, character);
+            return 1;
+        }
     }
-    return 0;
 }
 
+int TLuaInterpreter::setRoomSymbol(lua_State* L)
+{
+    int id;
+    QString symbol;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "setRoomSymbol: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        id = lua_tointeger(L, 1);
+    }
+
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setRoomSymbol: bad argument #2 type (room symbol as string expected, got %s!)",
+                       luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        symbol = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
+    } else {
+        if (symbol.isEmpty()) {
+            // Allow an empty string to be used to clear the symbol:
+            pR->mSymbol.clear();
+        } else {
+            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+            // handle/use/allow:
+            pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    }
+}
+
+int TLuaInterpreter::getRoomSymbol(lua_State* L)
+{
+    int id;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "getRoomSymbol: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        id = lua_tointeger(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
+    } else {
+        lua_pushstring(L, pR->mSymbol.toUtf8().constData());
+        return 1;
+    }
+}
 
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
@@ -12327,7 +12422,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "setRoomSymbol", TLuaInterpreter::setRoomSymbol);
+    lua_register(pGlobalLua, "getRoomSymbol", TLuaInterpreter::getRoomSymbol);
     // PLACEMARKER: End of main Lua interpreter functions registration
+
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");

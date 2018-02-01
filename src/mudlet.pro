@@ -604,6 +604,7 @@ FORMS += \
     ui/composer.ui \
     ui/connection_profiles.ui \
     ui/dlgPackageExporter.ui \
+    ui/glyph_usage.ui \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \

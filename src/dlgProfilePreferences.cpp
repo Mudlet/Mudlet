@@ -47,8 +47,10 @@
 #include <QPalette>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QTableWidget>
 #include <QTextOption>
 #include <QToolBar>
+#include <QUiLoader>
 #include <QVariant>
 #include "post_guard.h"
 
@@ -165,6 +167,10 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
+    label_mapSymbolsFont->setEnabled(false);
+    fontComboBox_mapSymbols->setEnabled(false);
+    checkBox_onlyUseChoosenFont->setEnabled(false);
+    pushButton_showGlyphUsage->setEnabled(false);
 
     groupBox_downloadMapOptions->setEnabled(false);
     // The above is actually normally hidden:
@@ -426,10 +432,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
     if (pHost->mpMap->mpMapper) {
+        label_mapSymbolsFont->setEnabled(true);
+        fontComboBox_mapSymbols->setEnabled(true);
+        checkBox_onlyUseChoosenFont->setEnabled(true);
+        pushButton_showGlyphUsage->setEnabled(true);
+
         checkBox_showDefaultArea->show();
         checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
         checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
+
+        fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
+        checkBox_onlyUseChoosenFont->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
+        connect(pushButton_showGlyphUsage, SIGNAL(clicked(bool)), this, SLOT(slot_showMapGlyphUsage()), Qt::UniqueConnection);
+        connect(fontComboBox_mapSymbols, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(slot_setMapSymbolFont(const QFont&)), Qt::UniqueConnection);
+        connect(checkBox_onlyUseChoosenFont, SIGNAL(clicked(bool)), this, SLOT(slot_setMapSymbolFontStrategey(bool)), Qt::UniqueConnection);
     } else {
+        label_mapSymbolsFont->setEnabled(false);
+        fontComboBox_mapSymbols->setEnabled(false);
+        checkBox_onlyUseChoosenFont->setEnabled(false);
+        pushButton_showGlyphUsage->setEnabled(false);
+
         checkBox_showDefaultArea->hide();
     }
 
@@ -1599,6 +1621,11 @@ void dlgProfilePreferences::copyMap()
 
 void dlgProfilePreferences::slot_save_and_exit()
 {
+    if (mpDialogMapGlyphUsage) {
+        mpDialogMapGlyphUsage->close();
+        mpDialogMapGlyphUsage = nullptr;
+    }
+
     Host* pHost = mpHost;
     if (pHost) {
         if (dictList->currentItem()) {
@@ -1634,6 +1661,7 @@ void dlgProfilePreferences::slot_save_and_exit()
                 // Corner case fixup:
                 pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
             }
+
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
         }
@@ -2259,5 +2287,188 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         clearHostDetails();
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
+    }
+}
+
+void dlgProfilePreferences::generateMapGlyphDisplay()
+{
+    QHash<QString, QSet<int>> roomSymbolsHash(mpHost->mpMap->roomSymbolsHash());
+    QTableWidget* pTableWidget = mpDialogMapGlyphUsage->findChild<QTableWidget*>(QLatin1String("tableWidget"));
+    if (!pTableWidget) {
+        return;
+    }
+
+    pTableWidget->clearContents();
+    pTableWidget->setColumnCount(6);
+    pTableWidget->setRowCount(roomSymbolsHash.count());
+
+    // Must turn off sorting whilst inserting items...
+    pTableWidget->setSortingEnabled(false);
+
+    QFont selectedFont = mpHost->mpMap->mMapSymbolFont;
+    selectedFont.setPointSize(16);
+    selectedFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(selectedFont.styleStrategy() | QFont::NoFontMerging));
+    QFont anyFont = mpHost->mpMap->mMapSymbolFont;
+    anyFont.setPointSize(16);
+    anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(anyFont.styleStrategy() &~(QFont::NoFontMerging)));
+
+    int row = -1;
+    QHashIterator<QString, QSet<int>> itUsedSymbol(roomSymbolsHash);
+    while (itUsedSymbol.hasNext()) {
+        itUsedSymbol.next();
+        QString symbol = itUsedSymbol.key();
+        QList<int> roomsWithSymbol = itUsedSymbol.value().toList();
+        if (roomsWithSymbol.count() > 1) {
+            std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
+        }
+        QTableWidgetItem* pSymbolInFont = new QTableWidgetItem();
+        pSymbolInFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolInFont->setFont(selectedFont);
+
+        QTableWidgetItem* pSymbolAnyFont = new QTableWidgetItem();
+        pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolAnyFont->setFont(anyFont);
+
+        QFontMetrics SymbolInFontMetrics(selectedFont);
+        QFontMetrics SymbolAnyFontMetrics(anyFont);
+
+        // pCodePoints is the sequence of UTF-32 codepoints in the symbol and
+        // this ought to be what is needed to check that a font or set of fonts
+        // can render the codepoints:
+        QVector<quint32> pCodePoints = symbol.toUcs4();
+        // These can be used to flag symbols that cannot be reproduced
+        bool isSingleFontUsable=true;
+        bool isAllFontUsable=true;
+        QStringList codePointsString;
+        for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
+            codePointsString << QStringLiteral("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
+            if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
+                isAllFontUsable=false;
+                // By definition if all the fonts together cannot render the
+                // glyph then the specified one cannot either
+                isSingleFontUsable=false;
+            } else if (!SymbolInFontMetrics.inFontUcs4(pCodePoints.at(i))) {
+                isSingleFontUsable=false;
+            }
+        }
+
+        QTableWidgetItem* pCodePointDisplay = new QTableWidgetItem(codePointsString.join(QStringLiteral(", ")));
+        pCodePointDisplay->setTextAlignment(Qt::AlignCenter);
+
+        // Need to pad the numbers with spaces so that sorting works correctly:
+        QTableWidgetItem* pUsageCount = new QTableWidgetItem(QStringLiteral("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
+        pUsageCount->setTextAlignment(Qt::AlignCenter);
+
+        QStringList roomNumberStringList;
+        QListIterator<int> itRoom(roomsWithSymbol);
+        while (itRoom.hasNext()) {
+            roomNumberStringList << QString::number(itRoom.next());
+        }
+        QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(QStringLiteral(", ")));
+
+        QToolButton * pDummyButton = new QToolButton();
+        if (isSingleFontUsable) {
+            pSymbolInFont->setText(symbol);
+            pSymbolAnyFont->setText(symbol);
+            pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
+        } else {
+            // Need to switch to a different font as it is possible that the
+            // single font may not have the replacement glyph either...!
+            pSymbolInFont->setFont(anyFont);
+            pSymbolInFont->setText(QString(QChar::ReplacementCharacter));
+            if (isAllFontUsable) {
+                pSymbolAnyFont->setText(symbol);
+                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-warning.png")));
+            } else {
+                pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
+                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-error.png")));
+            }
+        }
+        pTableWidget->setCellWidget(++row, 0, pDummyButton);
+
+        pTableWidget->setItem(row, 1, pSymbolInFont);
+        pTableWidget->setItem(row, 2, pSymbolAnyFont);
+        pTableWidget->setItem(row, 3, pCodePointDisplay);
+        pTableWidget->setItem(row, 4, pUsageCount);
+        pTableWidget->setItem(row, 5, pRoomNumbers);
+    }
+    pTableWidget->resizeColumnsToContents();
+    pTableWidget->sortItems(4, Qt::DescendingOrder);
+    pTableWidget->setSortingEnabled(true);
+    mpDialogMapGlyphUsage->show();
+    mpDialogMapGlyphUsage->raise();
+}
+
+void dlgProfilePreferences::slot_showMapGlyphUsage()
+{
+    if (!mpHost || !mpHost->mpMap) {
+        return;
+    }
+
+    if (mpDialogMapGlyphUsage) {
+        // Already in use so just refresh the contents instead:
+        generateMapGlyphDisplay();
+        return;
+    }
+
+    QUiLoader loader;
+    QFile file(":/ui/glyph_usage.ui");
+    file.open(QFile::ReadOnly);
+    mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
+    file.close();
+    if (!mpDialogMapGlyphUsage) {
+        qWarning("dlgProfilePreferences::slot_showMapGlyphUsage() ERROR: failed to create the dialog!");
+        return;
+    }
+
+    mpDialogMapGlyphUsage->setWindowIcon(QIcon(QStringLiteral(":/icons/place_of_interest.png")));
+    mpDialogMapGlyphUsage->setWindowTitle(tr("Map glyph usage - %1").arg(mpHost->getName()));
+    mpDialogMapGlyphUsage->setAttribute(Qt::WA_DeleteOnClose);
+    generateMapGlyphDisplay();
+}
+
+void dlgProfilePreferences::slot_setMapSymbolFontStrategey(const bool isToOnlyUseSelectedFont)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    if (pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed != isToOnlyUseSelectedFont) {
+        pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed = isToOnlyUseSelectedFont;
+        // Clear the existing cache of room symbol pixmaps:
+        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+        // Forceably redraw it as we ARE currently showing default area:
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
+
+        if (mpDialogMapGlyphUsage) {
+            generateMapGlyphDisplay();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
+    QFont::StyleStrategy fontStrategy = pHost->mpMap->mMapSymbolFont.styleStrategy();
+    if (pHost->mpMap->mMapSymbolFont != font) {
+        pHost->mpMap->mMapSymbolFont = font;
+        pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
+        pHost->mpMap->mMapSymbolFont.setStyleStrategy(fontStrategy);
+        // Clear the existing cache of room symbol pixmaps:
+        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+        // Forceably redraw it as we ARE currently showing default area:
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
+
+        if (mpDialogMapGlyphUsage) {
+            generateMapGlyphDisplay();
+        }
     }
 }

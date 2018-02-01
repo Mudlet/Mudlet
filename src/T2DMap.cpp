@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -58,6 +59,9 @@
 #include <QTreeWidgetItem>
 #include "post_guard.h"
 
+const quint8 mapLetterPixmapSize = 192;
+// The size of the square used to draw map room symbols (formerly "letters") on,
+// larger values produce better pictures but take more space in cache.
 
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
@@ -160,91 +164,7 @@ void T2DMap::init()
     eSize = mpMap->mpHost->mLineSize;
     rSize = mpMap->mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
-
-    mPixMap.clear();
-    QFont f = QFont(QFont("Bitstream Vera Sans Mono", 20, QFont::Normal));
-    f.setPointSize(gzoom);
-    f.setBold(true);
-    int j = 0;
-    for (int k = 1; k < 17; k++) {
-        for (int i = 1; i < 255; i++) {
-            j++;
-            QPixmap b(gzoom, gzoom);
-            b.fill(Qt::transparent);
-            QPainter p(&b);
-            QColor c = _getColor(k);
-            p.setPen(c);
-            p.setFont(f);
-            QRect r(0, 0, gzoom, gzoom);
-            p.drawText(r, Qt::AlignHCenter | Qt::AlignVCenter, QChar(i));
-            mPixMap[j] = b;
-        }
-    }
 }
-
-QColor T2DMap::_getColor(int id)
-{
-    QColor c;
-
-    switch (id) {
-    case 1:
-        c = mpHost->mRed_2;
-        break;
-
-    case 2:
-        c = mpHost->mGreen_2;
-        break;
-    case 3:
-        c = mpHost->mYellow_2;
-        break;
-
-    case 4:
-        c = mpHost->mBlue_2;
-        break;
-
-    case 5:
-        c = mpHost->mMagenta_2;
-        break;
-    case 6:
-        c = mpHost->mCyan_2;
-        break;
-    case 7:
-        c = mpHost->mWhite_2;
-        break;
-    case 8:
-        c = mpHost->mBlack_2;
-        break;
-
-    case 9:
-        c = mpHost->mLightRed_2;
-        break;
-
-    case 10:
-        c = mpHost->mLightGreen_2;
-        break;
-    case 11:
-        c = mpHost->mLightYellow_2;
-        break;
-
-    case 12:
-        c = mpHost->mLightBlue_2;
-        break;
-
-    case 13:
-        c = mpHost->mLightMagenta_2;
-        break;
-    case 14:
-        c = mpHost->mLightCyan_2;
-        break;
-    case 15:
-        c = mpHost->mLightWhite_2;
-        break;
-    case 16:
-        c = mpHost->mLightBlack_2;
-    }
-    return c;
-}
-
 
 QColor T2DMap::getColor(int id)
 {
@@ -577,7 +497,73 @@ void T2DMap::slot_switchArea(QString name)
     }
 }
 
+// key format: <"W_" or "B_" for White/Black><QString of one or more QChars>
+void T2DMap::addSymbolToPixmapCache( const QString key )
+{
+    QPixmap * pix = new QPixmap(mapLetterPixmapSize,mapLetterPixmapSize);
+    pix->fill( QColor(0,0,0,0) ); // Fill with a *transparent* background!
+    QString symbolString(key.mid(2));
+    QPainter symbolPainter(pix);
+    if (key.startsWith(QLatin1String("W_"))) {
+        symbolPainter.setPen(Qt::white);
+    } else {
+        symbolPainter.setPen(Qt::black);
+    }
+    symbolPainter.setFont(mMapSymbolFont);
+    symbolPainter.setRenderHints( QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform , true );
 
+    QFontMetrics mapSymbolFontMetrics = symbolPainter.fontMetrics();
+    QVector<quint32> codePoints = symbolString.toUcs4();
+    QVector<bool> isUsable;
+    for (uint i=0; i<codePoints.size(); ++i) {
+        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
+    }
+
+    QFont fontForThisSymbol = mMapSymbolFont;
+    bool isToFallback = isUsable.contains(false);
+    // Oh dear at least one grapheme is not represented in either the selected
+    // or any font as set elsewhere
+    if (isToFallback) {
+        symbolString = QString(QChar::ReplacementCharacter);
+        // Clear the setting that may be forcings only the specified font to be
+        // used, as it may not have the Replacement Character glyph...
+        fontForThisSymbol.setStyleStrategy(static_cast<QFont::StyleStrategy>(fontForThisSymbol.styleStrategy() &~(QFont::NoFontMerging)));
+    }
+
+    { // blocked to limit lifetime of QPainter used here
+        qreal fudgeFactor = mapLetterPixmapSize * mpMap->mMapSymbolFontFudgeFactor;
+        QRectF testRect(0, 0, fudgeFactor, fudgeFactor);
+        testRect.moveCenter(pix->rect().center());
+        QRectF boundaryRect;
+        // Try larger font sizes until it won't fit
+        do {
+            fontForThisSymbol.setPointSize(++mSymbolFontSize);
+            symbolPainter.setFont(fontForThisSymbol);
+            boundaryRect = symbolPainter.boundingRect(pix->rect(), Qt::AlignCenter, symbolString);
+            // Use a limit on mSymbolFontSize otherwise some broken fonts can
+            // lock the system into a very slow loop as it gets very large
+        } while (testRect.contains(boundaryRect) && mSymbolFontSize < 100);
+        // Then try smaller ones until it will
+        do {
+            fontForThisSymbol.setPointSize(--mSymbolFontSize);
+            symbolPainter.setFont(fontForThisSymbol);
+            boundaryRect = symbolPainter.boundingRect(pix->rect(), Qt::AlignCenter, symbolString);
+            // Use a limit on mSymbolFontSize otherwise some broken fonts can
+            // lock the system into a very slow loop as it gets very large
+        } while (!testRect.contains(boundaryRect) && mSymbolFontSize > 4);
+        if (testRect.contains(boundaryRect)) {
+            fontForThisSymbol.setPointSize(++mSymbolFontSize);
+        }
+        // Else, it still doesn't fit, must be a long string, too bad...
+    }
+    symbolPainter.drawText(pix->rect(), Qt::AlignCenter|Qt::TextSingleLine, symbolString);
+
+    if( ! mSymbolPixmapCache.insert(key, pix) ) {
+        qDebug("T2DMap::addSymbolToPixmapCache() ALERT: Map Room Symbol Pixmap cache is full...!" );
+    }
+}
+
+// Revised to use a QCache to hold QPixmap * to generated images for room symbols
 void T2DMap::paintEvent(QPaintEvent* e)
 {
     if (!mpMap) {
@@ -611,6 +597,27 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mTX = _w / xspan;
     mTY = _h / yspan;
+
+    static bool oldBubbleMode = false;
+    if (oldBubbleMode !=mBubbleMode) {
+        // If the round/square room selection has changed this will invalidate
+        // all the previously generated pixmaps:
+        mSymbolPixmapCache.clear();
+        oldBubbleMode = mBubbleMode;
+    }
+
+    mSymbolFontSize = 1;
+    mMapSymbolFont = mpMap->mMapSymbolFont;
+    if (mpMap->mIsOnlyMapSymbolFontToBeUsed) {
+        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoFontMerging | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality | QFont::PreferNoShaping));
+    } else {
+        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality | QFont::PreferNoShaping ));
+    }
+    mMapSymbolFont.setBold(false);
+    mMapSymbolFont.setItalic(false);
+    mMapSymbolFont.setUnderline(false);
+    mMapSymbolFont.setOverline(false);
+    mMapSymbolFont.setStrikeOut(false);
 
     QList<int> exitList;
     QList<int> oneWayExits;
@@ -1483,37 +1490,57 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
             }
         } else {
-            char _ch = pR->c;
-            if (_ch >= 33) {
-                int _color = (265 - 257) * 254 + _ch;
-
-                if (c.red() + c.green() + c.blue() > 260) {
-                    _color = (7) * 254 + _ch;
-                } else {
-                    _color = (6) * 254 + _ch;
-                }
-
-                p.fillRect(dr, c);
-                if (mPixMap.contains(_color)) {
-                    QPixmap pix = mPixMap[_color].scaled(dr.width(), dr.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                    p.drawPixmap(dr.topLeft(), pix);
-                }
+            if (mBubbleMode) {
+                float _radius = 0.5 * rSize * mTX;
+                QPointF _center = QPointF(rx,ry);
+                QRadialGradient _gradient(_center,_radius);
+                _gradient.setColorAt(0.85, c);
+                _gradient.setColorAt(0, QColor(255,255,255,255));
+                QPen myPen(QColor(0,0,0,0));
+                QPainterPath myPath;
+                p.setBrush(_gradient);
+                p.setPen(myPen);
+                myPath.addEllipse(_center,_radius,_radius);
+                p.drawPath(myPath);
             } else {
-                if (mBubbleMode) {
-                    float _radius = (rSize * mTX) / 2.0;
-                    QPointF _center = QPointF(rx, ry);
-                    QRadialGradient _gradient(_center, _radius);
-                    _gradient.setColorAt(0.85, c);
-                    _gradient.setColorAt(0, QColor(255, 255, 255, 255));
-                    QPen myPen(Qt::transparent);
-                    QPainterPath myPath;
-                    p.setBrush(_gradient);
-                    p.setPen(myPen);
-                    myPath.addEllipse(_center, _radius, _radius);
-                    p.drawPath(myPath);
+                p.fillRect(dr,c);
+            }
+
+            if (! mShowRoomID  && ! pR->mSymbol.isEmpty()) {
+                QString pixmapKey;
+                if (c.lightness() > 127) {
+                    pixmapKey = QStringLiteral("B_%1").arg(pR->mSymbol);
                 } else {
-                    p.fillRect(dr, c);
+                    pixmapKey = QStringLiteral("W_%1").arg(pR->mSymbol);
                 }
+                if (! mSymbolPixmapCache.contains(pixmapKey)) {
+                    addSymbolToPixmapCache(pixmapKey);
+                }
+
+                p.save();
+                p.setBackgroundMode(Qt::TransparentMode);
+
+                QPixmap * pix = mSymbolPixmapCache.object(pixmapKey);
+                if (! pix) {
+                    qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", pR->mSymbol.toUtf8().constData() );
+                } else {
+                    if (mBubbleMode) {
+                        // Must tweak the size so it fits within circle
+                        QRectF symbolRect(dr);
+                        if (pArea->gridMode) {
+                            symbolRect.setSize(QSizeF( 0.707*mTX,       0.707*mTY));
+                        } else {
+                            symbolRect.setSize(QSizeF( 0.707*mTX*rSize, 0.707*mTY*rSize));
+                        }
+
+                        symbolRect.moveCenter( dr.center() );
+                        p.drawPixmap(symbolRect.toRect(), *pix);
+                    } else {
+                        p.drawPixmap(dr.toRect(), *pix);
+                    }
+                }
+
+                p.restore();
             }
 
             if (pR->highlight) {
@@ -2557,9 +2584,9 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             action8->setToolTip(tr("Set room exits"));
             connect(action8, SIGNAL(triggered()), this, SLOT(slot_setExits()));
 
-            QAction* action10 = new QAction("letter", this);
-            action10->setToolTip(tr("Set a letter to mark special rooms"));
-            connect(action10, SIGNAL(triggered()), this, SLOT(slot_setCharacter()));
+            QAction* action10 = new QAction("symbol", this);
+            action10->setToolTip(tr("set a symbol or letter to mark special rooms"));
+            connect(action10, SIGNAL(triggered()), this, SLOT(slot_setSymbol()));
 
             QAction* action12 = new QAction("move to", this);
             action12->setToolTip(tr("Move selected group to a given position"));
@@ -3164,10 +3191,9 @@ void T2DMap::slot_moveRoom()
     mNewMoveAction = true;
 }
 
-// TODO: Convert pR->c (a single ASCII character) to pR->symbol (a single Unicode Grapheme, possibly containing several QChars - as a QString)
-void T2DMap::slot_setCharacter()
+void T2DMap::slot_setSymbol()
 {
-    // Now analysises and reports the existing letters used in ALL the selected
+    // Now analyses and reports the existing symbols used in ALL the selected
     // rooms if more than once (and sorts by their frequency)
     // Also allows the existing letters to be deleted (by clearing all the displayed
     // letters) as previous code DID NOT - and the Cancel option works as well!
@@ -3175,87 +3201,77 @@ void T2DMap::slot_setCharacter()
         return;
     }
 
-    // First scan and count all the different letters used
-    QMap<QString, uint> usedLetters;
-    QSetIterator<int> itRoom = mMultiSelectionSet;
+    // First scan and count all the different symbol used
     TRoom* pR;
+    bool isAtLeastOneRoom = false;
+    QHash<QString, unsigned int> usedSymbols;
+    QSetIterator<int> itRoom = mMultiSelectionSet;
+    QSet<TRoom*> roomPtrsSet;
     while (itRoom.hasNext()) {
         pR = mpMap->mpRoomDB->getRoom(itRoom.next());
         if (!pR) {
             continue;
         }
 
-        if (pR->c) {
-            QString thisLetter = QString(pR->c);
-            if (!thisLetter.isEmpty()) {
-                if (usedLetters.contains(thisLetter)) {
-                    usedLetters[thisLetter] += 1;
-                } else {
-                    usedLetters[thisLetter] = 1;
-                }
+        roomPtrsSet.insert(pR);
+        isAtLeastOneRoom = true;
+        if (pR->mSymbol.isEmpty()) {
+            continue;
+        }
+
+        QString thisLetter = QString(pR->mSymbol);
+        if (!thisLetter.isEmpty()) {
+            if (usedSymbols.contains(thisLetter)) {
+                (usedSymbols[thisLetter])++;
+            } else {
+                usedSymbols[thisLetter] = 1;
             }
         }
     }
 
-    QString newLetterText;
-    bool isOk = false;
-    // Choose most appropriate text depending on number of rooms selected and
-    // how many of them have letters already:
-    if (mMultiSelectionSet.size() == 1) {
-        if (usedLetters.isEmpty()) {
-            newLetterText = QInputDialog::getText(this,                    // QWidget * parent
-                                                  tr("Enter room marker"), // const QString & title
-                                                  tr("Enter new (not space)\n"
-                                                     "marker letter:"), // const QString & label
-                                                  QLineEdit::Normal,    // QLineEdit::EchoMode mode = QLineEdit::Normal
-                                                  QString(),            // const QString & text = QString()
-                                                  &isOk,                // bool * ok = 0
-                                                  Qt::Widget,           // Qt::WindowFlags flags = 0
-                                                  Qt::ImhLatinOnly);    // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
+    if (isAtLeastOneRoom) {
+        QString newSymbol;
+        bool isOk;
+        // TODO: Replace the static QInputDialog::getText(...) calls with
+        // one built manually - so that the font used for the QTextLinet entry
+        // part can be made to use the same as will be used on the 2DMap itself
+        // otherwise can get different glyphs being used between the two which
+        // is confusing to the user...
+        if (usedSymbols.isEmpty()) {
+            // No existing symbols
+            newSymbol = QInputDialog::getText(this,
+                                              tr("Enter room symbol"),
+                                              tr("Enter the symbol to use \n"
+                                                 "for this/these room(s):", "", mMultiSelectionSet.size()),
+                                              QLineEdit::Normal,
+                                              QStringLiteral(""),
+                                              & isOk,
+                                              Qt::Dialog);
+        } else if (usedSymbols.size() == 1) {
+            newSymbol = QInputDialog::getText(this,
+                                              tr("Enter room symbol"),
+                                              ( mMultiSelectionSet.size() > 1 )
+                                                  ? tr("The only used symbol is \"%1\" in one or\n"
+                                                       "more of the selected rooms, delete this to\n"
+                                                       "clear it from all selected rooms or replace\n"
+                                                       "with a new symbol to use for all the rooms:")
+                                                    .arg(usedSymbols.keys().first())
+                                                  : tr("The symbol is \"%1\" in the selected room,\n"
+                                                       "delete this to clear the symbol or replace\n"
+                                                       "it with a new symbol for this room:")
+                                                    .arg(usedSymbols.keys().first()),
+                                              QLineEdit::Normal,
+                                              usedSymbols.keys().first(),
+                                              & isOk,
+                                              Qt::Dialog);
         } else {
-            newLetterText = QInputDialog::getText(this,
-                                                  tr("Enter room marker"),
-                                                  tr("Delete the existing, or\n"
-                                                     "enter a new (non-space),\n"
-                                                     "marker letter:"),
-                                                  QLineEdit::Normal,
-                                                  usedLetters.keys().first(),
-                                                  &isOk,
-                                                  Qt::Widget,
-                                                  Qt::ImhLatinOnly);
-        }
-    } else {
-        if (usedLetters.isEmpty()) {
-            newLetterText = QInputDialog::getText(this,
-                                                  tr("Enter room marker"),
-                                                  tr("Enter new (not space)\n"
-                                                     "marker letter:"),
-                                                  QLineEdit::Normal,
-                                                  QString(),
-                                                  &isOk,
-                                                  Qt::Widget,
-                                                  Qt::ImhLatinOnly);
-        } else if (usedLetters.size() == 1) {
-            newLetterText = QInputDialog::getText(this,
-                                                  tr("Enter room marker"),
-                                                  tr("Delete the (only)\n"
-                                                     "existing (in some rooms),\n"
-                                                     "or enter a new (not\n"
-                                                     "space) marker letter for\n"
-                                                     "all selected rooms:"),
-                                                  QLineEdit::Normal,
-                                                  usedLetters.keys().first(),
-                                                  &isOk,
-                                                  Qt::Widget,
-                                                  Qt::ImhLatinOnly);
-        } else {
-            QMapIterator<QString, uint> itSymbolUsed = usedLetters;
-            QSet<uint> symbolCountsSet;
+            QHashIterator<QString, unsigned int> itSymbolUsed(usedSymbols);
+            QSet<unsigned int> symbolCountsSet;
             while (itSymbolUsed.hasNext()) {
                 itSymbolUsed.next();
                 symbolCountsSet.insert(itSymbolUsed.value());
             }
-            QList<uint> symbolCountsList = symbolCountsSet.toList();
+            QList<unsigned int> symbolCountsList = symbolCountsSet.toList();
             if (symbolCountsList.size() > 1) {
                 std::sort(symbolCountsList.begin(), symbolCountsList.end());
             }
@@ -3265,67 +3281,50 @@ void T2DMap::slot_setCharacter()
                 while (itSymbolUsed.hasNext()) {
                     itSymbolUsed.next();
                     if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                        displayStrings.append(tr("%1 {count:%2}").arg(itSymbolUsed.key(), itSymbolUsed.value()));
+                        displayStrings.append(tr("%1 {count:%2}")
+                                              .arg(itSymbolUsed.key())
+                                              .arg(QString::number(itSymbolUsed.value())));
                     }
                 }
             }
-            newLetterText = QInputDialog::getItem(this,                    // QWidget * parent
-                                                  tr("Enter room marker"), // const QString & title
-                                                  tr("Choose an existing marker\n"
-                                                     "letter) from the list\n"
-                                                     "(sorted by most commonly\n"
-                                                     "used first) or enter a\n"
-                                                     "new single ASCII\n"
-                                                     "character (not space) for\n"
-                                                     "all selected rooms:",
-                                                     // Intentional comment to separate two strings!
-                                                     "Use line feeds to format text into a reasonable rectangle."), // const QString & label
-                                                  displayStrings,                                                   // QStringList & items
-                                                  0,                                                                // int current = 0
-                                                  true,                                                             // bool editable = true
-                                                  &isOk,                                                            // bool * ok = 0
-                                                  nullptr,                                                                // Qt::WindowFlags flags = 0
-                                                  Qt::ImhLatinOnly);                                                // Qt::InputMethodHints inputMethodHints = Qt::ImhNone,
-                                                                                                                    // to change when I rework the room symbols for any Unicode Grapheme!
+            newSymbol = QInputDialog::getItem(this,                    // QWidget * parent
+                                              tr("Enter room symbol"), // const QString & title
+                                              tr("Choose an existing symbol from\n"
+                                                 "the list (sorted by most commonly\n"
+                                                 "used first) or enter one or more\n"
+                                                 "new graphemes (\"visible characters\"),\n"
+                                                 "to set; or a space to clear; all\n"
+                                                 "selected rooms:",
+                                                 // Intentional comment to separate two strings!
+                                                 "Use line feeds to format text into a reasonable rectangle."), // const QString & label
+                                              displayStrings,                                                   // QStringList & items
+                                              0,                                                                // int current = 0
+                                              true,                                                             // bool editable = true
+                                              &isOk,                                                            // bool * ok = 0
+                                              Qt::Dialog);
         }
-    }
 
-    QString newLetter;
-    if (isOk) { // Don't proceed if cancel was pressed, will need revision to extract the
-        // first grapheme when we support all printable unicode characters as room symbols!
-        if (newLetterText.isEmpty()) {
-            newLetter = QStringLiteral(" ");
-        } else if (!newLetterText.at(0).isHighSurrogate()) { // The first QChar of the QString is NOT the start of a Unicode character beyond the BMP!
-            if (newLetterText.at(0).row() == 0) {            // The first QChar of the QString has a zero high byte
-                if (newLetterText.at(0).cell() < 128) {      // The first QChar of the QString has a low byte within the range for ASCII
-                    newLetter = newLetterText.at(0);
-                } else {
-                    isOk = false; // Prevent any change if the value is not reasonable
-                }
-            } else {
-                isOk = false; // Prevent any change if the value is not reasonable
+        if (! isOk) {
+            return;
+        }
+
+        if (newSymbol.isEmpty()) {
+            QSetIterator<TRoom*> itRoomPtr(roomPtrsSet);
+            while (itRoomPtr.hasNext()) {
+                itRoomPtr.next()->mSymbol = QString();
             }
         } else {
-            isOk = false; // Prevent any change if the value is not reasonable
-        }
-    }
-
-    if (isOk) {
-        itRoom.toFront();
-        while (itRoom.hasNext()) {
-            pR = mpMap->mpRoomDB->getRoom(itRoom.next());
-            if (!pR) {
-                continue;
-            }
-
-            if (newLetter.at(0) == QStringLiteral(" ")) {
-                if (pR->c) {
-                    pR->c = 0;
-                }
-            } else {
-                pR->c = newLetter.at(0).toLatin1();
+            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+            // handle/use/allow - by normalising the symbol we can ensure that
+            // all the entered ones are decomposed and recomposed in a
+            // "standard" way and will have the same sequence of codepoints:
+            newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+            QSetIterator<TRoom*> itRoomPtr(roomPtrsSet);
+            while (itRoomPtr.hasNext()) {
+                itRoomPtr.next()->mSymbol = newSymbol;
             }
         }
+        repaint();
     }
 }
 

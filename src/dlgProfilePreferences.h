@@ -107,6 +107,8 @@ public slots:
     void saveMap();
     void copyMap();
     void slot_chooseProfilesChanged(QAction*);
+    void slot_showMapGlyphUsage();
+
 
     // Save.
     void slot_save_and_exit();
@@ -124,6 +126,8 @@ private slots:
     void slot_script_selected(int index);
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);
+    void slot_setMapSymbolFont(const QFont&);
+    void slot_setMapSymbolFontStrategey(const bool);
 
 private:
     void setColors();
@@ -142,13 +146,15 @@ private:
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();
-    
+    void disconnectHostRelatedControls();
+    void generateMapGlyphDisplay();
+
     int mFontSize;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
-    void disconnectHostRelatedControls();
+    QPointer<QDialog> mpDialogMapGlyphUsage;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
