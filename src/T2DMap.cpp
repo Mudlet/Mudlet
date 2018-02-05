@@ -609,9 +609,17 @@ void T2DMap::paintEvent(QPaintEvent* e)
     mSymbolFontSize = 1;
     mMapSymbolFont = mpMap->mMapSymbolFont;
     if (mpMap->mIsOnlyMapSymbolFontToBeUsed) {
-        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoFontMerging | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality | QFont::PreferNoShaping));
+        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoFontMerging | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+#if QT_VERSION >= 0x051000
+                                                             | QFont::PreferNoShaping
+#endif
+                                                             ));
     } else {
-        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality | QFont::PreferNoShaping ));
+        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+#if QT_VERSION >= 0x051000
+                                                             | QFont::PreferNoShaping
+#endif
+                                                             ));
     }
     mMapSymbolFont.setBold(false);
     mMapSymbolFont.setItalic(false);
