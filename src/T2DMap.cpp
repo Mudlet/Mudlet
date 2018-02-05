@@ -610,13 +610,13 @@ void T2DMap::paintEvent(QPaintEvent* e)
     mMapSymbolFont = mpMap->mMapSymbolFont;
     if (mpMap->mIsOnlyMapSymbolFontToBeUsed) {
         mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoFontMerging | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-#if QT_VERSION >= 0x051000
+#if QT_VERSION >= 0x050a00
                                                              | QFont::PreferNoShaping
 #endif
                                                              ));
     } else {
         mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-#if QT_VERSION >= 0x051000
+#if QT_VERSION >= 0x050a00
                                                              | QFont::PreferNoShaping
 #endif
                                                              ));
