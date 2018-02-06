@@ -176,6 +176,8 @@ function InstallPython() {
 function InstallOpenssl() {
   DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l-i386-win32.zip"
   ExtractZip "openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l"
+  Step "installing"
+  exec "XCOPY" @("/S", "/I", "/Q", "openssl-1.0.2l", "$Env:MINGW_BASE_DIR\bin")
 }
 
 function InstallHunspell() {
@@ -203,7 +205,7 @@ function InstallYajl() {
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "..")
   RunMake
   Step "installing"
-  Copy-Item "yajl-2.0.1\lib\*" "$Env:MINGW_BASE_DIR\lib"
+  Copy-Item "yajl-2.0.1\lib\*" "$Env:MINGW_BASE_DIR\bin"
   exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.0.1\include", "$Env:MINGW_BASE_DIR\include")
   $Env:Path = $ShPath
 }
@@ -305,6 +307,7 @@ function InstallLuaModules(){
   Step "installing luazip"
   exec "gcc" @("-O2", "-c", "-o", "src/luazip.o", "-I`"$Env:MINGW_BASE_DIR/include`"", "src/luazip.c")
   exec "gcc" @("-shared", "-o", "zip.dll", "src/luazip.o", "-L`"$Env:MINGW_BASE_DIR/lib`"", "-lzzip", "-lz", "`"$Env:MINGW_BASE_DIR/bin/lua51.dll`"", "-lm")
+  Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
   FinishPart "Installing lua modules"
 }
 
@@ -323,9 +326,9 @@ $ShPath = "$Env:MINGW_BASE_DIR\bin;C:\Python27;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
 $Env:PATH = $ShPath
 
-CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { InstallOpenssl }
+CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\ssleay32.dll" { InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { InstallHunspell }
-CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { InstallYajl }
+CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\bin\libyajl.dll" { InstallYajl }
 CheckAndInstall "lua" "$Env:MINGW_BASE_DIR\bin\lua51.dll" { InstallLua }
 CheckAndInstall "pcre" "$Env:MINGW_BASE_DIR\bin\libpcre-1.dll" { InstallPcre }
 CheckAndInstall "sqlite" "$Env:MINGW_BASE_DIR\bin\libsqlite3-0.dll" { InstallSqlite }
