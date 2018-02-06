@@ -164,6 +164,7 @@ void T2DMap::init()
     eSize = mpMap->mpHost->mLineSize;
     rSize = mpMap->mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+    flushSymbolPixmapCache();
 }
 
 QColor T2DMap::getColor(int id)
@@ -501,7 +502,7 @@ void T2DMap::slot_switchArea(QString name)
 void T2DMap::addSymbolToPixmapCache( const QString key )
 {
     QPixmap * pix = new QPixmap(mapLetterPixmapSize,mapLetterPixmapSize);
-    pix->fill( QColor(0,0,0,0) ); // Fill with a *transparent* background!
+    pix->fill(Qt::transparent);
     QString symbolString(key.mid(2));
     QPainter symbolPainter(pix);
     if (key.startsWith(QLatin1String("W_"))) {
@@ -602,25 +603,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
     if (oldBubbleMode !=mBubbleMode) {
         // If the round/square room selection has changed this will invalidate
         // all the previously generated pixmaps:
-        mSymbolPixmapCache.clear();
+        flushSymbolPixmapCache();
         oldBubbleMode = mBubbleMode;
     }
 
     mSymbolFontSize = 1;
     mMapSymbolFont = mpMap->mMapSymbolFont;
-    if (mpMap->mIsOnlyMapSymbolFontToBeUsed) {
-        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoFontMerging | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+    mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mpMap->mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
+                                                                      | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
 #if QT_VERSION >= 0x050a00
-                                                             | QFont::PreferNoShaping
+                                                                      | QFont::PreferNoShaping
 #endif
-                                                             ));
-    } else {
-        mMapSymbolFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-#if QT_VERSION >= 0x050a00
-                                                             | QFont::PreferNoShaping
-#endif
-                                                             ));
-    }
+                                                                      ));
     mMapSymbolFont.setBold(false);
     mMapSymbolFont.setItalic(false);
     mMapSymbolFont.setUnderline(false);
@@ -1477,7 +1471,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 _gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
                 _gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
                 _gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-                _gradient.setColorAt(0, QColor(255, 255, 255, 255));
+                _gradient.setColorAt(0, Qt::white);
                 QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
@@ -1503,8 +1497,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 QPointF _center = QPointF(rx,ry);
                 QRadialGradient _gradient(_center,_radius);
                 _gradient.setColorAt(0.85, c);
-                _gradient.setColorAt(0, QColor(255,255,255,255));
-                QPen myPen(QColor(0,0,0,0));
+                _gradient.setColorAt(0, Qt::white);
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1586,7 +1580,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 _gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
                 _gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
                 _gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-                _gradient.setColorAt(0, QColor(255, 255, 255, 255));
+                _gradient.setColorAt(0, Qt::white);
                 QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
@@ -1752,7 +1746,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     _gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
                     _gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
                     _gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-                    _gradient.setColorAt(0, QColor(255, 255, 255, 255));
+                    _gradient.setColorAt(0, Qt::white);
                     QPen myPen(Qt::transparent);
                     QPainterPath myPath;
                     p.setBrush(_gradient);
@@ -1877,7 +1871,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             _gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
             _gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
             _gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-            _gradient.setColorAt(0, QColor(255, 255, 255, 255));
+            _gradient.setColorAt(0, Qt::white);
             p.setBrush(_gradient);
             p.setPen(myPen);
             myPath.addEllipse(_center, _radius, _radius);
@@ -1890,7 +1884,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             _gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
             _gradient.setColorAt(0.3, QColor(150, 150, 150, 100));
             _gradient.setColorAt(0.1, QColor(255, 255, 255, 100));
-            _gradient.setColorAt(0, QColor(255, 255, 255, 255));
+            _gradient.setColorAt(0, Qt::white);
             p.setBrush(_gradient);
             p.setPen(myPen);
             myPath.addEllipse(_center, _radius, _radius);

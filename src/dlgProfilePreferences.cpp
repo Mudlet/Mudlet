@@ -2293,17 +2293,18 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
 void dlgProfilePreferences::generateMapGlyphDisplay()
 {
     QHash<QString, QSet<int>> roomSymbolsHash(mpHost->mpMap->roomSymbolsHash());
-    QTableWidget* pTableWidget = mpDialogMapGlyphUsage->findChild<QTableWidget*>(QLatin1String("tableWidget"));
+    QPointer<QTableWidget> pTableWidget = mpDialogMapGlyphUsage->findChild<QTableWidget*>(QLatin1String("tableWidget"));
     if (!pTableWidget) {
         return;
     }
 
-    pTableWidget->clearContents();
+    // Must turn off sorting at least whilst inserting items...
+    pTableWidget->setSortingEnabled(false);
     pTableWidget->setColumnCount(6);
+    // This clears  any previous contents:
+    pTableWidget->setRowCount(0);
     pTableWidget->setRowCount(roomSymbolsHash.count());
 
-    // Must turn off sorting whilst inserting items...
-    pTableWidget->setSortingEnabled(false);
 
     QFont selectedFont = mpHost->mpMap->mMapSymbolFont;
     selectedFont.setPointSize(16);
@@ -2361,8 +2362,20 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
 
         QStringList roomNumberStringList;
         QListIterator<int> itRoom(roomsWithSymbol);
+        // Only show the first, say 32, rooms otherwise the whole dialog could
+        // be filled completely for a symbol that is used extensively e.g. on
+        // a wilderness type map:
+        int roomCount = 0;
+        bool isToShowOverflow = false;
         while (itRoom.hasNext()) {
             roomNumberStringList << QString::number(itRoom.next());
+            if (++roomCount == 32 && itRoom.hasNext()) {
+                // There is still rooms not listed
+                isToShowOverflow = true;
+                roomNumberStringList << tr("more - not shown...");
+                // Escape from loop to truncate the listing:
+                break;
+            }
         }
         QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(QStringLiteral(", ")));
 
@@ -2392,9 +2405,11 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         pTableWidget->setItem(row, 4, pUsageCount);
         pTableWidget->setItem(row, 5, pRoomNumbers);
     }
-    pTableWidget->resizeColumnsToContents();
     pTableWidget->sortItems(4, Qt::DescendingOrder);
     pTableWidget->setSortingEnabled(true);
+    pTableWidget->resizeColumnsToContents();
+    // The room number column can contain a lot of rooms...
+    pTableWidget->resizeRowsToContents();
     mpDialogMapGlyphUsage->show();
     mpDialogMapGlyphUsage->raise();
 }
@@ -2436,9 +2451,13 @@ void dlgProfilePreferences::slot_setMapSymbolFontStrategey(const bool isToOnlyUs
 
     if (pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed != isToOnlyUseSelectedFont) {
         pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed = isToOnlyUseSelectedFont;
+        if (isToOnlyUseSelectedFont) {
+            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+        } else {
+            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
+        }
         // Clear the existing cache of room symbol pixmaps:
         pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        // Forceably redraw it as we ARE currently showing default area:
         pHost->mpMap->mpMapper->mp2dMap->repaint();
         pHost->mpMap->mpMapper->update();
 
@@ -2456,14 +2475,11 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
     }
 
     int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
-    QFont::StyleStrategy fontStrategy = pHost->mpMap->mMapSymbolFont.styleStrategy();
     if (pHost->mpMap->mMapSymbolFont != font) {
         pHost->mpMap->mMapSymbolFont = font;
         pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
-        pHost->mpMap->mMapSymbolFont.setStyleStrategy(fontStrategy);
         // Clear the existing cache of room symbol pixmaps:
         pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
-        // Forceably redraw it as we ARE currently showing default area:
         pHost->mpMap->mpMapper->mp2dMap->repaint();
         pHost->mpMap->mpMapper->update();
 
