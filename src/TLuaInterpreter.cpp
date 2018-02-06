@@ -10838,6 +10838,8 @@ int TLuaInterpreter::getOS(lua_State* L)
     lua_pushstring(L, "windows");
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
+#elif defined(Q_OS_LINUX)
+    lua_pushstring(L, "linux");
 #elif defined(Q_OS_HURD)
     // One can hope/dream!
     lua_pushstring(L, "hurd");
