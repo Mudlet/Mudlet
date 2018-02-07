@@ -12364,6 +12364,11 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #endif
+#ifdef Q_OS_WIN32
+    //Windows Qt Creator builds with our SDK install the library into a well known directory
+    //We need to escape the backslashes as they need escaping in lua strings as well. The raw string literal lets us remove one level of escaping.
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. ';C:\\Qt\\Tools\\mingw492_32\\lib\\lua\\5.1\\?.dll')");
+#endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
