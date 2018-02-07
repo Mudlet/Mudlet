@@ -1592,107 +1592,159 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         QColor lc;
-        if (c.red() + c.green() + c.blue() > 200) {
+        if (c.lightness() > 127) {
             lc = QColor(Qt::black);
         } else {
             lc = QColor(Qt::white);
         }
         pen = p.pen();
         pen.setColor(lc);
-        pen.setWidthF(0); //wegBreite?);
         pen.setCosmetic(mMapperUseAntiAlias);
         pen.setCapStyle(Qt::RoundCap);
         pen.setJoinStyle(Qt::RoundJoin);
-        p.setPen(pen);
+        p.save();
 
-        //FIXME: redo exit stubs here since the room will draw over up/down stubs -- its repetitive though
-        QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
-        for (int k = 0; k < pR->exitStubs.size(); k++) {
-            int direction = pR->exitStubs[k];
-            QVector3D uDirection = unitVectors[direction];
-            if (direction > 8) {
-                float rx = pR->x * mTX + mRX;
-                float ry = pR->y * -1 * mTY + mRY;
-                QPolygonF _poly;
-                QPointF _pt;
-                _pt = QPointF(rx, ry + (mTY * rSize) * uDirection.z() / 20.0);
-                _poly.append(_pt);
-                _pt = QPointF(rx + (mTX * rSize) / 3.1, ry + (mTY * rSize) * uDirection.z() / 3.1);
-                _poly.append(_pt);
-                _pt = QPointF(rx - (mTX * rSize) / 3.1, ry + (mTY * rSize) * uDirection.z() / 3.1);
-                _poly.append(_pt);
-                QBrush brush = p.brush();
-                brush.setColor(Qt::black);
-                brush.setStyle(Qt::NoBrush);
-                p.setBrush(brush);
-                p.drawPolygon(_poly);
+        if (pR->getUp() > 0 || pR->exitStubs.contains(DIR_UP)) {
+            QPolygonF poly_up;
+            poly_up.append(QPointF(rx, ry + (mTY * rSize) / 20.0));
+            poly_up.append(QPointF(rx - (mTX * rSize) / 3.1, ry + (mTY * rSize) / 3.1));
+            poly_up.append(QPointF(rx + (mTX * rSize) / 3.1, ry + (mTY * rSize) / 3.1));
+            QBrush brush = p.brush();
+            switch (pR->doors.value(QStringLiteral("up"))) {
+            case 1: //open door
+                brush.setColor(QColor(10, 155, 10));
+                break;
+            case 2: //closed door
+                brush.setColor(QColor(155, 155, 10));
+                break;
+            case 3:
+                brush.setColor(QColor(155, 10, 10));
+                break;
+            default:
+                brush.setColor(lc);
             }
-        }
-
-        if (pR->getUp() > 0) {
-            QPolygonF _poly;
-            QPointF _pt;
-            _pt = QPointF(rx, ry + (mTY * rSize) / 20.0);
-            _poly.append(_pt);
-            _pt = QPointF(rx - (mTX * rSize) / 3.1, ry + (mTY * rSize) / 3.1);
-            _poly.append(_pt);
-            _pt = QPointF(rx + (mTX * rSize) / 3.1, ry + (mTY * rSize) / 3.1);
-            _poly.append(_pt);
-            QBrush brush = p.brush();
-            brush.setColor(Qt::black);
-            brush.setStyle(Qt::SolidPattern);
+            if (pR->getUp() > 0) {
+                pen.setWidthF((mTX * rSize) / 50.0);
+                brush.setStyle(Qt::Dense4Pattern);
+            } else {
+                pen.setWidthF((mTX * rSize) / 100.0);
+                brush.setStyle(Qt::DiagCrossPattern);
+            }
+            p.setPen(pen);
             p.setBrush(brush);
-            p.drawPolygon(_poly);
+            p.drawPolygon(poly_up);
         }
 
-        if (pR->getDown() > 0) {
-            QPolygonF _poly;
-            QPointF _pt;
-            _pt = QPointF(rx, ry - (mTY * rSize) / 20.0);
-            _poly.append(_pt);
-            _pt = QPointF(rx - (mTX * rSize) / 3.1, ry - (mTY * rSize) / 3.1);
-            _poly.append(_pt);
-            _pt = QPointF(rx + (mTX * rSize) / 3.1, ry - (mTY * rSize) / 3.1);
-            _poly.append(_pt);
+        if (pR->getDown() > 0 || pR->exitStubs.contains(DIR_DOWN)) {
+            QPolygonF poly_down;
+            poly_down.append(QPointF(rx, ry - (mTY * rSize) / 20.0));
+            poly_down.append(QPointF(rx - (mTX * rSize) / 3.1, ry - (mTY * rSize) / 3.1));
+            poly_down.append(QPointF(rx + (mTX * rSize) / 3.1, ry - (mTY * rSize) / 3.1));
             QBrush brush = p.brush();
-            brush.setColor(Qt::black);
-            brush.setStyle(Qt::SolidPattern);
+            switch (pR->doors.value(QStringLiteral("down"))) {
+            case 1: //open door
+                brush.setColor(QColor(10, 155, 10));
+                break;
+            case 2: //closed door
+                brush.setColor(QColor(155, 155, 10));
+                break;
+            case 3:
+                brush.setColor(QColor(155, 10, 10));
+                break;
+            default:
+                brush.setColor(lc);
+            }
+            if (pR->getDown() > 0) {
+                pen.setWidthF((mTX * rSize) / 50.0);
+                brush.setStyle(Qt::Dense4Pattern);
+            } else {
+                pen.setWidthF((mTX * rSize) / 100.0);
+                brush.setStyle(Qt::DiagCrossPattern);
+            }
+            p.setPen(pen);
             p.setBrush(brush);
-            p.drawPolygon(_poly);
+            p.drawPolygon(poly_down);
         }
 
-        if (pR->getIn() > 0) {
-            QPolygonF _poly;
-            QPointF _pt;
-            _pt = QPointF(rx + (mTX * rSize) / 20.0, ry);
-            _poly.append(_pt);
-            _pt = QPointF(rx - (mTX * rSize) / 3.1, ry - (mTY * rSize) / 3.1);
-            _poly.append(_pt);
-            _pt = QPointF(rx - (mTX * rSize) / 3.1, ry + (mTY * rSize) / 3.1);
-            _poly.append(_pt);
+        // Change these from const to static to tweak them whilst running in a debugger...!
+        const float inOuterX = 4.5f;
+        const float inUpDownY = 7.0f;
+        const float outOuterX = 2.2f;
+        const float outUpDownY = 5.5f;
+        const float outInterX = 3.5f;
+        if (pR->getIn() > 0 || pR->exitStubs.contains(DIR_IN)) {
+            QPolygonF poly_in_left;
+            QPolygonF poly_in_right;
+            poly_in_left.append(QPointF(rx - (mTX * rSize) / 20.0, ry));
+            poly_in_left.append(QPointF(rx - (mTX * rSize) / inOuterX, ry + (mTY * rSize) / inUpDownY));
+            poly_in_left.append(QPointF(rx - (mTX * rSize) / inOuterX, ry - (mTY * rSize) / inUpDownY));
+            poly_in_right.append(QPointF(rx + (mTX * rSize) / 20.0, ry));
+            poly_in_right.append(QPointF(rx + (mTX * rSize) / inOuterX, ry + (mTY * rSize) / inUpDownY));
+            poly_in_right.append(QPointF(rx + (mTX * rSize) / inOuterX, ry - (mTY * rSize) / inUpDownY));
             QBrush brush = p.brush();
-            brush.setColor(Qt::black);
-            brush.setStyle(Qt::SolidPattern);
+            switch (pR->doors.value(QStringLiteral("in"))) {
+            case 1: //open door
+                brush.setColor(QColor(10, 155, 10));
+                break;
+            case 2: //closed door
+                brush.setColor(QColor(155, 155, 10));
+                break;
+            case 3:
+                brush.setColor(QColor(155, 10, 10));
+                break;
+            default:
+                brush.setColor(lc);
+            }
+            if (pR->getIn() > 0) {
+                pen.setWidthF((mTX * rSize) / 50.0);
+                brush.setStyle(Qt::Dense4Pattern);
+            } else {
+                pen.setWidthF((mTX * rSize) / 100.0);
+                brush.setStyle(Qt::DiagCrossPattern);
+            }
             p.setBrush(brush);
-            p.drawPolygon(_poly);
+            p.setPen(pen);
+            p.drawPolygon(poly_in_left);
+            p.drawPolygon(poly_in_right);
         }
 
-        if (pR->getOut() > 0) {
-            QPolygonF _poly;
-            QPointF _pt;
-            _pt = QPointF(rx - (mTX * rSize) / 20.0, ry);
-            _poly.append(_pt);
-            _pt = QPointF(rx + (mTX * rSize) / 3.1, ry - (mTY * rSize) / 3.1);
-            _poly.append(_pt);
-            _pt = QPointF(rx + (mTX * rSize) / 3.1, ry + (mTY * rSize) / 3.1);
-            _poly.append(_pt);
+        if (pR->getOut() > 0 || pR->exitStubs.contains(DIR_OUT)) {
+            QPolygonF poly_out_left;
+            QPolygonF poly_out_right;
+            poly_out_left.append(QPointF(rx - (mTX * rSize) / outOuterX, ry));
+            poly_out_left.append(QPointF(rx - (mTX * rSize) / outInterX, ry + (mTY * rSize) / outUpDownY));
+            poly_out_left.append(QPointF(rx - (mTX * rSize) / outInterX, ry - (mTY * rSize) / outUpDownY));
+            poly_out_right.append(QPointF(rx + (mTX * rSize) / outOuterX, ry));
+            poly_out_right.append(QPointF(rx + (mTX * rSize) / outInterX, ry + (mTY * rSize) / outUpDownY));
+            poly_out_right.append(QPointF(rx + (mTX * rSize) / outInterX, ry - (mTY * rSize) / outUpDownY));
             QBrush brush = p.brush();
-            brush.setColor(Qt::black);
-            brush.setStyle(Qt::SolidPattern);
+            switch (pR->doors.value(QStringLiteral("out"))) {
+            case 1: //open door
+                brush.setColor(QColor(10, 155, 10));
+                break;
+            case 2: //closed door
+                brush.setColor(QColor(155, 155, 10));
+                break;
+            case 3:
+                brush.setColor(QColor(155, 10, 10));
+                break;
+            default:
+                brush.setColor(lc);
+            }
+            if (pR->getOut() > 0) {
+                pen.setWidthF((mTX * rSize) / 50.0);
+                brush.setStyle(Qt::Dense4Pattern);
+            } else {
+                pen.setWidthF((mTX * rSize) / 100.0);
+                brush.setStyle(Qt::DiagCrossPattern);
+            }
             p.setBrush(brush);
-            p.drawPolygon(_poly);
+            p.setPen(pen);
+            p.drawPolygon(poly_out_left);
+            p.drawPolygon(poly_out_right);
         }
 
+        p.restore();
         if (pArea->gridMode) {
             QMapIterator<int, QPoint> it(mAreaExitList);
             while (it.hasNext()) {
