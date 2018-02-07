@@ -12366,8 +12366,7 @@ void TLuaInterpreter::initLuaGlobals()
 #endif
 #ifdef Q_OS_WIN32
     //Windows Qt Creator builds with our SDK install the library into a well known directory
-    //We need to escape the backslashes as they need escaping in lua strings as well. The raw string literal lets us remove one level of escaping.
-    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. ';C:\\Qt\\Tools\\mingw492_32\\lib\\lua\\5.1\\?.dll')");
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
 #endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
@@ -12521,6 +12520,14 @@ void TLuaInterpreter::initIndenterGlobals()
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
                   .arg(QCoreApplication::applicationDirPath())
+                  .toUtf8().constData());
+#elif defined(Q_OS_WIN32)
+    // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
+    luaL_dostring(pIndenterState, QStringLiteral("package.path = [[" LUA_DEFAULT_PATH R"(\?.lua;%1\..\3rdparty\?.lua;]] .. package.path)")
+                  .arg(QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
+                  .toUtf8().constData());
+    luaL_dostring(pIndenterState, QStringLiteral(R"(package.path = [[%1\..\..\3rdparty\?.lua;]] .. package.path)")
+                  .arg(QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
                   .toUtf8().constData());
 #endif
 
