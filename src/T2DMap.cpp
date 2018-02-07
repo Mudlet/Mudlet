@@ -609,6 +609,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mSymbolFontSize = 1;
     mMapSymbolFont = mpMap->mMapSymbolFont;
+    mMapSymbolFont.setHintingPreference(QFont::PreferFullHinting);
     mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mpMap->mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
                                                                       | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
 #if QT_VERSION >= 0x050a00
