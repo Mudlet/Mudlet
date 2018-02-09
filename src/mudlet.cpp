@@ -1184,7 +1184,7 @@ void mudlet::disableToolbarButtons()
     // show tool-tips which is likely to be done in near future when there are
     // more texts to show {the default is to repeat the menu text which is not
     // useful} with a call to menuEditor->setToolTipsVisible(true);
-    // dactionReplay->setToolTip(mpActionReplay->toolTip());
+    dactionReplay->setToolTip(mpActionReplay->toolTip());
 
     dactionReplay->setEnabled(false);
     actionReconnect->setEnabled(false);
@@ -1217,7 +1217,7 @@ void mudlet::enableToolbarButtons()
         // show tool-tips which is likely to be done in near future when there are
         // more texts to show {the default is to repeat the menu text which is not
         // useful} with a call to menuEditor->setToolTipsVisible(true);
-        // dactionReplay->setToolTip(mpActionReplay->toolTip());
+        dactionReplay->setToolTip(mpActionReplay->toolTip());
     }
 
     actionReconnect->setEnabled(true);
@@ -2981,9 +2981,7 @@ bool mudlet::replayStart()
 
     // Lock the replay button and menu item down until the replay is over
     mpActionReplay->setCheckable(true);
-    dactionReplay->setCheckable(true);
     mpActionReplay->setChecked(true);
-    dactionReplay->setChecked(true);
     mpActionReplay->setEnabled(false);
     dactionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -3082,9 +3080,7 @@ void mudlet::replayOver()
 
     // Unlock/uncheck the replay button/menu item
     mpActionReplay->setChecked(false);
-    dactionReplay->setChecked(false);
     mpActionReplay->setCheckable(false);
-    dactionReplay->setCheckable(false);
     mpActionReplay->setEnabled(true);
     dactionReplay->setEnabled(true);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
