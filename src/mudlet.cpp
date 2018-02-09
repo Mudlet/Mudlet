@@ -2332,12 +2332,51 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
 void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (! isVisible) {
-        // Only need to worry about it DIS-appearing
-        if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways)
-                ||(mToolbarVisibility & visibleMaskNormally)) {
+        if (mMenuBarVisibility == visibleNever) {
+            // Only need to worry about it DIS-appearing if the menu bar is not showing
+            int hostCount = mHostManager.getHostCount();
+            if ( (hostCount < 2 && (mToolbarVisibility & visibleAlways))
+               ||(hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
 
-            mpMainToolBar->show();
+                QString stateString;
+                switch (mToolbarVisibility) {
+                case mudlet::visibleNever:
+                    stateString = QLatin1String("visibleNever");
+                    break;
+                case mudlet::visibleOnlyWithoutLoadedProfile:
+                    stateString = QLatin1String("visibleOnlyWithoutLoadedProfile");
+                    break;
+                case mudlet::visibleMaskNormally: // This value should never be encountered as it is a mask not a used value
+                    stateString = QLatin1String("visibleMaskNormally");
+                    break;
+                case mudlet::visibleAlways:
+                    stateString = QLatin1String("visibleAlways");
+                    break;
+                default:
+                    stateString = QStringLiteral("wrong(0x%1)").arg(static_cast<int>(mToolbarVisibility), 0, 16);
+                }
+
+                qDebug() << "mudlet::slot_handleToolbarVisibilityChanged(isVisible:"
+                         << isVisible
+                         << ") INFO: menu was about to be hidden but has been prevented - there is"
+                         << hostCount
+                         << "Host instances (including the default one) and the current menuBar visibility value is:"
+                         << stateString;
+                mpMainToolBar->show();
+            } else {
+                qDebug() << "mudlet::slot_handleToolbarVisibilityChanged(isVisible:"
+                         << isVisible
+                         << ") INFO: menu is about to be hidden and that is considered safe.";
+            }
+        } else {
+            qDebug() << "mudlet::slot_handleToolbarVisibilityChanged(isVisible:"
+                     << isVisible
+                     << ") INFO: menu is about to be hidden but as the menu bar is shown that okay.";
         }
+    } else {
+        qDebug() << "mudlet::slot_handleToolbarVisibilityChanged(isVisible:"
+                 << isVisible
+                 << ") INFO: menu is about to be shown and that okay.";
     }
 }
 
