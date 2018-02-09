@@ -1099,14 +1099,6 @@ void TConsole::setConsoleFgColor(int r, int g, int b)
     return time;
    } */
 
-// Actually means load a "replay" (which will currently be a *.dat) file
-void TConsole::loadRawFile(std::string n)
-{
-    QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
-    QString fileName = QStringLiteral("%1/%2").arg(directoryLogFile, QString(n.c_str()));
-    mpHost->mTelnet.loadReplay(fileName);
-}
-
 void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
 {
     mProcessingTime.restart();

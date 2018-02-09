@@ -1,8 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017 by Stephen Lyons                        *
- *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2014, 2017-2018 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
@@ -62,6 +62,11 @@
 
 using namespace std;
 
+char loadBuffer[100001];
+int loadedBytes;
+QDataStream replayStream;
+QFile replayFile;
+
 
 cTelnet::cTelnet(Host* pH)
 : mResponseProcessed(true)
@@ -89,6 +94,7 @@ cTelnet::cTelnet(Host* pH)
 , mZstream()
 , recvdGA()
 , lastTimeOffset()
+, mIsReplayRunFromLua(false)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -160,6 +166,16 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+    if (loadingReplay) {
+        // If we are doing a replay we had better abort it so that if we are
+        // NOT the "last profile standing" the replay system gets reset for
+        // another profile to use:
+        loadingReplay = false;
+        replayFile.close();
+        qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";
+        mudlet::self()->replayOver();
+    }
+
     if (messageStack.size()) {
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
         foreach (QString message, messageStack) {
@@ -1535,32 +1551,52 @@ void cTelnet::recordReplay()
     timeOffset.start();
 }
 
-char loadBuffer[100001];
-int loadedBytes;
-QDataStream replayStream;
-QFile replayFile;
-
-void cTelnet::loadReplay(QString& name)
+bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
 {
     replayFile.setFileName(name);
     if (replayFile.open(QIODevice::ReadOnly)) {
-        QString msg = tr("[ INFO ]  - Loading replay file:\n"
-                         "\"%1\".")
-                              .arg(name);
-        postMessage(msg);
+        if (!pErrMsg) {
+            // Only post an information menu if initiated from GUI controls
+            postMessage(tr("[ INFO ]  - Loading replay file:\n"
+                           "\"%1\".")
+                        .arg(name));
+            mIsReplayRunFromLua = true;
+        } else {
+            mIsReplayRunFromLua = false;
+        }
         replayStream.setDevice(&replayFile);
         loadingReplay = true;
-        mudlet::self()->replayStart();
-        _loadReplay();
+        if (mudlet::self()->replayStart()) {
+            // TODO: consider moving to a QTimeLine based system...?
+            // This initiates the replay chunk reading/processing cycle:
+            loadReplayChunk();
+        } else {
+            loadingReplay = false;
+            if (pErrMsg) {
+                *pErrMsg = QStringLiteral("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
+            } else {
+                postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
+                               "try again when it has finished."));
+            }
+            return false;
+        }
     } else {
-        QString msg = tr("[ ERROR ]  - Unable to open replay file:\n"
-                         "\"%1\".")
-                              .arg(name);
-        postMessage(msg);
+        if (pErrMsg) {
+            // Call from lua case:
+            *pErrMsg = QStringLiteral("cannot read file \"%1\", error message was: \"%2\".")
+                    .arg(name, replayFile.errorString());
+        } else {
+            postMessage(tr("[ ERROR ] - Cannot read file \"%1\",\n"
+                           "error message was: \"%2\".")
+                        .arg(name, replayFile.errorString()));
+        }
+        return false;
     }
+
+    return true;
 }
 
-void cTelnet::_loadReplay()
+void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
         int offset;
@@ -1568,22 +1604,24 @@ void cTelnet::_loadReplay()
         replayStream >> offset;
         replayStream >> amount;
 
-        char* pB = &loadBuffer[0];
-        loadedBytes = replayStream.readRawData(pB, amount);
-        loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
+        loadedBytes = replayStream.readRawData(loadBuffer, amount);
+        // Previous use of loadedBytes + 1 caused a spurious character at end of
+        // string display by a qDebug of the loadBuffer contents
+        loadBuffer[loadedBytes] = '\0';
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
+        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(slot_processReplayChunk()));
     } else {
         loadingReplay = false;
         replayFile.close();
-        QString msg = tr("[  OK  ]  - The replay has ended.");
-        postMessage(msg);
+        if (!mIsReplayRunFromLua) {
+            postMessage(tr("[  OK  ]  - The replay has ended."));
+        }
         mudlet::self()->replayOver();
     }
 }
 
 
-void cTelnet::readPipe()
+void cTelnet::slot_processReplayChunk()
 {
     int datalen = loadedBytes;
     string cleandata = "";
@@ -1673,7 +1711,7 @@ void cTelnet::readPipe()
 
     mpHost->mpConsole->finalize();
     if (loadingReplay) {
-        _loadReplay();
+        loadReplayChunk();
     }
 }
 
