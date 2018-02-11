@@ -164,9 +164,9 @@ private:
     QPointer<Host> mpHost;
     QTcpSocket socket;
     QHostAddress mHostAddress;
-    QTextCodec* incomingDataCodec;
+//    QTextCodec* incomingDataCodec;
     QTextCodec* outgoingDataCodec;
-    QTextDecoder* incomingDataDecoder;
+//    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
