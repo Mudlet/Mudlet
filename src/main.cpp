@@ -469,13 +469,13 @@ int main(int argc, char* argv[])
         first_launch = true;
     }
 
-#if defined(INCLUDE_FONTS)
     if (show_splash) {
         splash_message.append("Done.\n\nLoading font files... ");
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
 
+#if defined(INCLUDE_FONTS)
     QString bitstreamVeraFontDirectory(QStringLiteral("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
@@ -534,6 +534,10 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 #endif
 
+    mudlet::debugMode = false;
+    FontManager fm;
+    fm.addFonts();
+
     if (show_splash) {
         splash_message.append("Done.\n\n"
                               "All data has been loaded successfully.\n\n"
@@ -541,12 +545,6 @@ int main(int argc, char* argv[])
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
-
-    mudlet::debugMode = false;
-#if defined(INCLUDE_FONTS)
-    FontManager fm;
-    fm.addFonts();
-#endif
 
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
 #ifdef Q_OS_WIN32
