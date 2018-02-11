@@ -115,12 +115,16 @@ cTelnet::cTelnet(Host* pH)
 
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << QLatin1String("UTF-8");
+        mAcceptableEncodings << QLatin1String("GBK");
+        mAcceptableEncodings << QLatin1String("GB18030");
         mAcceptableEncodings << QLatin1String("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
 
     if (mFriendlyEncodings.isEmpty()) {
         mFriendlyEncodings << QLatin1String("UTF-8");
+        mFriendlyEncodings << QLatin1String("GBK");
+        mFriendlyEncodings << QLatin1String("GB18030");
         mFriendlyEncodings << QLatin1String("ISO 8859-1");
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
@@ -188,22 +192,27 @@ cTelnet::~cTelnet()
 
 void cTelnet::encodingChanged(const QString& encoding)
 {
-    mEncoding = encoding;
-
     // unicode carries information in form of single byte characters
     // and multiple byte character sequences.
     // the encoder and the decoder maintain translation state, i.e. they need to know the preceding
     // chars to make the correct decisions when translating into unicode and vice versa
 
-    // Not currently used as we do it by hand as we have to extract the data
-    // from the telnet protocol and all the out-of-band stuff.  It might be
-    // possible to use this in the future for non-UTF-8 traffic thought.
-    incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
-    incomingDataDecoder = incomingDataCodec->makeDecoder();
+    if (mEncoding != encoding) {
+        mEncoding = encoding;
+        // Not currently used as we do it by hand as we have to extract the data
+        // from the telnet protocol and all the out-of-band stuff.  It might be
+        // possible to use this in the future for non-UTF-8 traffic though.
+//    incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+//    incomingDataDecoder = incomingDataCodec->makeDecoder();
 
-    outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
-    outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
-    // Do NOT create BOMs!
+        outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+        // Do NOT create BOM on out-going text data stream!
+        outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+
+        // No need to tell the TBuffer instance of the main TConsole for this
+        // profile to change its QTextCodec to match as it now checks for
+        // changes here on each incoming packet
+    }
 }
 
 // returns the computer encoding name ("ISO 8859-5") given a human-friendly one ("ISO 8859-5 (Cyrillic)")
@@ -375,9 +384,18 @@ bool cTelnet::sendData(QString& data)
     if (mpHost->mAllowToSendCommand) {
         string outData;
         if (!mEncoding.isEmpty()) {
+            if (! outgoingDataCodec->canEncode(data)) {
+                QString errorMsg = tr("[ WARN ] - Invalid characters in outgoing data, one or more characters cannot\n"
+                                      "be encoded into the range that is acceptable for the character\n"
+                                      "encoding that is currently set {\"%1\"} for the MUD Server."
+                                      "It may not understand what is sent to it.").arg(mEncoding);
+                postMessage(errorMsg);
+            }
+            // Even if there are bad characters - try to send it anyway...
             outData = outgoingDataEncoder->fromUnicode(data).constData();
         } else {
             // Plain, raw ASCII, we hope!
+            // TODO: Moan if the user is trying to send non-ASCII characters out!
             outData = data.toStdString();
         }
 
