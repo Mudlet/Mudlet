@@ -7667,7 +7667,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     file.close();
 }
 
-bool dlgTriggerEditor::eventFilter(QObject* obj, QEvent* event)
+bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
 {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
