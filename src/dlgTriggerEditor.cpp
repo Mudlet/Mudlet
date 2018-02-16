@@ -7667,6 +7667,25 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     file.close();
 }
 
+bool dlgTriggerEditor::eventFilter(QObject* obj, QEvent* event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+            this->event(event);
+            return true;
+        default:
+            return false;
+        }
+    }
+    return false;
+}
+
 bool dlgTriggerEditor::event(QEvent* event)
 {
     if (mIsGrabKey) {
@@ -7683,6 +7702,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                         action->setShortcut(tr("Ctrl+Shift+S"));
                     }
                 }
+                QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
             case 0x01000020:
@@ -7701,6 +7721,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                         action->setShortcut(tr("Ctrl+Shift+S"));
                     }
                 }
+                QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
             }
@@ -7721,6 +7742,7 @@ void dlgTriggerEditor::slot_grab_key()
             action->setShortcut(tr(""));
         }
     }
+    QCoreApplication::instance()->installEventFilter(this);
 }
 
 void dlgTriggerEditor::grab_key_callback(int key, int modifier)
@@ -8049,7 +8071,7 @@ void dlgTriggerEditor::slot_clearSearchResults()
     textRanges->clear();
     controller->update();
 }
- 
+
 // shows a custom right-click menu for the editor, including the indent action
 void dlgTriggerEditor::slot_editorContextMenu()
 {
