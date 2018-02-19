@@ -26,6 +26,7 @@
 #include "pre_guard.h"
 #include <QCache>
 #include <QColor>
+#include <QFont>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
@@ -75,13 +76,12 @@ public:
     void createLabel(QRectF labelRect);
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
-    void addSymbolToPixmapCache(const QString);
+    void addSymbolToPixmapCache(const QString, const bool);
 
 
     TMap* mpMap;
     QPointer<Host> mpHost;
-    int xzoom;
-    int yzoom;
+    int xyzoom;
     int mRX;
     int mRY;
     QPoint mPHighlight;
@@ -224,9 +224,6 @@ private:
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames;
-    // The initialisation cannot be completed until both Host and TMap classes
-    // are setup - this gets set once init() has been done:
-    bool mIsInitialised;
 
     QCache<QString, QPixmap> mSymbolPixmapCache;
     ushort mSymbolFontSize;

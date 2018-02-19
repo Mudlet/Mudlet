@@ -59,15 +59,10 @@
 #include <QTreeWidgetItem>
 #include "post_guard.h"
 
-const quint8 mapLetterPixmapSize = 192;
-// The size of the square used to draw map room symbols (formerly "letters") on,
-// larger values produce better pictures but take more space in cache.
-
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 , mpMap()
-, xzoom(20)
-, yzoom(20)
+, xyzoom(20)
 , mRX()
 , mRY()
 , mPick()
@@ -121,7 +116,6 @@ T2DMap::T2DMap(QWidget* parent)
 , mIsSelectionSorting(true)
 , mIsSelectionSortByNames()
 , mIsSelectionUsingNames(false)
-, mIsInitialised()
 {
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -153,11 +147,9 @@ T2DMap::T2DMap(QWidget* parent)
 
 void T2DMap::init()
 {
-    if (!mpHost || !mpMap || mIsInitialised) {
+    if (!mpHost || !mpMap) {
         return;
     }
-
-    mIsInitialised = true;
 
     isCenterViewCall = false;
 
@@ -499,10 +491,37 @@ void T2DMap::slot_switchArea(QString name)
 }
 
 // key format: <"W_" or "B_" for White/Black><QString of one or more QChars>
-void T2DMap::addSymbolToPixmapCache( const QString key )
+void T2DMap::addSymbolToPixmapCache( const QString key, const bool isGridMode)
 {
-    QPixmap * pix = new QPixmap(mapLetterPixmapSize,mapLetterPixmapSize);
+    // Some constants used to prevent small, unreadable symbols:
+    static float symbolLowerSizeLimit = 8.0;
+    static unsigned int minimumUsableFontSize = 8;
+
+    // Draw onto a rectangle that will fit the room suymbol rectangle,
+    // Must tweak the size so it fits within circle when round room symbols are
+    // used and also accomodate fixed sizes for gridmode:
+    QRectF symbolRect;
+    if (isGridMode && mBubbleMode) {
+        symbolRect = QRectF(0.0, 0.0, 0.707*mTX, 0.707*mTY);
+    } else if (mBubbleMode) {
+        symbolRect = QRectF(0.0, 0.0, 0.707*mTX*rSize, 0.707*mTY*rSize);
+    } else if (isGridMode){
+        symbolRect = QRectF(0.0, 0.0, mTX, mTY);
+    } else {
+        symbolRect = QRectF(0.0, 0.0, mTX * rSize, mTY * rSize);
+    }
+
+    QPixmap* pix = new QPixmap(symbolRect.toRect().size());
     pix->fill(Qt::transparent);
+
+    if (symbolRect.width() < symbolLowerSizeLimit || symbolRect.height() < symbolLowerSizeLimit) {
+        // if the space to draw the symbol on is too small then do not create
+        // anything on the pixmap as it will be unreadable - instead insert an
+        // empty pixmap:
+        mSymbolPixmapCache.insert(key, pix);
+        return;
+    }
+
     QString symbolString(key.mid(2));
     QPainter symbolPainter(pix);
     if (key.startsWith(QLatin1String("W_"))) {
@@ -510,8 +529,8 @@ void T2DMap::addSymbolToPixmapCache( const QString key )
     } else {
         symbolPainter.setPen(Qt::black);
     }
-    symbolPainter.setFont(mMapSymbolFont);
-    symbolPainter.setRenderHints( QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform , true );
+    symbolPainter.setFont(mpMap->mMapSymbolFont);
+    symbolPainter.setRenderHints(QPainter::Antialiasing|QPainter::TextAntialiasing|QPainter::SmoothPixmapTransform, true);
 
     QFontMetrics mapSymbolFontMetrics = symbolPainter.fontMetrics();
     QVector<quint32> codePoints = symbolString.toUcs4();
@@ -520,7 +539,7 @@ void T2DMap::addSymbolToPixmapCache( const QString key )
         isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
     }
 
-    QFont fontForThisSymbol = mMapSymbolFont;
+    QFont fontForThisSymbol = mpMap->mMapSymbolFont;
     bool isToFallback = isUsable.contains(false);
     // Oh dear at least one grapheme is not represented in either the selected
     // or any font as set elsewhere
@@ -528,36 +547,36 @@ void T2DMap::addSymbolToPixmapCache( const QString key )
         symbolString = QString(QChar::ReplacementCharacter);
         // Clear the setting that may be forcings only the specified font to be
         // used, as it may not have the Replacement Character glyph...
-        fontForThisSymbol.setStyleStrategy(static_cast<QFont::StyleStrategy>(fontForThisSymbol.styleStrategy() &~(QFont::NoFontMerging)));
+        fontForThisSymbol.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
     }
 
-    { // blocked to limit lifetime of QPainter used here
-        qreal fudgeFactor = mapLetterPixmapSize * mpMap->mMapSymbolFontFudgeFactor;
-        QRectF testRect(0, 0, fudgeFactor, fudgeFactor);
-        testRect.moveCenter(pix->rect().center());
-        QRectF boundaryRect;
-        // Try larger font sizes until it won't fit
-        do {
-            fontForThisSymbol.setPointSize(++mSymbolFontSize);
-            symbolPainter.setFont(fontForThisSymbol);
-            boundaryRect = symbolPainter.boundingRect(pix->rect(), Qt::AlignCenter, symbolString);
-            // Use a limit on mSymbolFontSize otherwise some broken fonts can
-            // lock the system into a very slow loop as it gets very large
-        } while (testRect.contains(boundaryRect) && mSymbolFontSize < 100);
-        // Then try smaller ones until it will
-        do {
-            fontForThisSymbol.setPointSize(--mSymbolFontSize);
-            symbolPainter.setFont(fontForThisSymbol);
-            boundaryRect = symbolPainter.boundingRect(pix->rect(), Qt::AlignCenter, symbolString);
-            // Use a limit on mSymbolFontSize otherwise some broken fonts can
-            // lock the system into a very slow loop as it gets very large
-        } while (!testRect.contains(boundaryRect) && mSymbolFontSize > 4);
-        if (testRect.contains(boundaryRect)) {
-            fontForThisSymbol.setPointSize(++mSymbolFontSize);
-        }
-        // Else, it still doesn't fit, must be a long string, too bad...
+    qreal fudgeFactor = symbolRect.toRect().width() * mpMap->mMapSymbolFontFudgeFactor;
+    QRectF testRect(0, 0, fudgeFactor, fudgeFactor);
+    testRect.moveCenter(pix->rect().center());
+    QRectF boundaryRect;
+    // Try larger font sizes until it won't fit
+    do {
+        fontForThisSymbol.setPointSize(++mSymbolFontSize);
+        symbolPainter.setFont(fontForThisSymbol);
+        boundaryRect = symbolPainter.boundingRect(pix->rect(), Qt::AlignCenter, symbolString);
+        // Use a limit on mSymbolFontSize otherwise some broken fonts can
+        // lock the system into a very slow loop as it gets very large
+    } while (testRect.contains(boundaryRect) && mSymbolFontSize < 255);
+    // Then try smaller ones until it will
+    do {
+        fontForThisSymbol.setPointSize(--mSymbolFontSize);
+        symbolPainter.setFont(fontForThisSymbol);
+        boundaryRect = symbolPainter.boundingRect(pix->rect(), Qt::AlignCenter, symbolString);
+        // Use a limit on mSymbolFontSize otherwise some broken fonts can
+        // lock the system into a very slow loop as it gets very large
+    } while (!testRect.contains(boundaryRect) && mSymbolFontSize > minimumUsableFontSize);
+
+    if (testRect.contains(boundaryRect)) {
+        fontForThisSymbol.setPointSize(++mSymbolFontSize);
+        symbolPainter.drawText(pix->rect(), Qt::AlignCenter|Qt::TextSingleLine, symbolString);
     }
-    symbolPainter.drawText(pix->rect(), Qt::AlignCenter|Qt::TextSingleLine, symbolString);
+    // Else, it still doesn't fit, must be a long string, too bad, leave
+    // the  pixmap untouched so nothing will be shown when it is used
 
     if( ! mSymbolPixmapCache.insert(key, pix) ) {
         qDebug("T2DMap::addSymbolToPixmapCache() ALERT: Map Room Symbol Pixmap cache is full...!" );
@@ -589,11 +608,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     if (_w > _h) {
-        xspan = xzoom * (_w / _h);
-        yspan = xzoom;
+        xspan = xyzoom * (_w / _h);
+        yspan = xyzoom;
     } else {
-        xspan = yzoom;
-        yspan = yzoom * (_h / _w);
+        xspan = xyzoom;
+        yspan = xyzoom * (_h / _w);
     }
 
     mTX = _w / xspan;
@@ -609,12 +628,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mSymbolFontSize = 1;
     mMapSymbolFont = mpMap->mMapSymbolFont;
-    mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mpMap->mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
-                                                                      | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-#if QT_VERSION >= 0x050a00
-                                                                      | QFont::PreferNoShaping
-#endif
-                                                                      ));
     mMapSymbolFont.setBold(false);
     mMapSymbolFont.setItalic(false);
     mMapSymbolFont.setUnderline(false);
@@ -1516,7 +1529,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     pixmapKey = QStringLiteral("W_%1").arg(pR->mSymbol);
                 }
                 if (! mSymbolPixmapCache.contains(pixmapKey)) {
-                    addSymbolToPixmapCache(pixmapKey);
+                    addSymbolToPixmapCache(pixmapKey, pArea->gridMode);
                 }
 
                 p.save();
@@ -1526,20 +1539,28 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 if (! pix) {
                     qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", pR->mSymbol.toUtf8().constData() );
                 } else {
-                    if (mBubbleMode) {
-                        // Must tweak the size so it fits within circle
-                        QRectF symbolRect(dr);
-                        if (pArea->gridMode) {
-                            symbolRect.setSize(QSizeF( 0.707*mTX,       0.707*mTY));
-                        } else {
-                            symbolRect.setSize(QSizeF( 0.707*mTX*rSize, 0.707*mTY*rSize));
-                        }
+                    /* For the non-scaling QPainter::drawPixmap() used now we
+                     * have to position the generated pixmap containing the
+                     * particular symbol for this room to Y when it would
+                     * position it at X - this should be faster than the prevous
+                     * scaling QPainter::drawPixmap() as that would scale the
+                     * pixmap to fit the Room Rectangle!
+                     *
+                     *               |<------->| dr.width()
+                     * dr.topLeft-->X---------+
+                     *              |  Room   |
+                     *              |  Y---+  |
+                     *              |  |Pix|  |
+                     *              |  +---+  |
+                     *              |Rectangle|
+                     *              +---------+
+                     *                 |<->|<--symbolRect.width()
+                     * x-offset---->|<>|<-- (dr.width() - symbolRect.width())/2.0
+                     * similarly for the y-offset
+                     */
 
-                        symbolRect.moveCenter( dr.center() );
-                        p.drawPixmap(symbolRect.toRect(), *pix);
-                    } else {
-                        p.drawPixmap(dr.toRect(), *pix);
-                    }
+                    p.drawPixmap(QPoint(qRound(dr.left() + ((dr.width() - pix->width())/2.0)),
+                                        qRound(dr.top() + ((dr.height() - pix->height())/2.0))), *pix);
                 }
 
                 p.restore();
@@ -4120,15 +4141,12 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     }
     if (delta != 0) {
         mPick = false;
-        xzoom += delta;
-        yzoom += delta;
-        if (yzoom < 3) { // At present xzoom and yzoom alway will be the same I think
-            yzoom = 3;
+        int oldZoom = xyzoom;
+        xyzoom = qMax(3, xyzoom + delta);
+        if (oldZoom != xyzoom) {
+            flushSymbolPixmapCache();
+            update();
         }
-        if (xzoom < 3) {
-            xzoom = 3;
-        }
-        update();
         e->accept();
         return;
     }
@@ -4138,11 +4156,11 @@ void T2DMap::wheelEvent(QWheelEvent* e)
 
 void T2DMap::setMapZoom(int zoom)
 {
-    xzoom = zoom;
-    yzoom = zoom;
-    if (yzoom < 3 || xzoom < 3) {
-        xzoom = 3;
-        yzoom = 3;
+    int oldZoom = xyzoom;
+    xyzoom = qMax(3, zoom);
+    if (oldZoom != xyzoom) {
+        flushSymbolPixmapCache();
+        update();
     }
 }
 
@@ -4152,6 +4170,8 @@ void T2DMap::setRoomSize(double f)
     if (mpHost) {
         mpHost->mRoomSize = f;
     }
+    flushSymbolPixmapCache();
+    update();
 }
 
 void T2DMap::setExitSize(double f)

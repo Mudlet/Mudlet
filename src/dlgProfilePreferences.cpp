@@ -64,8 +64,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // init generated dialog
     setupUi(this);
 
-    // These are currently empty so can be hidden until needed, but provides
-    // locations on the first (General) and last (Special Options) tabs where
+    // This is currently empty so can be hidden until needed, but provides a
+    // location on the last (Special Options) tab where
     // temporary/development/testing controls can be placed if needed...
     groupBox_debug->hide();
 
@@ -432,6 +432,20 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
     if (pHost->mpMap->mpMapper) {
+        QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_debug);
+        mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_debug);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
+        mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
+        mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
+        mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
+        QFormLayout* pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
+        if (pdebugLayout) {
+            pdebugLayout->addRow(pLabel_mapSymbolFontFudge, mpDoubleSpinBox_mapSymbolFontFudge);
+            groupBox_debug->show();
+        } else {
+            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QFormLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
+        }
+
         label_mapSymbolsFont->setEnabled(true);
         fontComboBox_mapSymbols->setEnabled(true);
         checkBox_onlyUseChoosenFont->setEnabled(true);
@@ -1662,6 +1676,8 @@ void dlgProfilePreferences::slot_save_and_exit()
                 pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
             }
 
+            pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
         }
@@ -2308,10 +2324,10 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
 
     QFont selectedFont = mpHost->mpMap->mMapSymbolFont;
     selectedFont.setPointSize(16);
-    selectedFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(selectedFont.styleStrategy() | QFont::NoFontMerging));
+    selectedFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
     QFont anyFont = mpHost->mpMap->mMapSymbolFont;
     anyFont.setPointSize(16);
-    anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(anyFont.styleStrategy() &~(QFont::NoFontMerging)));
+    anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
 
     int row = -1;
     QHashIterator<QString, QSet<int>> itUsedSymbol(roomSymbolsHash);

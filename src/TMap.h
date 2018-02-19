@@ -47,7 +47,6 @@ class GLWidget;
 class TArea;
 class TRoom;
 class TRoomDB;
-class T2DMap;
 class QFile;
 class QNetworkAccessManager;
 class QProgressDialog;
