@@ -20,6 +20,19 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
+############################################################################
+#                                                                          #
+#    NOTICE: FreeBSD is not an officially supported platform as such;      #
+#    the work on getting it working has been done by myself, and other     #
+#    developers, unless they have explicitly said so, are not able to      #
+#    address issues relating specifically to that Operating System.        #
+#    Nevertheless users of FreeBSD are equally welcome to contribute       #
+#    to the development of Mudlet - bugfixes and enhancements are          #
+#    welcome from all!                                                     #
+#                                           Stephen Lyons, February 2018   #
+#                                                                          #
+############################################################################
+
 lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
     error("Mudlet requires Qt 5.6 or later")
 }
@@ -77,15 +90,6 @@ clear(scopes)
 cygwin {
   scopes += "cygwin"
 }
-freebsd {
-  scopes += "freebsd"
-}
-freebsd-clang {
-  scopes += "freebsd-clang"
-}
-freebsd-g++ {
-  scopes += "freebsd-g++"
-}
 linux-clang-libc++ {
   scopes += "linux-clang-libc++"
 }
@@ -123,6 +127,7 @@ win64 {
 # darwin(Travis CI), linux(local), linux-clang(local), linux-g++(local),
 # macx(Travis CI), macx-clang(Travis CI), win32(AppVeyor CI),
 # win32-g++(AppVeyor CI), unix(local)
+# freebsd(local) freebsd-clang(local) freebsd-g++(local)
 
 # Suspected not to work:
 # linux-g++-32, linux-g++-64
@@ -1348,4 +1353,8 @@ DISTFILES += \
     mudlet-lua/tests/README.md \
     mudlet-lua/tests/DB.lua \
     mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua
+    mudlet-lua/tests/Other.lua \
+    ../mudlet.desktop \
+    ../mudlet.png \
+    ../mudlet.svg \
+    ../README.md
