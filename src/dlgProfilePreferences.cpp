@@ -130,6 +130,25 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // on top! 8-)
     tabWidget->setCurrentIndex(0);
 
+    // To be moved to a slot that is used on GUI language change when that gets
+    // implimented:
+    pushButton_showGlyphUsage->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg("<p>This will bring up a display showing all the symbols used in the current "
+                                               "map and whether they can be drawn using just the specifed font, any other "
+                                               "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                               "that make up that symbol, so that they can be identified even if they "
+                                               "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                               "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+    fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                             "(glyphs) from choosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+    checkBox_onlyUseChoosenFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg("<p>Using a single font is likely to produce a more consistent style but may "
+                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
@@ -478,12 +497,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         label_mapSymbolsFont->setEnabled(true);
         fontComboBox_mapSymbols->setEnabled(true);
         checkBox_onlyUseChoosenFont->setEnabled(true);
-        pushButton_showGlyphUsage->setEnabled(true);
 
         checkBox_showDefaultArea->show();
         checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
         checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
 
+        pushButton_showGlyphUsage->setEnabled(true);
         fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
         checkBox_onlyUseChoosenFont->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
         connect(pushButton_showGlyphUsage, SIGNAL(clicked(bool)), this, SLOT(slot_showMapGlyphUsage()), Qt::UniqueConnection);
@@ -2490,17 +2509,17 @@ void dlgProfilePreferences::slot_showMapGlyphUsage()
     }
 
     QUiLoader loader;
-    QFile file(":/ui/glyph_usage.ui");
+    QFile file(QStringLiteral(":/ui/glyph_usage.ui"));
     file.open(QFile::ReadOnly);
     mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!mpDialogMapGlyphUsage) {
-        qWarning("dlgProfilePreferences::slot_showMapGlyphUsage() ERROR: failed to create the dialog!");
+        qWarning() << "dlgProfilePreferences::slot_showMapGlyphUsage() ERROR: failed to create the dialog!";
         return;
     }
 
     mpDialogMapGlyphUsage->setWindowIcon(QIcon(QStringLiteral(":/icons/place_of_interest.png")));
-    mpDialogMapGlyphUsage->setWindowTitle(tr("Map glyph usage - %1").arg(mpHost->getName()));
+    mpDialogMapGlyphUsage->setWindowTitle(tr("Map symbol usage - %1").arg(mpHost->getName()));
     mpDialogMapGlyphUsage->setAttribute(Qt::WA_DeleteOnClose);
     generateMapGlyphDisplay();
 }

@@ -2723,7 +2723,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             connect(action8, SIGNAL(triggered()), this, SLOT(slot_setExits()));
 
             QAction* action10 = new QAction("symbol", this);
-            action10->setToolTip(tr("set a symbol or letter to mark special rooms"));
+            action10->setToolTip(tr("Set one or more symbols or letters to mark special rooms"));
             connect(action10, SIGNAL(triggered()), this, SLOT(slot_setSymbol()));
 
             QAction* action12 = new QAction("move to", this);
