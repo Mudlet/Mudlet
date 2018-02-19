@@ -84,7 +84,9 @@ function Geyser.Label:setTiledBackgroundImage (imageFileName)
   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
 end
 
---- Sets a callback to be used when this label is clicked.
+--- Sets a callback to be used when this label is clicked. When this
+-- function is called by the event system, details of the event will be
+-- appended as the final argument (see @{\\mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setClickCallback (func, ...)
@@ -93,7 +95,9 @@ function Geyser.Label:setClickCallback (func, ...)
   self.clickArgs = { ... }
 end
 
---- Sets a callback to be used when this label is double clicked.
+--- Sets a callback to be used when this label is double clicked. When this
+-- function is called by the event system, details of the event will be
+-- appended as the final argument (see @{\\mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setDoubleClickCallback (func, ...)
@@ -102,7 +106,9 @@ function Geyser.Label:setDoubleClickCallback (func, ...)
   self.doubleclickArgs = { ... }
 end
 
---- Sets a callback to be used when a mouse click is released over this label.
+--- Sets a callback to be used when a mouse click is released over this label. When this
+-- function is called by the event system, details of the event will be
+-- appended as the final argument (see @{\\mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setReleaseCallback (func, ...)
@@ -111,7 +117,9 @@ function Geyser.Label:setReleaseCallback (func, ...)
   self.releaseArgs = { ... }
 end
 
---- Sets a callback to be used when the mouse cursor is moved over this label.
+--- Sets a callback to be used when the mouse cursor is moved over this label. When this
+-- function is called by the event system, details of the event will be
+-- appended as the final argument (see @{\\mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setMoveCallback (func, ...)
@@ -120,7 +128,9 @@ function Geyser.Label:setMoveCallback (func, ...)
   self.moveArgs = { ... }
 end
 
---- Sets a callback to be used when the user scrolls over this label.
+--- Sets a callback to be used when the user scrolls over this label. When this
+-- function is called by the event system, details of the event will be
+-- appended as the final argument (see @{\\mouseWheelEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setWheelCallback (func, ...)
@@ -609,3 +619,24 @@ function Geyser.Label:addChild(cons, container)
   me:hide()
   return me
 end
+
+-- The table returned by @{\\setClickCallback}
+-- @field x The x coordinate of the click local to the label
+-- @field y The y coordinate of the click local to the label
+-- @field globalX The global x coordinate of the click
+-- @field globalY The global y coordinate of the click
+-- @field button A string corresponding to the button clicked
+-- @field buttons A table of strings correspinding to additional buttons held down during the click event
+-- @table mouseClickEvent
+local mouseClickEvent = {}
+
+-- The table returned by @{\\setWheelCallback}
+-- @field x The x coordinate of the click local to the label
+-- @field y The y coordinate of the click local to the label
+-- @field globalX The global x coordinate of the click
+-- @field globalY The global y coordinate of the click
+-- @field buttons A table of strings correspinding to additional buttons held down during the click event
+-- @field angleDeltaX A number corresponding with the vertical wheel motion. For most devices, this number is in increments of 120
+-- @field angleDeltaY A number corresponding with the horizontal wheel motion. For most devices, this number is in increments of 120
+-- @table mouseWheelEvent
+local mouseWheelEvent = {}
