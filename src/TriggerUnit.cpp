@@ -247,10 +247,8 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (data.size() > 0) {
-        char* subject = (char*)malloc(strlen(data.toLocal8Bit().data()) + 1);
-        strcpy(subject, data.toLocal8Bit().data());
-
+    if (!data.isEmpty()) {
+        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
         for (auto trigger : mTriggerRootNodeList) {
             trigger->match(subject, data, line);
         }
