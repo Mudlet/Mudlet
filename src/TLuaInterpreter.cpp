@@ -12523,12 +12523,12 @@ void TLuaInterpreter::initIndenterGlobals()
                   .toUtf8().constData());
 #elif defined(Q_OS_WIN32)
     // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
-    luaL_dostring(pIndenterState, QStringLiteral("package.path = [[" LUA_DEFAULT_PATH R"(\?.lua;%1\..\3rdparty\?.lua;]] .. package.path)")
-                  .arg(QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
-                  .toUtf8().constData());
-    luaL_dostring(pIndenterState, QStringLiteral(R"(package.path = [[%1\..\..\3rdparty\?.lua;]] .. package.path)")
-                  .arg(QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
-                  .toUtf8().constData());
+    luaL_dostring(pIndenterState,
+                  QStringLiteral("package.path = [[%1\\..\\..\\3rdparty\\?.lua;%2\\?.lua;%1\\..\\3rdparty\\?.lua;]] .. package.path")
+                          .arg(QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
+                          .toUtf8()
+                          .constData())
+            .arg(LUA_DEFAULT_PATH);
 #endif
 
     int error = luaL_dostring(pIndenterState, R"(
