@@ -266,9 +266,13 @@ function InstallLibzip() {
 function InstallZziplib() {
   # DownloadFile "https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download" "zziplib-0.13.62.tar.bz2"
   # Switched to using GitHub which seems to be by the same maintainer
-  DownloadFile "https://codeload.github.com/gdraheim/zziplib/tar.gz/v0.13.62" "zziplib-0.13.62.tar.gz"
-  ExtractTar "zziplib-0.13.62.tar.gz" "zziplib"
-  Set-Location zziplib\zziplib-0.13.62
+  # DownloadFile "https://codeload.github.com/gdraheim/zziplib/tar.gz/v0.13.62" "zziplib-0.13.62.tar.gz"
+  # The tar.gz from the above source does not contain exactly the same files as
+  # the tar.bz and fails to build in our setup - assuming that there might have
+  # been some fixes in the last few years we will switch to the latest one:
+  DownloadFile "https://codeload.github.com/gdraheim/zziplib/tar.gz/v0.13.68" "zziplib-0.13.68.tar.gz"
+  ExtractTar "zziplib-0.13.68.tar.gz" "zziplib"
+  Set-Location zziplib\zziplib-0.13.68
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
   RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
