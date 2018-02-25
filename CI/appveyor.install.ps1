@@ -223,10 +223,10 @@ function InstallLua() {
 }
 
 function InstallPcre() {
-  DownloadFile "https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download" "pcre-8.38.tar.gz"
+  DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.38.tar.gz" "pcre-8.38.tar.gz"
   ExtractTar "pcre-8.38.tar.gz" "pcre-8.38"
   Set-Location pcre-8.38\pcre-8.38
-  RunConfigure
+  RunConfigure "--enable-utf --enable-unicode-properties"
   RunMake
   RunMakeInstall
 }
