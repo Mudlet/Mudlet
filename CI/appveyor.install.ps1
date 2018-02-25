@@ -264,7 +264,6 @@ function InstallLibzip() {
 }
 
 function InstallZziplib() {
-https://github.com/gdraheim/zziplib/archive/v0.13.62.tar.gz
   # DownloadFile "https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download" "zziplib-0.13.62.tar.bz2"
   # Switched to using GitHub which seems to be by the same maintainer
   DownloadFile "https://codeload.github.com/gdraheim/zziplib/tar.gz/v0.13.62" "zziplib-0.13.62.tar.gz"
