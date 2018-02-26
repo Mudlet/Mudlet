@@ -265,7 +265,7 @@ function InstallLibzip() {
 
 function InstallZziplib() {
   DownloadFile "https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download" "zziplib-0.13.62.tar.bz2"
-  ExtractTar "zziplib-0.13.62.tar.gz" "zziplib"
+  ExtractTar "zziplib-0.13.62.tar.bz2" "zziplib"
   Set-Location zziplib\zziplib-0.13.62
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
