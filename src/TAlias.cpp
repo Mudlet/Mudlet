@@ -93,7 +93,13 @@ bool TAlias::match(const QString& toMatch)
         return false; //regex compile error
     }
 
+#if defined(Q_OS_WIN32)
+    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+    char* subject = (char*)malloc(strlen(toMatch.toUtf8().constData()) + 1);
+    strcpy(subject, toMatch.toUtf8().constData());
+#else
     char* subject = strndup(toMatch.toUtf8().constData(), strlen(toMatch.toUtf8().constData()));
+#endif
     unsigned char* name_table;
     int namecount;
     int name_entry_size;
