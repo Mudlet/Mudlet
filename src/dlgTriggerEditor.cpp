@@ -31,7 +31,6 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TEasyButtonBar.h"
-#include "THighlighter.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "TTreeWidget.h"

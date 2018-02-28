@@ -499,7 +499,6 @@ SOURCES += \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
-    THighlighter.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
@@ -574,7 +573,6 @@ HEADERS += \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
-    THighlighter.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
