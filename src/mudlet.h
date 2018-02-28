@@ -5,7 +5,8 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -162,17 +163,25 @@ public:
     QMap<Host*, QMap<QString, TConsole*>> mHostConsoleMap;
     QMap<Host*, QMap<QString, TDockWidget*>> mHostDockConsoleMap;
     QMap<Host*, QMap<QString, TLabel*>> mHostLabelMap;
-    QIcon* testicon;
-    bool mShowMenuBar;
-    bool mShowToolbar;
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
     void setToolBarIconSize(const int);
     void setEditorTreeWidgetIconSize(const int);
-    void setToolBarVisible(const bool);
-    void setMenuBarVisible(const bool);
-    void replayStart();
+    enum controlsVisibilityFlag {
+        visibleNever = 0,
+        visibleOnlyWithoutLoadedProfile = 0x1,
+        visibleMaskNormally = 0x2,
+        visibleAlways = 0x3
+    };
+    Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
+    void setToolBarVisibility(const controlsVisibility);
+    void setMenuBarVisibility(const controlsVisibility);
+    void adjustToolBarVisibility();
+    void adjustMenuBarVisibility();
+    controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
+    bool replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
     bool setScrollBarVisible(Host* pHost, const QString& name, bool isVisible);
     void replayOver();
@@ -298,6 +307,10 @@ public:
         moduleBackupsPath
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    // Used to enable "emergency" control recovery action - if Mudlet is
+    // operating without either menubar or main toolbar showing.
+    bool isControlsVisible() const;
+    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -343,6 +356,9 @@ public slots:
 #if defined(INCLUDE_UPDATER)
     void slot_check_manual_update();
 #endif
+    void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
+    void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
+    void slot_handleToolbarVisibilityChanged(bool);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -396,20 +412,24 @@ private:
     QMap<Host*, QToolBar*> mUserToolbarMap;
     QMenu* restoreBar;
     bool mIsGoingDown;
+    controlsVisibility mMenuBarVisibility;
+    controlsVisibility mToolbarVisibility;
 
-    QAction* actionReplaySpeedDown;
-    QAction* actionReplaySpeedUp;
-    QAction* actionSpeedDisplay;
-    QAction* actionReplayTime;
-    QLabel* replaySpeedDisplay;
-    QLabel* replayTime;
-    QTimer* replayTimer;
-    QToolBar* replayToolBar;
+    QPointer<QAction> mpActionReplaySpeedDown;
+    QPointer<QAction> mpActionReplaySpeedUp;
+    QPointer<QAction> mpActionSpeedDisplay;
+    QPointer<QAction> mpActionReplayTime;
+    QPointer<QLabel> mpLabelReplaySpeedDisplay;
+    QPointer<QLabel> mpLabelReplayTime;
+    QPointer<QTimer> mpTimerReplay;
+    QPointer<QToolBar> mpToolBarReplay;
 
     QAction* actionAbout;
     QAction* actionReconnect;
 
     void check_for_mappingscript();
+
+    QPointer<QAction> mpActionReplay;
 
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;
@@ -430,7 +450,13 @@ private:
     void set_compact_input_line();
 
     QSettings* getQSettings();
+
+    // Argument to QDateTime::toString(...) to format the elapsed time display
+    // on the mpToolBarReplay:
+    QString mTimeFormat;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
 
 class TConsoleMonitor : public QObject
 {

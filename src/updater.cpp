@@ -55,7 +55,7 @@ void Updater::checkUpdatesOnStart()
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
     setupOnLinux();
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
     setupOnWindows();
 #endif
 }
@@ -97,7 +97,7 @@ void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
     qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
@@ -114,7 +114,7 @@ void Updater::setupOnMacOS()
 }
 #endif // Q_OS_MACOS
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN32)
 void Updater::setupOnWindows()
 {
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
@@ -298,7 +298,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
     QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, filePath);
 #endif
 
@@ -307,7 +307,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
 #if defined(Q_OS_LINUX)
         updateBinaryOnLinux();
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
         finishSetup();
 #endif
         installOrRestartButton->setText(tr("Restart to apply update"));
@@ -342,7 +342,7 @@ void Updater::recordUpdateTime() const
 bool Updater::shouldShowChangelog()
 {
 // Don't show changelog for automatic updates on Sparkle - Sparkle doesn't support it
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     return false;
 #endif
 

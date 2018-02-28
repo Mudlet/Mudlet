@@ -58,7 +58,7 @@ using namespace std;
 
 TConsole* spDebugConsole = nullptr;
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN32)
 bool runUpdate();
 #endif
 
@@ -85,7 +85,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 
 // A crude and simplistic commandline options processor - note that Qt deals
 // with its options automagically!
-#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC))
+#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MACOS) || defined(Q_OS_FREEBSD))
     // Handle other currently unconsidered OSs - what are they - by returning the
     // normal GUI type application handle.
     return new QApplication(argc, argv);
@@ -133,12 +133,18 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 #endif
     } else {
 #if defined(Q_OS_MACOS)
-        // Workaround for horrible mac rendering issues once the mapper widget is open
-        // see https://bugreports.qt.io/browse/QTBUG-41257
+        // Workaround for horrible mac rendering issues once the mapper widget
+        // is open - see https://bugreports.qt.io/browse/QTBUG-41257
         QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
-#endif
-#if defined(Q_OS_WIN32)
-        // Force OpenGL use as we use some functions that aren't provided by Qt's OpenGL layer on Windows (QOpenGLFunctions)
+#elif defined(Q_OS_FREEBSD)
+        // Cure for diagnostic:
+        // "Qt WebEngine seems to be initialized from a plugin. Please set
+        // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
+        // before constructing QGuiApplication."
+        QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#elif defined(Q_OS_WIN32)
+        // Force OpenGL use as we use some functions that aren't provided by
+        // Qt's OpenGL layer on Windows (QOpenGLFunctions)
         QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
@@ -190,8 +196,6 @@ int main(int argc, char* argv[])
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
-
-    Q_INIT_RESOURCE(mudlet);
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
     QApplication* app = qobject_cast<QApplication*>(initApp.data());
@@ -364,7 +368,7 @@ int main(int argc, char* argv[])
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
 
-#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -465,14 +469,13 @@ int main(int argc, char* argv[])
         first_launch = true;
     }
 
-
-#if defined(INCLUDE_FONTS)
     if (show_splash) {
         splash_message.append("Done.\n\nLoading font files... ");
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
 
+#if defined(INCLUDE_FONTS)
     QString bitstreamVeraFontDirectory(QStringLiteral("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
@@ -531,6 +534,10 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 #endif
 
+    mudlet::debugMode = false;
+    FontManager fm;
+    fm.addFonts();
+
     if (show_splash) {
         splash_message.append("Done.\n\n"
                               "All data has been loaded successfully.\n\n"
@@ -538,12 +545,6 @@ int main(int argc, char* argv[])
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
-
-    mudlet::debugMode = false;
-#if defined(INCLUDE_FONTS)
-    FontManager fm;
-    fm.addFonts();
-#endif
 
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
 #ifdef Q_OS_WIN32
@@ -613,7 +614,7 @@ int main(int argc, char* argv[])
     return app->exec();
 }
 
-#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
 // small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done

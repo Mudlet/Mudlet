@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
@@ -120,10 +120,9 @@ const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
-static const QString timeFormat = "hh:mm:ss";
 const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
 
-QPointer<mudlet> mudlet::_self;
+QPointer<mudlet> mudlet::_self = nullptr;
 
 void mudlet::start()
 {
@@ -138,8 +137,6 @@ mudlet* mudlet::self()
 
 mudlet::mudlet()
 : QMainWindow()
-, mShowMenuBar(false)
-, mShowToolbar(true)
 , mToolbarIconSize(0)
 , mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
@@ -147,16 +144,18 @@ mudlet::mudlet()
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
 , mpCurrentActiveHost(nullptr)
 , mIsGoingDown(false)
+, mMenuBarVisibility(visibleAlways)
+, mToolbarVisibility(visibleAlways)
+, mpActionReplaySpeedDown(nullptr)
+, mpActionReplaySpeedUp(nullptr)
+, mpActionSpeedDisplay(nullptr)
+, mpActionReplayTime(nullptr)
+, mpLabelReplaySpeedDisplay(nullptr)
+, mpLabelReplayTime(nullptr)
+, mpTimerReplay(nullptr)
 , mIsLoadingLayout(false)
 , mHasSavedLayout(false)
-, actionReplaySpeedDown(nullptr)
-, actionReplaySpeedUp(nullptr)
-, actionSpeedDisplay(nullptr)
-, actionReplayTime(nullptr)
-, replaySpeedDisplay(nullptr)
-, replayTime(nullptr)
-, replayTimer(nullptr)
-, replayToolBar(nullptr)
+, mpToolBarReplay(nullptr)
 , moduleTable(nullptr)
 , mCompactInputLine(false)
 , mpAboutDlg(nullptr)
@@ -164,6 +163,9 @@ mudlet::mudlet()
 , mpPackageManagerDlg(nullptr)
 , mpProfilePreferencesDlg(nullptr)
 , mshowMapAuditErrors(false)
+, mTimeFormat(tr("hh:mm:ss",
+                 "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -175,6 +177,7 @@ mudlet::mudlet()
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName("mpMainToolBar");
+    mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
     addToolBarBreak();
@@ -307,11 +310,10 @@ mudlet::mudlet()
     actionModuleM->setObjectName(QStringLiteral("module_action"));
     mpMainToolBar->widgetForAction(actionModuleM)->setObjectName(actionModuleM->objectName());
 
-    QAction* actionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
-    actionReplay->setToolTip(tr("Load a Mudlet replay"));
-    mpMainToolBar->addAction(actionReplay);
-    actionReplay->setObjectName(QStringLiteral("replay_action"));
-    mpMainToolBar->widgetForAction(actionReplay)->setObjectName(actionReplay->objectName());
+    mpActionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
+    mpActionReplay->setObjectName(QStringLiteral("replay_action"));
+    mpMainToolBar->addAction(mpActionReplay);
+    mpMainToolBar->widgetForAction(mpActionReplay)->setObjectName(mpActionReplay->objectName());
 
     actionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
     actionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
@@ -390,7 +392,7 @@ mudlet::mudlet()
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
     connect(actionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(actionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
-    connect(actionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
+    connect(mpActionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
     connect(actionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
     connect(actionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(actionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
@@ -454,6 +456,8 @@ mudlet::mudlet()
 
     mpSettings = getQSettings();
     readSettings(*mpSettings);
+    // The previous line will set an option used in the slot method:
+    connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -470,14 +474,6 @@ mudlet::mudlet()
     // mToolbarIconSize has been set to 0 in the initialisation list so either
     // value will be accepted:
     setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
-
-    // Recover from a save in a state when both are hidden so that the toolbar
-    // is shown
-    // TODO: Provide a main console context menu item to restore at least one
-    // of them - if both are hidden.
-    if (!(mShowMenuBar || mShowToolbar)) {
-        setToolBarVisible(true);
-    }
 
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
@@ -1182,6 +1178,19 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled(false);
     mpMainToolBar->actions()[13]->setEnabled(false);
     mpMainToolBar->actions()[14]->setEnabled(false);
+
+    mpActionReplay->setEnabled(false);
+    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>Load a Mudlet replay.</p>"
+                                       "<p><i>Disabled until a profile is loaded.</i></p>")));
+    // The menu items will not show tool-tips unless the parent menu is set to
+    // show tool-tips which is likely to be done in near future when there are
+    // more texts to show {the default is to repeat the menu text which is not
+    // useful} with a call to menuEditor->setToolTipsVisible(true);
+    dactionReplay->setToolTip(mpActionReplay->toolTip());
+
+    dactionReplay->setEnabled(false);
+    actionReconnect->setEnabled(false);
 }
 
 void mudlet::enableToolbarButtons()
@@ -1198,6 +1207,28 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled(true);
     mpMainToolBar->actions()[13]->setEnabled(true);
     mpMainToolBar->actions()[14]->setEnabled(true);
+
+    if (!mpToolBarReplay) {
+        // Only enable the replay button if it is not disabled because there is
+        // another profile loaded and already playing a replay {when the replay
+        // toolbar pointer will be non-null}:
+        mpActionReplay->setEnabled(true);
+        dactionReplay->setEnabled(true);
+        mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>Load a Mudlet replay.</p>")));
+        // The menu items will not show tool-tips unless the parent menu is set to
+        // show tool-tips which is likely to be done in near future when there are
+        // more texts to show {the default is to repeat the menu text which is not
+        // useful} with a call to menuEditor->setToolTipsVisible(true);
+        dactionReplay->setToolTip(mpActionReplay->toolTip());
+    }
+
+    actionReconnect->setEnabled(true);
+
+    // As this is called when a profile is loaded it is time to check whether
+    // we need to continue to show the main menu and/or the main toolbar
+    adjustMenuBarVisibility();
+    adjustToolBarVisibility();
 }
 
 bool mudlet::saveWindowLayout()
@@ -2220,28 +2251,18 @@ void mudlet::readSettings(const QSettings& settings)
         setToolBarIconSize(settings.value("mainiconsize").toInt());
     }
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
-    setMenuBarVisible(settings.value("showMenuBar", QVariant(false)).toBool());
-    setToolBarVisible(settings.value("showToolbar", QVariant(true)).toBool());
-    mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
+    // We have abandoned previous "showMenuBar" / "showToolBar" booleans
+    // although we provide a backwards compatible value
+    // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
+    // it is suggested Mudlet 4.x:
+    setMenuBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     resize(size);
     move(pos);
-    if (mShowMenuBar) {
-        MenuBar->show();
-    } else {
-        MenuBar->hide();
-    }
-    if (mShowToolbar || !mShowMenuBar) {
-        mpMainToolBar->show();
-    } else {
-        if (mShowMenuBar) {
-            mpMainToolBar->hide();
-        } else {
-            mpMainToolBar->show();
-        }
-    }
     if (settings.value("maximized", false).toBool()) {
         showMaximized();
     }
@@ -2261,9 +2282,9 @@ void mudlet::setToolBarIconSize(const int s)
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
 
-    if (replayToolBar) {
-        replayToolBar->setIconSize(mpMainToolBar->iconSize());
-        replayToolBar->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+    if (mpToolBarReplay) {
+        mpToolBarReplay->setIconSize(mpMainToolBar->iconSize());
+        mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
     }
     emit signal_setToolBarIconSize(s);
 }
@@ -2278,26 +2299,72 @@ void mudlet::setEditorTreeWidgetIconSize(const int s)
     emit signal_setTreeIconSize(s);
 }
 
-void mudlet::setMenuBarVisible(const bool state)
+// This is used to set the menu bar visibility and adjusts that accordingly
+void mudlet::setMenuBarVisibility(const controlsVisibility state)
 {
-    mShowMenuBar = state;
+    mMenuBarVisibility = state;
 
-    if (mShowMenuBar) {
+    adjustMenuBarVisibility();
+}
+
+// This only adjusts the visibility as appropriate
+void mudlet::adjustMenuBarVisibility()
+{
+    // Are there any profiles loaded - note that the dummy "default_host" counts
+    // as the first one
+    if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways)
+      ||(mMenuBarVisibility & visibleMaskNormally)) {
+
         menuBar()->show();
     } else {
         menuBar()->hide();
     }
 }
 
-void mudlet::setToolBarVisible(const bool state)
-{
-    mShowToolbar = state;
+void mudlet::setToolBarVisibility(const controlsVisibility state)
 
-    if (mShowToolbar) {
+{
+    mToolbarVisibility = state;
+
+    adjustToolBarVisibility();
+}
+
+// Override the main window context menu action to prevent the main tool bar
+// from being hidden if we do not want it to be (or it is not safe to do so - no
+// profile loaded so no TConsoles with a "rescue" context menu):
+void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
+{
+    if (! isVisible && mMenuBarVisibility == visibleNever) {
+        // Only need to worry about it DIS-appearing if the menu bar is not showing
+        int hostCount = mHostManager.getHostCount();
+        if ( (hostCount < 2 && (mToolbarVisibility & visibleAlways))
+           ||(hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
+
+            mpMainToolBar->show();
+        }
+    }
+}
+
+void mudlet::adjustToolBarVisibility()
+{
+    // Are there any profiles loaded - note that the dummy "default_host" counts
+    // as the first one
+    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways)
+       ||(mToolbarVisibility & visibleMaskNormally)) {
+
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
     }
+}
+
+bool mudlet::isControlsVisible() const
+{
+    // Use the real state of the controlled things in case the logic to
+    // control their state (mToolbarVisibility & mMenuBarVisibility) are out of
+    // sync with reality:
+
+    return mpMainToolBar->isVisible() || menuBar()->isVisible();
 }
 
 void mudlet::writeSettings()
@@ -2310,8 +2377,13 @@ void mudlet::writeSettings()
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mToolbarIconSize);
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
-    settings.setValue("showMenuBar", mShowMenuBar);
-    settings.setValue("showToolbar", mShowToolbar);
+    // This pair are only for backwards compatibility and will be ignored for
+    // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
+    settings.setValue("showMenuBar", mMenuBarVisibility != visibleNever);
+    settings.setValue("showToolbar", mToolbarVisibility != visibleNever);
+
+    settings.setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
+    settings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
@@ -2635,19 +2707,16 @@ void mudlet::slot_replay()
         return;
     }
 
-    QString home = getMudletPath(profileReplayAndLogFilesPath, pHost->getName());
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), home, tr("*.dat"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
+                                                    getMudletPath(profileReplayAndLogFilesPath, pHost->getName()),
+                                                    tr("*.dat"));
     if (fileName.isEmpty()) {
+        // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Select Replay"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    pHost->mTelnet.loadReplay(fileName);
+    // No third argument causes error messages to be sent to pHost's main console:
+    loadReplay(pHost, fileName);
 }
 
 void mudlet::printSystemMessage(Host* pH, const QString& s)
@@ -2886,6 +2955,12 @@ void mudlet::set_compact_input_line()
 
 mudlet::~mudlet()
 {
+    // There may be a corner case if a replay is running AND the application is
+    // closing down AND the updater on a particular platform pauses the
+    // application destruction...?
+    delete(mpTimerReplay);
+    mpTimerReplay = nullptr;
+
     mudlet::_self = nullptr;
 }
 
@@ -2898,116 +2973,145 @@ void mudlet::toggleFullScreenView()
     }
 }
 
-void mudlet::replayStart()
+// Called from the ctelnet instance for the host concerned:
+bool mudlet::replayStart()
 {
-    if (!mpMainToolBar) {
-        return;
+    // Do not proceed if there is a problem with the main toolbar (it isn't there)
+    // OR if there is already a replay toolbar in existance (a replay is already
+    // in progress)...
+    if (!mpMainToolBar || mpToolBarReplay) {
+        return false;
     }
-    replayToolBar = new QToolBar(this);
+
+    // Lock the replay button and menu item down until the replay is over
+    mpActionReplay->setCheckable(true);
+    mpActionReplay->setChecked(true);
+    mpActionReplay->setEnabled(false);
+    dactionReplay->setEnabled(false);
+    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>Cannot load a replay as one is already in progress in this or another profile.</p>")));
+    dactionReplay->setToolTip(mpActionReplay->toolTip());
+
+    mpToolBarReplay = new QToolBar(this);
+    mpToolBarReplay->setIconSize(QSize(8 * mToolbarIconSize, 8 * mToolbarIconSize));
+    mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+
     mReplaySpeed = 1;
     mReplayTime.setHMS(0, 0, 0, 1); // Since Qt5.0 adding anything to a zero
                                     // (invalid) time leaves the time value
                                     // STILL being regarded as invalid - so to
                                     // get a valid time we have to use a very
                                     // small, NON-zero time to initiase it...!
-    replayTime = new QLabel(this);
-    actionReplayTime = replayToolBar->addWidget(replayTime);
 
-    replayToolBar->setIconSize(mpMainToolBar->iconSize());
-    replayToolBar->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+    mpLabelReplayTime = new QLabel(this);
+    mpActionReplayTime = mpToolBarReplay->addWidget(mpLabelReplayTime);
 
-    actionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);
-    actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
-    replayToolBar->addAction(actionReplaySpeedUp);
-    actionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
-    replayToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
+    mpActionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);
+    mpActionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
+    mpActionReplaySpeedUp->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                      .arg(tr("<p>Replay each step with a shorter time interval between steps.</p>")));
+    mpToolBarReplay->addAction(mpActionReplaySpeedUp);
+    mpToolBarReplay->widgetForAction(mpActionReplaySpeedUp)->setObjectName(mpActionReplaySpeedUp->objectName());
 
-    actionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
-    actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
-    replayToolBar->addAction(actionReplaySpeedDown);
-    actionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
-    replayToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
-    replaySpeedDisplay = new QLabel(this);
-    actionSpeedDisplay = replayToolBar->addWidget(replaySpeedDisplay);
+    mpActionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
+    mpActionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
+    mpActionReplaySpeedDown->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg(tr("<p>Replay each step with a longer time interval between steps.</p>")));
+    mpToolBarReplay->addAction(mpActionReplaySpeedDown);
+    mpToolBarReplay->widgetForAction(mpActionReplaySpeedDown)->setObjectName(mpActionReplaySpeedDown->objectName());
 
-    connect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-    connect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+    mpLabelReplaySpeedDisplay = new QLabel(this);
+    mpActionSpeedDisplay = mpToolBarReplay->addWidget(mpLabelReplaySpeedDisplay);
 
-    QString txt = "<font size=25><b>speed:";
-    txt.append(QString::number(mReplaySpeed));
-    txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
+    connect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+    connect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
 
-    replayTimer = new QTimer(this);
-    replayTimer->setInterval(1000);
-    replayTimer->setSingleShot(false);
-    connect(replayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+    mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
-    QString txt2 = "<font size=25><b>Time:";
-    txt2.append(mReplayTime.toString(timeFormat));
-    txt2.append("</b></font>");
-    replayTime->setText(txt2);
+    mpTimerReplay = new QTimer(this);
+    mpTimerReplay->setInterval(1000);
+    mpTimerReplay->setSingleShot(false);
+    connect(mpTimerReplay, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
 
-    replaySpeedDisplay->show();
-    replayTime->show();
-    insertToolBar(mpMainToolBar, replayToolBar);
-    replayToolBar->show();
-    replayTimer->start();
+    mpLabelReplayTime->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+
+    mpLabelReplaySpeedDisplay->show();
+    mpLabelReplayTime->show();
+
+    insertToolBar(mpMainToolBar, mpToolBarReplay);
+
+    mpToolBarReplay->show();
+    mpTimerReplay->start();
+    return true;
 }
 
 void mudlet::slot_replayTimeChanged()
 {
-    QString txt2 = "<font size=25><b>Time:";
-    txt2.append(mReplayTime.toString(timeFormat));
-    txt2.append("</b></font>");
-    replayTime->setText(txt2);
+    // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
+    if (mpLabelReplayTime) {
+        mpLabelReplayTime->setText(QStringLiteral("<font size=25><b>%1</b></font>")
+                                   .arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+        mpLabelReplayTime->show();
+    }
 }
 
 void mudlet::replayOver()
 {
-    if (!mpMainToolBar) {
-        return;
-    }
-    if (!replayToolBar) {
+    if ((!mpMainToolBar) || (!mpToolBarReplay)) {
         return;
     }
 
-    if (actionReplaySpeedUp) {
-        disconnect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-        disconnect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
-        replayToolBar->removeAction(actionReplaySpeedUp);
-        replayToolBar->removeAction(actionReplaySpeedDown);
-        replayToolBar->removeAction(actionSpeedDisplay);
-        removeToolBar(replayToolBar);
-        actionReplaySpeedUp = nullptr;
-        actionReplaySpeedDown = nullptr;
-        actionSpeedDisplay = nullptr;
-        actionReplayTime = nullptr;
-        replayToolBar = nullptr;
-    }
+    disconnect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+    disconnect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+    mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
+    mpToolBarReplay->removeAction(mpActionReplaySpeedDown);
+    mpToolBarReplay->removeAction(mpActionSpeedDisplay);
+    removeToolBar(mpToolBarReplay);
+    mpActionReplaySpeedUp->deleteLater(); // Had previously omitted these, causing a resource leak!
+    mpActionReplaySpeedUp = nullptr;
+    mpActionReplaySpeedDown->deleteLater();
+    mpActionReplaySpeedDown = nullptr;
+    mpActionSpeedDisplay->deleteLater();
+    mpActionSpeedDisplay = nullptr;
+    mpActionReplayTime->deleteLater();
+    mpActionReplayTime = nullptr;
+    mpLabelReplaySpeedDisplay->deleteLater();
+    mpLabelReplaySpeedDisplay = nullptr;
+    mpLabelReplayTime->deleteLater();
+    mpLabelReplayTime = nullptr;
+    mpToolBarReplay->deleteLater();
+    mpToolBarReplay = nullptr;
+
+    // Unlock/uncheck the replay button/menu item
+    mpActionReplay->setChecked(false);
+    mpActionReplay->setCheckable(false);
+    mpActionReplay->setEnabled(true);
+    dactionReplay->setEnabled(true);
+    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>Load a Mudlet replay.</p>")));
+    dactionReplay->setToolTip(mpActionReplay->toolTip());
 }
 
 void mudlet::slot_replaySpeedUp()
 {
-    mReplaySpeed = mReplaySpeed * 2;
-    QString txt = "<font size=25><b>speed:";
-    txt.append(QString::number(mReplaySpeed));
-    txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
-    replaySpeedDisplay->show();
+    if(mpLabelReplaySpeedDisplay) {
+        mReplaySpeed = mReplaySpeed * 2;
+        mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+
+        mpLabelReplaySpeedDisplay->show();
+    }
 }
 
 void mudlet::slot_replaySpeedDown()
 {
-    mReplaySpeed = mReplaySpeed / 2;
-    if (mReplaySpeed < 1) {
-        mReplaySpeed = 1;
+    if(mpLabelReplaySpeedDisplay) {
+        mReplaySpeed = mReplaySpeed / 2;
+        if (mReplaySpeed < 1) {
+            mReplaySpeed = 1;
+        }
+        mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+        mpLabelReplaySpeedDisplay->show();
     }
-    QString txt = "<font size=25><b>speed:";
-    txt.append(QString::number(mReplaySpeed));
-    txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
-    replaySpeedDisplay->show();
 }
 
 /* loop through and stop all sounds */
@@ -3481,4 +3585,42 @@ int mudlet::getRowCount(Host* pHost, QString& name)
     }
 
     return dockWindowConsoleMap[name]->console->getRowCount();
+}
+
+// Can be called from lua sub-system OR from slot_replay(), the presence of a
+// non-NULLPTR pErrMsg indicates the former; also the replayFileName CAN be
+// relative (to the profiles ./log sub-directory where replays are stored) if
+// sourced from the lua sub-system.
+bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pErrMsg)
+{
+    // Do not proceed if there is a problem with the main toolbar (it isn't there)
+    // OR if there is already a replay toolbar in existance (a replay is already
+    // in progress)...
+    if (!mpMainToolBar || mpToolBarReplay) {
+        // This was in (bool) ctelnet::loadReplay(const QString&, QString*)
+        // but is needed here to prevent getting into there otherwise a lua call
+        // to start a replay would mess up (QFile) ctelnet::replayFile for a
+        // replay already in progess in the SAME profile.  Technically there
+        // could be a very small chance of a race condition if a lua call of
+        // loadRawFile happens at the same time as a file was selected for a
+        // replay after the toolbar/menu command to do a reaply for the same
+        // profile - but the window for this is likely to be a fraction of a
+        // second...
+        if (pErrMsg) {
+            *pErrMsg = QStringLiteral("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
+        } else {
+            pHost->postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
+                                  "try again when it has finished."));
+        }
+        return false;
+    }
+
+    QString absoluteReplayFileName;
+    if (QFileInfo(replayFileName).isRelative()) {
+        absoluteReplayFileName = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
+    } else {
+        absoluteReplayFileName = replayFileName;
+    }
+
+    return pHost->mTelnet.loadReplay(absoluteReplayFileName, pErrMsg);
 }
