@@ -71,6 +71,7 @@ void TKey::setName(const QString& name)
     mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
 }
 
+// This method is potentially flawed in that only the first child match is ever executed...!
 bool TKey::match(int key, int modifier)
 {
     if (isActive()) {

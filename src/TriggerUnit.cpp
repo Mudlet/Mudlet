@@ -247,10 +247,14 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (data.size() > 0) {
-        char* subject = (char*)malloc(strlen(data.toLocal8Bit().data()) + 1);
-        strcpy(subject, data.toLocal8Bit().data());
-
+    if (!data.isEmpty()) {
+#if defined(Q_OS_WIN32)
+        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+        char* subject = (char*)malloc(strlen(data.toUtf8().data()) + 1);
+        strcpy(subject, data.toUtf8().data());
+#else
+        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
         for (auto trigger : mTriggerRootNodeList) {
             trigger->match(subject, data, line);
         }
