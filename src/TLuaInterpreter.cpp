@@ -1357,7 +1357,13 @@ int TLuaInterpreter::paste(lua_State* L)
     return 0;
 }
 
-// The text MUST be presented in the ENCODING selected to be used by the SERVER
+// Takes one argument, a string and sends it to the trigger processing system
+// almost as if it came from the MUD Server. This string must be byte encoded
+// in a manner to match the currently selected Server Encoding. The trigger
+// processing system will recognise that this data is internal and, should it be
+// retaining a few bytes from the MUD server because a previous character was
+// split between two network packets, will not try to prepend those stored bytes
+// - instead it will hang on to them until the next network packet is processed.
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -6131,14 +6137,14 @@ int TLuaInterpreter::permAlias(lua_State* L)
     QString name = QString::fromUtf8(lua_tostring(L, 1));
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permAlias: bad argument #2 type (alias parent as string expected, got %s!)",
+        lua_pushfstring(L, "permAlias: bad argument #2 type (alias group/parent as string expected, got %s!)",
                         luaL_typename(L, 2));
         return lua_error(L);
     }
     QString parent = QString::fromUtf8(lua_tostring(L, 2));
 
     if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, "permAlias: bad argument #3 type (regexp-type pattern as string expected, got %s!)",
+        lua_pushfstring(L, "permAlias: bad argument #3 type (regexp pattern as string expected, got %s!)",
                         luaL_typename(L, 3));
         return lua_error(L);
     }
