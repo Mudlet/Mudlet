@@ -926,7 +926,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 return;
             }
             _m = _m.mid(3, command.size() - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.toLocal8Bit().data(), _m.length());
+            mpHost->mLuaInterpreter.msdp2Lua(_m.toUtf8().data(), _m.length());
             return;
         }
         // ATCP
