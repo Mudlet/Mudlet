@@ -117,7 +117,7 @@ p, li { white-space: pre-wrap; }
   <connection>
    <sender>close</sender>
    <signal>clicked()</signal>
-   <receiver>no_mapping_script</receiver>
+   <receiver>lacking_mapper_script</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

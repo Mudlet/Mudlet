@@ -75,6 +75,7 @@ cTelnet::cTelnet(Host* pH)
 , mFORCE_GA_OFF(false)
 , mpComposer(nullptr)
 , mpHost(pH)
+, mEncoding()
 , mpPostingTimer(new QTimer(this))
 , mUSE_IRE_DRIVER_BUGFIX(false)
 , mLF_ON_GA(false)
@@ -99,9 +100,10 @@ cTelnet::cTelnet(Host* pH)
     mIsTimerPosting = false;
     mNeedDecompression = false;
 
-    // initialize default encoding
-    mEncoding = "UTF-8";
-    encodingChanged(mEncoding);
+    // initialize encoding to a sensible default - needs to be a different value
+    // than that in the initialisation list so that it is processed as a change
+    // to set up the initial encoder
+    encodingChanged(QLatin1String("UTF-8"));
     termType = QString("Mudlet %1").arg(APP_VERSION);
     if (QByteArray(APP_BUILD).trimmed().length()) {
         termType.append(QString(APP_BUILD));
@@ -924,7 +926,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 return;
             }
             _m = _m.mid(3, command.size() - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.toLocal8Bit().data(), _m.length());
+            mpHost->mLuaInterpreter.msdp2Lua(_m.toUtf8().data(), _m.length());
             return;
         }
         // ATCP

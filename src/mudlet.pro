@@ -629,14 +629,14 @@ FORMS += \
 RESOURCES = mudlet.qrc
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += mudlet_fonts.qrc
-    !build-pass{
+    !build_pass{
         # On windows or on platforms that support CONFIG having debug_and_release"
         # then there can be three passes through this file and we only want the
-        # message once (the non build-pass in that case):
+        # message once (the non build_pass in that case):
         message("Including additional font resources within the Mudlet executable")
     }
 } else {
-    !build-pass{
+    !build_pass{
         message("No font resources are to be included within the Mudlet executable")
     }
 }
@@ -645,16 +645,16 @@ linux|macx|win32 {
     contains( DEFINES, INCLUDE_UPDATER ) {
         HEADERS += updater.h
         SOURCES += updater.cpp
-        !build-pass{
+        !build_pass{
             message("The updater code is included in this configuration")
         }
     } else {
-        !build-pass{
+        !build_pass{
             message("The updater code is excluded from this configuration")
         }
     }
 } else {
-    !build-pass{
+    !build_pass{
         message("The Updater code is excluded as on-line updating is not available on this platform")
     }
 }
