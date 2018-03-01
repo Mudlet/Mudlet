@@ -1346,6 +1346,7 @@ DISTFILES += \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.set-environment.ps1 \
     ../CI/appveyor.build.ps1 \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
