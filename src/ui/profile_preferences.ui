@@ -1715,9 +1715,9 @@
            </widget>
           </item>
           <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox_onlyUseChoosenFont">
+           <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
             <property name="text">
-             <string>Only use symbols (glyphs) from choosen font</string>
+             <string>Only use symbols (glyphs) from chosen font</string>
             </property>
            </widget>
           </item>

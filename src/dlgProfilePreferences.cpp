@@ -141,8 +141,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
     fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                         .arg("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                             "(glyphs) from choosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
-    checkBox_onlyUseChoosenFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                             "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                         .arg("<p>Using a single font is likely to produce a more consistent style but may "
                                              "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
                                              "does not have a needed glyph (a font's individual character/symbol) to represent "
@@ -205,7 +205,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_mapFileActionResult->hide();
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
-    checkBox_onlyUseChoosenFont->setEnabled(false);
+    checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
     pushButton_showGlyphUsage->setEnabled(false);
 
     groupBox_downloadMapOptions->setEnabled(false);
@@ -496,7 +496,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         label_mapSymbolsFont->setEnabled(true);
         fontComboBox_mapSymbols->setEnabled(true);
-        checkBox_onlyUseChoosenFont->setEnabled(true);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(true);
 
         checkBox_showDefaultArea->show();
         checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
@@ -504,14 +504,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         pushButton_showGlyphUsage->setEnabled(true);
         fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
-        checkBox_onlyUseChoosenFont->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
         connect(pushButton_showGlyphUsage, SIGNAL(clicked(bool)), this, SLOT(slot_showMapGlyphUsage()), Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(slot_setMapSymbolFont(const QFont&)), Qt::UniqueConnection);
-        connect(checkBox_onlyUseChoosenFont, SIGNAL(clicked(bool)), this, SLOT(slot_setMapSymbolFontStrategey(bool)), Qt::UniqueConnection);
+        connect(checkBox_isOnlyMapSymbolFontToBeUsed, SIGNAL(clicked(bool)), this, SLOT(slot_setMapSymbolFontStrategey(bool)), Qt::UniqueConnection);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
-        checkBox_onlyUseChoosenFont->setEnabled(false);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
         pushButton_showGlyphUsage->setEnabled(false);
 
         checkBox_showDefaultArea->hide();
@@ -2383,7 +2383,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     // Must turn off sorting at least whilst inserting items...
     pTableWidget->setSortingEnabled(false);
     pTableWidget->setColumnCount(6);
-    // This clears  any previous contents:
+    // This clears any previous contents:
     pTableWidget->setRowCount(0);
     pTableWidget->setRowCount(roomSymbolsHash.count());
 
@@ -2406,10 +2406,14 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         }
         QTableWidgetItem* pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.</p>")));
         pSymbolInFont->setFont(selectedFont);
 
         QTableWidgetItem* pSymbolAnyFont = new QTableWidgetItem();
         pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolAnyFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>The room symbol will appear like this if symbols (glyphs) from any font can be used.</p>")));
         pSymbolAnyFont->setFont(anyFont);
 
         QFontMetrics SymbolInFontMetrics(selectedFont);
@@ -2437,10 +2441,21 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
 
         QTableWidgetItem* pCodePointDisplay = new QTableWidgetItem(codePointsString.join(QStringLiteral(", ")));
         pCodePointDisplay->setTextAlignment(Qt::AlignCenter);
+        pCodePointDisplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                      .arg(tr("<p>These are the sequence of hexadecimal numbers that are used by the Unicode consortium "
+                                              "to identify the graphemes needed to create the symbol.  These numbers can be utilised "
+                                              "to determine precisely what is to be drawn even if some fonts have glyphs that are the "
+                                              "same for different codepoints or combination of codepoints.</p>"
+                                              "<p>Character entry utilities such as <i>charmap.exe</> on <i>Windows</i> or <i>gucharmap</i> "
+                                              "on many Unix type operating systems will also use these numbers which cover "
+                                              "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use"
+                                              "Plane 16</i> via most of the written marks that humanity has ever made.</p>")));
 
         // Need to pad the numbers with spaces so that sorting works correctly:
         QTableWidgetItem* pUsageCount = new QTableWidgetItem(QStringLiteral("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
         pUsageCount->setTextAlignment(Qt::AlignCenter);
+        pUsageCount->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>How many rooms in the whole map have this symbol.")));
 
         QStringList roomNumberStringList;
         QListIterator<int> itRoom(roomsWithSymbol);
@@ -2448,24 +2463,27 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         // be filled completely for a symbol that is used extensively e.g. on
         // a wilderness type map:
         int roomCount = 0;
-        bool isToShowOverflow = false;
         while (itRoom.hasNext()) {
             roomNumberStringList << QString::number(itRoom.next());
             if (++roomCount == 32 && itRoom.hasNext()) {
                 // There is still rooms not listed
-                isToShowOverflow = true;
                 roomNumberStringList << tr("more - not shown...");
                 // Escape from loop to truncate the listing:
                 break;
             }
         }
         QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(QStringLiteral(", ")));
+        pRoomNumbers->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>The rooms with this symbol, up to a maximum of thirty-two, if there are more "
+                                         "than this, it is indicated but they are not shown.</p>")));
 
         QToolButton * pDummyButton = new QToolButton();
         if (isSingleFontUsable) {
             pSymbolInFont->setText(symbol);
             pSymbolAnyFont->setText(symbol);
             pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
+            pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>The symbol can be made entirely from glyphs in the specified font.</p>")));
         } else {
             // Need to switch to a different font as it is possible that the
             // single font may not have the replacement glyph either...!
@@ -2474,9 +2492,24 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
             if (isAllFontUsable) {
                 pSymbolAnyFont->setText(symbol);
                 pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-warning.png")));
+                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>The symbol cannot be made entirely from glyphs in the specified font, but, "
+                                                 "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
+                                                 "(glyphs) from chosen font</i> option or try and choose another font that does "
+                                                 "have the needed glyphs.</p><p><i>You need not close this table to try another font, "
+                                                 "changing it on the main preferences dialogue will update this table after a slight"
+                                                 "delay.</i></p>")));
             } else {
                 pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
                 pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-error.png")));
+                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>The symbol cannot be drawn using any of the fonts in the system, either an "
+                                                 "invalid string was entered as the symbol for the indicated rooms or the map was "
+                                                 "created on a different systems with a different set of fonts available to use. "
+                                                 "You may be able to correct this by installing an additional font using whatever "
+                                                 "method is appropriate for this system or by editing the map to use a different "
+                                                 "symbol. It may be possible to do the latter via a lua script using the "
+                                                 "<i>getRoomSymbol</i> and <i>setRoomSymbol</i> functions.</p>")));
             }
         }
         pTableWidget->setCellWidget(++row, 0, pDummyButton);

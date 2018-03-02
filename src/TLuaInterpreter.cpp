@@ -12550,7 +12550,7 @@ void TLuaInterpreter::initIndenterGlobals()
     // running from a shadow build directory, the latter means we HAVE to rename
     // where the module code is stored or use a symbolic link from "lcf" to
     // "lua_code_formatter" in the "3rdparty" source directory - a rename was
-    // choosen.
+    // chosen.
     luaL_dostring(pIndenterState, QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/../3rdparty/?.lua;' .. package.path")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());

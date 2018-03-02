@@ -2434,7 +2434,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
                                 // click auf einen edit - punkt
                                 if (mCustomLineSelectedRoom != 0) {
-                                    // We have already choosen a line to edit
+                                    // We have already chosen a line to edit
                                     if (fabs(mx - lx) <= 0.25 && fabs(my - ly) <= 0.25) {
                                         // And this looks close enough to a point that we should edit it
                                         mCustomLineSelectedPoint = j;
@@ -2442,7 +2442,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                     }
                                 }
 
-                                // We have not previously choosen a line to edit
+                                // We have not previously chosen a line to edit
                                 QLineF line = QLineF(olx, oly, lx, ly);
                                 QLineF normal = line.normalVector();
                                 QLineF tl;
