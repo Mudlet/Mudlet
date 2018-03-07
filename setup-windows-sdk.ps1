@@ -2,7 +2,7 @@ $sourceDir = $pwd.Path
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {
-    $arguments = ("-ExecutionPolicy", "Bypass", "cd $sourceDir\CI ; & '.\appveyor.install.ps1'")
+    $arguments = ("-ExecutionPolicy", "Bypass", "cd `"$sourceDir\CI`" ; & '.\appveyor.install.ps1'")
     Start-Process powershell -Verb runAs -ArgumentList $arguments -Wait
 }
 else {
