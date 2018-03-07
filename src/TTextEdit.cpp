@@ -32,8 +32,10 @@
 #include "TEvent.h"
 
 #include "pre_guard.h"
+#include <QtGlobal>
 #include <QtEvents>
 #include <QApplication>
+#include <QChar>
 #include <QClipboard>
 #include <QDesktopServices>
 #include <QMenu>
@@ -1190,6 +1192,16 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         popup->addAction(action2);
         popup->addSeparator();
         popup->addAction(action3);
+
+        if (mPA != mPB) {
+            mpContextMenuAnalyser = new QAction("analyse characters", this);
+            connect(mpContextMenuAnalyser, SIGNAL(hovered()), this, SLOT(slot_analyseSelection()));
+            mpContextMenuAnalyser->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                 .arg(tr("Hover on this item to display the Unicode codepoints in the <i>first line</i> of the selection.")));
+            popup->addSeparator();
+            popup->addAction(mpContextMenuAnalyser);
+        }
+
         popup->addSeparator();
         popup->addAction(action4);
 
@@ -1599,4 +1611,284 @@ int TTextEdit::getRowCount()
     }
 
     return height() / rowHeight;
+}
+
+//QString TTextEdit::convertWhiteSpaceToVisual(const QChar & first, const QChar & second)
+//{
+// TODO: May not be needed as there may not be that many non-BMP codepoints frequently encountered with no visual represention?
+//}
+
+// Not just whitespace but also some formatting and other things - it may be
+// that some entries do not work like this and we cannot just display a short
+// bit of text to indicate them in the analysis of the on-screen content- the
+// language directional controls may be like that:
+inline QString TTextEdit::convertWhiteSpaceToVisual(const QChar & first)
+{
+    // clang-format off
+    switch (first.unicode()) {
+    case QChar::Tabulation:         return QStringLiteral("<center>%1</center>").arg(tr("{tab}"));  break;
+    case QChar::LineFeed:           return QStringLiteral("<center>%1</center>").arg(tr("{lf}"));   break; // Not likely to be seen as it gets filtered out
+    case QChar::CarriageReturn:     return QStringLiteral("<center>%1</center>").arg(tr("{cr}"));   break; // Not likely to be seen as it gets filtered out
+    case QChar::Space:              return QStringLiteral("<center>%1</center>").arg(tr("{sp}"));   break;
+    case QChar::Nbsp:               return QStringLiteral("<center>%1</center>").arg(tr("{nbsp}")); break;
+    case QChar::SoftHyphen:         return QStringLiteral("<center>%1</center>").arg(tr("{shyp}")); break;
+    case 0x034F:                    return QStringLiteral("<center>%1</center>").arg(tr("{cgj}"));  break; // Combining Grapheme Joiner (badly named apparently)
+    case 0x1680:                    return QStringLiteral("<center>%1</center>").arg(tr("{osp}"));  break; // Ogham space mark
+    case 0x2000:                    return QStringLiteral("<center>%1</center>").arg(tr("{enqd}")); break; // En quad
+    case 0x2001:                    return QStringLiteral("<center>%1</center>").arg(tr("{emqd}")); break; // Em quad
+    case 0x2002:                    return QStringLiteral("<center>%1</center>").arg(tr("{ensp}")); break; // En space
+    case 0x2003:                    return QStringLiteral("<center>%1</center>").arg(tr("{emsp}")); break; // Em space
+    case 0x2004:                    return QStringLiteral("<center>%1</center>").arg(tr("{m3sp}")); break; // Three-per-em (Thick) space
+    case 0x2005:                    return QStringLiteral("<center>%1</center>").arg(tr("{m4sp}")); break; // Four-per-em (Mid) space
+    case 0x2006:                    return QStringLiteral("<center>%1</center>").arg(tr("{m6sp}")); break; // Six-per-em (sometime same as Thin) space
+    case 0x2007:                    return QStringLiteral("<center>%1</center>").arg(tr("{fgsp}")); break; // Figure (Digit) space
+    case 0x2008:                    return QStringLiteral("<center>%1</center>").arg(tr("{pnsp}")); break; // Punctuation space
+    case 0x2009:                    return QStringLiteral("<center>%1</center>").arg(tr("{m5sp}")); break; // Five-per-em (or sometimes six, Thin) space
+    case 0x200A:                    return QStringLiteral("<center>%1</center>").arg(tr("{hrsp}")); break; // Hair (Thinnest) space
+    case 0x200B:                    return QStringLiteral("<center>%1</center>").arg(tr("{zwsp}")); break; // Zero width space
+    case 0x200C:                    return QStringLiteral("<center>%1</center>").arg(tr("{zwnj}")); break; // Zero width non-joiner
+    case 0x200D:                    return QStringLiteral("<center>%1</center>").arg(tr("{zwj}"));  break; // Zero width joiner
+    case 0x200E:                    return QStringLiteral("<center>%1</center>").arg(tr("{lrm}"));  break; // Left-to-Right mark
+    case 0x200F:                    return QStringLiteral("<center>%1</center>").arg(tr("{rlm}"));  break; // Right-to-Left mark
+    case QChar::LineSeparator:      return QStringLiteral("<center>%1</center>").arg(tr("{ls}"));   break;
+    case QChar::ParagraphSeparator: return QStringLiteral("<center>%1</center>").arg(tr("{ps}"));   break;
+    case 0x202A:                    return QStringLiteral("<center>%1</center>").arg(tr("{lre}"));  break; // Left-to-Right embedding
+    case 0x202B:                    return QStringLiteral("<center>%1</center>").arg(tr("{rle}"));  break; // Right-to-Left embedding
+    case 0x202C:                    return QStringLiteral("<center>%1</center>").arg(tr("{pdf}"));  break; // Pop directional formatting
+    case 0x202D:                    return QStringLiteral("<center>%1</center>").arg(tr("{lro}"));  break; // Left-to-Right override
+    case 0x202E:                    return QStringLiteral("<center>%1</center>").arg(tr("{rle}"));  break; // Right-to-Left override
+    case 0x202F:                    return QStringLiteral("<center>%1</center>").arg(tr("{nnbsp}"));break; // Narrow no break space
+    case 0x205F:                    return QStringLiteral("<center>%1</center>").arg(tr("{mmsp}")); break; // Medium mathematical space (4/18 = 2/9 em space)
+    case 0x2060:                    return QStringLiteral("<center>%1</center>").arg(tr("{wj}"));   break; // Zero width non-breaking space
+    case 0x2061:                    return QStringLiteral("<center>%1</center>").arg(tr("{fnct}")); break; // Function application
+    case 0x2062:                    return QStringLiteral("<center>%1</center>").arg(tr("{inv*}")); break; // Invisible times
+    case 0x2063:                    return QStringLiteral("<center>%1</center>").arg(tr("{inv,}")); break; // Invisible separator or comma
+    case 0x2064:                    return QStringLiteral("<center>%1</center>").arg(tr("{inv+}")); break; // Invisible plus
+    case 0x2066:                    return QStringLiteral("<center>%1</center>").arg(tr("{lri}"));  break; // Left-to-Right isolate
+    case 0x2067:                    return QStringLiteral("<center>%1</center>").arg(tr("{rli}"));  break; // Right-to-Right isolate
+    case 0x2068:                    return QStringLiteral("<center>%1</center>").arg(tr("{1iso}")); break; // First strong isolate
+    case 0x2069:                    return QStringLiteral("<center>%1</center>").arg(tr("{pdi}"));  break; // Pop directional isolate
+    case 0x206A:                    return QStringLiteral("<center>%1</center>").arg(tr("{inhss}"));break; // Inhibit symmetrical swapping
+    case 0x206B:                    return QStringLiteral("<center>%1</center>").arg(tr("{actss}"));break; // Activate symmetrical swapping
+    case 0x206C:                    return QStringLiteral("<center>%1</center>").arg(tr("{inafs}"));break; // Inhibit Arabic Form Shaping
+    case 0x206D:                    return QStringLiteral("<center>%1</center>").arg(tr("{inafs}"));break; // Activate Arabic Form Shaping
+    case 0x206E:                    return QStringLiteral("<center>%1</center>").arg(tr("{natds}"));break; // National Digit shapes
+    case 0x206F:                    return QStringLiteral("<center>%1</center>").arg(tr("{nomds}"));break; // Nominal Digit shapes
+    case 0x3000:                    return QStringLiteral("<center>%1</center>").arg(tr("{isp}"));  break; // Ideaographic (CJK Wide) space
+    case 0xFE00:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs1}"));  break; // Variation selector 1
+    case 0xFE01:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs2}"));  break; // Variation selector 2
+    case 0xFE02:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs3}"));  break; // Variation selector 3
+    case 0xFE03:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs4}"));  break; // Variation selector 4
+    case 0xFE04:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs5}"));  break; // Variation selector 5
+    case 0xFE05:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs6}"));  break; // Variation selector 6
+    case 0xFE06:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs7}"));  break; // Variation selector 7
+    case 0xFE07:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs8}"));  break; // Variation selector 8
+    case 0xFE08:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs9}"));  break; // Variation selector 9
+    case 0xFE09:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs10}")); break; // Variation selector 10
+    case 0xFE0A:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs11}")); break; // Variation selector 11
+    case 0xFE0B:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs12}")); break; // Variation selector 12
+    case 0xFE0C:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs13}")); break; // Variation selector 13
+    case 0xFE0D:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs14}")); break; // Variation selector 14
+    case 0xFE0E:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs15}")); break; // Variation selector 15 - After an Emoji codepoint forces the textual black and white rendition
+    case 0xFE0F:                    return QStringLiteral("<center>%1</center>").arg(tr("{vs16}")); break; // Variation selector 16 - After an Emoji codepoint forces the proper coloured "Emoji" rendition
+    case 0xFFF9:                    return QStringLiteral("<center>%1</center>").arg(tr("{iaa}"));  break; // Interlinear Annotation Anchor
+    case 0xFEFA:                    return QStringLiteral("<center>%1</center>").arg(tr("{ias}"));  break; // Interlinear Annotation Separator
+    case 0xFEFB:                    return QStringLiteral("<center>%1</center>").arg(tr("{iat}"));  break; // Interlinear Annotation Terminator
+    case 0xFEFF:                    return QStringLiteral("<center>%1</center>").arg(tr("{zwnbs}"));break; // Zero Width No-Break Space (also BOM at start of text!)
+    default:                        return QStringLiteral("<center>%1</center>").arg(first);
+    }
+    // clang-format on
+}
+
+/*
+ * Formula to convert High+Low surrogate pairs to Unicode code-point:
+ * (HighSurrogate - 0xD800) * 0x400 + (LowSurrogage - 0xDC00) + 0x10000
+ */
+void TTextEdit::slot_analyseSelection()
+{
+    if (!mpContextMenuAnalyser || mpBuffer->lineBuffer.isEmpty()) {
+        // Menu has gone away or no text on screen
+        return;
+    }
+    // If we get here we must at least have a line 0!
+
+    // Get the smallest of the two lines in the range, but clamp it to the first
+    // line which is zero and then the maximum line in existance:
+    int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size()-1));
+
+    QString indexes; // UTF-16 index
+    QString vals; // UTF-16 values
+    QString elements; // grapheme
+    QString utf8Indexes; // UTF-8 indexes
+    QString utf8Vals; // UTF-8 bytes
+    QString completedRows;
+    quint8 rowItems = 0;
+    QChar zero('0');
+    unsigned short int utf8Index = -1;
+    char utf8Bytes[5];
+    utf8Bytes[4] = '\0';
+    int total = mpBuffer->lineBuffer.at(line).size();
+    // We do not want more than around 16 code-points per row, but we also do
+    // not want orphans (a few odd code-points) on the last row so deduce a
+    // number of items to include in a row:
+    quint8 rowsCount = qMax(1, qRound((total+8.5)/16.0));
+    quint8 rowLimit = qMax(8, qRound(total*1.0/rowsCount));
+    bool isFirstRow = true;
+
+    for(int index = 0; index < total; ++index) {
+        if (mpBuffer->lineBuffer.at(line).at(index).isHighSurrogate() && ((index + 1) < total)) {
+            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8().constData(), 4);
+            size_t utf8Width = strnlen(utf8Bytes, 4);
+            quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
+
+            indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2 & %3</center></th>")
+                           .arg(QString::number(columnsToUse), QString::number(index), QString::number(index+1)));
+
+            // The use of one QStringLiteral inside another is because it is
+            // impossible to force an upper-case alphabet to Hex digits otherwise
+            // just for that number (and not the rest of the resultant String):
+            // &#8232; is the Unicode Line Separator
+            vals.append(QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</centre>&#8232;<center>(0x%3:0x%4)</center></td>")
+                        .arg(QString::number(columnsToUse))
+                        .arg(QStringLiteral("%1")
+                             .arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index+1)), 4, 16, zero)
+                             .toUpper())
+                        .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
+                        .arg(mpBuffer->lineBuffer.at(line).at(index+1).unicode(), 4, 16, zero));
+
+            // Note the addition to the index here to jump over the low-surrogate:
+            elements.append(QStringLiteral("<td colspan=\"%1\"><center>%2</center></td>")
+                            .arg(QString::number(columnsToUse))
+                            .arg(mpBuffer->lineBuffer.at(line).mid(index++,2)));
+
+            switch (utf8Width) {
+            case 4:
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td></b>")
+                                   .arg(QString::number(++utf8Index), QString::number(++utf8Index), QString::number(++utf8Index), QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td><td><center>0x%4</center></td>")
+                                .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[3]), 2, 16, zero));
+                break;
+            case 3:
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td>")
+                                   .arg(QString::number(++utf8Index), QString::number(++utf8Index), QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td>")
+                                .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero));
+                break;
+            case 2:
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td>")
+                                   .arg(QString::number(++utf8Index), QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td>")
+                                .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero));
+                break;
+            default:
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th>").arg(QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td>").arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero));
+            }
+            rowItems += 2;
+        } else {
+            strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8().constData(), 4);
+            size_t utf8Width = strnlen(utf8Bytes, 4);
+            quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
+
+            indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index)));
+
+
+            vals.append(QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center></td>")
+                        .arg(QString::number(columnsToUse))
+                        .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, QChar('0')).toUpper());
+
+            elements.append(QStringLiteral("<td colspan=\"%1\">%2</td>").arg(QString::number(columnsToUse), convertWhiteSpaceToVisual(mpBuffer->lineBuffer.at(line).at(index))));
+
+            switch (utf8Width) {
+            case 4: // Maybe a BMP character cannot use 4 utf-8 bytes?
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td>")
+                                   .arg(QString::number(++utf8Index), QString::number(++utf8Index), QString::number(++utf8Index), QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td><td><center>0x%4</center></td>")
+                                .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[3]), 2, 16, zero));
+                break;
+            case 3:
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td>")
+                                   .arg(QString::number(++utf8Index), QString::number(++utf8Index), QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td>")
+                                .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero));
+                break;
+            case 2:
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td>")
+                                   .arg(QString::number(++utf8Index), QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td>")
+                                .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                        .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero));
+                break;
+            default:
+                utf8Indexes.append(QStringLiteral("<th><center>%1</center></th>").arg(QString::number(++utf8Index)));
+                utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td>").arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero));
+            }
+
+            ++rowItems;
+        }
+        if (rowItems > rowLimit) {
+            if (isFirstRow) {
+                completedRows = QStringLiteral("<table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                               "<tr><th>Index (UTF-16)</th>%1</tr>"
+                                               "<tr><th>U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i></th>%2</tr>"
+                                               "<tr><th>Visual</th>%3</tr>"
+                                               "<tr><th>Index (UTF-8)</th>%4</tr>"
+                                               "<tr><th>Byte</th>%5</tr>"
+                                               "</table><br>")
+                        .arg(indexes, vals, elements, utf8Indexes, utf8Vals);
+                isFirstRow = false;
+            } else {
+                completedRows.append(QStringLiteral("<table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                                    "<tr>%1</tr>"
+                                                    "<tr>%2</tr>"
+                                                    "<tr>%3</tr>"
+                                                    "<tr>%4</tr>"
+                                                    "<tr>%5</tr>"
+                                                    "</table><br>")
+                                     .arg(indexes, vals, elements, utf8Indexes, utf8Vals));
+            }
+            rowItems = 0;
+            indexes.clear();
+            vals.clear();
+            elements.clear();
+            utf8Indexes.clear();
+            utf8Vals.clear();
+        }
+    }
+    // <table border=\"0\" style=\"margin-top:36px; margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">
+    if (mpContextMenuAnalyser) {
+        if (isFirstRow) {
+            // if this is still true then we only have a short, single line of
+            // less than 16 codepoints
+            mpContextMenuAnalyser->setToolTip(QStringLiteral("<html><head/><body>%1"
+                                                             "<table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                                             "<tr><th>Index (UTF-16)</th>%2</tr>"
+                                                             "<tr><th>U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i></th>%3</tr>"
+                                                             "<tr><th>Visual</th>%4</tr>"
+                                                             "<tr><th>Index (UTF-8)</th>%5</tr>"
+                                                             "<tr><th>Byte</th>%6</tr></table></body></html>")
+                                              .arg(completedRows, indexes, vals, elements, utf8Indexes, utf8Vals));
+        } else {
+            mpContextMenuAnalyser->setToolTip(QStringLiteral("<html><head/><body>%1"
+                                                             "<table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                                             "<tr>%2</tr>"
+                                                             "<tr>%3</tr>"
+                                                             "<tr>%4</tr>"
+                                                             "<tr>%5</tr>"
+                                                             "<tr>%6</tr></table></body></html>")
+                                              .arg(completedRows, indexes, vals, elements, utf8Indexes, utf8Vals));
+
+        }
+    }
 }

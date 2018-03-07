@@ -110,10 +110,14 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
+    void slot_analyseSelection();
 
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
+    QString convertWhiteSpaceToVisual(const QChar& first);
+// Not needed?    QString convertWhiteSpaceToVisual(const QChar& first, const QChar& second);
+
 
     int mFontHeight;
     int mFontWidth;
@@ -142,6 +146,7 @@ private:
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
+    QPointer<QAction> mpContextMenuAnalyser;
 };
 
 #endif // MUDLET_TTEXTEDIT_H
