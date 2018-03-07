@@ -36,6 +36,10 @@ windeployqt.exe mudlet.exe
 . "$sourceDir\CI\copy-non-qt-win-dependencies.ps1"
 
 Start-Sleep 10
-Start-Process mudlet.exe
+Start-Process -wait mudlet.exe
 
 cd $sourceDir
+
+Write-Output "Cleaning up created binary directories, so you can use QtCreator..."
+Remove-Item -force -Recurse "$sourcedir\src\debug"
+Remove-Item -force -Recurse "$sourcedir\src\release"
