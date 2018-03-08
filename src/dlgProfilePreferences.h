@@ -127,7 +127,7 @@ private slots:
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);
     void slot_setMapSymbolFont(const QFont&);
-    void slot_setMapSymbolFontStrategey(const bool);
+    void slot_setMapSymbolFontStrategy(const bool);
     void slot_changeShowMenuBar(const int);
     void slot_changeShowToolBar(const int);
 

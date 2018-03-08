@@ -507,7 +507,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
         connect(pushButton_showGlyphUsage, SIGNAL(clicked(bool)), this, SLOT(slot_showMapGlyphUsage()), Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(slot_setMapSymbolFont(const QFont&)), Qt::UniqueConnection);
-        connect(checkBox_isOnlyMapSymbolFontToBeUsed, SIGNAL(clicked(bool)), this, SLOT(slot_setMapSymbolFontStrategey(bool)), Qt::UniqueConnection);
+        connect(checkBox_isOnlyMapSymbolFontToBeUsed, SIGNAL(clicked(bool)), this, SLOT(slot_setMapSymbolFontStrategy(bool)), Qt::UniqueConnection);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -2446,9 +2446,9 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                               "to identify the graphemes needed to create the symbol.  These numbers can be utilised "
                                               "to determine precisely what is to be drawn even if some fonts have glyphs that are the "
                                               "same for different codepoints or combination of codepoints.</p>"
-                                              "<p>Character entry utilities such as <i>charmap.exe</> on <i>Windows</i> or <i>gucharmap</i> "
+                                              "<p>Character entry utilities such as <i>charmap.exe</i> on <i>Windows</i> or <i>gucharmap</i> "
                                               "on many Unix type operating systems will also use these numbers which cover "
-                                              "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use"
+                                              "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use "
                                               "Plane 16</i> via most of the written marks that humanity has ever made.</p>")));
 
         // Need to pad the numbers with spaces so that sorting works correctly:
@@ -2497,7 +2497,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                                  "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
                                                  "(glyphs) from chosen font</i> option or try and choose another font that does "
                                                  "have the needed glyphs.</p><p><i>You need not close this table to try another font, "
-                                                 "changing it on the main preferences dialogue will update this table after a slight"
+                                                 "changing it on the main preferences dialogue will update this table after a slight "
                                                  "delay.</i></p>")));
             } else {
                 pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
@@ -2557,7 +2557,7 @@ void dlgProfilePreferences::slot_showMapGlyphUsage()
     generateMapGlyphDisplay();
 }
 
-void dlgProfilePreferences::slot_setMapSymbolFontStrategey(const bool isToOnlyUseSelectedFont)
+void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUseSelectedFont)
 {
     Host* pHost = mpHost;
     if (!pHost ||!pHost->mpMap) {
