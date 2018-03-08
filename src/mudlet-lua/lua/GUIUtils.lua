@@ -597,7 +597,7 @@ end
 function replaceAll(word, what)
   local startp, endp = 1, 1
   while true do
-    startp, endp = getCurrentLine():find(word, endp + (#what - #word) + 1)
+    startp, endp = getCurrentLine():find(word)
     if not startp then
       break
     end
