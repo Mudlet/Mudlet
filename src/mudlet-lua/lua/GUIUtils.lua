@@ -596,11 +596,13 @@ end
 ---   </pre>
 function replaceAll(word, what)
   local startp, endp = 1, 1
+  local found = 0
   while true do
-    startp, endp = getCurrentLine():find(word)
+    startp, endp = getCurrentLine():find(word, (found*(endp + (#what - #word) + 1)))
     if not startp then
       break
     end
+    found = 1
     selectSection(startp - 1, endp - startp + 1)
     replace(what)
   end
