@@ -11239,12 +11239,16 @@ int TLuaInterpreter::ttsGetState(lua_State* L)
     switch (speechUnit->state()) {
     case QTextToSpeech::Ready:
         lua_pushstring(L, "ttsSpeechReady");
+        break;
     case QTextToSpeech::Paused:
         lua_pushstring(L, "ttsSpeechPaused");
+        break;
     case QTextToSpeech::Speaking:
         lua_pushstring(L, "ttsSpeechStarted");
+        break;
     case QTextToSpeech::BackendError:
         lua_pushstring(L, "ttsSpeechError");
+        break;
     default:
         lua_pushstring(L, "ttsUnknownState");
     }
