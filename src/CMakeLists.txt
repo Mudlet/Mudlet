@@ -21,187 +21,183 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-    set(mudlet_fonts_RCCS mudlet_fonts.qrc)
-    add_definitions(-DINCLUDE_FONTS)
+  set(mudlet_fonts_RCCS mudlet_fonts.qrc)
+  add_definitions(-DINCLUDE_FONTS)
 endif()
 
 set(mudlet_SRCS
-    ActionUnit.cpp
-    AliasUnit.cpp
-    ctelnet.cpp
-    dlgAboutDialog.cpp
-    dlgActionMainArea.cpp
-    dlgAliasMainArea.cpp
-    dlgColorTrigger.cpp
-    dlgComposer.cpp
-    dlgConnectionProfiles.cpp
-    dlgIRC.cpp
-    dlgKeysMainArea.cpp
-    dlgMapper.cpp
-    dlgNotepad.cpp
-    dlgPackageExporter.cpp
-    dlgProfilePreferences.cpp
-    dlgRoomExits.cpp
-    dlgScriptsMainArea.cpp
-    dlgSourceEditorArea.cpp
-    dlgSystemMessageArea.cpp
-    dlgTimersMainArea.cpp
-    dlgTriggerEditor.cpp
-    dlgTriggerPatternEdit.cpp
-    dlgTriggersMainArea.cpp
-    dlgVarsMainArea.cpp
-    EAction.cpp
-    exitstreewidget.cpp
-    FontManager.cpp
-    glwidget.cpp
-    Host.cpp
-    HostManager.cpp
-    ircmessageformatter.cpp
-    KeyUnit.cpp
-    LuaInterface.cpp
-    main.cpp
-    mudlet.cpp
-    ScriptUnit.cpp
-    T2DMap.cpp
-    TAction.cpp
-    TAlias.cpp
-    TArea.cpp
-    TBuffer.cpp
-    TCommandLine.cpp
-    TConsole.cpp
-    TDebug.cpp
-    TDockWidget.cpp
-    TEasyButtonBar.cpp
-    TFlipButton.cpp
-    TForkedProcess.cpp
-    TimerUnit.cpp
-    TKey.cpp
-    TLabel.cpp
-    TLuaInterpreter.cpp
-    TMap.cpp
-    TriggerUnit.cpp
-    TRoom.cpp
-    TRoomDB.cpp
-    TScript.cpp
-    TSplitter.cpp
-    TSplitterHandle.cpp
-    TTextEdit.cpp
-    TTimer.cpp
-    TToolBar.cpp
-    TTreeWidget.cpp
-    TTrigger.cpp
-    TVar.cpp
-    VarUnit.cpp
-    XMLexport.cpp
-    XMLimport.cpp
-)
+  ActionUnit.cpp
+  AliasUnit.cpp
+  ctelnet.cpp
+  dlgAboutDialog.cpp
+  dlgActionMainArea.cpp
+  dlgAliasMainArea.cpp
+  dlgColorTrigger.cpp
+  dlgComposer.cpp
+  dlgConnectionProfiles.cpp
+  dlgIRC.cpp
+  dlgKeysMainArea.cpp
+  dlgMapper.cpp
+  dlgNotepad.cpp
+  dlgPackageExporter.cpp
+  dlgProfilePreferences.cpp
+  dlgRoomExits.cpp
+  dlgScriptsMainArea.cpp
+  dlgSourceEditorArea.cpp
+  dlgSystemMessageArea.cpp
+  dlgTimersMainArea.cpp
+  dlgTriggerEditor.cpp
+  dlgTriggerPatternEdit.cpp
+  dlgTriggersMainArea.cpp
+  dlgVarsMainArea.cpp
+  EAction.cpp
+  exitstreewidget.cpp
+  FontManager.cpp
+  glwidget.cpp
+  Host.cpp
+  HostManager.cpp
+  ircmessageformatter.cpp
+  KeyUnit.cpp
+  LuaInterface.cpp
+  main.cpp
+  mudlet.cpp
+  ScriptUnit.cpp
+  T2DMap.cpp
+  TAction.cpp
+  TAlias.cpp
+  TArea.cpp
+  TBuffer.cpp
+  TCommandLine.cpp
+  TConsole.cpp
+  TDebug.cpp
+  TDockWidget.cpp
+  TEasyButtonBar.cpp
+  TFlipButton.cpp
+  TForkedProcess.cpp
+  TimerUnit.cpp
+  TKey.cpp
+  TLabel.cpp
+  TLuaInterpreter.cpp
+  TMap.cpp
+  TriggerUnit.cpp
+  TRoom.cpp
+  TRoomDB.cpp
+  TScript.cpp
+  TSplitter.cpp
+  TSplitterHandle.cpp
+  TTextEdit.cpp
+  TTimer.cpp
+  TToolBar.cpp
+  TTreeWidget.cpp
+  TTrigger.cpp
+  TVar.cpp
+  VarUnit.cpp
+  XMLexport.cpp
+  XMLimport.cpp)
 
 # This is for compiled UI files, not those used at runtime though the resource file.
 set(mudlet_UIS
-    ui/about_dialog.ui
-    ui/actions_main_area.ui
-    ui/aliases_main_area.ui
-    ui/color_trigger.ui
-    ui/composer.ui
-    ui/connection_profiles.ui
-    ui/dlgPackageExporter.ui
-    ui/irc.ui
-    ui/keybindings_main_area.ui
-    ui/main_window.ui
-    ui/mapper.ui
-    ui/notes_editor.ui
-    ui/profile_preferences.ui
-    ui/room_exits.ui
-    ui/scripts_main_area.ui
-    ui/source_editor_area.ui
-    ui/system_message_area.ui
-    ui/timers_main_area.ui
-    ui/triggers_main_area.ui
-    ui/trigger_editor.ui
-    ui/trigger_pattern_edit.ui
-    ui/vars_main_area.ui
-)
+  ui/about_dialog.ui
+  ui/actions_main_area.ui
+  ui/aliases_main_area.ui
+  ui/color_trigger.ui
+  ui/composer.ui
+  ui/connection_profiles.ui
+  ui/dlgPackageExporter.ui
+  ui/irc.ui
+  ui/keybindings_main_area.ui
+  ui/main_window.ui
+  ui/mapper.ui
+  ui/notes_editor.ui
+  ui/profile_preferences.ui
+  ui/room_exits.ui
+  ui/scripts_main_area.ui
+  ui/source_editor_area.ui
+  ui/system_message_area.ui
+  ui/timers_main_area.ui
+  ui/triggers_main_area.ui
+  ui/trigger_editor.ui
+  ui/trigger_pattern_edit.ui
+  ui/vars_main_area.ui)
 
 set(mudlet_MOC_HDRS
-    ctelnet.h
-    dlgAboutDialog.h
-    dlgActionMainArea.h
-    dlgAliasMainArea.h
-    dlgColorTrigger.h
-    dlgComposer.h
-    dlgConnectionProfiles.h
-    dlgIRC.h
-    dlgKeysMainArea.h
-    dlgMapper.h
-    dlgNotepad.h
-    dlgPackageExporter.h
-    dlgProfilePreferences.h
-    dlgRoomExits.h
-    dlgScriptsMainArea.h
-    dlgSourceEditorArea.h
-    dlgSystemMessageArea.h
-    dlgTimersMainArea.h
-    dlgTriggerEditor.h
-    dlgTriggerPatternEdit.h
-    dlgTriggersMainArea.h
-    dlgVarsMainArea.h
-    EAction.h
-    exitstreewidget.h
-    glwidget.h
-    mudlet.h
-    T2DMap.h
-    TCommandLine.h
-    TConsole.h
-    TEasyButtonBar.h
-    TForkedProcess.h
-    TLabel.h
-    TLuaInterpreter.h
-    TMap.h
-    TSplitter.h
-    TSplitterHandle.h
-    TTextEdit.h
-    TToolBar.h
-    TTreeWidget.h
-)
+  ctelnet.h
+  dlgAboutDialog.h
+  dlgActionMainArea.h
+  dlgAliasMainArea.h
+  dlgColorTrigger.h
+  dlgComposer.h
+  dlgConnectionProfiles.h
+  dlgIRC.h
+  dlgKeysMainArea.h
+  dlgMapper.h
+  dlgNotepad.h
+  dlgPackageExporter.h
+  dlgProfilePreferences.h
+  dlgRoomExits.h
+  dlgScriptsMainArea.h
+  dlgSourceEditorArea.h
+  dlgSystemMessageArea.h
+  dlgTimersMainArea.h
+  dlgTriggerEditor.h
+  dlgTriggerPatternEdit.h
+  dlgTriggersMainArea.h
+  dlgVarsMainArea.h
+  EAction.h
+  exitstreewidget.h
+  glwidget.h
+  mudlet.h
+  T2DMap.h
+  TCommandLine.h
+  TConsole.h
+  TEasyButtonBar.h
+  TForkedProcess.h
+  TLabel.h
+  TLuaInterpreter.h
+  TMap.h
+  TSplitter.h
+  TSplitterHandle.h
+  TTextEdit.h
+  TToolBar.h
+  TTreeWidget.h)
 
 set(mudlet_HDRS
-    ActionUnit.h
-    AliasUnit.h
-    FontManager.h
-    Host.h
-    HostManager.h
-    ircmessageformatter.h
-    KeyUnit.h
-    LuaInterface.h
-    pre_guard.h
-    post_guard.h
-    ScriptUnit.h
-    TAction.h
-    TAlias.h
-    TArea.h
-    TAstar.h
-    TBuffer.h
-    TDebug.h
-    TDockWidget.h
-    testdbg.h
-    TEvent.h
-    TFlipButton.h
-    TimerUnit.h
-    TKey.h
-    TMatchState.h
-    Tree.h
-    TriggerUnit.h
-    TRoom.h
-    TRoomDB.h
-    TScript.h
-    TSplitterHandle.h
-    TTimer.h
-    TTrigger.h
-    TVar.h
-    VarUnit.h
-    XMLexport.h
-    XMLimport.h
-)
+  ActionUnit.h
+  AliasUnit.h
+  FontManager.h
+  Host.h
+  HostManager.h
+  ircmessageformatter.h
+  KeyUnit.h
+  LuaInterface.h
+  pre_guard.h
+  post_guard.h
+  ScriptUnit.h
+  TAction.h
+  TAlias.h
+  TArea.h
+  TAstar.h
+  TBuffer.h
+  TDebug.h
+  TDockWidget.h
+  testdbg.h
+  TEvent.h
+  TFlipButton.h
+  TimerUnit.h
+  TKey.h
+  TMatchState.h
+  Tree.h
+  TriggerUnit.h
+  TRoom.h
+  TRoomDB.h
+  TScript.h
+  TSplitterHandle.h
+  TTimer.h
+  TTrigger.h
+  TVar.h
+  VarUnit.h
+  XMLexport.h
+  XMLimport.h)
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
@@ -336,13 +332,19 @@ find_package(Qt5 COMPONENTS Gamepad QUIET)
 # This is not present before Qt 5.9:
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.6)
+if(Qt5Core_VERSION VERSION_LESS 5.6)
   message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
-elif (Qt5Core_VERSION VERSION_LESS 5.7)
-  message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad or TextToSpeech support, they requires 5.7 and 5.9 respectively at a minimum.")
-elif (Qt5Core_VERSION VERSION_LESS 5.9)
-  message(WARNING "Qt version: ${Qt5Core_VERSION} - no TextToSpeech support, it requires 5.9 at a minimum.")
-else ()
+elif(Qt5Core_VERSION VERSION_LESS 5.9)
+  # Qt Gamepad was a Technology Preview in 5.7
+  # Qt Gamepad was a Technology Preview 2 in 5.8
+  # Qt Speech (or at least the TTS part) was a Technology Preview in 5.8
+  message(WARNING "Qt version: ${Qt5Core_VERSION} - Gamepad and TextToSpeech may not be supported, as officially they requires 5.9 and 5.10 respectively")
+elif(Qt5Core_VERSION VERSION_LESS 5.10)
+  # Qt Speech (or at least the TTS part) was a Technology Preview 2 in 5.9, now supported on Mingw
+  # Qt Gamepad was officially released in 5.9
+  message(WARNING "Qt version: ${Qt5Core_VERSION} - TextToSpeech may not be supported, officially it requires 5.10")
+else()
+  # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
 endif()
 
@@ -395,8 +397,8 @@ find_package(Boost 1.44 COMPONENTS graph)
 add_definitions(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
 if(UNIX)
-    set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
-    set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
+  set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
+  set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
 endif(UNIX)
 
 # Define a preprocessor symbol with the default fallback location from which
@@ -412,35 +414,34 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
-    ${Qt5Core_INCLUDE_DIRS}
-    ${Qt5Widgets_INCLUDE_DIRS}
-    ${Qt5Network_INCLUDE_DIRS}
-    ${Qt5OpenGL_INCLUDE_DIRS}
-    ${Qt5Multimedia_INCLUDE_DIRS}
-    ${Qt5UiTools_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIRS}
-    ${LUA_INCLUDE_DIR}
-    ${PCRE_INCLUDE_DIR}
-    ${YAJL_INCLUDE_DIR}
-)
+  ${Qt5Core_INCLUDE_DIRS}
+  ${Qt5Widgets_INCLUDE_DIRS}
+  ${Qt5Network_INCLUDE_DIRS}
+  ${Qt5OpenGL_INCLUDE_DIRS}
+  ${Qt5Multimedia_INCLUDE_DIRS}
+  ${Qt5UiTools_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
+  ${LUA_INCLUDE_DIR}
+  ${PCRE_INCLUDE_DIR}
+  ${YAJL_INCLUDE_DIR})
 
-if (Qt5TextToSpeech_FOUND)
-    add_definitions(${Qt5TextToSpeech_DEFINITIONS})
-    include_directories(${Qt5TextToSpeech_INCLUDE_DIRS})
-    message(STATUS "Using TextToSpeech module")
-endif (Qt5TextToSpeech_FOUND)
+if(Qt5TextToSpeech_FOUND)
+  add_definitions(${Qt5TextToSpeech_DEFINITIONS})
+  include_directories(${Qt5TextToSpeech_INCLUDE_DIRS})
+  message(STATUS "Using TextToSpeech module")
+endif(Qt5TextToSpeech_FOUND)
 
 if(Qt5Gamepad_FOUND)
-    add_definitions(${Qt5Gamepad_DEFINITIONS})
-    include_directories(${Qt5Gamepad_INCLUDE_DIRS})
-    message(STATUS "Using Gamepad module")
+  add_definitions(${Qt5Gamepad_DEFINITIONS})
+  include_directories(${Qt5Gamepad_INCLUDE_DIRS})
+  message(STATUS "Using Gamepad module")
 endif(Qt5Gamepad_FOUND)
 
 # Need to use the plural variables as there can be more than ONE directory to specify:
 if(PC_ZIP_FOUND)
-    include_directories( ${PC_ZIP_INCLUDE_DIRS} )
+  include_directories( ${PC_ZIP_INCLUDE_DIRS} )
 else()
-    include_directories( ${ZIP_INCLUDE_DIRS} )
+  include_directories( ${ZIP_INCLUDE_DIRS} )
 endif()
 
 include_directories( ${ZLIB_INCLUDE_DIR} )
@@ -448,82 +449,76 @@ include_directories( ${ZLIB_INCLUDE_DIR} )
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 if(USE_FONTS)
-    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
+  QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
 else()
-    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+  QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 endif()
 
 if(WIN32)
-    add_executable(mudlet WIN32
-        ${mudlet_SRCS}
-        ${mudlet_MOC_SRCS}
-        ${mudlet_RCC_SRCS}
-        ${mudlet_HDRS}
-        ${mudlet_UIS_H}
-        ${mudlet_MOC_HDRS}
-        ${mudlet_LUA_FILES}
-    )
+  add_executable(mudlet WIN32
+    ${mudlet_SRCS}
+    ${mudlet_MOC_SRCS}
+    ${mudlet_RCC_SRCS}
+    ${mudlet_HDRS}
+    ${mudlet_UIS_H}
+    ${mudlet_MOC_HDRS}
+    ${mudlet_LUA_FILES})
 else()
-    add_executable(mudlet
-        ${mudlet_SRCS}
-        ${mudlet_MOC_SRCS}
-        ${mudlet_RCC_SRCS}
-        ${mudlet_HDRS}
-        ${mudlet_UIS_H}
-        ${mudlet_MOC_HDRS}
-        ${mudlet_LUA_FILES}
-    )
+  add_executable(mudlet
+    ${mudlet_SRCS}
+    ${mudlet_MOC_SRCS}
+    ${mudlet_RCC_SRCS}
+    ${mudlet_HDRS}
+    ${mudlet_UIS_H}
+    ${mudlet_MOC_HDRS}
+    ${mudlet_LUA_FILES})
 endif()
 
 target_link_libraries(mudlet
-    ${Qt5Core_LIBRARIES}
-    ${Qt5Widgets_LIBRARIES}
-    ${Qt5Network_LIBRARIES}
-    ${Qt5Multimedia_LIBRARIES}
-    ${Qt5OpenGL_LIBRARIES}
-    ${Qt5UiTools_LIBRARIES}
-    ${Qt5Concurrent_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${LUA_LIBRARIES}
-    ${OPENGL_LIBRARIES}
-    ${PCRE_LIBRARIES}
-    ${YAJL_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    communi
-    lua_yajl
-    edbee-lib
-)
+  ${Qt5Core_LIBRARIES}
+  ${Qt5Widgets_LIBRARIES}
+  ${Qt5Network_LIBRARIES}
+  ${Qt5Multimedia_LIBRARIES}
+  ${Qt5OpenGL_LIBRARIES}
+  ${Qt5UiTools_LIBRARIES}
+  ${Qt5Concurrent_LIBRARIES}
+  ${Boost_LIBRARIES}
+  ${LUA_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+  ${PCRE_LIBRARIES}
+  ${YAJL_LIBRARIES}
+  ${ZLIB_LIBRARIES}
+  communi
+  lua_yajl
+  edbee-lib)
 
-if (Qt5TextToSpeech_FOUND)
-  TARGET_LINK_LIBRARIES(mudlet ${Qt5TextToSpeech_LIBRARIES})
-endif (Qt5TextToSpeech_FOUND)
+if(Qt5TextToSpeech_FOUND)
+  target_link_libraries(mudlet ${Qt5TextToSpeech_LIBRARIES})
+endif(Qt5TextToSpeech_FOUND)
 
 if(USE_UPDATER)
-    target_link_libraries(mudlet
-        dblsqd)
+  target_link_libraries(mudlet dblsqd)
 endif(USE_UPDATER)
 
 if(Qt5Gamepad_FOUND)
-    target_link_libraries(mudlet ${Qt5Gamepad_LIBRARIES})
+  target_link_libraries(mudlet ${Qt5Gamepad_LIBRARIES})
 endif(Qt5Gamepad_FOUND)
 
 if(PC_ZIP_FOUND)
-    target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
+  target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
 else()
-    target_link_libraries(mudlet ${ZIP_LIBRARIES})
+  target_link_libraries(mudlet ${ZIP_LIBRARIES})
 endif()
 
 if(APPLE)
-  target_link_libraries(mudlet
-          luazip
-  )
+  target_link_libraries(mudlet luazip)
 
   if(USE_UPDATER)
     target_link_libraries(mudlet
-          cocoa-qt-glue
-          "-framework Sparkle"
-          "-framework AppKit"
-          "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+      cocoa-qt-glue
+      "-framework Sparkle"
+      "-framework AppKit"
+      "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
   endif(USE_UPDATER)
 endif()
 

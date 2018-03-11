@@ -121,12 +121,12 @@ endif()
 # something else or not even exist).
 set(FONT_TEST $ENV{WITH_FONTS})
 if(DEFINED FONT_TEST)
-    string(TOUPPER ${FONT_TEST} FONT_TEST)
+  string(TOUPPER ${FONT_TEST} FONT_TEST)
 else()
-    # Set the CMake variable to the default if it (as a result of WITH_FONTS not
-    # existing) has not been defined, without the if(DEFINED ...) string(...)
-    # errors out - and so may further tests on the variable...
-    set(FONT_TEST "YES")
+  # Set the CMake variable to the default if it (as a result of WITH_FONTS not
+  # existing) has not been defined, without the if(DEFINED ...) string(...)
+  # errors out - and so may further tests on the variable...
+  set(FONT_TEST "YES")
 endif()
 if(FONT_TEST STREQUAL "NO")
   option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" OFF)
