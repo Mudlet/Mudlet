@@ -9160,95 +9160,8 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     }
 }
 
-int TLuaInterpreter::setRoomChar(lua_State* L)
-{
-    int id;
-    string c;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomChar: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
-        return lua_error(L);
-    } else {
-        id = lua_tointeger(L, 1);
-    }
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setRoomChar: bad argument #2 type (room character as single latin1 character expected, got %s!)",
-                       luaL_typename(L, 2));
-        return lua_error(L);
-    } else {
-        c = lua_tostring(L, 2);
-    }
-
-    Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        if (c.size() >= 1) {
-            if (c[0] == ' ') {
-                pR->mSymbol.clear();
-                lua_pushboolean(L, true);
-                return 1;
-            } else if (c[0] >= 33) {
-                pR->mSymbol = c[0];
-                lua_pushboolean(L, true);
-                return 1;
-            } else {
-                lua_pushnil(L);
-                lua_pushfstring(L, "invalid first character code: %d in supplied room character", c[0]);
-                return 2;
-            }
-        } else {
-            // Allow an empty string to be used to clear the symbol:
-            pR->mSymbol.clear();
-            lua_pushboolean(L, true);
-            return 1;
-        }
-    }
-}
-
-int TLuaInterpreter::getRoomChar(lua_State* L)
-{
-    int id;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getRoomChar: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
-        return lua_error(L);
-    } else {
-        id = lua_tointeger(L, 1);
-    }
-
-    Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        if (pR->mSymbol.isEmpty()) {
-            lua_pushstring(L, "");
-            return 1;
-        } else if (pR->mSymbol.length() >1) {
-            lua_pushstring(L, "?");
-            lua_pushfstring(L, "the symbol for the room cannot be represented as a single ASCII character, use getRoomSymbol(roomId) instead");
-            return 2;
-        } else if (pR->mSymbol.at(0).row()) {
-            lua_pushstring(L, "?");
-            lua_pushfstring(L, "the symbol for the room cannot be represented as a single ASCII character, use getRoomSymbol(roomId) instead");
-            return 2;
-        } else {
-            char character[2];
-            character[0] = pR->mSymbol.at(0).toLatin1();
-            character[1] = '\0';
-            lua_pushstring(L, character);
-            return 1;
-        }
-    }
-}
-
+// This replaces the setRoomChar function which is now registered to use the
+// same C++ method so the old name still works in Lua scripts
 int TLuaInterpreter::setRoomSymbol(lua_State* L)
 {
     int id;
@@ -9289,6 +9202,8 @@ int TLuaInterpreter::setRoomSymbol(lua_State* L)
     }
 }
 
+// This replaces the getRoomChar function which is now registered to use the
+// same C++ method so the old name still works in lua scripts
 int TLuaInterpreter::getRoomSymbol(lua_State* L)
 {
     int id;
@@ -12280,8 +12195,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRoomAreaName", TLuaInterpreter::getRoomAreaName);
     lua_register(pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea);
     lua_register(pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom);
-    lua_register(pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar);
-    lua_register(pGlobalLua, "getRoomChar", TLuaInterpreter::getRoomChar);
+    lua_register(pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomSymbol);
+    lua_register(pGlobalLua, "getRoomChar", TLuaInterpreter::getRoomSymbol);
     lua_register(pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler);
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
