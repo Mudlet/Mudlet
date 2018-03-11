@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
@@ -25,6 +26,7 @@
 #include "TTextEdit.h"
 
 
+#include "mudlet.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -75,7 +77,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
         }
 
         mpHost->mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
         p.setFont(mpHost->mDisplayFont);
@@ -93,7 +95,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
         mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
         p.setFont(mDisplayFont);
@@ -190,7 +192,7 @@ void TTextEdit::initDefaultSettings()
     mFgColor = QColor(192, 192, 192);
     mBgColor = QColor(Qt::black);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     int width = mScreenWidth * mFontWidth * 2;
     int height = mFontHeight * 2;
     // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -221,7 +223,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -245,7 +247,7 @@ void TTextEdit::updateScreenView()
         mFontHeight = mFontAscent + mFontDescent;
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -264,7 +266,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         int width = mScreenWidth * mFontWidth * 2;
         int height = mFontHeight * 2;
         // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -399,7 +401,7 @@ inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QStr
         font.setUnderline(isUnderline);
         font.setItalic(isItalics);
         font.setStrikeOut(isStrikeOut);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
 #endif
         painter.setFont(font);
@@ -407,7 +409,7 @@ inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QStr
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     QPointF _p(rect.x(), rect.bottom() - mFontDescent);
     painter.drawText(_p, text);
 #else
@@ -1160,27 +1162,52 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
 
         QAction* action = new QAction("copy", this);
-        action->setStatusTip(tr("copy selected text to clipboard"));
+        // According to the Qt Documentation:
+        // "This text is used for the tooltip."
+        // "If no tooltip is specified, the action's text is used."
+        // "By default, this property contains the action's text."
+        // So it seems that if we turn on tooltips (for all QAction) on a menu
+        // (with QMenu::setToolTipsVisible(true)) we should forcible clear
+        // the tooltip contents which are presumable filled with the default
+        // in the QAction constructor:
+        action->setToolTip(QString());
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
         QAction* action2 = new QAction("copy HTML", this);
-        action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
+        action2->setToolTip(QString());
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
         QAction* action3 = new QAction("select all", this);
-        action3->setStatusTip(tr("select all text in the buffer"));
+        action3->setToolTip(QString());
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(("search on " + selectedEngine), this);
+        action4->setToolTip(QString());
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
-        action4->setStatusTip("search selected text on " + selectedEngine);
 
         auto popup = new QMenu(this);
+        popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
         popup->addSeparator();
         popup->addAction(action3);
         popup->addSeparator();
         popup->addAction(action4);
+
+        if (!mudlet::self()->isControlsVisible()) {
+            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
+            connect(actionRestoreMainMenu, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainMenu()));
+            actionRestoreMainMenu->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                              .arg(tr("Use this to restore the Main menu to get access to controls.")));
+
+            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
+            connect(actionRestoreMainToolBar, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainToolBar()));
+            actionRestoreMainToolBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                 .arg(tr("Use this to restore the Main Toolbar to get access to controls.")));
+
+            popup->addSeparator();
+            popup->addAction(actionRestoreMainMenu);
+            popup->addAction(actionRestoreMainToolBar);
+        }
 
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
@@ -1390,6 +1417,8 @@ QString TTextEdit::getSelectedText(char newlineChar)
         // we never append the last character of a buffer line se we set our own
         text.append(newlineChar);
     }
+    qDebug() << "TTextEdit::getSelectedText(...) INFO - unexpectedly hit bottom of method so returning:" << text;
+    return text;
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
@@ -1544,4 +1573,30 @@ int TTextEdit::bufferScrollDown(int lines)
 
         return lines;
     }
+}
+
+int TTextEdit::getColumnCount()
+{
+    int charWidth;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        charWidth = qRound(QFontMetricsF(mpHost->mDisplayFont).averageCharWidth());
+    } else {
+        charWidth = qRound(QFontMetricsF(mDisplayFont).averageCharWidth());
+    }
+
+    return width() / charWidth;
+}
+
+int TTextEdit::getRowCount()
+{
+    int rowHeight;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        rowHeight = qRound(QFontMetricsF(mpHost->mDisplayFont).lineSpacing());
+    } else {
+        rowHeight = qRound(QFontMetricsF(mDisplayFont).lineSpacing());
+    }
+
+    return height() / rowHeight;
 }

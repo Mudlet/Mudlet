@@ -125,6 +125,16 @@ function Geyser.MiniConsole:setLink(...)
   setLink(self.name, ...)
 end
 
+--- Returns the number of simultaneous rows that this miniconsole can show at once
+function Geyser.MiniConsole:getRowCount()
+    return getRowCount(self.name)
+end
+
+--- Returns the number of simultaneous columns (characters) that this miniconsole can show at once on a single row
+function Geyser.MiniConsole:getColumnCount()
+    return getColumnCount(self.name)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 

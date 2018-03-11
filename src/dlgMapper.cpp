@@ -113,6 +113,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setYRotation(int)));
     connect(zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setZRotation(int)));
     connect(showRoomIDs, SIGNAL(stateChanged(int)), this, SLOT(slot_toggleShowRoomIDs(int)));
+    // Explicitly set the font otherwise it changes between the Application and
+    // the default System one as the mapper is docked and undocked!
     QFont mapperFont = QFont(mpHost->mDisplayFont.family());
     if (mpHost->mNoAntiAlias) {
         mapperFont.setStyleStrategy(QFont::NoAntialias);
@@ -120,8 +122,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
         mapperFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality));
     }
     setFont(mapperFont);
-    // Explicitly set the font otherwise it changes between the Application and
-    // the default System one as the mapper is docked and undocked!
     mp2dMap->mFontHeight = QFontMetrics(mpHost->mDisplayFont).height();
     glWidget->hide();
     mpMap->customEnvColors[257] = mpHost->mRed_2;
@@ -140,9 +140,12 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
-    // Not needed as already explicitly called, IMHO - Slysven
-    //    qDebug()<<"dlgMapper constructor -> call T2DMap::init()";
-    //    mp2dMap->init();
+    if (mpHost) {
+        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpHost->getName(): " << mpHost->getName();
+        mp2dMap->init();
+    } else {
+        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
+    }
 }
 
 void dlgMapper::updateAreaComboBox()

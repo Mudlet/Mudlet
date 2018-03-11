@@ -303,7 +303,7 @@ public:
     static int showUserWindow(lua_State*);
     static int hideUserWindow(lua_State*);
     static int closeUserWindow(lua_State*);
-    static int resizeUserWindow(lua_State*);
+    static int resizeWindow(lua_State*);
     static int createStopWatch(lua_State*);
     static int stopStopWatch(lua_State*);
     static int getStopWatchTime(lua_State*);
@@ -445,8 +445,12 @@ public:
 #endif // QT_TEXTTOSPEECH_LIB
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
+    static int getColumnCount(lua_State*);
+    static int getRowCount(lua_State*);
+    static int getOS(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
+    void freeLuaRegistryIndex(int index);
 
 public slots:
     void slot_replyFinished(QNetworkReply*);

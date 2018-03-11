@@ -75,6 +75,9 @@ public:
     TEvent mLeaveParams;
     TEvent mEnterParams;
     bool mouseInside;
+
+private:
+    void releaseParams(Host* pHost, TEvent& params);
 };
 
 #endif // MUDLET_TLABEL_H

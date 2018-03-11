@@ -959,8 +959,8 @@ bool TMap::findPath(int from, int to)
     vertex goal = roomidToIndex.value(to);
 
     std::vector<vertex> p(num_vertices(g));
-    // Somehow p is an acending, monotonic series of numbers start at 0, it
-    // seems we have a redundent indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
+    // Somehow p is an ascending, monotonic series of numbers start at 0, it
+    // seems we have a redundant indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
     std::vector<cost> d(num_vertices(g));
     try {
         astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
@@ -1153,7 +1153,7 @@ bool TMap::serialize(QDataStream& ofs)
         QString message = tr("[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
                              "format of at least 17 to preserve it before quitting!\n"
                              "Areas id affected: %1.")
-                                  .arg(areaIds.join(tr(", "))); // Translatable in case list separators are locale dependendent!
+                                  .arg(areaIds.join(tr(", "))); // Translatable in case list separators are locale dependant!
         mpHost->mTelnet.postMessage(message);
     }
     // End of TODO
@@ -1265,7 +1265,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         QDataStream ifs(&file);
         ifs >> mVersion;
         if (mVersion > mMaxVersion) {
-            QString errMsg = tr("[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
+            QString errMsg = tr("[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of\n"
                                 "Mudlet can handle (%2)!  The file is:\n\"%3\".")
                                      .arg(mVersion)
                                      .arg(mMaxVersion)
