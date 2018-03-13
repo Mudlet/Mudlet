@@ -25,20 +25,6 @@ SetQtBaseDir "$logFile"
 
 $Env:PATH = "$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 
-function filterPathForSh {
-    $path = $Env:PATH
-    try{
-      while($True){
-        $Env:PATH = ($Env:PATH.Split(';') | Where-Object { $_ -ne (Get-Command "sh.exe" -ErrorAction Stop | Select-Object -ExpandProperty definition | Split-Path -Parent) }) -join ';'
-      }
-    } catch{
-      # Do nothing
-    }
-    $noShPath = $Env:PATH
-    $Env:PATH = $path
-    return $noShPath
-}
-
 # Helper functions
 # see http://patrick.lioi.net/2011/08/18/powershell-and-calling-external-executables/
 function script:exec {
@@ -65,6 +51,21 @@ function script:exec {
   }
   # restore exit behavior
   $global:ErrorActionPreference = "Stop"
+}
+
+# Checks, whether sh.exe is found in the PATH. If so, these parts get filtered out and the remaining PATH gets returned.
+function filterPathForSh {
+    $path = $Env:PATH
+    try{
+      while($True){
+        $Env:PATH = ($Env:PATH.Split(';') | Where-Object { $_ -ne (Get-Command "sh.exe" -ErrorAction Stop | Select-Object -ExpandProperty definition | Split-Path -Parent) }) -join ';'
+      }
+    } catch{
+      # Do nothing
+    }
+    $noShPath = $Env:PATH
+    $Env:PATH = $path
+    return $noShPath
 }
 
 function PartSkeleton([string] $content) {
@@ -338,8 +339,9 @@ CheckAndInstall "Python" "C:\Python27\python.exe" { InstallPython }
 SetMingwBaseDir "$logFile"
 $ShPath = "$Env:MINGW_BASE_DIR\bin;C:\Python27;$Env:PATH"
 $Env:PATH = $ShPath
+# Filter PATH because cmake complains if an sh.exe being in the PATH and it's instructed to create MinGW makefiles.
+# But on the other hand we keep sh.exe in the PATH to easily run "configure" scripts. So we create 2 variables and assign PATH accordingly.
 $NoShPath = filterPathForSh
-Write-Output $NoShPath
 
 CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\ssleay32.dll" { InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { InstallHunspell }
