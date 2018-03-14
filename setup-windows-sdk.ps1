@@ -15,11 +15,15 @@ cd "$sourceDir"
 SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 
-cd "$sourceDir\src"
+if(-NOT (Test-Path "$sourceDir\build")){
+    New-Item -ItemType Directory "$sourceDir\build"
+}
+
+cd "$sourceDir\build"
 
 Write-Output "Running qmake"
 $Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:QT_BASE_DIR\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
-qmake CONFIG+=debug mudlet.pro
+qmake CONFIG+=debug ../src/mudlet.pro
 if("$LastExitCode" -ne "0"){
   exit 1
 }
@@ -30,16 +34,7 @@ if("$LastExitCode" -ne "0"){
   exit 1
 }
 
-cd "$sourceDir\src\debug"
-
-windeployqt.exe mudlet.exe
-. "$sourceDir\CI\copy-non-qt-win-dependencies.ps1"
-
-Start-Sleep 10
-Start-Process -wait mudlet.exe
+cd "$sourceDir\build"
+Start-Process -wait debug\mudlet.exe
 
 cd $sourceDir
-
-Write-Output "Cleaning up created binary directories, so you can use QtCreator..."
-Remove-Item -force -Recurse "$sourcedir\src\debug"
-Remove-Item -force -Recurse "$sourcedir\src\release"
