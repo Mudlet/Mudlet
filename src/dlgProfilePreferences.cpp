@@ -598,6 +598,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
     connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
     connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
+
+    connect (pushButton_whereToLog, SIGNAL(clicked()), this, SLOT(setLogDir()));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1679,6 +1681,11 @@ void dlgProfilePreferences::copyMap()
     // CHECK: Race condition? We might be changing this whilst other profile
     // are accessing it...
     mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
+}
+
+void dlgProfilePreferences::setLogDir()
+{
+  Host* pHost = mpHost;
 }
 
 void dlgProfilePreferences::slot_save_and_exit()

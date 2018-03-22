@@ -111,6 +111,9 @@ public slots:
     void slot_showMapGlyphUsage();
 
 
+    // Log.
+    void setLogDir();
+
     // Save.
     void slot_save_and_exit();
 
