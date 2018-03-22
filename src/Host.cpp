@@ -83,6 +83,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
+, mLogDir("")
 , mResetProfile(false)
 , mScreenHeight(25)
 , mScreenWidth(90)

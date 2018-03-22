@@ -824,7 +824,14 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         QTextStream out(&file);
         file.close();
 
-        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+        QString directoryLogFile;
+        if (mpHost->mLogDir.isEmpty()) {
+            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath,
+                                                     profile_name);
+        } else {
+            directoryLogFile = mpHost->mLogDir;
+        }
+
         // Revised file name derived from time so that alphabetical filename and
         // date sort order are the same...
         QDir dirLogFile;

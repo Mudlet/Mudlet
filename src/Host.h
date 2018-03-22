@@ -220,6 +220,7 @@ public:
     bool mIsNextLogFileInHtmlFormat;
 
     bool mIsLoggingTimestamps;
+    QString mLogDir;
     bool mResetProfile;
     int mScreenHeight;
     int mScreenWidth;

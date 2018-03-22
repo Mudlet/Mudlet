@@ -162,6 +162,7 @@ private:
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+    QString logDirPath;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

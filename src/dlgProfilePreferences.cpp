@@ -401,6 +401,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
     rightBorderWidth->setValue(pHost->mBorderRightWidth);
+    logDirPath = pHost->mLogDir;
     mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
@@ -1685,7 +1686,21 @@ void dlgProfilePreferences::copyMap()
 
 void dlgProfilePreferences::setLogDir()
 {
-  Host* pHost = mpHost;
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    QDir currentLogDir =
+        QFileDialog::getExistingDirectory(this, tr("Select log directory"),
+                                          logDirPath,
+                                          QFileDialog::ShowDirsOnly);
+    if (currentLogDir.isEmpty()) {
+        return;
+    }
+    logDirPath = currentLogDir.absolutePath();
+    
+    return;
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
@@ -1747,6 +1762,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
+        pHost->mLogDir = logDirPath;
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
