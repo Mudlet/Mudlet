@@ -38,13 +38,13 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QToolButton>
 #include <QDateTime>
 #include <QDir>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
-#include <QToolButton>
 #include <QVBoxLayout>
 #include "post_guard.h"
 
@@ -826,8 +826,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         QString directoryLogFile;
         if (mpHost->mLogDir.isEmpty()) {
-            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath,
-                                                     profile_name);
+            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
@@ -841,12 +840,12 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
+            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, QDateTime::currentDateTime().toString(mpHost->mLogFileNameFormat));
         } else {
-            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
+            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(mpHost->mLogFileNameFormat));
         }
         mLogFile.setFileName(mLogFileName);
-        mLogFile.open(QIODevice::WriteOnly);
+        mLogFile.open(QIODevice::WriteOnly | QIODevice::Append);
         mLogStream.setDevice(&mLogFile);
         if (isMessageEnabled) {
             QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());

@@ -2076,6 +2076,23 @@
           <string>Log files</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_31">
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_setLogName">
+            <property name="text">
+             <string>Format of log file name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_setLogName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_setLogName">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Customize the format of the log file name.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Examples:&lt;/span&gt;&lt;/p&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Year:&lt;br/&gt;yyyy (e.g., 1997)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Year and month:&lt;br/&gt;yyyy-MM (e.g., 1997-07)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Complete date:&lt;br/&gt;yyyy-MM-dd (e.g., 1997-07-16)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Complete date plus hours and minutes:&lt;br/&gt;yyyy-MM-ddTHH:mm (e.g., 1997-07-16T19:20)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Complete date plus hours, minutes and seconds:&lt;br/&gt;yyyy-MM-ddTHH:mm:ss (e.g., 1997-07-16T19:20:30)&lt;/span&gt;&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_whereToLog">
             <property name="text">
@@ -2089,17 +2106,32 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_whereToLog">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When set, logs will be saved in this directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(Optional) Save log files in selected directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>Press to choose folder and load</string>
+             <string>Press to select folder</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_9">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="acceptDrops">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>&lt;p&gt;More information on date and time formatting &lt;a href=&quot;https://doc.qt.io/qt-5/qdatetime.html#toString-1&quot;&gt;here&lt;/a&gt;.</string>
             </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_logOptions">
          <property name="title">
           <string>Log options</string>

@@ -84,6 +84,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
 , mLogDir("")
+, mLogFileNameFormat(QStringLiteral("yyyy-MM-dd#hh-mm-ss"))
 , mResetProfile(false)
 , mScreenHeight(25)
 , mScreenWidth(90)
@@ -204,12 +205,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mDoubleClickIgnore.insert('\'');
 
     // search engine load entries
-    mSearchEngineData = QMap<QString, QString>(
-    {
-                    {"Bing",       "https://www.bing.com/search?q="},
-                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
-                    {"Google",     "https://www.google.com/search?q="}
-    });
+    mSearchEngineData = QMap<QString, QString>({{"Bing", "https://www.bing.com/search?q="}, {"DuckDuckGo", "https://duckduckgo.com/?q="}, {"Google", "https://www.google.com/search?q="}});
 }
 
 Host::~Host()
@@ -479,7 +475,7 @@ void Host::reenableAllTriggers()
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    if(mSearchEngineData.contains(mSearchEngineName))
+    if (mSearchEngineData.contains(mSearchEngineName))
         return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
     else
         return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
@@ -580,9 +576,7 @@ bool Host::resetStopWatch(int watchID)
     }
 }
 
-void Host::callEventHandlers()
-{
-}
+void Host::callEventHandlers() {}
 
 void Host::incomingStreamProcessor(const QString& data, int line)
 {

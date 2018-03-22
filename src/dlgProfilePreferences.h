@@ -163,6 +163,7 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     QString logDirPath;
+    QString logFileNameFormat;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

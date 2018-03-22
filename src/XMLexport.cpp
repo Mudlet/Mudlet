@@ -38,86 +38,37 @@
 
 using namespace std;
 
-XMLexport::XMLexport( Host * pH )
-: mpHost( pH )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+XMLexport::XMLexport(Host* pH) : mpHost(pH), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport( TTrigger * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( pT )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+XMLexport::XMLexport(TTrigger* pT) : mpHost(Q_NULLPTR), mpTrigger(pT), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport( TTimer * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( pT )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+XMLexport::XMLexport(TTimer* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(pT), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport( TAlias * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( pT )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+XMLexport::XMLexport(TAlias* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(pT), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport( TAction * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( pT )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+XMLexport::XMLexport(TAction* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(pT), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport( TScript * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( pT )
-, mpKey( Q_NULLPTR )
+XMLexport::XMLexport(TScript* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(pT), mpKey(Q_NULLPTR)
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport( TKey * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( pT )
+XMLexport::XMLexport(TKey* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(pT)
 {
     setAutoFormatting(true);
 }
@@ -331,6 +282,8 @@ bool XMLexport::writeHost(Host* pHost)
     // future - phpBB code might be useful if it can be done.
     writeAttribute("mRawStreamDump", pHost->mIsNextLogFileInHtmlFormat ? "yes" : "no");
     writeAttribute("mIsLoggingTimestamps", pHost->mIsLoggingTimestamps ? "yes" : "no");
+    writeAttribute("mLogDir", pHost->mLogDir);
+    writeAttribute("mLogFileNameFormat", pHost->mLogFileNameFormat);
     writeAttribute("mAlertOnNewData", pHost->mAlertOnNewData ? "yes" : "no");
     writeAttribute("mFORCE_NO_COMPRESSION", pHost->mFORCE_NO_COMPRESSION ? "yes" : "no");
     writeAttribute("mFORCE_GA_OFF", pHost->mFORCE_GA_OFF ? "yes" : "no");
@@ -389,10 +342,10 @@ bool XMLexport::writeHost(Host* pHost)
             }
             writeEndElement(); // </mInstalledModules>
         }
-// CHECK: Do we need:
-//        else {
-//            writeEmptyElement( "mInstalledModules" ); // i.e. <mInstalledModules />
-//        }
+        // CHECK: Do we need:
+        //        else {
+        //            writeEmptyElement( "mInstalledModules" ); // i.e. <mInstalledModules />
+        //        }
 
         writeTextElement("url", pHost->mUrl);
         writeTextElement("serverPackageName", pHost->mServerGUI_Package_name);
@@ -543,8 +496,8 @@ bool XMLexport::writeHost(Host* pHost)
 
     if (isOk) {
         writeStartElement("KeyPackage");
-        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTemporary() || (*it)->mModuleMember) {
+        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
+            if (!(*it) || (*it)->isTemporary() || (*it)->mModuleMember) {
                 continue;
             }
             if (!writeKey(*it)) {
@@ -708,10 +661,10 @@ bool XMLexport::writeGenericPackage(Host* pHost)
         writeEndElement(); // </ScriptPackage>
     }
 
-    if( isOk ) {
-        writeStartElement( "KeyPackage" );
-        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTemporary() ) {
+    if (isOk) {
+        writeStartElement("KeyPackage");
+        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
+            if (!(*it) || (*it)->isTemporary()) {
                 continue;
             }
             if (!writeKey(*it)) {

@@ -221,6 +221,7 @@ public:
 
     bool mIsLoggingTimestamps;
     QString mLogDir;
+    QString mLogFileNameFormat;
     bool mResetProfile;
     int mScreenHeight;
     int mScreenWidth;
