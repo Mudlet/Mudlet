@@ -9160,14 +9160,12 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     }
 }
 
-// This replaces the setRoomChar function which is now registered to use the
-// same C++ method so the old name still works in Lua scripts
-int TLuaInterpreter::setRoomSymbol(lua_State* L)
+int TLuaInterpreter::setRoomChar(lua_State* L)
 {
     int id;
     QString symbol;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomSymbol: bad argument #1 type (room id as number expected, got %s!)",
+        lua_pushfstring(L, "setRoomChar: bad argument #1 type (room id as number expected, got %s!)",
                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -9175,7 +9173,7 @@ int TLuaInterpreter::setRoomSymbol(lua_State* L)
     }
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setRoomSymbol: bad argument #2 type (room symbol as string expected, got %s!)",
+        lua_pushfstring(L, "setRoomChar: bad argument #2 type (room symbol as string expected, got %s!)",
                        luaL_typename(L, 2));
         return lua_error(L);
     } else {
@@ -9202,13 +9200,11 @@ int TLuaInterpreter::setRoomSymbol(lua_State* L)
     }
 }
 
-// This replaces the getRoomChar function which is now registered to use the
-// same C++ method so the old name still works in lua scripts
-int TLuaInterpreter::getRoomSymbol(lua_State* L)
+int TLuaInterpreter::getRoomChar(lua_State* L)
 {
     int id;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getRoomSymbol: bad argument #1 type (room id as number expected, got %s!)",
+        lua_pushfstring(L, "getRoomChar: bad argument #1 type (room id as number expected, got %s!)",
                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -12195,8 +12191,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRoomAreaName", TLuaInterpreter::getRoomAreaName);
     lua_register(pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea);
     lua_register(pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom);
-    lua_register(pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomSymbol);
-    lua_register(pGlobalLua, "getRoomChar", TLuaInterpreter::getRoomSymbol);
+    lua_register(pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar);
+    lua_register(pGlobalLua, "getRoomChar", TLuaInterpreter::getRoomChar);
     lua_register(pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler);
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
@@ -12286,8 +12282,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
-    lua_register(pGlobalLua, "setRoomSymbol", TLuaInterpreter::setRoomSymbol);
-    lua_register(pGlobalLua, "getRoomSymbol", TLuaInterpreter::getRoomSymbol);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
