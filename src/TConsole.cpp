@@ -167,10 +167,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mFormatSystemMessage.fgB = 0;
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
-    mWaitingForHighColorCode = false;
-    mHighColorModeForeground = false;
-    mHighColorModeBackground = false;
-    mIsHighColorMode = false;
 
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);

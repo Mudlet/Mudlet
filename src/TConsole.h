@@ -196,7 +196,6 @@ public:
 
     int mIndentCount;
     bool mIsDebugConsole;
-    bool mIsHighColorMode;
     bool mIsSubConsole;
     std::map<std::string, TLabel*> mLabelMap;
     QFile mLogFile;
@@ -213,9 +212,6 @@ public:
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
-    bool mHighColorModeBackground;
-    bool mHighColorModeForeground;
-
 
     QWidget* mpBaseVFrame;
     QWidget* mpTopToolBar;
@@ -244,7 +240,6 @@ public:
     bool mTriggerEngineMode;
     bool mUserConsole;
     QPoint mUserCursor;
-    bool mWaitingForHighColorCode;
     bool mWindowIsHidden;
     int mWrapAt;
     QLineEdit* networkLatency;
