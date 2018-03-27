@@ -3883,7 +3883,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_UTF8_PROCESSING)
             QString debugMsg;
             for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16));
+                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
             }
             qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
 #endif
@@ -3939,6 +3939,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
     } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80) {
         // Invalid as first byte
         isValid = false;
+        isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
         qDebug().nospace() << "TBuffer::processGBSequence(...) 1-byte sequence as " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " rejected!";
 #endif
@@ -4148,6 +4149,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // clang-format on
 
                     isValid = false;
+                    isToUseReplacementMark = true;
 
 #if defined(DEBUG_GB_PROCESSING)
                     qDebug().nospace() << "TBuffer::processGBSequence(...) 4-byte sequence as "
@@ -4251,6 +4253,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // Outside expected range
 
                     isValid = false;
+                    isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
                     qDebug().nospace() << "TBuffer::processGBSequence(...) 2-byte sequence as GB18030 rejected!";
 #endif
@@ -4322,7 +4325,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #if defined(DEBUG_GB_PROCESSING)
         QString debugMsg;
         for (size_t i = 0; i < gbSequenceLength; ++i) {
-            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16));
+            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
         qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
 #endif
