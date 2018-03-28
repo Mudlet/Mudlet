@@ -147,6 +147,9 @@ public slots:
     void slot_send_login();
     void slot_send_pass();
 
+signals:
+    // Raised when new data is incomming to trigger Alert handling in mudlet class:
+    void signal_newDataAlert(const QString&);
 
 private:
     cTelnet() {}

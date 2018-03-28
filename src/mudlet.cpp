@@ -1016,6 +1016,10 @@ void mudlet::slot_tab_changed(int tabID)
         return;
     }
 
+    // Automatically reset the colour of the tab back to "normal" to undo the
+    // effect of it being coloured on new data by using an invalid QColor:
+    mpTabBar->setTabTextColor(tabID, QColor());
+
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         mpCurrentActiveHost->mpConsole->hide();
         QString host = mpTabBar->tabText(tabID);
@@ -3607,4 +3611,24 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
     }
 
     return pHost->mTelnet.loadReplay(absoluteReplayFileName, pErrMsg);
+}
+
+// This is not the "mark the application as needing attention" function but the
+// one that marks a profile that is not the current one as having new data...
+void mudlet::slot_newDataOnHost(const QString& hostName)
+{
+    Host* pHost = mHostManager.getHost(hostName);
+    if (pHost && pHost != mpCurrentActiveHost) {
+        if (mpTabBar->isVisible()) {
+            // The data is not for the currently active host, so find out which
+            // one it is for and set the text colour on the tab on the shown tab-bar:
+            for (int i, total = mpTabBar->count(); i < total; ++i) {
+                if (mpTabBar->tabText(i) == hostName) {
+                    // Found the matching tab - turn it red:
+                    mpTabBar->setTabTextColor(i, Qt::red);
+                    break;
+                }
+            }
+        }
+    }
 }

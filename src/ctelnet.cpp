@@ -152,6 +152,10 @@ cTelnet::cTelnet(Host* pH)
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+    if (mudlet::self()) {
+        // mudlet::self() Will be null for default_host case which wont work here:
+        connect(this, SIGNAL(signal_newDataAlert(const QString&)), mudlet::self(), SLOT(slot_newDataOnHost(const QString&)));
+    }
 }
 
 void cTelnet::reset()
@@ -1510,6 +1514,8 @@ void cTelnet::postData()
     if (mAlertOnNewData) {
         QApplication::alert(mudlet::self(), 0);
     }
+    // Turn the tab text red if this is not the currently active host:
+    emit signal_newDataAlert(mpHost->getName());
 }
 
 void cTelnet::initStreamDecompressor()

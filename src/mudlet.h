@@ -359,6 +359,8 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_newDataOnHost(const QString&);
+
 
 protected:
     void closeEvent(QCloseEvent* event) override;
