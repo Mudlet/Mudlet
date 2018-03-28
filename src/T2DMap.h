@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +24,9 @@
 
 
 #include "pre_guard.h"
+#include <QCache>
 #include <QColor>
+#include <QFont>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
@@ -52,7 +54,6 @@ public:
     void paintMap();
     void setMapZoom(int zoom);
     QColor getColor(int id);
-    QColor _getColor(int id);
     void init();
     void exportAreaImage(int);
     void paintEvent(QPaintEvent*) override;
@@ -73,11 +74,14 @@ public:
     void setRoomSize(double);
     void setExitSize(double);
     void createLabel(QRectF labelRect);
+    // Clears cache so new symbols are built at next paintEvent():
+    void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
+    void addSymbolToPixmapCache(const QString, const bool);
+
 
     TMap* mpMap;
     QPointer<Host> mpHost;
-    int xzoom;
-    int yzoom;
+    int xyzoom;
     int mRX;
     int mRY;
     QPoint mPHighlight;
@@ -167,7 +171,7 @@ public slots:
     void shiftDown();
     void shiftLeft();
     void shiftRight();
-    void slot_setCharacter();
+    void slot_setSymbol();
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
@@ -220,9 +224,10 @@ private:
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames;
-    // The initialisation cannot be completed until both Host and TMap classes
-    // are setup - this gets set once init() has been done:
-    bool mIsInitialised;
+
+    QCache<QString, QPixmap> mSymbolPixmapCache;
+    ushort mSymbolFontSize;
+    QFont mMapSymbolFont;
 };
 
 #endif // MUDLET_T2DMAP_H
