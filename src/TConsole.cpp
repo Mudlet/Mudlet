@@ -88,7 +88,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpMapper(nullptr)
 , mpButtonMainLayer(nullptr)
 , mpScrollBar(new QScrollBar)
-
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -569,6 +568,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         // is not fatal...
         // So, this SHOULD be the main profile console - Slysven
         connect(mudlet::self(), SIGNAL(signal_profileMapReloadRequested(QList<QString>)), this, SLOT(slot_reloadMap(QList<QString>)), Qt::UniqueConnection);
+        connect(this, SIGNAL(signal_newDataAlert(const QString&, const bool)), mudlet::self(), SLOT(slot_newDataOnHost(const QString&, const bool)), Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
     }
@@ -1112,6 +1112,10 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     } else {
         networkLatency->setText(QString("<no GA> S:%1").arg(processT / 1000, 0, 'f', 3));
     }
+    // Turn the tab text red if this is not the currently active host - this
+    // method is only used on the "main" console so no need to filter depending
+    // on TConsole types:
+    emit signal_newDataAlert(mpHost->getName(), !isFromServer);
 }
 
 void TConsole::runTriggers(int line)

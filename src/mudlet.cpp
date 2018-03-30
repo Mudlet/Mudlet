@@ -370,7 +370,10 @@ mudlet::mudlet()
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
     }
-    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 6, QFont::Normal);
+    // This is the only place the tabBar font is set and it influences the
+    // height of the tabs used - since we now want to include a small icon the
+    // font size can be a little larger that the 6 it once was:
+    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     setFont(mainFont);
     mainPane->setFont(mainFont);
     mpTabBar->setFont(mdiFont);
@@ -1016,9 +1019,10 @@ void mudlet::slot_tab_changed(int tabID)
         return;
     }
 
-    // Automatically reset the colour of the tab back to "normal" to undo the
-    // effect of it being coloured on new data by using an invalid QColor:
+    // Reset the tab back to "normal" to undo the effect of it having it's style
+    // changed on new data:
     mpTabBar->setTabTextColor(tabID, QColor());
+    mpTabBar->setTabIcon(tabID, QIcon());
 
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         mpCurrentActiveHost->mpConsole->hide();
@@ -3613,19 +3617,24 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
     return pHost->mTelnet.loadReplay(absoluteReplayFileName, pErrMsg);
 }
 
-// This is not the "mark the application as needing attention" function but the
-// one that marks a profile that is not the current one as having new data...
-void mudlet::slot_newDataOnHost(const QString& hostName)
+void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLocalChange)
 {
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
-        if (mpTabBar->isVisible()) {
-            // The data is not for the currently active host, so find out which
-            // one it is for and set the text colour on the tab on the shown tab-bar:
-            for (int i, total = mpTabBar->count(); i < total; ++i) {
+        if (mpTabBar->count() > 1) {
+            for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
                 if (mpTabBar->tabText(i) == hostName) {
-                    // Found the matching tab - turn it red:
-                    mpTabBar->setTabTextColor(i, Qt::red);
+                    if (!isLocalChange) {
+                        mpTabBar->setTabTextColor(i, Qt::red);
+                        mpTabBar->setTabIcon(i, QIcon(QStringLiteral(":/icons/dialog-warning.png")));
+                    } else if (isLocalChange && !mpTabBar->tabTextColor(i).isValid()) {
+                        // Local, lower priority change so only change the
+                        // styling if it is not already modified - so that the
+                        // higher priority remote change indication will not
+                        // get changed:
+                        mpTabBar->setTabTextColor(i, Qt::blue);
+                        mpTabBar->setTabIcon(i, QIcon(QStringLiteral(":/icons/dialog-information.png")));
+                    }
                     break;
                 }
             }

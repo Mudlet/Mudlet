@@ -359,7 +359,7 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
-    void slot_newDataOnHost(const QString&);
+    void slot_newDataOnHost(const QString&, const bool isLocal = false);
 
 
 protected:
