@@ -205,7 +205,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mDoubleClickIgnore.insert('\'');
 
     // search engine load entries
-    mSearchEngineData = QMap<QString, QString>({{"Bing", "https://www.bing.com/search?q="}, {"DuckDuckGo", "https://duckduckgo.com/?q="}, {"Google", "https://www.google.com/search?q="}});
+    mSearchEngineData = QMap<QString, QString>(
+    {
+                    {"Bing",       "https://www.bing.com/search?q="},
+                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
+                    {"Google",     "https://www.google.com/search?q="}
+    });
 }
 
 Host::~Host()
@@ -575,8 +580,6 @@ bool Host::resetStopWatch(int watchID)
         return false;
     }
 }
-
-void Host::callEventHandlers() {}
 
 void Host::incomingStreamProcessor(const QString& data, int line)
 {

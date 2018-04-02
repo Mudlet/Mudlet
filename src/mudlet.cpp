@@ -58,9 +58,6 @@
 #endif
 
 #include "pre_guard.h"
-#include <QTableWidget>
-#include <QTextCharFormat>
-#include <QToolBar>
 #include <QtEvents>
 #include <QtUiTools/quiloader.h>
 #include <QApplication>
@@ -168,7 +165,8 @@ mudlet::mudlet()
 , mpPackageManagerDlg(nullptr)
 , mpProfilePreferencesDlg(nullptr)
 , mshowMapAuditErrors(false)
-, mTimeFormat(tr("hh:mm:ss", "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+, mTimeFormat(tr("hh:mm:ss",
+                 "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 
 {
     setupUi(this);
@@ -1195,8 +1193,8 @@ void mudlet::disableToolbarButtons()
 
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                       .arg(tr("<p>Load a Mudlet replay.</p>"
-                                               "<p><i>Disabled until a profile is loaded.</i></p>")));
+                               .arg(tr("<p>Load a Mudlet replay.</p>"
+                                       "<p><i>Disabled until a profile is loaded.</i></p>")));
     // The menu items will not show tool-tips unless the parent menu is set to
     // show tool-tips which is likely to be done in near future when there are
     // more texts to show {the default is to repeat the menu text which is not
@@ -1228,7 +1226,8 @@ void mudlet::enableToolbarButtons()
         // toolbar pointer will be non-null}:
         mpActionReplay->setEnabled(true);
         dactionReplay->setEnabled(true);
-        mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Load a Mudlet replay.</p>")));
+        mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>Load a Mudlet replay.</p>")));
         // The menu items will not show tool-tips unless the parent menu is set to
         // show tool-tips which is likely to be done in near future when there are
         // more texts to show {the default is to repeat the menu text which is not
@@ -2323,7 +2322,9 @@ void mudlet::adjustMenuBarVisibility()
 {
     // Are there any profiles loaded - note that the dummy "default_host" counts
     // as the first one
-    if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways) || (mMenuBarVisibility & visibleMaskNormally)) {
+    if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways)
+      ||(mMenuBarVisibility & visibleMaskNormally)) {
+
         menuBar()->show();
     } else {
         menuBar()->hide();
@@ -2712,7 +2713,9 @@ void mudlet::slot_replay()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), getMudletPath(profileReplayAndLogFilesPath, pHost->getName()), tr("*.dat"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
+                                                    getMudletPath(profileReplayAndLogFilesPath, pHost->getName()),
+                                                    tr("*.dat"));
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
@@ -2991,7 +2994,8 @@ bool mudlet::replayStart()
     mpActionReplay->setChecked(true);
     mpActionReplay->setEnabled(false);
     dactionReplay->setEnabled(false);
-    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Cannot load a replay as one is already in progress in this or another profile.</p>")));
+    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>Cannot load a replay as one is already in progress in this or another profile.</p>")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 
     mpToolBarReplay = new QToolBar(this);
@@ -3010,13 +3014,15 @@ bool mudlet::replayStart()
 
     mpActionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);
     mpActionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
-    mpActionReplaySpeedUp->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Replay each step with a shorter time interval between steps.</p>")));
+    mpActionReplaySpeedUp->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                      .arg(tr("<p>Replay each step with a shorter time interval between steps.</p>")));
     mpToolBarReplay->addAction(mpActionReplaySpeedUp);
     mpToolBarReplay->widgetForAction(mpActionReplaySpeedUp)->setObjectName(mpActionReplaySpeedUp->objectName());
 
     mpActionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
     mpActionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
-    mpActionReplaySpeedDown->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Replay each step with a longer time interval between steps.</p>")));
+    mpActionReplaySpeedDown->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg(tr("<p>Replay each step with a longer time interval between steps.</p>")));
     mpToolBarReplay->addAction(mpActionReplaySpeedDown);
     mpToolBarReplay->widgetForAction(mpActionReplaySpeedDown)->setObjectName(mpActionReplaySpeedDown->objectName());
 
@@ -3049,7 +3055,8 @@ void mudlet::slot_replayTimeChanged()
 {
     // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
     if (mpLabelReplayTime) {
-        mpLabelReplayTime->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+        mpLabelReplayTime->setText(QStringLiteral("<font size=25><b>%1</b></font>")
+                                   .arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
         mpLabelReplayTime->show();
     }
 }

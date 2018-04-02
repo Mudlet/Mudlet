@@ -140,7 +140,6 @@ public:
     void raiseEvent(const TEvent& event);
     void resetProfile();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), bool syncModules = false);
-    void callEventHandlers();
     void stopAllTriggers();
     void reenableAllTriggers();
 

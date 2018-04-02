@@ -38,8 +38,6 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QTextOption>
-#include <QToolBar>
 #include <QtConcurrent>
 #include <QColorDialog>
 #include <QFileDialog>
@@ -57,7 +55,11 @@
 #include "post_guard.h"
 
 
-dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost) : QDialog(pF), mFontSize(10), mpHost(pHost), mpMenu(nullptr)
+dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
+: QDialog(pF)
+, mFontSize(10)
+, mpHost(pHost)
+, mpMenu(nullptr)
 {
     // init generated dialog
     setupUi(this);
@@ -338,8 +340,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     const QString url(pHost->getUrl());
-    if (url.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || url.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-        || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive) || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+    if (url.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
     } else {
@@ -397,7 +402,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
     rightBorderWidth->setValue(pHost->mBorderRightWidth);
     logDirPath = pHost->mLogDir;
-    lineEdit_setLogName->setText(pHost->mLogFileNameFormat);
+    lineEdit_setLogNameFormat->setText(pHost->mLogFileNameFormat);
     mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
@@ -596,7 +601,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
     connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
 
-    connect(pushButton_whereToLog, SIGNAL(clicked()), this, SLOT(setLogDir()));
+    connect(pushButton_whereToLog, SIGNAL(clicked()), this, SLOT(slot_setLogDir()));
+    connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1395,10 +1401,12 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(this,
-                                                    tr("Load Mudlet map"),
-                                                    mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
-                                                    tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!"));
+    QString fileName = QFileDialog::getOpenFileName(
+                           this,
+                           tr("Load Mudlet map"),
+                           mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
+                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
+                              "Do not change extensions (in braces) they are used programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -1569,10 +1577,25 @@ void dlgProfilePreferences::copyMap()
         int otherProfileAreaCount;
         int otherProfileVersion;
         int otherProfileCurrentRoomId; // What we are looking for!
-        if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(), &otherProfileFileUsed, &otherProfileVersion, &otherProfileCurrentRoomId, &otherProfileAreaCount, &otherProfileRoomCount)) {
-            qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:" << itOtherProfile.key() << "\n    the file examined was:" << otherProfileFileUsed
-                     << "\n    it was of version:" << otherProfileVersion << "\n    it had an area count of:" << otherProfileAreaCount << "\n    it had a room count of:" << otherProfileRoomCount
-                     << "\n    the player was located in:" << otherProfileCurrentRoomId;
+        if( pHost->mpMap->retrieveMapFileStats( itOtherProfile.key(),
+                                                 & otherProfileFileUsed,
+                                                 & otherProfileVersion,
+                                                 & otherProfileCurrentRoomId,
+                                                 & otherProfileAreaCount,
+                                                 & otherProfileRoomCount ) ) {
+
+            qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:"
+                     << itOtherProfile.key()
+                     << "\n    the file examined was:"
+                     << otherProfileFileUsed
+                     << "\n    it was of version:"
+                     << otherProfileVersion
+                     << "\n    it had an area count of:"
+                     << otherProfileAreaCount
+                     << "\n    it had a room count of:"
+                     << otherProfileRoomCount
+                     << "\n    the player was located in:"
+                     << otherProfileCurrentRoomId;
             itOtherProfile.setValue(otherProfileCurrentRoomId);
             // Using a mutable iterator we must modify (mutate) the data through
             // the iterator!
@@ -1663,7 +1686,7 @@ void dlgProfilePreferences::copyMap()
     mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
 
-void dlgProfilePreferences::setLogDir()
+void dlgProfilePreferences::slot_setLogDir()
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -1671,10 +1694,19 @@ void dlgProfilePreferences::setLogDir()
     }
 
     QDir currentLogDir = QFileDialog::getExistingDirectory(this, tr("Select log directory"), logDirPath, QFileDialog::ShowDirsOnly);
-    if (currentLogDir.isEmpty()) {
+    logDirPath = currentLogDir.absolutePath();
+
+    return;
+}
+
+void dlgProfilePreferences::slot_resetLogDir()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
         return;
     }
-    logDirPath = currentLogDir.absolutePath();
+
+    logDirPath = "";
 
     return;
 }
@@ -1739,9 +1771,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = logDirPath;
-        if (!lineEdit_setLogName->text().isEmpty()) {
-            pHost->mLogFileNameFormat = lineEdit_setLogName->text();
-        }
+        pHost->mLogFileNameFormat = lineEdit_setLogNameFormat->text();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 

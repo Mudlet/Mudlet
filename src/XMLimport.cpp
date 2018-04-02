@@ -23,6 +23,7 @@
 #include "XMLimport.h"
 
 
+#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -35,13 +36,12 @@
 #include "TTrigger.h"
 #include "TVar.h"
 #include "VarUnit.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtMath>
-#include <QBuffer>
 #include <QDebug>
+#include <QBuffer>
 #include <QStringList>
 #include "post_guard.h"
 

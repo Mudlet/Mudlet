@@ -38,37 +38,86 @@
 
 using namespace std;
 
-XMLexport::XMLexport(Host* pH) : mpHost(pH), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
+XMLexport::XMLexport( Host * pH )
+: mpHost( pH )
+, mpTrigger( Q_NULLPTR )
+, mpTimer( Q_NULLPTR )
+, mpAlias( Q_NULLPTR )
+, mpAction( Q_NULLPTR )
+, mpScript( Q_NULLPTR )
+, mpKey( Q_NULLPTR )
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport(TTrigger* pT) : mpHost(Q_NULLPTR), mpTrigger(pT), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
+XMLexport::XMLexport( TTrigger * pT )
+: mpHost( Q_NULLPTR )
+, mpTrigger( pT )
+, mpTimer( Q_NULLPTR )
+, mpAlias( Q_NULLPTR )
+, mpAction( Q_NULLPTR )
+, mpScript( Q_NULLPTR )
+, mpKey( Q_NULLPTR )
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport(TTimer* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(pT), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
+XMLexport::XMLexport( TTimer * pT )
+: mpHost( Q_NULLPTR )
+, mpTrigger( Q_NULLPTR )
+, mpTimer( pT )
+, mpAlias( Q_NULLPTR )
+, mpAction( Q_NULLPTR )
+, mpScript( Q_NULLPTR )
+, mpKey( Q_NULLPTR )
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport(TAlias* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(pT), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
+XMLexport::XMLexport( TAlias * pT )
+: mpHost( Q_NULLPTR )
+, mpTrigger( Q_NULLPTR )
+, mpTimer( Q_NULLPTR )
+, mpAlias( pT )
+, mpAction( Q_NULLPTR )
+, mpScript( Q_NULLPTR )
+, mpKey( Q_NULLPTR )
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport(TAction* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(pT), mpScript(Q_NULLPTR), mpKey(Q_NULLPTR)
+XMLexport::XMLexport( TAction * pT )
+: mpHost( Q_NULLPTR )
+, mpTrigger( Q_NULLPTR )
+, mpTimer( Q_NULLPTR )
+, mpAlias( Q_NULLPTR )
+, mpAction( pT )
+, mpScript( Q_NULLPTR )
+, mpKey( Q_NULLPTR )
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport(TScript* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(pT), mpKey(Q_NULLPTR)
+XMLexport::XMLexport( TScript * pT )
+: mpHost( Q_NULLPTR )
+, mpTrigger( Q_NULLPTR )
+, mpTimer( Q_NULLPTR )
+, mpAlias( Q_NULLPTR )
+, mpAction( Q_NULLPTR )
+, mpScript( pT )
+, mpKey( Q_NULLPTR )
 {
     setAutoFormatting(true);
 }
 
-XMLexport::XMLexport(TKey* pT) : mpHost(Q_NULLPTR), mpTrigger(Q_NULLPTR), mpTimer(Q_NULLPTR), mpAlias(Q_NULLPTR), mpAction(Q_NULLPTR), mpScript(Q_NULLPTR), mpKey(pT)
+XMLexport::XMLexport( TKey * pT )
+: mpHost( Q_NULLPTR )
+, mpTrigger( Q_NULLPTR )
+, mpTimer( Q_NULLPTR )
+, mpAlias( Q_NULLPTR )
+, mpAction( Q_NULLPTR )
+, mpScript( Q_NULLPTR )
+, mpKey( pT )
 {
     setAutoFormatting(true);
 }

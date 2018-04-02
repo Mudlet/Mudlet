@@ -38,13 +38,13 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QToolButton>
 #include <QDateTime>
 #include <QDir>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include "post_guard.h"
 
@@ -825,24 +825,33 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         file.close();
 
         QString directoryLogFile;
+        QString logFileNameFormat;
+
+        // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir.isEmpty()) {
             directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
 
+        // If no log name format is set, default to "yyyy-MM-dd#hh-mm-ss"
+        if (mpHost->mLogFileNameFormat.isEmpty()) {
+            logFileNameFormat = "yyyy-MM-dd#hh-mm-ss";
+        }
+
         // Revised file name derived from time so that alphabetical filename and
         // date sort order are the same...
         QDir dirLogFile;
+
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
         }
 
         mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, QDateTime::currentDateTime().toString(mpHost->mLogFileNameFormat));
+            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, QDateTime::currentDateTime().toString(logFileNameFormat));
         } else {
-            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(mpHost->mLogFileNameFormat));
+            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(logFileNameFormat));
         }
         mLogFile.setFileName(mLogFileName);
         mLogFile.open(QIODevice::WriteOnly | QIODevice::Append);

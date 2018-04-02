@@ -112,7 +112,8 @@ public slots:
 
 
     // Log.
-    void setLogDir();
+    void slot_setLogDir();
+    void slot_resetLogDir();
 
     // Save.
     void slot_save_and_exit();
