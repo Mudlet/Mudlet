@@ -32,6 +32,7 @@
 #include "TScript.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
+#include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -52,12 +53,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 : mTelnet(this)
 , mpConsole(nullptr)
 , mLuaInterpreter(this, id)
-, mTriggerUnit(this)
-, mTimerUnit(this)
-, mScriptUnit(this)
-, mAliasUnit(this)
-, mActionUnit(this)
-, mKeyUnit(this)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -68,44 +63,39 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderLeftWidth(0)
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
-, mCodeCompletion(true)
 , mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QString(";"))
-, mDisableAutoCompletion(false)
+, mCommandSeparator(QLatin1String(";"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
-, mHostID(id)
-, mHostName(hostname)
 , mInsertedMissingLF(false)
 , mIsGoingDown(false)
+, mIsProfileLoadingSequence(false)
 , mLF_ON_GA(true)
-, mLogin(login)
-, mMainIconSize(3)
 , mNoAntiAlias(false)
-, mPass(pass)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this))
 , mpNotePad(nullptr)
-, mPort(port)
 , mPrintCommand(true)
 , mIsCurrentLogFileInHtmlFormat(false)
+, mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
 , mResetProfile(false)
-, mRetries(5)
-, mSaveProfileOnExit(false)
 , mScreenHeight(25)
 , mScreenWidth(90)
-, mTEFolderIconSize(3)
 , mTimeout(60)
 , mUSE_FORCE_LF_AFTER_PROMPT(false)
 , mUSE_IRE_DRIVER_BUGFIX(true)
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mEditorTheme(QLatin1String("Mudlet"))
+, mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
+, mThemePreviewItemID(-1)
+, mThemePreviewType(QString())
 , mBlack(Qt::black)
 , mLightBlack(Qt::darkGray)
 , mRed(Qt::darkRed)
@@ -144,27 +134,42 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWhite_2(Qt::lightGray)
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
-, mSpellDic("en_US")
+, mMapStrongHighlight(false)
+, mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
-, mModuleSaveBlock(false)
 , mLineSize(10.0)
 , mRoomSize(0.5)
+, mShowInfo(true)
 , mBubbleMode(false)
 , mShowRoomID(false)
-, mMapperUseAntiAlias(true)
+, mShowPanel(true)
 , mServerGUI_Package_version(-1)
-, mServerGUI_Package_name("nothing")
+, mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
+, mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
+, mTriggerUnit(this)
+, mTimerUnit(this)
+, mScriptUnit(this)
+, mAliasUnit(this)
+, mActionUnit(this)
+, mKeyUnit(this)
+, mCodeCompletion(true)
+, mDisableAutoCompletion(false)
+, mHostID(id)
+, mHostName(hostname)
+, mIsClosingDown(false)
+, mLogin(login)
+, mPass(pass)
+, mPort(port)
+, mRetries(5)
+, mSaveProfileOnExit(false)
+, mModuleSaveBlock(false)
 , mHaveMapperScript(false)
-, mEditorTheme("Mudlet")
-, mEditorThemeFile("Mudlet.tmTheme")
-, mThemePreviewItemID(-1)
-, mThemePreviewType(QString())
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -181,12 +186,18 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogStream.setDevice(&mErrorLogFile);
 
     QTimer::singleShot(0, [this]() {
+        qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
         if (mpMap->restore(QString(), false)) {
             mpMap->audit();
+            if (mpMap->mpMapper) {
+                mpMap->mpMapper->mp2dMap->init();
+                mpMap->mpMapper->updateAreaComboBox();
+                mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMap->mpMapper->show();
+            }
         }
     });
 
-    mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
@@ -1061,7 +1072,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
 
-    int error = luaL_loadstring(L, strings.join("\n").toLatin1().data());
+    int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
     if (!error) {
         error = lua_pcall(L, 0, 0, 0);

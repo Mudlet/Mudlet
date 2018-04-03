@@ -167,8 +167,8 @@ public:
     // contains complementary directions of dirs on TRoom.h
     QMap<int, int> reverseDirections;
 
-    GLWidget* mpM;
-    dlgMapper* mpMapper;
+    QPointer<GLWidget> mpM;
+    QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
 
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;

@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017 by Stephen Lyons                        #
+#    Copyright (C) 2013-2015, 2017-2018 by Stephen Lyons                   #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -20,6 +20,19 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
+############################################################################
+#                                                                          #
+#    NOTICE: FreeBSD is not an officially supported platform as such;      #
+#    the work on getting it working has been done by myself, and other     #
+#    developers, unless they have explicitly said so, are not able to      #
+#    address issues relating specifically to that Operating System.        #
+#    Nevertheless users of FreeBSD are equally welcome to contribute       #
+#    to the development of Mudlet - bugfixes and enhancements are          #
+#    welcome from all!                                                     #
+#                                           Stephen Lyons, February 2018   #
+#                                                                          #
+############################################################################
+
 lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
     error("Mudlet requires Qt 5.6 or later")
 }
@@ -30,29 +43,11 @@ include(../3rdparty/communi/communi.pri)
 # Include lua_yajl (run time lua module needed)
 include(../3rdparty/lua_yajl/lua_yajl.pri)
 
-include(../3rdparty/dblsqd/dblsqd-sdk-qt.pri)
-
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
-macx: {
+macx {
     include(../3rdparty/luazip/luazip.pri)
 }
-
-!exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
-    message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
-    system("git submodule update --init");
-}
-
-exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
-    # Include shiny, new (and quite substantial) editor widget
-    include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
-} else {
-    error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
-}
-
-# Set the current Mudlet Version, unfortunately the Qt documentation suggests
-# that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.6.1
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -93,6 +88,65 @@ qtHaveModule(texttospeech) {
     message("Using TextToSpeech module")
 }
 
+############################# TEMPORARY TESTING PART ###########################
+# Tempory tests to determine what scope variables are correct, it seems that
+# they are related to the complete mkspecs base directory names
+# (e.g. linux-g++-64) the first part at least seems to match up with what we
+#  have been using so far {"macx", "win32"} "unix" seems to be an oddity.
+clear(scopes)
+cygwin {
+  scopes += "cygwin"
+}
+linux-clang-libc++ {
+  scopes += "linux-clang-libc++"
+}
+linux-g++-32 {
+  scopes += "linux-g++-32"
+}
+linux-g++-64 {
+# not seen when expected:
+  scopes += "linux-g++-64"
+}
+linux-llvm {
+  scopes += "linux-llvm"
+}
+linux-lsb-g++ {
+  scopes += "linux-lsb-g++"
+}
+macx-g++ {
+  scopes += "macx-g++"
+}
+macx-xcode {
+  scopes += "macx-xcode"
+}
+win32-clang-msvc {
+  scopes += "win32-clang-msvc"
+}
+win32-msvc {
+  scopes += "win32-msvc"
+}
+win64 {
+  scopes += "win64"
+}
+
+!isEmpty( scopes ) : message("Previously unreported scope variables tested and found: $${scopes} - slysven would like to know about them.")
+# Confirmed (where):
+# darwin(Travis CI), linux(local), linux-clang(local), linux-g++(local),
+# macx(Travis CI), macx-clang(Travis CI), win32(AppVeyor CI),
+# win32-g++(AppVeyor CI), unix(local)
+# freebsd(local) freebsd-clang(local) freebsd-g++(local)
+
+# Suspected not to work:
+# linux-g++-32, linux-g++-64
+
+
+TEMPLATE = app
+
+########################## Version and Build setting ###########################
+# Set the current Mudlet Version, unfortunately the Qt documentation suggests
+# that only a #.#.# form without any other alphanumberic suffixes is required:
+VERSION = 3.7.1
+
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable to make identification of the used version simple
@@ -104,12 +158,13 @@ isEmpty( BUILD ) {
   BUILD = "-dev"
 }
 
-# Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
+# Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
 # be automatically rebuilt so you will need to 'touch' them...!
 # Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
+
 # Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
 macx {
     TARGET = Mudlet
@@ -122,6 +177,55 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
+
+################## DejuVu and Ubuntu Fonts inclusion detection #################
+# Setting an environmental variable WITH_FONTS to the case insensitive value
+# "no" will stop the inclusion of the fonts present in the source code in the
+# compiled binary. Linux packagers or other parties may not want to include the
+# fonts since such resources may already be available in other ways or are not
+# wanted in their binaries.
+# Note: as WITH_FONTS could be a number, a string, something else (or not even
+# exist) we need to be careful in checking it exists before doing much else
+# with it. Also as an environmental variable it is tricky to handle unless we
+# read it into a qmake variable first:
+FONT_TEST = $$(WITH_FONTS)
+isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
+    DEFINES += INCLUDE_FONTS
+    # Can download and extract latest Unbuntu font files (currently X.YY is
+    # 0.83) from:
+    # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
+    # It would be nice if we could automate the download and extraction of all
+    # the font and associate documentation (but NOT the "sources" sub-directory)
+    # contents into the ./src/fonts/ directory structure only if this option is
+    # set to ON; however that would be plaform specific and add more complexity
+    # and it is not obvious that there is a demand to do this currenly.
+}
+
+######################### Auto Updater setting detection #########,#############
+# Enable the auto updater system by default on supported platforms. unless the
+# environmental variable WITH_UPDATER is already defined and is not
+# set to (case insenstive) "no". This is for Linux packagers and others who will
+# want to handle updates themselves.
+# Note: as WITH_UPDATER could be a number, a string, something else (or not even
+# exist) we need to be careful in checking it exists before doing much else
+# with it. Also as an environmental variable it is tricky to handle unless we
+# read it into a qmake variable first:
+linux|macx|win32 {
+    # We are on one of the supported platforms
+    UPDATER_TEST = $$(WITH_UPDATER)
+    isEmpty( UPDATER_TEST ) | !equals($$upper(UPDATER_TEST), "NO" ) {
+       # The environmental variable does not exist or it does and it is NOT the
+       # particular value we are looking out for - so include the updater code:
+       DEFINES += INCLUDE_UPDATER
+    }
+    # else the environment variable is the specific "don't include the updater
+    # code" setting - so don't!
+}
+# else we are on another platform which the updater code will not support so
+# don't include it either
+
+
+###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
@@ -174,7 +278,11 @@ unix:!macx {
         -lzip \
         -lz
     LUA_DEFAULT_DIR = $${DATADIR}/lua
-} else:win32: {
+} else:win32 {
+    MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
+    isEmpty(MINGW_BASE_DIR) {
+        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw492_32"
+    }
     LIBS += -L"C:\\mingw32\\bin" \
         -L"C:\\mingw32\\lib" \
         -llua51 \
@@ -185,12 +293,17 @@ unix:!macx {
         -lyajl \
         -lopengl32 \
         -lglut \
-        -lglu32
-    INCLUDEPATH += "C:\\mingw32\\include"
+        -lglu32 \
+        -L"$${MINGW_BASE_DIR}\\bin"
+    INCLUDEPATH += "C:\\mingw32\\include" \
+                   "C:\\Libraries\\boost_1_60_0" \
+                   "$${MINGW_BASE_DIR}\\include" \
+                   "$${MINGW_BASE_DIR}\\lib\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
 }
+
 unix:!macx {
 #   the "target" install set is handled automagically, just not very well...
     target.path = $${BINDIR}
@@ -202,11 +315,14 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
+        LUA_LCF.path = $${LUA.path}/lcf
 # and say what will happen:
         message("Lua files will be installed to "$${LUA.path}"...")
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
+        message("Lua Code Formatter lua files will be installed to "$${LUA_LCF.path}"...")
     }
 }
+
 # use pkg-config whenever possible for linking on a mac
 # the same should be done on the Linux platform as well
 macx {
@@ -237,10 +353,110 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
-# Enable the built-in updater by default. Linux packagers will find it useful to disable it
-# since package managers are responsible for updates there
-DEFINES += INCLUDE_UPDATER
 
+####################### Git Submodules check and install #######################
+# The "exists" tests and "include" directives uses qmakes internal path handling
+# (always uses '/' dirextroy separators); the git operations need to be done
+# somewhere within the main git repository (which may not be the case for
+# "shadow builds" so we now explicitly change directory using native shell
+# command before carrying them out - however Windows cmd.exe uses a different
+# command separator to Powershell (and *nix shells) so the git commands may need
+# tweaking in that situation
+
+# Edbee widget needed in all cases.
+# Mudlet customised (Lua 5.1 specific?) lua-code-format source code needed in
+# all cases. (The code is built into a lcf module within
+# TLuaInterpreter::initIndenterGlobals() on demand) - and we need to get the
+# git submodule from Mudlet's own GitHub server...
+
+# NOTE: It does SEEM possible to prebuild and install this into a system wide
+# luarocks installation by changing to the "./3rdparty/lcf" directory with the
+# files checked out by git (which is currently the "5.1" branch on the "Mudlet"
+# repository) and creating a "lcf" "rock" using:
+# "luarocks make lcf-scn-1.rockspec" {run via "sudo" on Linux!}
+# there, this will result in the customised "lcf" rock being installed with a
+# version of "scm-1" and it will then be handled in the same way as the other
+# lua packages used via the luarocks sub-system, most specifically "utf8".  This
+# method has NOT been checked thoroughly though, so YMMV.
+win32 {
+    # Use a check explicitly based on where the project file is in the sources
+    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+        message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
+        # Changing the directory here only relates to the command following it
+        # and that the change does not persist, note that ';' only works for
+        # PowerShell - for cmd.exe the nearest equivalent is '&'
+        system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/edbee-lib")
+    }
+
+    !exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+        message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/lcf")
+    }
+} else {
+    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+        message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
+        system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/edbee-lib")
+    }
+    !exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+        message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+}
+
+contains( DEFINES, INCLUDE_UPDATER ) {
+    win32 {
+        # DBLSQD updater - needed for Windows
+        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+            message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
+            system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/dblsqd")
+        }
+    } else {
+        # DBLSQD updater - needed for Linux and MacOS
+        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+            message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
+            system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/dblsqd")
+        }
+
+        # Sparkle glue code - only needed for MacOs
+        macx {
+            !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+                message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
+                system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/sparkle-glue")
+            }
+        }
+    }
+}
+
+# Now include the submodules - and abort if the needed one are STILL missing
+exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    # Include shiny, new (and quite substantial) editor widget
+    include("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri")
+} else {
+    error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+}
+
+!exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+    error("Cannot locate lua code formatter submodule source code, build abandoned!")
+}
+
+contains( DEFINES, INCLUDE_UPDATER ) {
+    # dblsqd is needed for all update-able platforms:
+    exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        include("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
+    } else {
+        error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
+    }
+
+    macx {
+        # We do not actually have to do anything to include it here - it is
+        # pulled in by the Sparkle complation below
+        !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+            error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
+        }
+    }
+}
+
+################################## File Lists ##################################
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -290,7 +506,6 @@ SOURCES += \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
-    THighlighter.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
@@ -310,8 +525,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    updater.cpp
+    XMLimport.cpp
 
 
 HEADERS += \
@@ -366,7 +580,6 @@ HEADERS += \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
-    THighlighter.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
@@ -388,8 +601,9 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h \
-    updater.h
+    XMLimport.h
+
+
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -416,15 +630,45 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-RESOURCES = \
-    mudlet.qrc
+RESOURCES = mudlet.qrc
+contains(DEFINES, INCLUDE_FONTS) {
+    RESOURCES += mudlet_fonts.qrc
+    !build_pass{
+        # On windows or on platforms that support CONFIG having debug_and_release"
+        # then there can be three passes through this file and we only want the
+        # message once (the non build_pass in that case):
+        message("Including additional font resources within the Mudlet executable")
+    }
+} else {
+    !build_pass{
+        message("No font resources are to be included within the Mudlet executable")
+    }
+}
 
-TEMPLATE = app
+linux|macx|win32 {
+    contains( DEFINES, INCLUDE_UPDATER ) {
+        HEADERS += updater.h
+        SOURCES += updater.cpp
+        !build_pass{
+            message("The updater code is included in this configuration")
+        }
+    } else {
+        !build_pass{
+            message("The updater code is excluded from this configuration")
+        }
+    }
+} else {
+    !build_pass{
+        message("The Updater code is excluded as on-line updating is not available on this platform")
+    }
+}
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
-# following lists of files EXPLICITLY stated - IT IS NOT WORKABLE IF ONLY
-# A PATH IS GIVEN AS AN ENTRY TO THE .files LIST - as was the case for a
-# previous incarnation for macs.
+# following lists of files EXPLICITLY stated - IT DOESN'T WORK IF A WILD-CARD
+# PATH IS GIVEN AS AN ENTRY TO THE .files LIST as the needed relative positions
+# (sub-directories) for each file is not preserved in that case. This is not
+# apparently an issue for or applies in the inclusion of the Lua files in the
+# macOs bundle case!
 #
 # Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
 # choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
@@ -437,11 +681,15 @@ TEMPLATE = app
 # without the DOUBLE quotes but with the SINGLE quotes, assuming /usr/bin is the
 # location of "make"
 #
+# Modify the "Build Environment" (and/or) the "Run Environment" so that there
+# is a SUDO_ASKPASS entry with a value that points to a "ssh-askpass" or
+# similar GUI password requester utility.
+#
 # This then will run "make install" via sudo with root privileges when you use
 # the relevant "Deploy" option on the "Build" menu - and will ask you for YOUR
 # password via a GUI dialog if needed - so that the files can be placed in the
 # specified system directories to which a normal user (you?) does not have write
-# access normally.
+# access to normally.
 
 # Main lua files:
 LUA.files = \
@@ -475,7 +723,468 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
 
-macx: {
+# Our customised 5.1 Lua Code Formatter files, unfortunately to get the Qt
+# makefile constructor to reproduce the exact directory structure we have to
+# list EVERY SINGLE B****Y FILE in a per directory grouping; also in reproducing
+# the path names in the variable names below there are limits to the characters
+# that can be use, so that '_' represents '/' and '__' represents '_':
+LUA_LCF.files = \
+    $${PWD}/../3rdparty/lcf/get_ast.lua \
+    $${PWD}/../3rdparty/lcf/get_formatter_ast.lua \
+    $${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec \
+    $${PWD}/../3rdparty/lcf/LICENSE \
+    $${PWD}/../3rdparty/lcf/lua_get_ast.lua \
+    $${PWD}/../3rdparty/lcf/lua_get_formatter_ast.lua \
+    $${PWD}/../3rdparty/lcf/lua_reformat.lua \
+    $${PWD}/../3rdparty/lcf/readme.txt \
+    $${PWD}/../3rdparty/lcf/reformat.lua \
+# The path for the root directory has already been specified
+
+LUA_LCF_L1_GET__AST.files = $${PWD}/../3rdparty/lcf/get_ast/get_params.lua
+LUA_LCF_L1_GET__AST.path = $${LUA_LCF.path}/get_ast
+
+LUA_LCF_L1_GET__FORMATTER__AST.files = $${PWD}/../3rdparty/lcf/get_formatter_ast/get_params.lua
+LUA_LCF_L1_GET__FORMATTER__AST.path = $${LUA_LCF.path}/get_formatter_ast
+
+LUA_LCF_L1_REFORMAT.files = \
+    $${PWD}/../3rdparty/lcf/reformat/get_params.lua \
+    $${PWD}/../3rdparty/lcf/reformat/usage_text.lua
+LUA_LCF_L1_REFORMAT.path = $${LUA_LCF.path}/reformat
+
+LUA_LCF_L1_WORKSHOP.files = $${PWD}/../3rdparty/lcf/workshop/base.lua
+LUA_LCF_L1_WORKSHOP.path = $${LUA_LCF.path}/workshop
+
+LUA_LCF_L2_WORKSHOP_FILE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/file/as_string.lua \
+    $${PWD}/../3rdparty/lcf/workshop/file/convert.lua \
+    $${PWD}/../3rdparty/lcf/workshop/file/exists.lua \
+    $${PWD}/../3rdparty/lcf/workshop/file/get_size.lua \
+    $${PWD}/../3rdparty/lcf/workshop/file/safe_open.lua \
+    $${PWD}/../3rdparty/lcf/workshop/file/text_file_as_string.lua
+LUA_LCF_L2_WORKSHOP_FILE.path = $${LUA_LCF_L1_WORKSHOP.path}/file
+
+LUA_LCF_L3_WORKSHOP_FORMATS_LUA.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/save.lua
+LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path = $${LUA_LCF_L1_WORKSHOP.path}/formats/lua
+
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/is_identifier.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/keywords.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/load
+
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_boolean.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_nil.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_number.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_string.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_table.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD.path}/syntax
+
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_EXPRESSIONS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/bracket_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/expression.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/expr_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/vararg.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/var_link.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_EXPRESSIONS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path}/expressions
+
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_STATEMENTS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/break_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/call_assign.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/do_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/empty_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/function_body.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/generic_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/goto_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/if_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/label_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/local_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/numeric_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/repeat_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/return_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/statements.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/while_block.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_STATEMENTS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path}/statements
+
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/comment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/name_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/opt_spc.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/word.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path}/words
+
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS_PARTICLES.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/particles/long_bracket.lua
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS_PARTICLES.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS.path}/particles
+
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/save
+
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/get_result.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_block_multiline.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_block_oneline.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_list_variative.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_node.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/representation_is_allowed.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/represent.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/run.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/variate.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.path}/formatter
+
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expression.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path}/handlers
+
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/function_call.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/vararg.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/var_link.lua
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path}/expressions
+
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS_DATA__TYPES.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/boolean.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/nil.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/number.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/string.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/table.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/type_function.lua
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS_DATA__TYPES.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS.path}/data_types
+
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/assignment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/break_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/comment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/goto_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/label_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/local_assignment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/return_statement.lua
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path}/statements
+
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS_BLOCKS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/do_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/generic_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/if_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/local_named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/numeric_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/repeat_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/while_block.lua
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS_BLOCKS.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS.path}/blocks
+
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_WRAPPERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/bracket_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/colon_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/dot_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/dot_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/expr_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/func_args.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/function_params.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/name_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/name_parts.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/par_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/ref_list.lua
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_WRAPPERS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path}/wrappers
+
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/move_comments.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/process_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/process_node.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/remove_whitespaces.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path}/preprocess
+
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expression.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements.lua
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS.path}/handlers
+
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_EXPRESSIONS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/bracket_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/colon_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/dot_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/expr_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/func_args.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/function_params.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/key_val.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/name_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/par_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/table.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/type_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/var_link.lua
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_EXPRESSIONS.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.path}/expressions
+
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_STATEMENTS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/call_assign.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/do_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/elseif_part.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/else_part.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/generic_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/goto_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/if_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/if_part.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/label_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/local_assignment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/local_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/numeric_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/repeat_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/return_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/while_block.lua
+LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_STATEMENTS.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.path}/statements
+
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_STATE__KEEPER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/enter_level.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/get_child_state.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/get_state.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/leave_level.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/set_child_state.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/set_state.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_STATE__KEEPER.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path}/state_keeper
+
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_QUOTE__STRING.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/custom_quotes.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/dump.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/intact.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/linear.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/quote_char.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_QUOTE__STRING.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.path}/quote_string
+
+LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save.lua
+LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE.path = $${LUA_LCF_L1_WORKSHOP.path}/formats/lua_table
+
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE_SAVE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save/get_ast.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save/serialize_ast.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE_SAVE.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE.path}/save
+
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA__TABLE_SAVE_INSTALL__NODE__HANDLERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save/install_node_handlers/minimal.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save/install_node_handlers/readable.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA__TABLE_SAVE_INSTALL__NODE__HANDLERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE_SAVE.path}/install_node_handlers
+
+LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE__CODE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/load.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/save.lua
+LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE__CODE.path = $${LUA_LCF_L1_WORKSHOP.path}/formats/lua_table_code
+
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE__CODE_SAVE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/save/get_ast.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/save/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/save/install_node_handlers.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/save/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/save/serialize_ast.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE__CODE_SAVE.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE__CODE.path}/save
+
+LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT.files = $${PWD}/../3rdparty/lcf/workshop/frontend/text/print_msg_with_delta_time.lua
+LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT.path = $${LUA_LCF_L1_WORKSHOP.path}/frontend/text
+
+LUA_LCF_L2_WORKSHOP_LUA.files =  $${PWD}/../3rdparty/lcf/workshop/lua/data_types.lua
+LUA_LCF_L2_WORKSHOP_LUA.path = $${LUA_LCF_L1_WORKSHOP.path}/lua
+
+LUA_LCF_L3_WORKSHOP_LUA_CODE.files = $${PWD}/../3rdparty/lcf/workshop/lua/code/get_ast.lua
+LUA_LCF_L3_WORKSHOP_LUA_CODE.path = $${LUA_LCF_L1_WORKSHOP.path}/lua/code
+
+LUA_LCF_L2_WORKSHOP_MECHS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/generic_loader.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/indents_table.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/name_giver.lua
+LUA_LCF_L2_WORKSHOP_MECHS.path = $${LUA_LCF_L1_WORKSHOP.path}/mechs
+
+LUA_LCF_L3_WORKSHOP_MECHS_COMMAND__LINE__PROCESSOR.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/command_line_processor/assert_type_is_correct.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/command_line_processor/classify_item.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/command_line_processor/get_key_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/command_line_processor/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/command_line_processor/parse_args.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/command_line_processor/run.lua
+LUA_LCF_L3_WORKSHOP_MECHS_COMMAND__LINE__PROCESSOR.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/command_line_processor
+
+LUA_LCF_L3_WORKSHOP_MECHS_GENERIC__FILE__CONVERTER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/generic_file_converter/compile.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/generic_file_converter/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/generic_file_converter/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/generic_file_converter/run.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/generic_file_converter/say.lua
+LUA_LCF_L3_WORKSHOP_MECHS_GENERIC__FILE__CONVERTER.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/generic_file_converter
+
+LUA_LCF_L5_WORKSHOP_MECHS_GEOMETRY_1D_SEGMENTS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/geometry/1d/segments/is_inside.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/geometry/1d/segments/subtract_inner.lua
+LUA_LCF_L5_WORKSHOP_MECHS_GEOMETRY_1D_SEGMENTS.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/geometry/1d/segments
+
+LUA_LCF_L3_WORKSHOP_MECHS_GRAPH.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/graph/assembly_order.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/graph/dfs.lua
+LUA_LCF_L3_WORKSHOP_MECHS_GRAPH.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/graph
+
+LUA_LCF_L4_WORKSHOP_MECHS_GRAPH_DFS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/graph/dfs/dfs.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/graph/dfs/get_children.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/graph/dfs/interface.lua
+LUA_LCF_L4_WORKSHOP_MECHS_GRAPH_DFS.path = $${LUA_LCF_L3_WORKSHOP_MECHS_GRAPH.path}/dfs
+
+LUA_LCF_L4_WORKSHOP_MECHS_NUMBER_REPRESENTER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/represent.lua
+LUA_LCF_L4_WORKSHOP_MECHS_NUMBER_REPRESENTER.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/number/representer
+
+LUA_LCF_L5_WORKSHOP_MECHS_NUMBER_REPRESENTER_UNITS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/units/binary_bytes.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/units/binary_units.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/units/frequency.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/units/general_number.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/units/general_time.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/number/representer/units/interface.lua
+LUA_LCF_L5_WORKSHOP_MECHS_NUMBER_REPRESENTER_UNITS.path = $${LUA_LCF_L4_WORKSHOP_MECHS_NUMBER_REPRESENTER.path}/units
+
+LUA_LCF_L3_WORKSHOP_MECHS_PARSER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/get_struc.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/handy.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/on_match.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/parse.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/populate.lua
+LUA_LCF_L3_WORKSHOP_MECHS_PARSER.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/parser
+
+LUA_LCF_L4_WORKSHOP_MECHS_PARSER_FOLDER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/folder/fold.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/folder/get_struc.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/folder/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/parser/folder/interface.lua
+LUA_LCF_L4_WORKSHOP_MECHS_PARSER_FOLDER.path = $${LUA_LCF_L3_WORKSHOP_MECHS_PARSER.path}/folder
+
+LUA_LCF_L3_WORKSHOP_MECHS_PROCESSOR.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/processor/handy.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/processor/link.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/processor/optimize.lua
+LUA_LCF_L3_WORKSHOP_MECHS_PROCESSOR.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/processor
+
+LUA_LCF_L4_WORKSHOP_MECHS_PROCESSOR_CORE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/processor/core/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/processor/core/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/processor/core/match.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/processor/core/on_match.lua
+LUA_LCF_L4_WORKSHOP_MECHS_PROCESSOR_CORE.path = $${LUA_LCF_L3_WORKSHOP_MECHS_PROCESSOR.path}/core
+
+LUA_LCF_L4_WORKSHOP_MECHS_STREAMS_MERGEABLE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/block_read.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/get_segment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/get_slot.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/set_next_position.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/set_relative_position.lua
+LUA_LCF_L4_WORKSHOP_MECHS_STREAMS_MERGEABLE.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/streams/mergeable
+
+LUA_LCF_L5_WORKSHOP_MECHS_STREAMS_MERGEABLE_STRING.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/get_length.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/get_position.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/match_regexp.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/match_string.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/read.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/mergeable/string/set_position.lua
+LUA_LCF_L5_WORKSHOP_MECHS_STREAMS_MERGEABLE_STRING.path = $${LUA_LCF_L4_WORKSHOP_MECHS_STREAMS_MERGEABLE.path}/string
+
+LUA_LCF_L4_WORKSHOP_MECHS_STREAMS_SEQUENCE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/sequence/get_position.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/sequence/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/sequence/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/sequence/read.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/sequence/set_position.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/streams/sequence/write.lua
+LUA_LCF_L4_WORKSHOP_MECHS_STREAMS_SEQUENCE.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/streams/sequence
+
+LUA_LCF_L3_WORKSHOP_MECHS_TEXT__BLOCKS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/dec_indent.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/inc_indent.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/interface.lua
+LUA_LCF_L3_WORKSHOP_MECHS_TEXT__BLOCKS.path = $${LUA_LCF_L2_WORKSHOP_MECHS.path}/text_block
+
+LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_LINE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/line/add.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/line/get_line_length.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/line/get_line.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/line/get_text_length.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/line/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/line/interface.lua
+LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_LINE.path = $${LUA_LCF_L3_WORKSHOP_MECHS_TEXT__BLOCKS.path}/line
+
+LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT.files = \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/add_curline.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/add_textline.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/get_block_width.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/get_text.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/get_text_width.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/include.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/new_line.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/on_clean_line.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/request_clean_line.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/request_empty_line.lua \
+    $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/store_textline.lua
+LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT.path = $${LUA_LCF_L3_WORKSHOP_MECHS_TEXT__BLOCKS.path}/text
+
+LUA_LCF_L2_WORKSHOP_NUMBERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/number/represent_size.lua \
+    $${PWD}/../3rdparty/lcf/workshop/number/represent_time.lua
+LUA_LCF_L2_WORKSHOP_NUMBERS.path = $${LUA_LCF_L1_WORKSHOP.path}/number
+
+LUA_LCF_L2_WORKSHOP_STRING.files = \
+    $${PWD}/../3rdparty/lcf/workshop/string/content_attributes.lua \
+    $${PWD}/../3rdparty/lcf/workshop/string/save_to_file.lua \
+    $${PWD}/../3rdparty/lcf/workshop/string/trim_head.lua \
+    $${PWD}/../3rdparty/lcf/workshop/string/trim_linefeed.lua \
+    $${PWD}/../3rdparty/lcf/workshop/string/trim.lua \
+    $${PWD}/../3rdparty/lcf/workshop/string/trim_tail.lua
+LUA_LCF_L2_WORKSHOP_STRING.path = $${LUA_LCF_L1_WORKSHOP.path}/string
+
+LUA_LCF_L2_WORKSHOP_STRUC.files = $${PWD}/../3rdparty/lcf/workshop/struc/compile.lua
+LUA_LCF_L2_WORKSHOP_STRUC.path = $${LUA_LCF_L1_WORKSHOP.path}/struc
+
+LUA_LCF_L2_WORKSHOP_SYSTEM.files = \
+    $${PWD}/../3rdparty/lcf/workshop/system/install_assert_functions.lua \
+    $${PWD}/../3rdparty/lcf/workshop/system/install_is_functions.lua
+LUA_LCF_L2_WORKSHOP_SYSTEM.path = $${LUA_LCF_L1_WORKSHOP.path}/system
+
+LUA_LCF_L2_WORKSHOP_TABLE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/table/clone.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/get_key_vals.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/map_values.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/merge.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/new.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/patch.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/unfold.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/ordered_pass.lua
+LUA_LCF_L2_WORKSHOP_TABLE.path = $${LUA_LCF_L1_WORKSHOP.path}/table
+
+LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.files = $${PWD}/../3rdparty/lcf/workshop/table/ordered_pass/default_comparator.lua
+LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.path = $${LUA_LCF_L1_WORKSHOP.path}/table/ordered_pass
+LUA_LCF.depends = mudlet
+
+
+macx {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
     APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
@@ -487,40 +1196,42 @@ macx: {
 
     LIBS += -framework AppKit
 
-    # allow linker to find sparkle framework as we bundle it in
-    SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
+    contains( DEFINES, INCLUDE_UPDATER ) {
+        # allow linker to find sparkle framework if we bundle it in
+        SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
 
-    !exists($$SPARKLE_PATH) {
-        message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
-        system("cd ../3rdparty/cocoapods && pod install");
+        !exists($$SPARKLE_PATH) {
+            message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
+            system("cd ../3rdparty/cocoapods && pod install");
+        }
+
+        LIBS += -F$$SPARKLE_PATH
+        LIBS += -framework Sparkle
+
+        # necessary for Sparkle to compile
+        QMAKE_LFLAGS += -F $$SPARKLE_PATH
+        QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
+
+        SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
+
+        OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
+            ../3rdparty/sparkle-glue/CocoaInitializer.mm
+
+        HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
+            ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
+            ../3rdparty/sparkle-glue/CocoaInitializer.h
+
+        # Copy Sparkle into the app bundle
+        sparkle.path = Contents/Frameworks
+        sparkle.files = $$SPARKLE_PATH/Sparkle.framework
+        QMAKE_BUNDLE_DATA += sparkle
     }
-
-    LIBS += -F$$SPARKLE_PATH
-    LIBS += -framework Sparkle
-
-    # necessary for Sparkle to compile
-    QMAKE_LFLAGS += -F $$SPARKLE_PATH
-    QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
-
-    SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
-
-    OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
-        ../3rdparty/sparkle-glue/CocoaInitializer.mm
-
-    HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
-        ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
-        ../3rdparty/sparkle-glue/CocoaInitializer.h
-
-    # Copy Sparkle into the app bundle
-    sparkle.path = Contents/Frameworks
-    sparkle.files = $$SPARKLE_PATH/Sparkle.framework
-    QMAKE_BUNDLE_DATA += sparkle
 
     # And add frameworks to the rpath so that the app can find the framework.
     QMAKE_RPATHDIR += @executable_path/../Frameworks
 }
 
-win32: {
+win32 {
     # set the Windows binary icon
     RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
 
@@ -544,17 +1255,88 @@ OTHER_FILES += \
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
 # or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
-unix:!macx: {
+unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
     INSTALLS += \
         target \
         LUA \
-        LUA_GEYSER
-}
+        LUA_GEYSER \
+        LUA_LCF \
+        LUA_LCF_L1_GET__AST \
+        LUA_LCF_L1_GET__FORMATTER__AST \
+        LUA_LCF_L1_REFORMAT \
+        LUA_LCF_L1_WORKSHOP \
+        LUA_LCF_L2_WORKSHOP_FILE \
+        LUA_LCF_L3_WORKSHOP_FORMATS_LUA \
+        LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_EXPRESSIONS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_STATEMENTS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS \
+        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS_PARTICLES \
+        LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS \
+        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS \
+        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS_DATA__TYPES \
+        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS \
+        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS_BLOCKS \
+        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_WRAPPERS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS \
+        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS \
+        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_EXPRESSIONS \
+        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_STATEMENTS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_STATE__KEEPER \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_QUOTE__STRING \
+        LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE \
+        LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE_SAVE \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA__TABLE_SAVE_INSTALL__NODE__HANDLERS \
+        LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE__CODE \
+        LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE__CODE_SAVE \
+        LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT \
+        LUA_LCF_L2_WORKSHOP_LUA \
+        LUA_LCF_L3_WORKSHOP_LUA_CODE \
+        LUA_LCF_L2_WORKSHOP_MECHS \
+        LUA_LCF_L3_WORKSHOP_MECHS_COMMAND__LINE__PROCESSOR \
+        LUA_LCF_L3_WORKSHOP_MECHS_GENERIC__FILE__CONVERTER \
+        LUA_LCF_L5_WORKSHOP_MECHS_GEOMETRY_1D_SEGMENTS \
+        LUA_LCF_L3_WORKSHOP_MECHS_GRAPH \
+        LUA_LCF_L4_WORKSHOP_MECHS_GRAPH_DFS \
+        LUA_LCF_L4_WORKSHOP_MECHS_NUMBER_REPRESENTER \
+        LUA_LCF_L5_WORKSHOP_MECHS_NUMBER_REPRESENTER_UNITS \
+        LUA_LCF_L3_WORKSHOP_MECHS_PARSER \
+        LUA_LCF_L4_WORKSHOP_MECHS_PARSER_FOLDER \
+        LUA_LCF_L3_WORKSHOP_MECHS_PROCESSOR \
+        LUA_LCF_L4_WORKSHOP_MECHS_PROCESSOR_CORE \
+        LUA_LCF_L4_WORKSHOP_MECHS_STREAMS_MERGEABLE \
+        LUA_LCF_L5_WORKSHOP_MECHS_STREAMS_MERGEABLE_STRING \
+        LUA_LCF_L4_WORKSHOP_MECHS_STREAMS_SEQUENCE \
+        LUA_LCF_L3_WORKSHOP_MECHS_TEXT__BLOCKS \
+        LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_LINE \
+        LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT \
+        LUA_LCF_L2_WORKSHOP_NUMBERS \
+        LUA_LCF_L2_WORKSHOP_STRING \
+        LUA_LCF_L2_WORKSHOP_STRUC \
+        LUA_LCF_L2_WORKSHOP_SYSTEM \
+        LUA_LCF_L2_WORKSHOP_TABLE \
+        LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS
+    }
+# Unfortunately, because (it seems) there are some directories in the above
+# that do not, themselves contain any actual files and only sub-directories
+# the current Qt qmake makefile does not do a clean "make uninstall" as it
+# leaves those empty sub-directories behind and that prevents their parents
+# from being deleted as well
+
 
 DISTFILES += \
-    ../.travis.yml \
+    CMakeLists.txt \
+    .clang-format \
     ../CMakeLists.txt \
+    ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindPCRE.cmake \
+    ../cmake/FindYAJL.cmake \
+    ../cmake/FindZIP.cmake \
+    ../.travis.yml \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.before_install.sh \
@@ -562,9 +1344,21 @@ DISTFILES += \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
     ../CI/travis.set-build-info.sh \
-    ../cmake/FindHUNSPELL.cmake \
-    ../cmake/FindPCRE.cmake \
-    ../cmake/FindYAJL.cmake \
-    ../cmake/FindZIP.cmake \
-    .clang-format \
-    CMakeLists.txt
+    ../CI/travis.after_success.sh \
+    ../CI/travis.linux.after_success.sh \
+    ../CI/travis.osx.after_success.sh \
+    ../.appveyor.yml \
+    ../CI/appveyor.after_success.ps1 \
+    ../CI/appveyor.install.ps1 \
+    ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.build.ps1 \
+    mudlet-lua/lua/ldoc.css \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/tests/README.md \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua \
+    ../mudlet.desktop \
+    ../mudlet.png \
+    ../mudlet.svg \
+    ../README.md

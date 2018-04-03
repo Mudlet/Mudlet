@@ -31,7 +31,6 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TEasyButtonBar.h"
-#include "THighlighter.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "TTreeWidget.h"
@@ -4259,7 +4258,7 @@ void dlgTriggerEditor::saveAction()
 
     // This is an unnecessary level of indentation but has been retained to
     // reduce the noise in a git commit/diff caused by the removal of a
-    // redundent "if( pITem )" - can be removed next time the file is modified
+    // redundant "if( pITem )" - can be removed next time the file is modified
     int actionID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
@@ -4946,6 +4945,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pItem->pushButton_fgColor->show();
                 pItem->pushButton_bgColor->show();
                 pItem->pushButton_prompt->hide();
+                // Although not shown it holds the data about the colours selected:
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->hide();
                 if (!pT->mColorPatternList[i]) {
                     break;
@@ -7665,6 +7666,25 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     file.close();
 }
 
+bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+            this->event(event);
+            return true;
+        default:
+            return false;
+        }
+    }
+    return false;
+}
+
 bool dlgTriggerEditor::event(QEvent* event)
 {
     if (mIsGrabKey) {
@@ -7681,6 +7701,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                         action->setShortcut(tr("Ctrl+Shift+S"));
                     }
                 }
+                QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
             case 0x01000020:
@@ -7699,6 +7720,7 @@ bool dlgTriggerEditor::event(QEvent* event)
                         action->setShortcut(tr("Ctrl+Shift+S"));
                     }
                 }
+                QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
             }
@@ -7719,6 +7741,7 @@ void dlgTriggerEditor::slot_grab_key()
             action->setShortcut(tr(""));
         }
     }
+    QCoreApplication::instance()->installEventFilter(this);
 }
 
 void dlgTriggerEditor::grab_key_callback(int key, int modifier)
@@ -8047,7 +8070,7 @@ void dlgTriggerEditor::slot_clearSearchResults()
     textRanges->clear();
     controller->update();
 }
- 
+
 // shows a custom right-click menu for the editor, including the indent action
 void dlgTriggerEditor::slot_editorContextMenu()
 {
