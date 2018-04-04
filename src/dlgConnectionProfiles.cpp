@@ -1554,6 +1554,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
