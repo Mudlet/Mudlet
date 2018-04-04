@@ -91,7 +91,6 @@ public:
 
     int getColumnNumber();
     void createMapper(int, int, int, int);
-    void loadRawFile(std::string);
 
     void setWrapAt(int pos)
     {

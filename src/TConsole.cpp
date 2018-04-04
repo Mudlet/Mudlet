@@ -969,7 +969,7 @@ void TConsole::changeColors()
         console->setPalette(palette);
         console2->setPalette(palette);
     } else if (mIsSubConsole) {
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
@@ -1013,7 +1013,7 @@ void TConsole::changeColors()
         }
         mpHost->mDisplayFont.setFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
         QFont _font = mpHost->mDisplayFont;
@@ -1098,14 +1098,6 @@ void TConsole::setConsoleFgColor(int r, int g, int b)
     string time = s.str();
     return time;
    } */
-
-// Actually means load a "replay" (which will currently be a *.dat) file
-void TConsole::loadRawFile(std::string n)
-{
-    QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
-    QString fileName = QStringLiteral("%1/%2").arg(directoryLogFile, QString(n.c_str()));
-    mpHost->mTelnet.loadReplay(fileName);
-}
 
 void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
 {
@@ -2261,7 +2253,6 @@ void TConsole::createMapper(int x, int y, int width, int height)
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
-    mpMapper->mp2dMap->gridMapSizeChange = true; //mapper size has changed, but only init grid map when necessary
     mpMapper->show();
 }
 

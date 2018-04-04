@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
+*   Copyright (C) 2013-2018 by Stephen Lyons - slysven@virginmedia.com    *
 *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
 *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
 *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -936,26 +936,44 @@ int TLuaInterpreter::getLines(lua_State* L)
     lua_newtable(L);
     for (int i = 0; i < strList.size(); i++) {
         lua_pushnumber(L, i + 1);
-        lua_pushstring(L, strList[i].toLatin1().data());
+        lua_pushstring(L, strList.at(i).toUtf8().constData());
         lua_settable(L, -3);
     }
     return 1;
 }
 
+// Should have been called loadReplay(...) but this name is already in the
+// published Lua API
 int TLuaInterpreter::loadRawFile(lua_State* L)
 {
-    string luaSendText = "";
+    QString replayFileName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "loadRawFile: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "loadRawFile: bad argument #1 type (replay file name, {may include a relative to \n"
+                           "profile's \"logs\" sub-directory, or an absolute path}, as string expected, \n"
+                           "got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        replayFileName = QString::fromUtf8(lua_tostring(L, 1));
+        if (replayFileName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "a blank string is not a valid replay file name");
+            return 2;
+        }
     }
 
     Host& host = getHostFromLua(L);
-    host.mpConsole->loadRawFile(luaSendText);
-    return 0;
+    QString errMsg;
+    if (mudlet::self()->loadReplay(&host, replayFileName, &errMsg)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        // Although we only use English text for Lua messages the errMsg could
+        // contain a Windows pathFileName which may use non-ASCII characters:
+        lua_pushfstring(L, "unable to start replay, reason: '%s'", errMsg.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::getCurrentLine(lua_State* L)
@@ -975,7 +993,7 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString line = host.mpConsole->getCurrentLine(luaSendText);
-    lua_pushstring(L, line.toLatin1().data());
+    lua_pushstring(L, line.toUtf8().constData());
     return 1;
 }
 
@@ -1339,7 +1357,13 @@ int TLuaInterpreter::paste(lua_State* L)
     return 0;
 }
 
-
+// Takes one argument, a string and sends it to the trigger processing system
+// almost as if it came from the MUD Server. This string must be byte encoded
+// in a manner to match the currently selected Server Encoding. The trigger
+// processing system will recognise that this data is internal and, should it be
+// retaining a few bytes from the MUD server because a previous character was
+// split between two network packets, will not try to prepend those stored bytes
+// - instead it will hang on to them until the next network packet is processed.
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4832,7 +4856,7 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 {
     int index = 1;
     lua_newtable(L);
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     lua_createtable(L, 3, 0);
 #else
     lua_createtable(L, 2, 0);
@@ -4841,7 +4865,7 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
     QString nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/");
     lua_pushstring(L, nativePath.toUtf8().constData());
     lua_rawseti(L, -2, index++);
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     // add macOS lua path relative to the binary itself, which is part of the Mudlet.app package
     nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/");
     lua_pushstring(L, nativePath.toUtf8().constData());
@@ -5461,19 +5485,16 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString exactMatchPattern;
-    int triggerID;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #1 type (exact match pattern as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
+    QString exactMatchPattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    exactMatchPattern = QString::fromUtf8(lua_tostring(L, 1));
-
+    int triggerID;
     if (lua_isstring(L, 2)) {
-        QString luaFunction = QString::fromUtf8(lua_tostring(L, 2));
-        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, luaFunction);
+        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString::fromUtf8(lua_tostring(L, 2)));
     } else if (lua_isfunction(L, 2)) {
         triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString());
 
@@ -5495,19 +5516,16 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString pattern;
-    int triggerID;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #1 type (pattern as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
+    QString pattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    pattern = QString::fromUtf8(lua_tostring(L, 1));
-
+    int triggerID;
     if (lua_isstring(L, 2)) {
-        QString luaFunction = QString::fromUtf8(lua_tostring(L, 2));
-        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, luaFunction);
+        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString::fromUtf8(lua_tostring(L, 2)));
     } else if (lua_isfunction(L, 2)) {
         triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString());
 
@@ -5529,19 +5547,17 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString substringPattern;
-    int triggerID;
 
+    QString substringPattern;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempTrigger: bad argument #1 type (substring pattern as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-
     substringPattern = QString::fromUtf8(lua_tostring(L, 1));
 
+    int triggerID;
     if (lua_isstring(L, 2)) {
-        QString luaFunction = QString::fromUtf8(lua_tostring(L, 2));
-        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, luaFunction);
+        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString::fromUtf8(lua_tostring(L, 2)));
     } else if (lua_isfunction(L, 2)) {
         triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString());
 
@@ -5563,11 +5579,10 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    int triggerID;
 
+    int triggerID;
     if (lua_isstring(L, 1)) {
-        QString luaFunction = QString::fromUtf8(lua_tostring(L, 1));
-        triggerID = pLuaInterpreter->startTempPromptTrigger(luaFunction);
+        triggerID = pLuaInterpreter->startTempPromptTrigger(QString::fromUtf8(lua_tostring(L, 1)));
     } else if (lua_isfunction(L, 1)) {
         triggerID = pLuaInterpreter->startTempPromptTrigger(QString());
 
@@ -5589,24 +5604,22 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    int foregroundColor, backgroundColor;
-    int triggerID;
 
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "tempColorTrigger: bad argument #1 type (foreground color as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
+    int foregroundColor = lua_tointeger(L, 1);
+
     if (!lua_isnumber(L, 2)) {
         lua_pushfstring(L, "tempColorTrigger: bad argument #2 type (background color as number expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
+    int backgroundColor = lua_tointeger(L, 2);
 
-    foregroundColor = lua_tointeger(L, 1);
-    backgroundColor = lua_tointeger(L, 2);
-
+    int triggerID;
     if (lua_isstring(L, 3)) {
-        QString luaFunction = QString::fromUtf8(lua_tostring(L, 3));
-        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, luaFunction);
+        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString::fromUtf8(lua_tostring(L, 3)));
     } else if (lua_isfunction(L, 3)) {
         triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString());
 
@@ -5628,8 +5641,6 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    int from, howMany;
-    int triggerID;
 
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "tempLineTrigger: bad argument #1 type (line to start matching from as number expected, got %s!)", luaL_typename(L, 1));
@@ -5639,12 +5650,11 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    from = lua_tointeger(L, 1);
-    howMany = lua_tointeger(L, 2);
-
+    int from = lua_tointeger(L, 1);
+    int howMany = lua_tointeger(L, 2);
+    int triggerID;
     if (lua_isstring(L, 3)) {
-        QString luaFunction = QString::fromUtf8(lua_tostring(L, 3));
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, luaFunction);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString::fromUtf8(lua_tostring(L, 3)));
     } else if (lua_isfunction(L, 3)) {
         triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString());
 
@@ -5665,14 +5675,6 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    bool multiLine, matchAll, highlight, playSound, filter, colorTrigger;
-    int fireLength, lineDelta;
-    QString fgColor, bgColor;
-    QStringList regexList;
-    QString parent, script, triggerName, pattern, soundFile;
-    QColor hlFgColor, hlBgColor;
-    QList<int> propertyList;
-    int triggerID;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #1 type (trigger name create or add to as string expected, got %s!)", luaL_typename(L, 1));
@@ -5700,45 +5702,60 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    parent = QString::fromUtf8(lua_tostring(L, 1));
-    pattern = QString::fromUtf8(lua_tostring(L, 2));
-    multiLine = lua_tonumber(L, 4);
+    QString triggerName = QString::fromUtf8(lua_tostring(L, 1));
+    bool multiLine = lua_tonumber(L, 4);
+
+    bool colorTrigger;
+    QString fgColor;
     if (lua_isnumber(L, 5)) {
         colorTrigger = false;
     } else {
         colorTrigger = true;
         fgColor = lua_tostring(L, 5);
     }
+
+    QString bgColor;
     if (lua_isnumber(L, 6)) {
         colorTrigger = false;
     } else {
         bgColor = lua_tostring(L, 6);
     }
-    filter = lua_tonumber(L, 7);
-    matchAll = lua_tonumber(L, 8);
+
+    bool filter = lua_tonumber(L, 7);
+    bool matchAll = lua_tonumber(L, 8);
+
+    bool highlight;
+    QColor hlFgColor;
     if (lua_isnumber(L, 9)) {
         highlight = false;
     } else {
         highlight = true;
         hlFgColor.setNamedColor(lua_tostring(L, 9));
     }
+    QColor hlBgColor;
     if (lua_isnumber(L, 9)) {
         highlight = false;
     } else {
         highlight = true;
         hlBgColor.setNamedColor(lua_tostring(L, 9));
     }
+
+    QString soundFile;
+    bool playSound;
     if (lua_isstring(L, 10)) {
         playSound = true;
         soundFile = QString::fromUtf8(lua_tostring(L, 10));
     } else {
         playSound = false;
     }
-    fireLength = lua_tonumber(L, 11);
-    lineDelta = lua_tonumber(L, 12);
 
+    int fireLength = lua_tonumber(L, 11);
+    int lineDelta = lua_tonumber(L, 12);
+
+    QString pattern = QString::fromUtf8(lua_tostring(L, 2));
+    QStringList regexList;
+    QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
-
     if (!pP) {
         regexList << pattern;
         if (colorTrigger) {
@@ -5757,7 +5774,6 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     pT->setTemporary(true);
     pT->registerTrigger();
     pT->setName(pattern);
-    //pT->setIsMultiline( multiLine );
     pT->mPerlSlashGOption = matchAll; //match all
     pT->mFilterTrigger = filter;
     pT->setConditionLineDelta(lineDelta); //line delta
@@ -5773,8 +5789,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     }
 
     if (lua_isstring(L, 3)) {
-        script = QString::fromUtf8(lua_tostring(L, 3));
-        pT->setScript(script);
+        pT->setScript(QString::fromUtf8(lua_tostring(L, 3)));
     } else if (lua_isfunction(L, 3)) {
         pT->setScript(QString());
 
@@ -5966,19 +5981,16 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString regexPattern;
-    int triggerID;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #1 type (regex pattern as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
+    QString regexPattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    regexPattern = QString::fromUtf8(lua_tostring(L, 1));
-
+    int triggerID;
     if (lua_isstring(L, 2)) {
-        QString luaFunction = QString::fromUtf8(lua_tostring(L, 2));
-        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, luaFunction);
+        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString::fromUtf8(lua_tostring(L, 2)));
     } else if (lua_isfunction(L, 2)) {
         triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString());
 
@@ -5998,30 +6010,23 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 
 int TLuaInterpreter::tempAlias(lua_State* L)
 {
-    string luaRegex;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "tempAlias: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaRegex = lua_tostring(L, 1);
+        lua_pushfstring(L, "tempAlias: bad argument #1 type (regex-type pattern as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
+    QString regex = QString::fromUtf8(lua_tostring(L, 1));
 
-    string luaFunction;
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "tempAlias: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 2);
+        lua_pushfstring(L, "tempAlias: bad argument #2 type (lua script as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
     }
+    QString script = QString::fromUtf8(lua_tostring(L, 2));
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _luaFunction = luaFunction.c_str();
-    QString _luaRegex = luaRegex.c_str();
-    int aliasID = pLuaInterpreter->startTempAlias(_luaRegex, _luaFunction);
-    lua_pushnumber(L, aliasID);
+    lua_pushnumber(L, pLuaInterpreter->startTempAlias(regex, script));
     return 1;
 }
 
@@ -6063,28 +6068,25 @@ int TLuaInterpreter::exists(lua_State* L)
 
 int TLuaInterpreter::isActive(lua_State* L)
 {
-    string _name;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "isActive: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        _name = lua_tostring(L, 1);
+        lua_pushfstring(L, "isActive: bad argument #1 type (item name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
-    string _type;
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "isActive: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        _type = lua_tostring(L, 2);
+        lua_pushfstring(L, "isActive: bad argument #1 type (item type as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
     }
+    // Although we only use 4 ASCII strings the user may not enter a purely
+    // ASCII value which we might have to report...
+    QString type = QString::fromUtf8(lua_tostring(L, 2));
+
     Host& host = getHostFromLua(L);
     int cnt = 0;
-    QString type = _type.c_str();
-    type = type.toLower();
-    QString name = _name.c_str();
-    if (type == "timer") {
+    if (type.compare(QLatin1String("timer"), Qt::CaseInsensitive) == 0) {
         QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(name);
         while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
@@ -6092,7 +6094,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             }
             it1++;
         }
-    } else if (type == "trigger") {
+    } else if (type.compare(QLatin1String("trigger"), Qt::CaseInsensitive) == 0) {
         QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(name);
         while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
@@ -6100,7 +6102,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             }
             it1++;
         }
-    } else if (type == "alias") {
+    } else if (type.compare(QLatin1String("alias"), Qt::CaseInsensitive) == 0) {
         QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(name);
         while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
@@ -6108,7 +6110,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             }
             it1++;
         }
-    } else if (type == "keybind") {
+    } else if (type.compare(QLatin1String("keybind"), Qt::CaseInsensitive) == 0) {
         QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(name);
         while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
@@ -6116,58 +6118,48 @@ int TLuaInterpreter::isActive(lua_State* L)
             }
             it1++;
         }
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "invalid type '%s' given, it should be one (case insensitive) of: 'alias', 'keybind', 'timer' or 'trigger'",
+                        type.toUtf8().constData());
     }
     lua_pushnumber(L, cnt);
     return 1;
 }
 
-
 int TLuaInterpreter::permAlias(lua_State* L)
 {
-    string luaName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "permAlias: need a name for this alias");
-        lua_error(L);
-        return 1;
-    } else {
-        luaName = lua_tostring(L, 1);
+        lua_pushfstring(L, "permAlias: bad argument #1 type (alias name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
 
-    string luaParent;
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "permAlias: need a parent alias/group to add this alias to");
-        lua_error(L);
-        return 1;
-    } else {
-        luaParent = lua_tostring(L, 2);
+        lua_pushfstring(L, "permAlias: bad argument #2 type (alias group/parent as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
     }
+    QString parent = QString::fromUtf8(lua_tostring(L, 2));
 
-    string luaRegex;
     if (!lua_isstring(L, 3)) {
-        lua_pushstring(L, "permAlias: need the pattern for the alias");
-        lua_error(L);
-        return 1;
-    } else {
-        luaRegex = lua_tostring(L, 3);
+        lua_pushfstring(L, "permAlias: bad argument #3 type (regexp pattern as string expected, got %s!)",
+                        luaL_typename(L, 3));
+        return lua_error(L);
     }
+    QString regex = QString::fromUtf8(lua_tostring(L, 3));
 
-    string luaFunction;
     if (!lua_isstring(L, 4)) {
-        lua_pushstring(L, "permAlias: need Lua code for this alias");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 4);
+        lua_pushfstring(L, "permAlias: bad argument #4 type (lua script as string expected, got %s!)",
+                        luaL_typename(L, 4));
+        return lua_error(L);
     }
+    QString script = QString::fromUtf8(lua_tostring(L, 4));
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _luaName = luaName.c_str();
-    QString _luaParent = luaParent.c_str();
-    QString _luaFunction = luaFunction.c_str();
-    QString _luaRegex = luaRegex.c_str();
-    int aliasID = pLuaInterpreter->startPermAlias(_luaName, _luaParent, _luaRegex, _luaFunction);
-    lua_pushnumber(L, aliasID);
+    lua_pushnumber(L, pLuaInterpreter->startPermAlias(name, parent, regex, script));
     return 1;
 }
 
@@ -6220,57 +6212,46 @@ int TLuaInterpreter::permTimer(lua_State* L)
 
 int TLuaInterpreter::permSubstringTrigger(lua_State* L)
 {
-    string name;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        name = lua_tostring(L, 1);
+        lua_pushfstring(L, "permSubstringTrigger: bad argument #1 type (trigger name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
 
-    string parent;
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        parent = lua_tostring(L, 2);
+        lua_pushfstring(L, "permSubstringTrigger: bad argument #2 type (trigger parent as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
     }
-    QStringList _regList;
+    QString parent = QString::fromUtf8(lua_tostring(L, 2));
+
+    QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        while (lua_next(L, 3) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING) {
-                QString regex = lua_tostring(L, -1);
-                _regList << regex;
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
+        lua_pushfstring(L, "permSubstringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)",
+                        luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            regList << QString::fromUtf8(lua_tostring(L, -1));
         }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
     }
 
-    string luaFunction;
     if (!lua_isstring(L, 4)) {
-        lua_pushstring(L, "permSubstringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 4);
+        lua_pushfstring(L, "permSubstringTrigger: bad argument #4 type (lua script as string expected, got %s!)",
+                        luaL_typename(L, 4));
+        return lua_error(L);
     }
+    QString script = QString::fromUtf8(lua_tostring(L, 4));
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _name = name.c_str();
-    QString _parent = parent.c_str();
-    QString _luaFunction = luaFunction.c_str();
-    int ret = pLuaInterpreter->startPermSubstringTrigger(_name, _parent, _regList, _luaFunction);
-    lua_pushnumber(L, ret);
+    lua_pushnumber(L, pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script));
     return 1;
 }
 
@@ -6395,116 +6376,93 @@ int TLuaInterpreter::tempKey(lua_State* L)
 
 int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
 {
-    string name;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        name = lua_tostring(L, 1);
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #1 type (trigger name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
 
-    string parent;
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        parent = lua_tostring(L, 2);
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #2 type (trigger parent as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
     }
-    QStringList _regList;
+    QString parent = QString::fromUtf8(lua_tostring(L, 2));
+
+    QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        while (lua_next(L, 3) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING) {
-                QString regex = lua_tostring(L, -1);
-                _regList << regex;
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)",
+                        luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            regList << QString::fromUtf8(lua_tostring(L, -1));
         }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
     }
 
-    string luaFunction;
     if (!lua_isstring(L, 4)) {
-        lua_pushstring(L, "permBeginOfLineStringTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 4);
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #4 type (lua script as string expected, got %s!)",
+                        luaL_typename(L, 4));
+        return lua_error(L);
     }
+    QString script = QString::fromUtf8(lua_tostring(L, 4));
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _name = name.c_str();
-    QString _parent = parent.c_str();
-    QString _luaFunction = luaFunction.c_str();
-    int ret = pLuaInterpreter->startPermBeginOfLineStringTrigger(_name, _parent, _regList, _luaFunction);
-    lua_pushnumber(L, ret);
+    lua_pushnumber(L, pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script));
     return 1;
 }
 
 int TLuaInterpreter::permRegexTrigger(lua_State* L)
 {
-    string name;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        name = lua_tostring(L, 1);
+        lua_pushfstring(L, "permRegexTrigger: bad argument #1 type (trigger name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
 
-    string parent;
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        parent = lua_tostring(L, 2);
+        lua_pushfstring(L, "permRegexTrigger: bad argument #2 type (trigger parent as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
     }
-    QStringList _regList;
+    QString parent = QString::fromUtf8(lua_tostring(L, 2));
+
+    QStringList regList;
     if (!lua_istable(L, 3)) {
-        lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        while (lua_next(L, 3) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING) {
-                QString regex = lua_tostring(L, -1);
-                _regList << regex;
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
+        lua_pushfstring(L, "permRegexTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)",
+                        luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    lua_pushnil(L);
+    while (lua_next(L, 3) != 0) {
+        // key at index -2 and value at index -1
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            regList << QString::fromUtf8(lua_tostring(L, -1));
         }
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
     }
 
-    string luaFunction;
     if (!lua_isstring(L, 4)) {
-        lua_pushstring(L, "permRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 4);
+        lua_pushfstring(L, "permRegexTrigger: bad argument #4 type (lua script as string expected, got %s!)",
+                        luaL_typename(L, 4));
+        return lua_error(L);
     }
+    QString script = QString::fromUtf8(lua_tostring(L, 4));
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _name = name.c_str();
-    QString _parent = parent.c_str();
-    QString _luaFunction = luaFunction.c_str();
-    int ret = pLuaInterpreter->startPermRegexTrigger(_name, _parent, _regList, _luaFunction);
-    lua_pushnumber(L, ret);
+    lua_pushnumber(L, pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script));
     return 1;
 }
-
 
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
@@ -9205,59 +9163,65 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
 int TLuaInterpreter::setRoomChar(lua_State* L)
 {
     int id;
-    string c;
+    QString symbol;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomChar: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
+
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomChar: bad argument #2 type (room symbol as string expected, got %s!)",
+                       luaL_typename(L, 2));
+        return lua_error(L);
     } else {
-        c = lua_tostring(L, 2);
+        symbol = QString::fromUtf8(lua_tostring(L, 2));
     }
+
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushstring(L, "setRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
-        if (c.size() >= 1) {
-            pR->c = c[0];
+        if (symbol.isEmpty()) {
+            // Allow an empty string to be used to clear the symbol:
+            pR->mSymbol.clear();
+        } else {
+            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+            // handle/use/allow:
+            pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
         }
+        lua_pushboolean(L, true);
+        return 1;
     }
-    return 0;
 }
 
 int TLuaInterpreter::getRoomChar(lua_State* L)
 {
     int id;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "getRoomChar: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
+
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushstring(L, "getRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
-        QString c = (QString)pR->c;
-        lua_pushstring(L, c.toLatin1().data());
+        lua_pushstring(L, pR->mSymbol.toUtf8().constData());
         return 1;
     }
-    return 0;
 }
-
 
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
@@ -10838,6 +10802,8 @@ int TLuaInterpreter::getOS(lua_State* L)
     lua_pushstring(L, "windows");
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
+#elif defined(Q_OS_LINUX)
+    lua_pushstring(L, "linux");
 #elif defined(Q_OS_HURD)
     // One can hope/dream!
     lua_pushstring(L, "hurd");
@@ -10877,8 +10843,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
         return false;
     }
 
-    int error = luaL_dostring(L, code.toLatin1().data());
-    QString n;
+    int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(L, 1)) {
@@ -10959,19 +10924,7 @@ bool TLuaInterpreter::compileScript(const QString& code)
         return false;
     }
 
-    /*lua_newtable( L );
-
-	   // set values
-	   for( int i=0; i<matches.size(); i++ )
-	   {
-	    lua_pushnumber( L, i+1 ); // Lua indexes start with 1
-	    lua_pushstring( L, matches[i].toLatin1().data() );
-	    lua_settable( L, -3 );
-	   }
-	   lua_setglobal( L, "matches" );*/
-
-    int error = luaL_dostring(L, code.toLatin1().data());
-    QString n;
+    int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(L, 1)) {
@@ -11003,7 +10956,9 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
         return false;
     }
 
-    int error = (luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    int error = (luaL_loadbuffer(L, code.toUtf8().constData(),
+                                 strlen(code.toUtf8().constData()),
+                                 name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
     QString n;
     if (error != 0) {
@@ -11502,8 +11457,8 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
         lua_setglobal(L, "matches");
     }
 
-    lua_getglobal(L, function.toLatin1().data());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toLatin1().data());
+    lua_getglobal(L, function.toUtf8().constData());
+    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
@@ -11629,8 +11584,8 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         lua_setglobal(L, "multimatches");
     }
 
-    lua_getglobal(L, function.toLatin1().data());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toLatin1().data());
+    lua_getglobal(L, function.toUtf8().constData());
+    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
@@ -11870,7 +11825,7 @@ double TLuaInterpreter::condenseMapLoad()
             string e = "";
             if (lua_isstring(L, i)) {
                 e += lua_tostring(L, i);
-                QString _f = luaFunction.toLatin1();
+                QString _f = luaFunction.toUtf8().constData();
                 logError(e, luaFunction, _f);
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running " << luaFunction << " ERROR:" << e.c_str() << "\n" >> 0;
@@ -12329,6 +12284,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
+
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");
 
@@ -12489,7 +12445,7 @@ void TLuaInterpreter::initIndenterGlobals()
 
 
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
         //macOS app bundle would like the search path to also be set to the current binary directory
         luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
                       .arg(QCoreApplication::applicationDirPath())
@@ -12499,12 +12455,9 @@ void TLuaInterpreter::initIndenterGlobals()
                       .toUtf8().constData());
 
 #elif defined(Q_OS_UNIX)
-    // Need to tweak the lua path for the installed *nix case and to allow
-    // running from a shadow build directory, the latter means we HAVE to rename
-    // where the module code is stored or use a symbolic link from "lcf" to
-    // "lua_code_formatter" in the "3rdparty" source directory - a rename was
-    // choosen.
-    luaL_dostring(pIndenterState, QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/../3rdparty/?.lua;' .. package.path")
+    // Need to tweak the lua path for the installed *nix case and AppImage builds as well as
+    // to allow running from a shadow build directory (both qmake and cmake).
+    luaL_dostring(pIndenterState, QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;' .. package.path")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
 
@@ -12544,7 +12497,7 @@ void TLuaInterpreter::initIndenterGlobals()
 
 void TLuaInterpreter::loadGlobal()
 {
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     // Load relatively to MacOS inside Resources when we're in a .app bundle,
     // as mudlet-lua always gets copied in by the build script into the bundle
     QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
@@ -12554,7 +12507,7 @@ void TLuaInterpreter::loadGlobal()
     QString path = "../src/mudlet-lua/lua/LuaGlobal.lua";
 #endif
 
-    int error = luaL_dofile(pGlobalLua, path.toLatin1().data());
+    int error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
     if (error != 0) {
         // For the installer we do not go down a level to search for this. So
         // we check again for the user case of a windows install.
@@ -12565,7 +12518,7 @@ void TLuaInterpreter::loadGlobal()
         if (!QFileInfo::exists(path)) {
             path = "mudlet-lua/lua/LuaGlobal.lua";
         }
-        error = luaL_dofile(pGlobalLua, path.toLatin1().data());
+        error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
         if (error == 0) {
             mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
             return;
@@ -12577,7 +12530,7 @@ void TLuaInterpreter::loadGlobal()
 
     // Finally try loading from LUA_DEFAULT_PATH
     path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
-    error = luaL_dofile(pGlobalLua, path.toLatin1().data());
+    error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(pGlobalLua, -1)) {

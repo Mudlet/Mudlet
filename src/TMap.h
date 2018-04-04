@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +29,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
+#include <QFont>
 #include <QMap>
 #include <QMutex>
 #include <QNetworkReply>
@@ -45,7 +47,6 @@ class GLWidget;
 class TArea;
 class TRoom;
 class TRoomDB;
-class T2DMap;
 class QFile;
 class QNetworkAccessManager;
 class QProgressDialog;
@@ -144,6 +145,9 @@ public:
     // Use progress dialog for post-download operations.
     void reportProgressToProgressDialog(const int, const int);
 
+    // Show which rooms have which symbols:
+    QHash<QString, QSet<int>> roomSymbolsHash();
+
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
@@ -167,8 +171,8 @@ public:
     // contains complementary directions of dirs on TRoom.h
     QMap<int, int> reverseDirections;
 
-    GLWidget* mpM;
-    dlgMapper* mpMapper;
+    QPointer<GLWidget> mpM;
+    QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
 
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
@@ -207,6 +211,18 @@ public:
     int mSaveVersion;
 
     QMap<QString, QString> mUserData;
+
+    // This is the font that the map file or user *wants* to use - what actually
+    // gets used may be different, and will be stored in the T2DMap class.
+    QFont mMapSymbolFont;
+    // For 2D mapper: the symbol text is scaled to fill a rectangle based upone
+    // the room symbol with this scaling factor. This may be needed because
+    // different users could have differing requirement for symbol sizing
+    // depending on font usage, language, symbol choice, etc. but this has not
+    // (yet) made (user) adjustable:
+    qreal mMapSymbolFontFudgeFactor;
+    // Disables font substitution if set:
+    bool mIsOnlyMapSymbolFontToBeUsed;
 
 
 public slots:

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2017 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2016-2018 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -37,6 +37,13 @@
 #include <QTextLayout>
 #include "post_guard.h"
 
+/*
+ * Use to enable "Windows" behaviour for command line "--help"/"--version" on
+ * other platforms - for testing/debugging of that feature on non-Windows
+ * platforms...
+ */
+// #define DEBUG_TEST_WIN_CMDLINE_TEXTS
+
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
 // leak detection does not work when it is not defined.
@@ -51,7 +58,7 @@ using namespace std;
 
 TConsole* spDebugConsole = nullptr;
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN32)
 bool runUpdate();
 #endif
 
@@ -78,22 +85,19 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 
 // A crude and simplistic commandline options processor - note that Qt deals
 // with its options automagically!
-#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC))
+#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MACOS) || defined(Q_OS_FREEBSD))
     // Handle other currently unconsidered OSs - what are they - by returning the
     // normal GUI type application handle.
     return new QApplication(argc, argv);
 #endif
 
     for (int i = 1; i < argc; ++i) {
-#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
         if (qstrcmp(argv[i], "--") == 0) {
             break; // Bail out on end of option type arguments
         }
-#endif
 
         char argument = 0;
         bool isOption = false;
-#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
         if (strlen(argv[i]) > 2 && strncmp(argv[i], "--", 2) == 0) {
             argument = argv[i][2];
             isOption = true;
@@ -101,13 +105,6 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
             argument = argv[i][1];
             isOption = true;
         }
-#elif defined(Q_OS_WIN32)
-        // TODO: Do Qt builds for Windows use Unix '-' as option prefix or is the normal (for them) '/' used - as assumed here and in the help text
-        if (strlen(argv[i]) > 1 && strncmp(argv[i], "/", 1) == 0) {
-            argument = argv[i][1];
-            isOption = true;
-        }
-#endif
 
         if (isOption) {
             if (tolower(argument) == 'v') {
@@ -127,16 +124,27 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     }
 
     if ((action) & (1 | 2)) {
-        // Ah, we're gonna bail out early, just need a command-line application
+        // Ah, we're gonna bail out early, if Windows we still need a GUI Application
+#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
+        return new QApplication(argc, argv);
+#else
+        // otherwise, just need a command-line application
         return new QCoreApplication(argc, argv);
+#endif
     } else {
 #if defined(Q_OS_MACOS)
-        // Workaround for horrible mac rendering issues once the mapper widget is open
-        // see https://bugreports.qt.io/browse/QTBUG-41257
+        // Workaround for horrible mac rendering issues once the mapper widget
+        // is open - see https://bugreports.qt.io/browse/QTBUG-41257
         QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
-#endif
-#if defined(Q_OS_WIN32)
-        // Force OpenGL use as we use some functions that aren't provided by Qt's OpenGL layer on Windows (QOpenGLFunctions)
+#elif defined(Q_OS_FREEBSD)
+        // Cure for diagnostic:
+        // "Qt WebEngine seems to be initialized from a plugin. Please set
+        // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
+        // before constructing QGuiApplication."
+        QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#elif defined(Q_OS_WIN32)
+        // Force OpenGL use as we use some functions that aren't provided by
+        // Qt's OpenGL layer on Windows (QOpenGLFunctions)
         QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
@@ -189,87 +197,170 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
-    Q_INIT_RESOURCE(mudlet);
-
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
-
     QApplication* app = qobject_cast<QApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-    if (!app) {
-        if (startupAction & 2) {
-            // Do "version" action - wording and format is quite tightly specified by the coding standards
-            std::cout << APP_TARGET << " " << APP_VERSION << APP_BUILD << std::endl;
-            std::cout << "Qt libraries " << QT_VERSION_STR << "(compilation) " << qVersion() << "(runtime)" << std::endl;
-            std::cout << "Copyright (C) 2008-" << std::string(__DATE__).substr(7, 4) << " Mudlet devs." << std::endl;
-            std::cout << "Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>" << std::endl;
-            std::cout << "This is free software: you are free to change and redistribute it." << std::endl;
-            std::cout << "There is NO WARRANTY, to the extent permitted by law." << std::endl;
-        }
-        if (startupAction & 1) {
-            // Do "help" action -
-            std::cout << "Usage: " << std::string(APP_TARGET) << "[OPTION...]" << std::endl;
-#if defined(Q_OS_WIN32)
-            std::cout << "   /h, /help           displays this message." << std::endl;
-            std::cout << "   /v, /version        displays version information." << std::endl;
-            std::cout << "   /q, /quiet          no splash screen on startup." << std::endl;
-#define OPT_PREFIX '/'
-#else
-            std::cout << "   -h, --help          displays this message." << std::endl;
-            std::cout << "   -v, --version       displays version information." << std::endl;
-            std::cout << "   -q, --quiet         no splash screen on startup." << std::endl;
-#define OPT_PREFIX '-'
-#endif
-            std::cout << "There are other inherited options that arise from the Qt Libraries which" << std::endl;
-            std::cout << "are not likely to be useful for normal use of this application:" << std::endl;
-            // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
-            std::cout << "       " << OPT_PREFIX << "dograb         ignore any implicit or explicit -nograb." << std::endl;
-            std::cout << "                       " << OPT_PREFIX << "dograb wins over " << OPT_PREFIX << "nograb even when" << std::endl;
-            std::cout << "                       " << OPT_PREFIX << "nograb is last on the command line." << std::endl;
-            std::cout << "       " << OPT_PREFIX << "nograb         the application should never grab the mouse or the" << std::endl;
+	QStringList texts;
+    if (startupAction & 2) {
+        // Do "version" action - wording and format is quite tightly specified by the coding standards
+#if defined(QT_DEBUG)
+        texts << QCoreApplication::translate("main", "%1 %2%3 (debug symbols, no optimisations)\n")
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
+#else // ! defined(QT_DEBUG)
+        texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
+#endif // ! defined(QT_DEBUG)
+        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n").arg(QLatin1String(QT_VERSION_STR), qVersion());
+        texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
+#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
+        texts << QStringLiteral("%1 <a href=\"http://www.gnu.org/licenses/gpl.html\">www.gnu.org/licenses/gpl.html</a>")
+                 .arg(QCoreApplication::translate("main", "Licence: GPLv2+ - GNU General Public License version 2.0 (or at your option, any later version)."));
+#else // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
+        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>.\n");
+#endif // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
+        texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
+                                                     "There is NO WARRANTY, to the extent permitted by law.");
+#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
+        // On Windows have to dump the information to a QMessageBox, we do have a GUI application...
+        QMessageBox msgBox;
+        msgBox.setWindowTitle(QCoreApplication::translate("main", "Mudlet - Version Information"));
+        msgBox.setIconPixmap(QPixmap(QStringLiteral(":/icons/mudlet_information.png")));
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(texts.join(QLatin1String("<br>")));
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        app->processEvents();
+        msgBox.exec();
+#else // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
+        std::cout << texts.join(QString()).toStdString();
+#endif // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
+        return 0;
+    } else if (startupAction & 1) {
+        // Do "help" action
+#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
+        // &#8209; is the non-breaking hyphen...!
+        texts << QStringLiteral("<html><head/><body><table cellpadding=\"1\"><tr><td colspan=\"2\" style=\"width:100%\"><kdb>%1</kdb></td></tr>"
+                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%2</kdb></td><td style=\"width:75%\">%3</td></tr>"
+                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%4</tte></td><td style=\"width:75%\">%5</td></tr>"
+                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%6</kdb></td><td style=\"width:75%\">%7</td></tr>"
+                                "<tr><td colspan=\"2\" style=\"width:100%\">%8</td></tr>")
+                 .arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]").arg(QLatin1String(APP_TARGET)),
+                      QCoreApplication::translate("main", "&#8209;h, &#8209;&#8209;help", "This may not be translatable"),
+                      QCoreApplication::translate("main", "displays this message."),
+                      QCoreApplication::translate("main", "&#8209;v, &#8209;&#8209;version", "This may not be translatable"),
+                      QCoreApplication::translate("main", "displays version information."),
+                      QCoreApplication::translate("main", "&#8209;q, &#8209;&#8209;quiet", "This may not be translatable"),
+                      QCoreApplication::translate("main", "no splash screen on startup."),
+                      QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which "
+                                                          "are not likely to be useful for normal use of this application:"));
+
+        // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
+        // QString::Arg(...) methods can only handle up to 9 argments
+        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
+                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%3</kdb></td><td style=\"width:75%\">%4</td></tr>")
+                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;dograb", "This may not be translatable"),
+                      QCoreApplication::translate("main", "ignore any implicit or explicit <kdb>&#8209;&#8209;nograb</kdb>. "
+                                                          "<kdb>&#8209;&#8209;dograb</kdb> wins over <kdb>&#8209;&#8209;nograb</kdb> even when "
+                                                          "<kdb>&#8209;&#8209;nograb</kdb> is last on the command line.",
+                                                  "Please leave the <kdb>...</kdb> delimited parts untranslated!"),
+                      QCoreApplication::translate("main", "&#8209;&#8209;nograb", "This may not be translatable"),
+                      QCoreApplication::translate("main", "the application should never grab the mouse or the keyboard."));
+
+        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
+                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%3</kdb></td><td style=\"width:75%\">%4</td></tr>"
+                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%5</kdb></td><td style=\"width:75%\">%6</td></tr>")
+                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;reverse", "This may not be translatable"),
+                      QCoreApplication::translate("main", "sets the application's layout direction to right to left."),
+                      QCoreApplication::translate("main", "&#8209;&#8209;style= style", "This may not be translatable"),
+                      QCoreApplication::translate("main", "sets the application GUI style. Possible values depend on your system configuration. "
+                                                          "If Qt was compiled with additional styles or has additional styles as plugins these "
+                                                          "will be available to the <kdb>&#8209;&#8209;style</kdb> command line option. You can also set the "
+                                                          "style for all Qt applications by setting the <kdb>QT_STYLE_OVERRIDE</kdb> environment "
+                                                          "variable.",
+                                                          "Please leave the <kdb>...</kdb> delimited parts untranslated!"),
+                      QCoreApplication::translate("main", "&#8209;&#8209;style style", "This may not be translatable"),
+                      QCoreApplication::translate("main", "is the same as listed above."));
+
+        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
+                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%3</kdb></td><td style=\"width:75%\">%4</td></tr>")
+                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;stylesheet= stylesheet", "This may not be translatable"),
+                      QCoreApplication::translate("main", "sets the application styleSheet.\n"
+                                                          "The value must be a path to a file that contains the "
+                                                          "Style Sheet. Note: Relative URLs in the Style Sheet "
+                                                          "file are relative to the Style Sheet file's path."),
+                      QCoreApplication::translate("main", "&#8209;&#8209;stylesheet stylesheet", "This may not be translatable"),
+                      QCoreApplication::translate("main", "is the same as listed above."));
+
+        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
+                                "<tr><td align=\"center\" style=\"width:100%\" colspan=\"2\"><kdb>%3</kdb></td></tr>"
+                                "<tr><td align=\"center\" style=\"width:100%\" colspan=\"2\"><kdb>%4</kdb></td></tr></table>")
+                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;qmljsdebugger=1234[,block]", "This may not be translatable"),
+                      QCoreApplication::translate("main", "activates the QML/JS debugger with a specified port. "
+                                                          "The number is the port value and block is optional and will "
+                                                          "make the application wait until a debugger connects to it."),
+                      QCoreApplication::translate("main", "Report bugs to: %1.").arg(QLatin1String("<a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a>")),
+                      QCoreApplication::translate("main", "Project home page: %1.").arg(QLatin1String("<a href=\"https://www.mudlet.org/\">www.mudlet.org</a>")));
+        // On Windows have to dump the information to a QMessageBox
+        QMessageBox msgBox;
+        msgBox.setWindowTitle(QCoreApplication::translate("main", "Mudlet - Command Line Help"));
+        msgBox.setIconPixmap(QPixmap(QStringLiteral(":/icons/mudlet_information.png")));
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(texts.join(QString()));
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        app->processEvents();
+        msgBox.exec();
+#else // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
+        texts << QCoreApplication::translate("main", "Usage: %1 [OPTION...]\n"
+                                                     "       -h, --help      displays this message.\n"
+                                                     "       -v, --version   displays version information.\n"
+                                                     "       -q, --quiet     no splash screen on startup.\n\n"
+                                                     "There are other inherited options that arise from the Qt Libraries which are\n"
+                                                     "less likely to be useful for normal use of this application:\n")
+                 .arg(QLatin1String(APP_TARGET));
+        // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
+        texts << QCoreApplication::translate("main", "       --dograb        ignore any implicit or explicit -nograb.\n"
+                                                     "                       --dograb wins over --nograb even when --nograb is last on\n"
+                                                     "                       the command line.\n"
+                                                     "       --nograb        the application should never grab the mouse or the\n"
 #if defined(Q_OS_LINUX)
-            std::cout << "                       keyboard. This option is set by default when Mudlet is" << std::endl;
-            std::cout << "                       running in the gdb debugger under Linux." << std::endl;
-#else
-            std::cout << "                       keyboard." << std::endl;
-#endif
-            std::cout << "        " << OPT_PREFIX << "reverse       sets the application's layout direction to" << std::endl;
-            std::cout << "                       right to left." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "style= style  sets the application GUI style. Possible values depend" << std::endl;
-            std::cout << "                       on your system configuration. If Qt was compiled with" << std::endl;
-            std::cout << "                       additional styles or has additional styles as plugins" << std::endl;
-            std::cout << "                       these will be available to the -style command line" << std::endl;
-            std::cout << "                       option. You can also set the style for all Qt" << std::endl;
-            std::cout << "                       applications by setting the QT_STYLE_OVERRIDE environment" << std::endl;
-            std::cout << "                       variable." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "style style   is the same as listed above." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "stylesheet= stylesheet" << std::endl;
-            std::cout << "                       sets the application styleSheet." << std::endl;
-            std::cout << "                       The value must be a path to a file that contains the" << std::endl;
-            std::cout << "                       Style Sheet. Note: Relative URLs in the Style Sheet" << std::endl;
-            std::cout << "                       file are relative to the Style Sheet file's path." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "stylesheet stylesheet" << std::endl;
-            std::cout << "                       is the same as listed above." << std::endl;
-#if defined(Q_OS_UNIX)
-            std::cout << "        " << OPT_PREFIX << "sync          runs Mudlet in X synchronous mode. Synchronous mode" << std::endl;
-            std::cout << "                       forces the X server to perform each X client request" << std::endl;
-            std::cout << "                       immediately and not use buffer optimization. It makes" << std::endl;
-            std::cout << "                       the program easier to debug and often much slower. The" << std::endl;
-            std::cout << "                       -sync option is only valid for the X11 version of Qt." << std::endl;
-#endif
-            std::cout << "        " << OPT_PREFIX << "widgetcount   prints debug message at the end about number of widgets" << std::endl;
-            std::cout << "                       left undestroyed and maximum number of widgets existing" << std::endl;
-            std::cout << "                       at the same time." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "qmljsdebugger=1234[,block]" << std::endl;
-            std::cout << "                       activates the QML/JS debugger with a specified port." << std::endl;
-            std::cout << "                       The number is the port value and block is optional" << std::endl;
-            std::cout << "                       and will make the application wait until a debugger" << std::endl;
-            std::cout << "                       connects to it." << std::endl;
-            std::cout << std::endl;
-            std::cout << "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>" << std::endl;
-            std::cout << "pkg home page: <http://www.mudlet.org/>" << std::endl;
-        }
+                                                     "                       keyboard. This option is set by default when Mudlet is\n"
+                                                     "                       running in the gdb debugger under Linux.\n"
+#else // ! defined(Q_OS_LINUX)
+                                                     "                       keyboard.\n"
+#endif // ! defined(Q_OS_LINUX)
+                                                     "       --reverse       sets the application's layout direction to right to left.\n"
+                                                     "       --style= style  sets the application GUI style. Possible values depend on\n"
+                                                     "                       your system configuration. If Qt was compiled with\n"
+                                                     "                       additional styles or has additional styles as plugins\n"
+                                                     "                       these will be available to the -style command line\n"
+                                                     "                       option. You can also set the style for all Qt\n"
+                                                     "                       applications by setting the QT_STYLE_OVERRIDE environment\n"
+                                                     "                       variable.\n"
+                                                     "       --style style   is the same as listed above.\n"
+                                                     "       --stylesheet= stylesheet  sets the application styleSheet.\n"
+                                                     "                       The value must be a path to a file that contains the\n"
+                                                     "                       Style Sheet. Note: Relative URLs in the Style Sheet file\n"
+                                                     "                       are relative to the Style Sheet file's path.\n"
+                                                     "       --stylesheet stylesheet  is the same as listed above.\n"
+// Not sure about MacOS case as that does not use X
+#if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
+                                                     "       --sync          forces the X server to perform each X client request\n"
+                                                     "                       immediately and not use buffer optimization. It makes the\n"
+                                                     "                       program easier to debug and often much slower. The --sync\n"
+                                                     "                       option is only valid for the X11 version of Qt.\n"
+#endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
+        // NB: it is probably impossible to actually get to see this on Windows!
+                                                     "       --widgetcount   prints debug message at the end about number of widgets\n"
+                                                     "                       left undestroyed and maximum number of widgets existing\n"
+                                                     "                       at the same time.\n"
+                                                     "       --qmljsdebugger=1234[,block]  activates the QML/JS debugger with a\n"
+                                                     "                       specified port. The number is the port value and block is\n"
+                                                     "                       optional and will make the application wait until a\n"
+                                                     "                       debugger connects to it.\n\n");
+        texts << QCoreApplication::translate("main", "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>.\n");
+        texts << QCoreApplication::translate("main", "Project home page: <http://www.mudlet.org/>.\n");
+        std::cout << texts.join(QString()).toStdString();
+#endif // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         return 0;
     }
 
@@ -277,7 +368,7 @@ int main(int argc, char* argv[])
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
 
-#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
     if (abortLaunch) {
         return 0;
@@ -378,14 +469,13 @@ int main(int argc, char* argv[])
         first_launch = true;
     }
 
-
-#if defined(INCLUDE_FONTS)
     if (show_splash) {
         splash_message.append("Done.\n\nLoading font files... ");
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
 
+#if defined(INCLUDE_FONTS)
     QString bitstreamVeraFontDirectory(QStringLiteral("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
@@ -444,6 +534,10 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 #endif
 
+    mudlet::debugMode = false;
+    FontManager fm;
+    fm.addFonts();
+
     if (show_splash) {
         splash_message.append("Done.\n\n"
                               "All data has been loaded successfully.\n\n"
@@ -451,12 +545,6 @@ int main(int argc, char* argv[])
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
-
-    mudlet::debugMode = false;
-#if defined(INCLUDE_FONTS)
-    FontManager fm;
-    fm.addFonts();
-#endif
 
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
 #ifdef Q_OS_WIN32
@@ -526,7 +614,7 @@ int main(int argc, char* argv[])
     return app->exec();
 }
 
-#if defined(Q_OS_WIN) && defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
 // small detour for Windows - check if there's an updated Mudlet
 // available to install. If there is, quit and run it - Squirrel
 // will update Mudlet and then launch it once it's done

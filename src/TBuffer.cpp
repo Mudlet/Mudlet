@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,13 +25,21 @@
 #include "Host.h"
 #include "TConsole.h"
 
-#include <queue>
+#include "pre_guard.h"
+#include <QTextCodec>
 #include <QRegularExpression>
+#include "post_guard.h"
+
+#include <queue>
+
 #include <assert.h>
 
 // Define this to get qDebug() messages about the decoding of UTF-8 data when it
 // is not the single bytes of pure ASCII text:
-#define DEBUG_UTF8_PROCESSING
+// #define DEBUG_UTF8_PROCESSING
+// Define this to get qDebug() messages about the decoding of GB2312/GBK/GB18030
+// data when it is not the single bytes of pure ASCII text:
+// #define DEBUG_GB_PROCESSING
 
 // These tables have been regenerated from examination of the Qt source code
 // particularly from:
@@ -750,9 +758,6 @@ TBuffer::TBuffer(Host* pH)
 , mFgColorCode(false)
 , mBgColorCode(false)
 , mIsHighColorMode(false)
-, speedTP()
-, speedSequencer()
-, speedAppend()
 , mOpenMainQuote()
 , mEchoText()
 , mIsDefaultColor()
@@ -764,6 +769,8 @@ TBuffer::TBuffer(Host* pH)
 , mCode()
 , lastLoggedFromLine(0)
 , lastloggedToLine(0)
+, mEncoding()
+, mMainIncomingCodec(nullptr)
 {
     clear();
     newLines = 0;
@@ -796,20 +803,6 @@ void TBuffer::setBufferSize(int s, int batch)
     }
     mLinesLimit = s;
     mBatchDeleteSize = batch;
-}
-
-void TBuffer::resetFontSpecs()
-{
-    fgColorR = mFgColorR;
-    fgColorG = mFgColorG;
-    fgColorB = mFgColorB;
-    bgColorR = mBgColorR;
-    bgColorG = mBgColorG;
-    bgColorB = mBgColorB;
-    mBold = false;
-    mItalics = false;
-    mUnderline = false;
-    mStrikeOut = false;
 }
 
 void TBuffer::updateColors()
@@ -1065,7 +1058,6 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
 //}
 
 
-//int speedTP;
 
 /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
       -----------------------------------------
@@ -1158,37 +1150,43 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         return; // We really have a problem
     }
 
-    if (isFromServer && !mIncompleteUtf8SequenceBytes.empty() && pHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
-#if defined(DEBUG_UTF8_PROCESSING)
+    // Check this each packet
+    QString usedEncoding = mpHost->mTelnet.getEncoding();
+    if (mEncoding != usedEncoding) {
+        encodingChanged(usedEncoding);
+    }
+
+// clang-format off
+    if (isFromServer
+        && !mIncompleteSequenceBytes.empty()
+        && (mEncoding == QLatin1String("UTF-8") || mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030"))) {
+
+// clang-format on
+#if defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING)
         qDebug() << "TBuffer::translateToPlainText(...) Prepending residual UTF-8 bytes onto incoming data!";
 #endif
-        localBuffer = mIncompleteUtf8SequenceBytes + incoming;
-        mIncompleteUtf8SequenceBytes.clear();
+        localBuffer = mIncompleteSequenceBytes + incoming;
+        mIncompleteSequenceBytes.clear();
     } else {
         localBuffer = incoming;
     }
 
-    const QVector<QChar> encodingLookupTable = csmEncodingTable.value(pHost->mTelnet.getEncoding()).second;
-    // If the encoding is "ASCII", "ISO 8859-1" or "UTF-8" (which are not in the
-    // table) encodingLookupTable will be empty otherwise the 128 values in the
-    // returned table will be used for all the text data that gets through the
-    // following ANSI code and other out-of-band data processing - doing this
-    // mean that a (fast) lookup in the QVector can be done as opposed to a
-    // a repeated switch(...) and branch to one of a series of decoding methods
-    // each with another up to 128 value switch()
+    const QVector<QChar> encodingLookupTable = csmEncodingTable.value(mEncoding).second;
+    // If the encoding is "ASCII", "ISO 8859-1", "UTF-8", "GBK" or "GB18030"
+    // (which are not in the table) encodingLookupTable will be empty otherwise
+    // the 128 values in the returned table will be used for all the text data
+    // that gets through the following ANSI code and other out-of-band data
+    // processing - doing this mean that a (fast) lookup in the QVector can be
+    // done as opposed to a a repeated switch(...) and branch to one of a series
+    // of decoding methods each with another up to 128 value switch()
 
-    speedAppend = 0;
-    speedTP = 0;
     int numCodes = 0;
-    speedSequencer = 0;
     mUntriggered = lineBuffer.size() - 1;
     size_t localBufferLength = localBuffer.length();
     size_t localBufferPosition = 0;
     if (!localBufferLength) {
         return;
     }
-
-    QString encoding = mpHost->mTelnet.getEncoding();
 
     while (true) {
     DECODE:
@@ -1376,8 +1374,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     // a non-integer multiplier, instead of multiplying
                                     // and rounding we, for speed, can use a look-up table:
                                     int value;
-                                    switch( tag )
-                                    {
+                                    // clang-format off
+                                    switch (tag) {
                                         case 232:   value =   0; break; //   0.000
                                         case 233:   value =  11; break; //  11.087
                                         case 234:   value =  22; break; //  22.174
@@ -1406,7 +1404,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                             value = 192;
                                             qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for foreground failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to light-grey!";
                                     }
-
+                                    // clang-format on
                                     fgColorR = value;
                                     fgColorLightR = value;
                                     fgColorG = value;
@@ -1528,8 +1526,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                 } else {
                                     // black + 23 tone grayscale from dark to (NOT light gray, but) white
                                     int value;
-                                    switch( tag )
-                                    {
+                                    // clang-format off
+                                    switch (tag) {
                                         case 232:   value =   0; break; //   0.000
                                         case 233:   value =  11; break; //  11.087
                                         case 234:   value =  22; break; //  22.174
@@ -1558,7 +1556,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                             value = 64;
                                             qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for background failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to dark-grey!";
                                     }
-
+                                    // clang-format on
                                     bgColorR = value;
                                     bgColorG = value;
                                     bgColorB = value;
@@ -2179,8 +2177,21 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
     COMMIT_LINE:
         if ((ch == '\n') || (ch == '\xff') || (ch == '\r')) {
-            // MUD Zeilen werden immer am Zeilenanfang geschrieben
-            if (lineBuffer.back().size() > 0) {
+            // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
+            // EN: MUD lines are always written at the beginning of the line
+
+            // FIXME: This is the point where we should renormalise the new text
+            // data - of course there is the theoretical chance that the new
+            // text would alter the prior contents but as that is on a separate
+            // line there should not be any changes to text before a line feed
+            // which sort of seems to be implied by the current value of ch:
+
+            if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
+                qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
+                              "data character and attribute data items!";
+            }
+
+            if (!lineBuffer.back().isEmpty()) {
                 if (mMudLine.size() > 0) {
                     lineBuffer << mMudLine;
                 } else {
@@ -2222,7 +2233,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             mMudBuffer.clear();
             int line = lineBuffer.size() - 1;
             mpHost->mpConsole->runTriggers(line);
+            // Only use of TBuffer::wrap(), breaks up new text
+            // NOTE: it MAY have been clobbered by the trigger engine!
             wrap(lineBuffer.size() - 1);
+
+            // Start a new, but empty line in the various buffers
             ++localBufferPosition;
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
@@ -2248,240 +2263,25 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             } else {
                 mMudLine.append(encodingLookupTable.at(index - 128));
             }
-        } else if (encoding == QLatin1String("ISO 8859-1")) {
+        } else if (mEncoding == QLatin1String("ISO 8859-1")) {
             mMudLine.append(QString(QChar::fromLatin1(ch)));
-        } else if (encoding == QLatin1String("UTF-8")) {
-            // In Utf-8 mode we have to process the data more than one byte at a
-            // time because there is not necessarily a one-byte to one TChar
-            // mapping, instead we use one TChar per QChar - and that has to be
-            // tweaked for non-BMP characters that use TWO QChars per codepoint.
-            if (static_cast<quint8>(localBuffer[localBufferPosition]) & 0x80) {
-                // MSB is set, so if this is Utf-8 then assume this is the first byte
-                size_t utf8SequenceLength = 1;
-                // clang-format off
-                if        ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xE0) == 0xC0) {
-                    // 2 byte sequence - Unicode code-points: U+00000080 to U+000007FF
-                    utf8SequenceLength = 2;
-                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xF0) == 0xE0) {
-                    // 3 byte sequence - Unicode code-points: U+00000800 to U+0000FFFF
-                    utf8SequenceLength = 3;
-                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xF8) == 0xF0) {
-                    // 4 byte sequence - Unicode code-points: U+00010000 to U+001FFFFF (<= U+0010FFF LEGAL)
-                    utf8SequenceLength = 4;
-                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xFC) == 0xF8) {
-                    // 5 byte sequence - Unicode code-points: U+00200000 to U+03FFFFFF (ALL ILLEGAL)
-                    utf8SequenceLength = 5;
-                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xFE) == 0xFC) {
-                    // 6 byte sequence - Unicode code-points: U+04000000 to U+7FFFFFFF (ALL ILLEGAL)
-                    utf8SequenceLength = 6;
-                }
-                // clang-format on
-
-                if ((localBufferPosition + utf8SequenceLength) > localBufferLength) {
-                    // Not enough bytes left in localBuffer to complete the utf-8
-                    // sequence - need to save and prepend onto incoming data next
-                    // time around.
-                    // The absence of a second argument takes all the available
-                    // bytes - this is only for data from the Server NOT from
-                    // locally generated material from Lua feedTriggers(...)
-                    if (isFromServer) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
-                                 << " but we currently only have: " << localBuffer.substr(localBufferPosition).length() << " bytes (which we will store for next call to this method)...";
-#endif
-                        mIncompleteUtf8SequenceBytes = localBuffer.substr(localBufferPosition);
-                    }
-                    return; // Bail out
-                }
-
-                // If we have got here we have enough bytes to work with:
-                bool isValid = true;
-                bool isToUseReplacementMark = false;
-                bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
-                switch (utf8SequenceLength) {
-                case 4:
-                    // clang-format off
-                    if        (   (   static_cast<quint8>(localBuffer[localBufferPosition + 3]) & 0xC0) != 0x80) {
-                        // clang-format on
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) 4th byte in UTF-8 sequence is invalid!";
-#endif
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                        // clang-format off
-                    } else if ( ( (   static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0x07) >  0x04)
-                                ||( ((static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0x07) == 0x04)
-                                  &&((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0x3F) >  0x0F)) ) {
-                        // clang-format on
-
-// For 4 byte values the bits are distributed:
-//  Byte 1    Byte 2    Byte 3    Byte 4
-// 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
-// U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
-// So this (the maximum valid character) is:
-//      ABC    DEFGHI    JKLMNO    PQRSTU
-//      100    001111    111111    111111
-// So if the first byte localBuffer[localBufferPosition] & 0x07 is:
-//  < 0x04 then must be in range
-//  > 0x04 then must be out of range
-// == 0x04 then consider localBuffer[localBufferPosition+1] & 0x3F:
-//     <= 001111 0x0F then must be in range
-//      > 001111 0x0F then must be out of range
-
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
-#endif
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                    }
-
-                    [[clang::fallthrough]];
-                case 3:
-                    // clang-format off
-                    if        ((static_cast<quint8>(localBuffer[localBufferPosition + 2]) & 0xC0) != 0x80) {
-                        // clang-format on
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) 3rd byte in UTF-8 sequence is invalid!";
-#endif
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                        // clang-format off
-                    } else if ((static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0x0F) == 0x0D) {
-                        // clang-format on
-// For 3 byte values the bits are distributed:
-//  Byte 1    Byte 2    Byte 3
-// 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
-// First High surrogate 0xed 0xa0 0x80 (U+D800)
-// 1101 1000 0000 0000
-// ----1101  --100000  --000000
-// Last Low surrogate 0xed 0xbf 0xbf (U+DFFF)
-// 1101 1111 1111 1111
-// ----1101  --111111  --111111
-/*
- * As per Wikipedia {https://en.wikipedia.org/wiki/UTF-16#U.2BD800_to_U.2BDFFF}
- * "The Unicode standard permanently reserves these code point values for UTF-16
- * encoding of the high and low surrogates, and they will never be assigned a
- * character, so there should be no reason to encode them. The official Unicode
- * standard says that no UTF forms, including UTF-16, can encode these code
- * points.
- *
- * However UCS-2, UTF-8, and UTF-32 can encode these code points in trivial and
- * obvious ways, and large amounts of software does so even though the standard
- * states that such arrangements should be treated as encoding errors. It is
- * possible to unambiguously encode them in UTF-16 by using a code unit equal to
- * the code point, as long as no sequence of two code units can be interpreted
- * as a legal surrogate pair (that is, as long as a high surrogate is never
- * followed by a low surrogate). The majority of UTF-16 encoder and decoder
- * implementations translate between encodings as though this were the case
- * and Windows allows such sequences in filenames."
- */
-// So test for and reject if LSN of first byte is 0xD!
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
-#endif
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                        // clang-format off
-                    } else if (  (static_cast<quint8>(localBuffer[localBufferPosition + 2]) == 0xbf)
-                              && (static_cast<quint8>(localBuffer[localBufferPosition + 1]) == 0xbb)
-                              && (static_cast<quint8>(localBuffer[localBufferPosition    ]) == 0xef) ) {
-                        // clang-format on
-// Got caught out by this one - it is the Utf-8 BOM and
-// needs to be ignored as it transcodes to NO codepoints!
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) UTF-8 BOM sequence seen and handled!";
-#endif
-                        isValid = false;
-                        isToUseByteOrderMark = true;
-                    }
-                    [[clang::fallthrough]];
-                case 2:
-                    // clang-format off
-                    if (     (static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xC0) != 0x80) {
-                        // clang-format on
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) 2nd byte in UTF-8 sequence is invalid!";
-#endif
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                    }
-
-                    // Also test for (and reject) overlong sequences - don't
-                    // need to check 5 or 6 ones as those are already rejected:
-                    // clang-format off
-                    if ( (     ((static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0xFE) == 0xC0)
-                            && ((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xC0) == 0x80))
-                         || (  ( static_cast<quint8>(localBuffer[localBufferPosition    ])         == 0xE0)
-                            && ((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xE0) == 0x80))
-                         || (  ( static_cast<quint8>(localBuffer[localBufferPosition    ])         == 0xF0)
-                            && ((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xF0) == 0x80)) ) {
-                    // clang-format on
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug().nospace() << "TBuffer::translateToPlainText(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
-#endif
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                    }
-                    break;
-
-                default:
-#if defined(DEBUG_UTF8_PROCESSING)
-                    qDebug().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
-#endif
-                    isValid = false;
-                    isToUseReplacementMark = true;
-                }
-
-                // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
-                if (isValid) {
-                    QString codePoint = QString(localBuffer.substr(localBufferPosition, utf8SequenceLength).c_str());
-                    switch (codePoint.size()) {
-                    default:
-                        Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                        qWarning().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, and it encoded to " << codePoint.size()
-                                             << " QChars which does not make sense!!!";
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                        break;
-                    case 2:
-                        isTwoTCharsNeeded = true;
-                        [[clang::fallthrough]];
-                    case 1:
-#if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long ["
-                                           << codePoint << "]";
-#endif
-                        mMudLine.append(codePoint);
-                        break;
-                    case 0:
-                        qWarning().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, but it did not encode to ANY QChar(s)!!!";
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                    }
-                }
-
-                if (!isValid) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                    QString debugMsg;
-                    for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                        debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[localBufferPosition + i]), 2, 16));
-                    }
-                    qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
-#endif
-                    if (isToUseReplacementMark) {
-                        mMudLine.append(QChar::ReplacementCharacter);
-                    }
-                    if (isToUseByteOrderMark) {
-                        mMudLine.append(QChar::ByteOrderMark);
-                    }
-                }
-
-                // As there is already a unit increment at the bottom of loop
-                // add one less than the sequence length:
-                localBufferPosition += utf8SequenceLength - 1;
-            } else {
-                // Single byte character i.e. Unicode points: U+00000000 to U+0000007F
-                mMudLine.append(ch);
+        } else if (mEncoding == QLatin1String("GBK")) {
+            if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
+                // We have run out of bytes and we have stored the unprocessed
+                // ones but we need to bail out NOW!
+                return;
+            }
+        } else if (mEncoding == QLatin1String("GB18030")) {
+            if (!processGBSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
+                // We have run out of bytes and we have stored the unprocessed
+                // ones but we need to bail out NOW!
+                return;
+            }
+        } else if (mEncoding == QLatin1String("UTF-8")) {
+            if (!processUtf8Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
+                // We have run out of bytes and we have stored the unprocessed
+                // ones but we need to bail out NOW!
+                return;
             }
         } else {
             // Default - no encoding case - reject anything that has MS Bit set
@@ -3878,4 +3678,684 @@ const QString& TBuffer::getComputerEncoding(const QString& encoding) {
 
     // return the original encoding if none is found
     return encoding;
+}
+
+bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFromServer, const size_t len, size_t& pos, bool& isNonBMPCharacter)
+{
+    // In Utf-8 mode we have to process the data more than one byte at a
+    // time because there is not necessarily a one-byte to one TChar
+    // mapping, instead we use one TChar per QChar - and that has to be
+    // tweaked for non-BMP characters that use TWO QChars per codepoint.
+    if (bufferData.at(pos) & 0x80) {
+        // MSB is set, so if this is Utf-8 then assume this is the first byte
+        size_t utf8SequenceLength = 1;
+        if ((bufferData.at(pos) & 0xE0) == 0xC0) {
+            // 2 byte sequence - Unicode code-points: U+00000080 to U+000007FF
+            utf8SequenceLength = 2;
+        } else if ((bufferData.at(pos) & 0xF0) == 0xE0) {
+            // 3 byte sequence - Unicode code-points: U+00000800 to U+0000FFFF
+            utf8SequenceLength = 3;
+        } else if ((bufferData.at(pos) & 0xF8) == 0xF0) {
+            // 4 byte sequence - Unicode code-points: U+00010000 to U+001FFFFF (<= U+0010FFF LEGAL)
+            utf8SequenceLength = 4;
+        } else if ((bufferData.at(pos) & 0xFC) == 0xF8) {
+            // 5 byte sequence - Unicode code-points: U+00200000 to U+03FFFFFF (ALL ILLEGAL)
+            utf8SequenceLength = 5;
+        } else if ((bufferData.at(pos) & 0xFE) == 0xFC) {
+            // 6 byte sequence - Unicode code-points: U+04000000 to U+7FFFFFFF (ALL ILLEGAL)
+            utf8SequenceLength = 6;
+        }
+
+        if ((pos + utf8SequenceLength) > len) {
+            // Not enough bytes left in bufferData to complete the utf-8
+            // sequence - need to save and prepend onto incoming data next
+            // time around.
+            // The absence of a second argument takes all the available
+            // bytes - this is only for data from the Server NOT from
+            // locally generated material from Lua feedTriggers(...)
+            if (isFromServer) {
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug() << "TBuffer::processUtf8Sequence(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:" << utf8SequenceLength
+                         << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+#endif
+                mIncompleteSequenceBytes = bufferData.substr(pos);
+            }
+            return false; // Bail out
+        }
+
+        // If we have got here we have enough bytes to work with:
+        bool isValid = true;
+        bool isToUseReplacementMark = false;
+        bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
+        switch (utf8SequenceLength) {
+        case 4:
+            if ((bufferData.at(pos + 3) & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug() << "TBuffer::processUtf8Sequence(...) 4th byte in UTF-8 sequence is invalid!";
+#endif
+                isValid = false;
+                isToUseReplacementMark = true;
+            } else if (((bufferData.at(pos) & 0x07) > 0x04) || (((bufferData.at(pos) & 0x07) == 0x04) && ((bufferData.at(pos + 1) & 0x3F) > 0x0F))) {
+// For 4 byte values the bits are distributed:
+//  Byte 1    Byte 2    Byte 3    Byte 4
+// 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
+// U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
+// So this (the maximum valid character) is:
+//      ABC    DEFGHI    JKLMNO    PQRSTU
+//      100    001111    111111    111111
+// So if the first byte bufferData.at(pos] & 0x07 is:
+//  < 0x04 then must be in range
+//  > 0x04 then must be out of range
+// == 0x04 then consider bufferData.at(pos+1] & 0x3F:
+//     <= 001111 0x0F then must be in range
+//      > 001111 0x0F then must be out of range
+
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug() << "TBuffer::processUtf8Sequence(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
+#endif
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+
+        // Fall-through
+            [[clang::fallthrough]];
+        case 3:
+            if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug() << "TBuffer::processUtf8Sequence(...) 3rd byte in UTF-8 sequence is invalid!";
+#endif
+                isValid = false;
+                isToUseReplacementMark = true;
+            } else if ((bufferData.at(pos) & 0x0F) == 0x0D) {
+// For 3 byte values the bits are distributed:
+//  Byte 1    Byte 2    Byte 3
+// 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
+// First High surrogate 0xed 0xa0 0x80 (U+D800)
+// 1101 1000 0000 0000
+// ----1101  --100000  --000000
+// Last Low surrogate 0xed 0xbf 0xbf (U+DFFF)
+// 1101 1111 1111 1111
+// ----1101  --111111  --111111
+/*
+    * As per Wikipedia {https://en.wikipedia.org/wiki/UTF-16#U.2BD800_to_U.2BDFFF}
+    * "The Unicode standard permanently reserves these code point values for UTF-16
+    * encoding of the high and low surrogates, and they will never be assigned a
+    * character, so there should be no reason to encode them. The official Unicode
+    * standard says that no UTF forms, including UTF-16, can encode these code
+    * points.
+    *
+    * However UCS-2, UTF-8, and UTF-32 can encode these code points in trivial and
+    * obvious ways, and large amounts of software does so even though the standard
+    * states that such arrangements should be treated as encoding errors. It is
+    * possible to unambiguously encode them in UTF-16 by using a code unit equal to
+    * the code point, as long as no sequence of two code units can be interpreted
+    * as a legal surrogate pair (that is, as long as a high surrogate is never
+    * followed by a low surrogate). The majority of UTF-16 encoder and decoder
+    * implementations translate between encodings as though this were the case
+    * and Windows allows such sequences in filenames."
+    */
+// So test for and reject if LSN of first byte is 0xD!
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug() << "TBuffer::processUtf8Sequence(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
+#endif
+                isValid = false;
+                isToUseReplacementMark = true;
+            } else if (   (static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF)
+                       && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB)
+                       && (static_cast<quint8>(bufferData.at(pos    )) == 0xEF)) {
+// Got caught out by this one - it is the UTF-8 BOM and
+// needs to be ignored as it transcodes to NO codepoints!
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug() << "TBuffer::processUtf8Sequence(...) UTF-8 BOM sequence seen and handled!";
+#endif
+                isValid = false;
+                isToUseByteOrderMark = true;
+            }
+
+        // Fall-through
+            [[clang::fallthrough]];
+        case 2:
+            if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug() << "TBuffer::processUtf8Sequence(...) 2nd byte in UTF-8 sequence is invalid!";
+#endif
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+
+            // clang-format off
+            // Disable code reformatting as it would destroy layout that helps
+            // to explain the grouping of the tests
+            // Also test for (and reject) overlong sequences - don't
+            // need to check 5 or 6 ones as those are already rejected:
+            if (  ( ((static_cast<quint8>(bufferData.at(pos    )) & 0xFE) == 0xC0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) == 0x80) )
+                ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xE0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xE0) == 0x80) )
+                ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xF0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xF0) == 0x80) ) ) {
+// clang-format on
+
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug().nospace() << "TBuffer::processUtf8Sequence(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
+#endif
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+            break;
+
+        default:
+#if defined(DEBUG_UTF8_PROCESSING)
+            qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
+#endif
+            isValid = false;
+            isToUseReplacementMark = true;
+        }
+
+        // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
+        if (isValid) {
+            QString codePoint = QString(bufferData.substr(pos, utf8SequenceLength).c_str());
+            switch (codePoint.size()) {
+            default:
+                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, and it encoded to " << codePoint.size()
+                                     << " QChars which does not make sense!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+                break;
+            case 2:
+                isNonBMPCharacter = true;
+                // Fall-through
+                [[clang::fallthrough]];
+            case 1:
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long [" << codePoint
+                                   << "]";
+#endif
+                mMudLine.append(codePoint);
+                break;
+            case 0:
+                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, but it did not encode to "
+                                                                                                      "ANY QChar(s)!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+        }
+
+        if (!isValid) {
+#if defined(DEBUG_UTF8_PROCESSING)
+            QString debugMsg;
+            for (size_t i = 0; i < utf8SequenceLength; ++i) {
+                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+            }
+            qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
+#endif
+            if (isToUseReplacementMark) {
+                mMudLine.append(QChar::ReplacementCharacter);
+            } else if (isToUseByteOrderMark) {
+                mMudLine.append(QChar::ByteOrderMark);
+            }
+        }
+
+        // As there is already a unit increment at the bottom of loop
+        // add one less than the sequence length:
+        pos += utf8SequenceLength - 1;
+    } else {
+        // Single byte character i.e. Unicode points: U+00000000 to U+0000007F
+        mMudLine.append(bufferData.at(pos));
+    }
+
+    return true;
+}
+
+bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFromServer, const bool isGB18030, const size_t len, size_t& pos, bool& isNonBmpCharacter)
+{
+// In GBK/GB18030 mode we have to process the data more than one byte at a
+// time because there is not necessarily a one-byte to one TChar
+// mapping, instead we use one TChar per QChar - and that has to be
+// tweaked for non-BMP characters that use TWO QChars per codepoint.
+// GB2312 is the predecessor to both and - according to Wikipedia (EN) covers
+// over 99% of the characters of contempory usage.
+// GBK is a sub-set of GB18030 so can be processed in the same method
+// Assume we are at the first byte of a single (ASCII), pair (GBK/GB18030)
+// or four byte (GB18030) sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+    std::string dataIdentity;
+#endif
+
+    // The range deductions for two-byte sequences are take from:
+    // https://en.wikipedia.org/wiki/GBK#Encoding
+    size_t gbSequenceLength = 1;
+    bool isValid = true;
+    bool isToUseReplacementMark = false;
+    // Only set this if we are adding more than one code-point to
+    // mCurrentLineCharacters:
+    isNonBmpCharacter = false;
+    if (static_cast<quint8>(bufferData.at(pos)) < 0x80) {
+        // Is ASCII - single byte character, straight forward for a "first" byte case
+        mMudLine.append(bufferData.at(pos));
+        // As there is already a unit increment at the bottom of caller's loop
+        // there is no need to tweak pos in THIS case
+
+        return true;
+    } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80) {
+        // Invalid as first byte
+        isValid = false;
+        isToUseReplacementMark = true;
+#if defined(DEBUG_GB_PROCESSING)
+        qDebug().nospace() << "TBuffer::processGBSequence(...) 1-byte sequence as " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " rejected!";
+#endif
+
+        // Proceed to handle 1 byte (as GB2312/GBK/GB18030 data) outside of checks...
+
+    } else if (!isGB18030) {
+        // Could be two byte GBK - but do we have a second byte?
+        // As we are not in GB18030 mode treat it as if it is a 2 byte sequence
+        gbSequenceLength = 2;
+        if ((pos + gbSequenceLength - 1) < len) {
+            // We have enough bytes to look at the second one - lets see which
+            // range it is in:
+            // clang-format off
+            if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+// clang-format on
+// GBK Area 3 sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "GBK Area 3";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+// clang-format on
+// GBK Area 1 (& GB2312) sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "GBK Area 1 (or GB2312)";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+// clang-format on
+// GBK Area 2 (& GB2312) sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "GBK Area 2 (or GB2312)";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+// clang-format on
+// GBK/5 sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "GBK Area 5";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+// clang-format on
+// GBK/4 sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "GBK Area 4";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+// clang-format on
+// User Defined 1 sequence - possibly invalid for us but if the
+// MUD supplies their own font it could be used:
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "User Defined (PU) Area 1";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+// clang-format on
+// User Defined 2 sequence - possibly invalid for us but if the
+// MUD supplies their own font it could be used:
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "User Defined (PU) Area 2";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+// clang-format on
+// User Defined 3 sequence - possibly invalid for us but if the
+// MUD supplies their own font it could be used:
+
+#if defined(DEBUG_GB_PROCESSING)
+                dataIdentity = "User Defined (PU) Area 3";
+#endif
+
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x90) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xE3)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
+// clang-format on
+// First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
+// codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+                isValid = false;
+                isToUseReplacementMark = true;
+#if defined(DEBUG_GB_PROCESSING)
+                qDebug().nospace() << "TBuffer::processGBSequence(...) 2-byte sequence as "
+                                      "GB2312/GBK rejected because it is seems to be the "
+                                      "first pair of a 4-byte GB18030 non-BMP Unicode sequence!";
+#endif
+                // clang-format off
+            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xFD) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
+                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
+// clang-format on
+// First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
+// codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+                isValid = false;
+                isToUseReplacementMark = true;
+#if defined(DEBUG_GB_PROCESSING)
+                qDebug().nospace() << "TBuffer::processGBSequence(...) 2-byte sequence as "
+                                      "GB2312/GBK rejected because it is seems to be the "
+                                      "first pair of a 4-byte GB18030 Private Use sequence!";
+#endif
+            } else {
+                // Outside expected ranges
+
+                isValid = false;
+                isToUseReplacementMark = true;
+#if defined(DEBUG_GB_PROCESSING)
+                qDebug().nospace() << "TBuffer::processGBSequence(...) 2-byte sequence as "
+                                      "GB2312/GBK rejected!";
+#endif
+            }
+
+            // Proceed to handle 2 bytes (of GB2312/GBK data) outside of checks...
+
+        } else {
+            // Not enough bytes to process yet - so store what we have and return
+            if (isFromServer) {
+#if defined(DEBUG_GB_PROCESSING)
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
+                                      "complate GB2312/GBK sequence, need at least: "
+                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+#endif
+                mIncompleteSequenceBytes = bufferData.substr(pos);
+            }
+            return false; // Bail out
+        }
+
+    } else {
+        // isGB18030 is true!
+        // Could be two bytes or four bytes - but do we have at least a second
+        // byte? Treat it as if it is a 2 byte sequence until we know we have a
+        // four byte one - from examining the second byte and it is in range
+        // 0x30 to 0x39 inclusive:
+
+        gbSequenceLength = 2;
+        if ((pos + gbSequenceLength - 1) < len) {
+            // We have enough bytes to look at the second one - lets see which
+            // range it is in:
+            // clang-format off
+            if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
+               && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
+                // clang-format on
+                // This IS a 4-byte sequence
+
+                gbSequenceLength = 4;
+
+                if ((pos + gbSequenceLength - 1) >= len) {
+                    // Not enough bytes to process yet - so store what we have and return
+                    if (isFromServer) {
+#if defined(DEBUG_GB_PROCESSING)
+                        qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
+                                              "complate GB18030 sequence, need at least: "
+                                           << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+#endif
+                        mIncompleteSequenceBytes = bufferData.substr(pos);
+                    }
+
+                    return false; // Bail out
+                }
+
+                // clang-format off
+                // Continue with four-byte sequence validation processing as we
+                // have all four bytes to work with:
+                if (   ((  /* 1st group low limit 0x81 is already done*/        (static_cast<quint8>(bufferData.at(pos    )) <= 0x84))
+                        ||((static_cast<quint8>(bufferData.at(pos)) >= 0x90) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xE3)))
+                    /*
+                     * Only the above 1st byte ranges are currently used - others are reserved
+                     * Second byte range is 0x30-0x39 for all and has already been checked
+                     */
+                    && (static_cast<quint8>(bufferData.at(pos + 2)) >= 0x81) && (static_cast<quint8>(bufferData.at(pos + 2)) <= 0xFE)
+                    && (static_cast<quint8>(bufferData.at(pos + 3)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 3)) <= 0x39) ) {
+
+                    // Okay we should have a valid four byte sequence now
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "Non-BMP mapped Unicode";
+#endif
+                } else {
+                    // if first byte was < 0x90 then it would have been a BMP
+                    // unicode codepoint but it is academic as it is not
+                    // currently defined as a valid codepoint value and will be
+                    // substituted with the replacement character anyway:
+                    // clang-format on
+
+                    isValid = false;
+                    isToUseReplacementMark = true;
+
+#if defined(DEBUG_GB_PROCESSING)
+                    qDebug().nospace() << "TBuffer::processGBSequence(...) 4-byte sequence as "
+                                          "GB18030 rejected!";
+#endif
+                }
+
+                // Proceed to handle 4 bytes (as GB18030 data) outside of checks...
+
+            } else {
+                // Looks as though it is a two-byte sequence after all - so
+                // validate it as that:
+                // clang-format off
+                if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+                    // clang-format on
+                    // GBK/3 sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "GBK Area 3";
+#endif
+
+                // clang-format off
+                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+                    // clang-format on
+                    // GBK/1 (& GB2312) sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "GBK Area 1";
+#endif
+
+                // clang-format off
+                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+                    // clang-format on
+                    // GBK/2 (& GB2312) sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "GBK Area 2";
+#endif
+
+                // clang-format off
+                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+                    // clang-format on
+                    // GBK/5 sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "GBK Area 5";
+#endif
+
+                // clang-format off
+                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+                    // clang-format on
+                    // GBK/4 sequence
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "GBK Area 4";
+#endif
+
+                // clang-format off
+                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+                    // clang-format on
+                    // User Defined 1 sequence - possibly invalid for us but if the
+                    // MUD supplies their own font it could be used:
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "User Defined (PU) Area 1";
+#endif
+
+                // clang-format off
+                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
+                    // clang-format on
+                    // User Defined 2 sequence - possibly invalid for us but if the
+                    // MUD supplies their own font it could be used:
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "User Defined (PU) Area 2";
+#endif
+
+                // clang-format off
+                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
+                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
+                    // clang-format on
+                    // User Defined 3 sequence - possibly invalid for us but if the
+                    // MUD supplies their own font it could be used:
+
+#if defined(DEBUG_GB_PROCESSING)
+                    dataIdentity = "User Defined (PU) Area 3";
+#endif
+
+                } else {
+                    // Outside expected range
+
+                    isValid = false;
+                    isToUseReplacementMark = true;
+#if defined(DEBUG_GB_PROCESSING)
+                    qDebug().nospace() << "TBuffer::processGBSequence(...) 2-byte sequence as GB18030 rejected!";
+#endif
+                }
+
+            } // End of IF is a four-byte ELSE is a two-byte sequence...
+
+            // Proceed to handle 2 bytes (of GB18030 data) outside of checks...
+
+        } else {
+            // Not enough bytes to process yet could be we need two OR four but
+            // we only have one - so store what we have and return
+            if (isFromServer) {
+#if defined(DEBUG_GB_PROCESSING)
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to complate GB18030 sequence, need at least:"
+                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length()
+                                   << " bytes (which we will store for next call to this method)...";
+#endif
+                mIncompleteSequenceBytes = bufferData.substr(pos);
+            }
+            return false; // Bail out
+        }
+    }
+
+    // At this point we know how many bytes to consume, and whether they are in
+    // the right ranges of individual values to be valid
+
+    if (isValid) {
+        // Try and convert two or four byte sequence to Unicode using Qts own
+        // decoder - and check number of codepoints returned
+
+        QString codePoint;
+        if (mMainIncomingCodec) {
+            // Third argument is 0 to indicate we do NOT wish to store the state:
+            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength), 0);
+            switch (codePoint.size()) {
+            default:
+                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                qWarning().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " sequence accepted, and it encoded to "
+                                     << codePoint.size() << " QChars which does not make sense!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+                break;
+            case 2:
+                isNonBmpCharacter = true;
+            // Fall-through
+                [[clang::fallthrough]];
+            case 1:
+#if defined(DEBUG_GB_PROCESSING)
+                qDebug().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " sequence accepted, it is " << codePoint.size()
+                                   << " QChar(s) long [" << codePoint << "] and is in the " << dataIdentity.c_str() << " range";
+#endif
+                mMudLine.append(codePoint);
+                break;
+            case 0:
+                qWarning().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK")
+                                     << " sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+        } else {
+            // Unable to decode it - no Qt decoder...!
+            isValid = false;
+            isToUseReplacementMark = true;
+        }
+    }
+
+    if (!isValid) {
+#if defined(DEBUG_GB_PROCESSING)
+        QString debugMsg;
+        for (size_t i = 0; i < gbSequenceLength; ++i) {
+            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+        }
+        qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
+#endif
+        if (isToUseReplacementMark) {
+            mMudLine.append(QChar::ReplacementCharacter);
+        }
+    }
+
+    // As there is already a unit increment at the bottom of loop
+    // add one less than the sequence length:
+    pos += gbSequenceLength - 1;
+
+    return true;
+}
+
+void TBuffer::encodingChanged(const QString& newEncoding)
+{
+    if (mEncoding != newEncoding) {
+        mEncoding = newEncoding;
+        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030")) {
+            mMainIncomingCodec = QTextCodec::codecForName(mEncoding.toLatin1().constData());
+            if (!mMainIncomingCodec) {
+                qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
+            } else {
+                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Installing a codec that can handle:" << mMainIncomingCodec->aliases();
+            }
+        } else if (mMainIncomingCodec) {
+            qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Uninstall a codec that can handle:" << mMainIncomingCodec->aliases() << " as the new encoding setting of: "
+                               << mEncoding << " does not need a dedicated one explicitly set...";
+            mMainIncomingCodec = nullptr;
+        }
+    }
 }

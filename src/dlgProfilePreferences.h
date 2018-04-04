@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -107,6 +107,8 @@ public slots:
     void saveMap();
     void copyMap();
     void slot_chooseProfilesChanged(QAction*);
+    void slot_showMapGlyphUsage();
+
 
     // Save.
     void slot_save_and_exit();
@@ -124,6 +126,10 @@ private slots:
     void slot_script_selected(int index);
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);
+    void slot_setMapSymbolFont(const QFont&);
+    void slot_setMapSymbolFontStrategy(const bool);
+    void slot_changeShowMenuBar(const int);
+    void slot_changeShowToolBar(const int);
 
 private:
     void setColors();
@@ -142,13 +148,16 @@ private:
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();
-    
+    void disconnectHostRelatedControls();
+    void generateMapGlyphDisplay();
+
     int mFontSize;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
-    void disconnectHostRelatedControls();
+    QPointer<QDialog> mpDialogMapGlyphUsage;
+    QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

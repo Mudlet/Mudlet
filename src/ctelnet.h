@@ -6,7 +6,8 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -108,8 +109,8 @@ public:
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
     void recordReplay();
-    void loadReplay(QString&);
-    void _loadReplay();
+    bool loadReplay(const QString&, QString* pErrMsg = nullptr);
+    void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
@@ -136,7 +137,7 @@ public:
 public slots:
     void setDownloadProgress(qint64, qint64);
     void replyFinished(QNetworkReply*);
-    void readPipe();
+    void slot_processReplayChunk();
     void handle_socket_signal_hostFound(QHostInfo);
     void handle_socket_signal_connected();
     void handle_socket_signal_disconnected();
@@ -163,9 +164,9 @@ private:
     QPointer<Host> mpHost;
     QTcpSocket socket;
     QHostAddress mHostAddress;
-    QTextCodec* incomingDataCodec;
+//    QTextCodec* incomingDataCodec;
     QTextCodec* outgoingDataCodec;
-    QTextDecoder* incomingDataDecoder;
+//    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
@@ -208,7 +209,11 @@ private:
     bool enableGMCP;
     bool enableChannel102;
     QStringList messageStack;
+    // True if THIS profile is playing a replay, does not know about any OTHER
+    // active profile...
     bool loadingReplay;
+    // Used to disable the TConsole ending messages if run from lua:
+    bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
 };
