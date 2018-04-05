@@ -510,6 +510,7 @@ SOURCES += \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TTabBar.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -586,6 +587,7 @@ HEADERS += \
     TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TTabBar.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -595,7 +597,6 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h
-
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.

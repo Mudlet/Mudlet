@@ -25,6 +25,7 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TSplitter.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "mudlet.h"
 
