@@ -66,6 +66,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QTabBar>
 #include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
@@ -184,7 +185,7 @@ mudlet::mudlet()
     auto frame = new QWidget(this);
     frame->setFocusPolicy(Qt::NoFocus);
     setCentralWidget(frame);
-    mpTabBar = new QTabBar(frame);
+    mpTabBar = new TTabBar(frame);
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
@@ -1022,7 +1023,7 @@ void mudlet::slot_tab_changed(int tabID)
     // Reset the tab back to "normal" to undo the effect of it having it's style
     // changed on new data:
     mpTabBar->setTabTextColor(tabID, QColor());
-    mpTabBar->setTabIcon(tabID, QIcon());
+    mpTabBar->setTabBold(tabID, false);
 
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         mpCurrentActiveHost->mpConsole->hide();
@@ -3625,19 +3626,137 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLocalChang
             for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
                 if (mpTabBar->tabText(i) == hostName) {
                     if (!isLocalChange) {
-                        mpTabBar->setTabTextColor(i, Qt::red);
-                        mpTabBar->setTabIcon(i, QIcon(QStringLiteral(":/icons/dialog-warning.png")));
+                        mpTabBar->setTabTextColor(i, Qt::magenta);
+                        mpTabBar->setTabBold(i, true);
                     } else if (isLocalChange && !mpTabBar->tabTextColor(i).isValid()) {
                         // Local, lower priority change so only change the
                         // styling if it is not already modified - so that the
                         // higher priority remote change indication will not
                         // get changed:
                         mpTabBar->setTabTextColor(i, Qt::blue);
-                        mpTabBar->setTabIcon(i, QIcon(QStringLiteral(":/icons/dialog-information.png")));
+                        mpTabBar->setTabBold(i, true);
                     }
                     break;
                 }
             }
         }
+    }
+}
+
+TStyle::TStyle(QTabBar * bar)
+: mpTabBar(bar)
+{
+}
+
+TStyle::~TStyle()
+{
+}
+
+void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
+{
+    if (element == QStyle::CE_TabBarTab ) {
+        if (mBoldTabsSet.contains(mpTabBar->tabText(mpTabBar->tabAt(option->rect.center())))) {
+            QFont font = widget->font();
+            font.setBold(true);
+
+            painter->save();
+            painter->setFont(font);
+            QProxyStyle::drawControl(element, option, painter, widget);
+            painter->restore();
+        } else {
+            QProxyStyle::drawControl(element, option, painter, widget);
+        }
+    } else {
+        QProxyStyle::drawControl(element, option, painter, widget);
+    }
+}
+
+TTabBar::TTabBar(QWidget * parent)
+: QTabBar(parent)
+, mStyle(qobject_cast<QTabBar*>(this))
+{
+    setStyle(&mStyle);
+}
+
+TTabBar::~TTabBar()
+{
+}
+
+void TStyle::setTabBold(const QString& text, const bool state)
+{
+    bool textIsInATab = false;
+    for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+        if (mpTabBar->tabText(i) == text) {
+            textIsInATab = true;
+            break;
+        }
+    }
+
+    if (!textIsInATab) {
+        return;
+    }
+
+    if (state) {
+        mBoldTabsSet.insert(text);
+    } else {
+        mBoldTabsSet.remove(text);
+    }
+}
+
+void TStyle::setTabBold(const int index, const bool state)
+{
+    if (index < 0 || index >= mpTabBar->count()) {
+        return;
+    }
+
+    if (state) {
+        mBoldTabsSet.insert(mpTabBar->tabText(index));
+    } else {
+        mBoldTabsSet.remove(mpTabBar->tabText(index));
+    }
+}
+
+bool TStyle::tabBold(const QString& text) const
+{
+    bool textIsInATab = false;
+    for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+        if (mpTabBar->tabText(i) == text) {
+            textIsInATab = true;
+            break;
+        }
+    }
+
+    if (!textIsInATab) {
+        return false;;
+    }
+
+    return mBoldTabsSet.contains(text);
+}
+
+bool TStyle::tabBold(const int index) const
+{
+    if (index < 0 || index >= mpTabBar->count()) {
+        return false;;
+    }
+
+    return mBoldTabsSet.contains(mpTabBar->tabText(index));
+}
+
+QSize TTabBar::tabSizeHint(int index) const
+{
+    if (mStyle.tabBold(index)) {
+        const QSize s = QTabBar::tabSizeHint(index);
+        const QFontMetrics fm(font());
+        const int w = fm.width(tabText(index));
+
+        QFont f = font();
+        f.setBold(true);
+        const QFontMetrics bfm(f);
+
+        const int bw = bfm.width(tabText(index));
+
+        return QSize(s.width() - w + bw, s.height());
+    } else {
+        return QTabBar::tabSizeHint(index);
     }
 }

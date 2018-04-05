@@ -39,6 +39,7 @@
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
+#include <QProxyStyle>
 #include <QQueue>
 #include <QSettings>
 #include <QTextOption>
@@ -72,6 +73,39 @@ class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
 
+class TStyle : public QProxyStyle
+{
+public:
+    TStyle(QTabBar * bar);
+    ~TStyle();
+
+    void drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = Q_NULLPTR) const;
+    void setTabBold(const QString& tabText, const bool state);
+    void setTabBold(const int index, const bool state);
+    bool tabBold(const QString& tabText) const;
+    bool tabBold(const int index) const;
+    const QSet<QString> boldTabsSet() const {return mBoldTabsSet;}
+
+private:
+    QTabBar * mpTabBar;
+    QSet<QString> mBoldTabsSet;
+};
+
+class TTabBar : public QTabBar
+{
+public:
+    TTabBar(QWidget * parent);
+    ~TTabBar();
+    QSize tabSizeHint(int index) const;
+    void setTabBold(const QString& tabText, const bool state) {mStyle.setTabBold(tabText, state); }
+    void setTabBold(const int index, const bool state) {mStyle.setTabBold(index, state); }
+    bool tabBold(const QString& tabText) const {return mStyle.tabBold(tabText);}
+    bool tabBold(const int index) const {return mStyle.tabBold(index);}
+
+private:
+    // This instance of TStyle needs a pointer to a QTabBar on instantiation:
+    TStyle mStyle;
+};
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -207,7 +241,7 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
     QList<QMediaPlayer*> mMusicBoxList;
-    QTabBar* mpTabBar;
+    TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
     bool mHasSavedLayout;
