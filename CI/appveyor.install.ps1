@@ -264,9 +264,9 @@ function InstallLibzip() {
 }
 
 function InstallZziplib() {
-  DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.62.tar.gz" "zziplib-0.13.62.tar.gz"
-  ExtractTar "zziplib-0.13.62.tar.gz" "zziplib"
-  Set-Location zziplib\zziplib-0.13.62
+  DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.68.tar.gz" "zziplib-0.13.68.tar.gz"
+  ExtractTar "zziplib-0.13.68.tar.gz" "zziplib"
+  Set-Location zziplib\zziplib-0.13.68
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
   RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
