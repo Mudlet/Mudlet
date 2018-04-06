@@ -269,6 +269,9 @@ function InstallZziplib() {
   Set-Location zziplib\zziplib-0.13.62
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
+  # Create fake file missing from source directory. We don't need it, but it
+  # makes make happy.
+  New-Item -Path docs -Name zziplib-manpages.tar -ItemType "file"
   RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
