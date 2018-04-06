@@ -74,7 +74,7 @@ dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
     comboBox_variable_value_type->insertItem(0, tr("Auto-Type"), -1); // LUA_TNONE
     comboBox_variable_value_type->insertItem(1, tr("string"), 4);  // LUA_TSTRING
     comboBox_variable_value_type->insertItem(2, tr("number"), 3);  // LUA_TNUMBER
-    comboBox_variable_value_type->insertItem(3, tr("boolean"), 3);  // LUA_TNUMBER
+    comboBox_variable_value_type->insertItem(3, tr("boolean"), 1);  // LUA_TBOOLEAN
     comboBox_variable_value_type->insertItem(4, tr("table"), 5);  // LUA_TTABLE
     comboBox_variable_value_type->insertItem(5, tr("function"), 6);  // LUA_TFUNCTION
 
