@@ -4453,7 +4453,7 @@ void dlgTriggerEditor::clearEditorNotification() const
     mpSystemMessageArea->hide();
 }
 
-int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int nameType, int valueType)
+int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
 {
     //basic checks, return 1 if we can recast, 2 if no need to recast, 0 if we can't recast
     LuaInterface* lI = mpHost->getLuaInterface();
@@ -4462,16 +4462,16 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int nameType, int valueT
     if (!var) {
         return 2;
     }
-    int cNameType = var->getKeyType();
-    int cValueType = var->getValueType();
+    int currentNameType = var->getKeyType();
+    int currentValueType = var->getValueType();
     //most anything is ok to do.  We just want to enforce these rules:
     //you cannot change the type of a table that has children
     //rule removed to see if anything bad happens:
     //you cannot change anything to a table that isn't a table already
-    if (cValueType == LUA_TFUNCTION || cNameType == LUA_TTABLE) {
+    if (currentValueType == LUA_TFUNCTION || currentNameType == LUA_TTABLE) {
         return 0; //no recasting functions or table keys
     }
-    if (valueType == LUA_TTABLE && cValueType != LUA_TTABLE) {
+    if (newValueType == LUA_TTABLE && currentValueType != LUA_TTABLE) {
         //trying to change a table to something else
         if (var->getChildren(false).size()) {
             return 0;
@@ -4479,10 +4479,10 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int nameType, int valueT
         //no children, we can do this without bad things happening
         return 1;
     }
-    if (valueType == LUA_TTABLE && cValueType != LUA_TTABLE) {
+    if (newValueType == LUA_TTABLE && currentValueType != LUA_TTABLE) {
         return 1; //non-table to table
     }
-    if (cNameType == nameType && cValueType == valueType) {
+    if (currentNameType == newNameType && currentValueType == newValueType) {
         return 2;
     }
     return 1;
@@ -4523,27 +4523,27 @@ void dlgTriggerEditor::saveVar()
         return;
     }
     mChangingVar = true;
-    int nameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
-    int valueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
-    if ((nameType == 3 || nameType == 4) && newVar) {
-        nameType = -1;
+    int uiNameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
+    int uiValueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
+    if ((uiNameType == 3 || uiNameType == 4) && newVar) {
+        uiNameType = -1;
     }
     //check variable recasting
-    int varRecast = canRecast(pItem, nameType, valueType);
-    if ((nameType == -1) || (var && nameType != var->getKeyType())) {
+    int varRecast = canRecast(pItem, uiNameType, uiValueType);
+    if ((uiNameType == -1) || (var && uiNameType != var->getKeyType())) {
         if (QString(newName).toInt()) {
-            nameType = LUA_TNUMBER;
+            uiNameType = LUA_TNUMBER;
         } else {
-            nameType = LUA_TSTRING;
+            uiNameType = LUA_TSTRING;
         }
     }
-    if ((valueType != LUA_TTABLE) && (valueType == -1)) {
+    if ((uiValueType != LUA_TTABLE) && (uiValueType == -1)) {
         if (newValue.toInt()) {
-            valueType = LUA_TNUMBER;
+            uiValueType = LUA_TNUMBER;
         } else if (newValue.toLower() == "true" || newValue.toLower() == "false") {
-            valueType = LUA_TBOOLEAN;
+            uiValueType = LUA_TBOOLEAN;
         } else {
-            valueType = LUA_TSTRING;
+            uiValueType = LUA_TSTRING;
         }
     }
     if (varRecast == 2) {
@@ -4554,8 +4554,8 @@ void dlgTriggerEditor::saveVar()
             if (!var) {
                 var = new TVar();
             }
-            var->setName(newName, nameType);
-            var->setValue(newValue, valueType);
+            var->setName(newName, uiNameType);
+            var->setValue(newValue, uiValueType);
             lI->createVar(var);
             vu->addVariable(var);
             vu->addTreeItem(pItem, var);
@@ -4568,29 +4568,29 @@ void dlgTriggerEditor::saveVar()
             } else {
                 //we're trying to rename it/recast it
                 int change = 0;
-                if (newName != var->getName() || nameType != var->getKeyType()) {
+                if (newName != var->getName() || uiNameType != var->getKeyType()) {
                     //lets make sure the nametype works
                     if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
-                        nameType = LUA_TNUMBER;
+                        uiNameType = LUA_TNUMBER;
                     } else {
-                        nameType = LUA_TSTRING;
+                        uiNameType = LUA_TSTRING;
                     }
                     change = change | 0x1;
                 }
-                var->setNewName(newName, nameType);
-                if (var->getValueType() != LUA_TTABLE && (newValue != var->getValue() || valueType != var->getValueType())) {
+                var->setNewName(newName, uiNameType);
+                if (var->getValueType() != LUA_TTABLE && (newValue != var->getValue() || uiValueType != var->getValueType())) {
                     //lets check again
                     if (var->getValueType() == LUA_TTABLE) {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
-                        valueType = LUA_TTABLE;
-                    } else if (valueType == LUA_TNUMBER && newValue.toInt()) {
-                        valueType = LUA_TNUMBER;
-                    } else if (valueType == LUA_TBOOLEAN && (newValue.toLower() == "true" || newValue.toLower() == "false")) {
-                        valueType = LUA_TBOOLEAN;
+                        uiValueType = LUA_TTABLE;
+                    } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
+                        uiValueType = LUA_TNUMBER;
+                    } else if (uiValueType == LUA_TBOOLEAN && (newValue.toLower() == "true" || newValue.toLower() == "false")) {
+                        uiValueType = LUA_TBOOLEAN;
                     } else {
-                        valueType = LUA_TSTRING; //nope, you don't agree, you lose your value
+                        uiValueType = LUA_TSTRING; //nope, you don't agree, you lose your value
                     }
-                    var->setValue(newValue, valueType);
+                    var->setValue(newValue, uiValueType);
                     change = change | 0x2;
                 }
                 if (change) {
@@ -4612,8 +4612,8 @@ void dlgTriggerEditor::saveVar()
         if (newVar) {
             //we're making this var
             var = vu->getTVar(pItem);
-            var->setName(newName, nameType);
-            var->setValue(newValue, valueType);
+            var->setName(newName, uiNameType);
+            var->setValue(newValue, uiValueType);
             lI->createVar(var);
             vu->addVariable(var);
             vu->addTreeItem(pItem, var);
@@ -4622,30 +4622,30 @@ void dlgTriggerEditor::saveVar()
         } else if (var) {
             //we're trying to rename it/recast it
             int change = 0;
-            if (newName != var->getName() || nameType != var->getKeyType()) {
+            if (newName != var->getName() || uiNameType != var->getKeyType()) {
                 //lets make sure the nametype works
-                if (nameType == LUA_TSTRING) {
+                if (uiNameType == LUA_TSTRING) {
                     //do nothing, we can always make key to string
                 } else if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
-                    nameType = LUA_TNUMBER;
+                    uiNameType = LUA_TNUMBER;
                 } else {
-                    nameType = LUA_TSTRING;
+                    uiNameType = LUA_TSTRING;
                 }
-                var->setNewName(newName, nameType);
+                var->setNewName(newName, uiNameType);
                 change = change | 0x1;
             }
-            if (newValue != var->getValue() || valueType != var->getValueType()) {
+            if (newValue != var->getValue() || uiValueType != var->getValueType()) {
                 //lets check again
-                if (valueType == LUA_TTABLE) {
+                if (uiValueType == LUA_TTABLE) {
                     newValue = "{}";
-                } else if (valueType == LUA_TNUMBER && newValue.toInt()) {
-                    valueType = LUA_TNUMBER;
-                } else if (valueType == LUA_TBOOLEAN && (newValue.toLower() == "true" || newValue.toLower() == "false")) {
-                    valueType = LUA_TBOOLEAN;
+                } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
+                    uiValueType = LUA_TNUMBER;
+                } else if (uiValueType == LUA_TBOOLEAN && (newValue.toLower() == QLatin1String("true") || newValue.toLower() == QLatin1String("false"))) {
+                    uiValueType = LUA_TBOOLEAN;
                 } else {
-                    valueType = LUA_TSTRING; //nope, you don't agree, you lose your value
+                    uiValueType = LUA_TSTRING; //nope, you don't agree, you lose your value
                 }
-                var->setValue(newValue, valueType);
+                var->setValue(newValue, uiValueType);
                 change = change | 0x2;
             }
             if (change) {

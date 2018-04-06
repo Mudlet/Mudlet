@@ -172,7 +172,7 @@ public:
     void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
     void doCleanReset();
     void addVar(bool);
-    int canRecast(QTreeWidgetItem*, int, int);
+    int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
     void repopulateVars();
     void changeView(int);
