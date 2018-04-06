@@ -167,6 +167,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -372,8 +373,10 @@ mudlet::mudlet()
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
     }
     // This is the only place the tabBar font is set and it influences the
-    // height of the tabs used - since we now want to include a small icon the
-    // font size can be a little larger that the 6 it once was:
+    // height of the tabs used - since we now want to adjust the appearance of
+    // the tab if it is not the active one and new data has arrived to show in
+    // the related profile - make the font size a little larger that the 6 it
+    // once was so that it is a bit more obvious when it changes:
     QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     setFont(mainFont);
     mainPane->setFont(mainFont);
@@ -3635,7 +3638,7 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLocalChang
                         // Local, lower priority change so only change the
                         // styling if it is not already modified - so that the
                         // higher priority remote change indication will not
-                        // get changed:
+                        // get changed by a later local one:
                         mpTabBar->setTabItalic(i, true);
                         mpTabBar->setTabUnderline(i, true);
                         mpTabBar->update();

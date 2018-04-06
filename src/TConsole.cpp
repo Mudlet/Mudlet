@@ -88,6 +88,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpMapper(nullptr)
 , mpButtonMainLayer(nullptr)
 , mpScrollBar(new QScrollBar)
+
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -1112,7 +1113,7 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     } else {
         networkLatency->setText(QString("<no GA> S:%1").arg(processT / 1000, 0, 'f', 3));
     }
-    // Turn the tab text red if this is not the currently active host - this
+    // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
     // on TConsole types:
     emit signal_newDataAlert(mpHost->getName(), !isFromServer);
