@@ -1,4 +1,6 @@
 version: 1.0.{build}
+build:
+  verbosity: detailed
 init:
 - cmd: mkdir C:\src\
 environment:
