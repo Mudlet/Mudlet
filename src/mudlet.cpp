@@ -3622,16 +3622,16 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
     return pHost->mTelnet.loadReplay(absoluteReplayFileName, pErrMsg);
 }
 
-void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLocalChange)
+void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
 {
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
         if (mpTabBar->count() > 1) {
-            if (!isLocalChange) {
+            if (!isLowerPriorityChange) {
                 mpTabBar->setTabBold(hostName, true);
                 mpTabBar->setTabItalic(hostName, false);
                 mpTabBar->update();
-            } else if (isLocalChange && !mpTabBar->tabBold(hostName)) {
+            } else if (isLowerPriorityChange && !mpTabBar->tabBold(hostName)) {
                 // Local, lower priority change so only change the
                 // styling if it is not already modified - so that the
                 // higher priority remote change indication will not
