@@ -1,0 +1,90 @@
+<section> <date> 19. Aug 2001 </date>
+<h2> SDL rwops </h2> Example to make an SDL_rwops interface.
+
+<p><small> some <b>MSVC</b> help in 
+   <a href="README.MSVC6">README.MSVC6</a> and
+   <a href="README.SDL">README.SDL</a>
+</small></p>
+
+<!--border-->
+
+<section>
+<h3> Source </h3>
+
+<P>
+ The example sources of the <a href="zziplib.html">zziplib library</a>
+ are usually put under the <a href="COPYING.ZLIB">ZLIB license</a> so 
+ that you can reuse the code freely in your own projects. Here we talk
+ about the example that might be most useful for 
+ <a href="http://libsdl.org">SDL</a> based programs.
+ Just copy the two files 
+ <a href="SDL_rwops_zzip.h">SDL_rwops_zzip.h</a>
+ and
+ <a href="SDL_rwops_zzip.c">SDL_rwops_zzip.c</a>
+ to the directory with your other project sources, and make sure
+ to link it somehow to your programs. I did not make the effort to
+ create a seperate library out of it - it would just export one
+ single function <tt>SDL_RWFromZZIP</tt> that has the same call-synopsis
+ like <tt>SDL_RWFromFile</tt> (but it can not (yet) write a zip-file).
+</P>
+
+<P>
+ The source file <a href="SDL_rwops_zzip.c">SDL_rwops_zzip.c</a> is
+ quite short - it just stores a ZZIP_FILE handle in the userdata
+ field of the <tt>SDL_rwops</tt> structure. The SDL'rwop calls will then
+ fetch that pointer and call the corresponding functions from the
+ <a href="zziplib.html">zziplib library</a>. Most of the glue code
+ is in the <tt>SDL_RWFromZZIP</tt> function that allocates an 
+ <tt>SDL_rwops</tt> structure and fills the handler-functions 
+ into the callback fields.
+</P>
+
+</section><section>
+<h3> Usage </h3>
+
+<P>
+ If you link this file to your project, remember that your executables
+ do now have additional dependencies - not only -lzzip to link with
+ the <a href="zziplib.html">zziplib library</a> - do not forget to
+ link with zlib library via -lz. Of course, there is a lib-config
+ script that you can use: `zzip-config --libs` will return these
+ linker-infos (unless you have a native-windows system - it is 
+ shell-script).
+</P>
+
+<P>
+ As an example, replace that <tt>SDL_RWFromFile</tt> that accesses your
+ game-graphic files - these files are stored in shared/myapp
+ of course where they belong. When you've done that
+ then go to X/share/myapp and 
+<br><code>&nbsp;&nbsp;&nbsp;
+ `(cd graphics/ && zip -9r ../graphics.zip .)` </code><br>
+ and rename the graphics/ subfolder - and still all your files
+ are found: a filepath like X/shared/graphics/game/greetings.bmp 
+ will open X/shared/graphics.zip and return the zipped file 
+ game/greetings.bmp in the zip-archive (for reading that is).
+</P>
+
+</section><section>
+<h3> Test </h3>
+
+<P>
+ The <a href="zziplib.html">zziplib</a> configure script does not
+ look for <a href="http://libsdl.org">SDL</a>. If you know that
+ you have <a href="http://libsdl.org">SDL</a> installed 
+ then you can check this <tt>SDL_rwops</tt> example by using
+ <code><nobr>`make testsdl`</nobr></code>. This will compile the
+ two source files <a href="SDL_rwops_zzip.c">SDL_rwops_zzip.c</a>
+ and <a href="SDL_rwops_zzcat.c">SDL_rwops_zzcat.c</a> to be linked
+ together into an executable called <code>zzcatsdl</code>. The test
+ will continue with a <code><nobr>`zzcatsdl test/README`</nobr></code> 
+ - just like it is done for <code><nobr>`make test3`</nobr></code>.
+</P>
+<P>
+ The corresponding section in the <a href="Makefile.am">Makefile.am</a>
+ is also an example how to use lib-config scripts to build files. Here
+ there is no build-processing that had been tweaked much by automake/autoconf.
+ Just use sdl-config and zzip-config to add the needed flags.
+</P>
+</section></section>
+

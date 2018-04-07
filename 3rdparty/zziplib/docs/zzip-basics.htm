@@ -1,0 +1,163 @@
+<section> <date> 20. July 2002 </date>
+<h2> ZZIP API Basics </h2>              The open/close API description.
+
+<!--border-->
+
+<section>
+<h3> Basics </h3>
+
+<P>
+  The naming schem of functions in this library follow a simple rule: 
+  if you see a function with a <code>zzip_</code> prefix followed by 
+  compact name representing otherwise a C library or posix function then 
+  it is a magic wrapper that can automagically handle both real 
+  files/directories or zip-contained files. This includes:
+</P>
+<table cellpadding=10 width=100%><tr><td><table width=100% border=1>
+  <tr><td width=50%> zzip_opendir   </td><td width=50%> opendir </td></tr>
+  <tr><td width=50%> zzip_readdir   </td><td width=50%> readdir </td></tr>
+  <tr><td width=50%> zzip_closedir  </td><td width=50%> closedir </td></tr>
+  <tr><td width=50%> zzip_rewinddir </td><td width=50%> rewinddir </td></tr>
+  <tr><td width=50%> zzip_telldir   </td><td width=50%> telldir </td></tr>
+  <tr><td width=50%> zzip_seekdir   </td><td width=50%> seekdir </td></tr>
+</table></td></tr></table>
+<P>
+  The ZZIP_DIR handle can wrap both a real directory or a zip-file. 
+  Note that you can not open a virtual directory <em>within</em> a
+  zip-file, the ZZIP_DIR is either a real DIR-handle of a real 
+  directory or the reference of ZIP-file but never a DIR-handle
+  within a ZIP-file - there is no such schema of a SUB-DIR handle
+  implemented in this library. A ZZIP_DIR does actually represent
+  the central directory of a ZIP-file, so that each file entry in 
+  this ZZIP-DIR can possibly have a subpath prepended.
+</P>
+
+<P>
+  This form of magic has historic reasons as originally the 
+  magic wrappers of this library were not meant to wrap a complete
+  subtree of a real file tree but only a single directory being
+  wrapped with into a zip-file and placed instead. Later proposals
+  and patches were coming in to support subtree wrapping by not
+  only making a split between the dir-part and file-part but
+  going recursivly up through all "/"-dirseparators of a filepath
+  given to <code>zzip_open</code> and looking for zip-file there.
+</P>
+
+<P>
+  To open a zip-file unconditionally one should be using their
+  respective methods that would return a ZZIP_DIR handle being
+  the representant memory instance of a ZIP-DIR, the central
+  directory of a zip-file. From that ZZIP-DIR one can open a
+  compressed file entry which will be returned as a ZZIP_FILE
+  pointer.
+</P>
+<table cellpadding=10 width=100%><tr><td><table border=1 width=100%>
+  <tr><td width=50%> zzip_dir_open  </td>
+      <td width=50%> open a zip-file and parse the central directory 
+                                              to a memory shadow</td></tr>
+  <tr><td width=50%> zzip_dir_close  </td>
+      <td width=50%> close a zip-file and free the memory shadow</td></tr>
+  <tr><td width=50%> zzip_dir_fdopen  </td>
+      <td width=50%> aquire the given posix-file and try to parse it 
+                                                  as a zip-file.</td></tr>
+  <tr><td width=50%> zzip_dir_read  </td>
+      <td width=50%> return the next info entry of a zip-file's central
+                 directory - this would include a possible subpath </td></tr>
+</table></td></tr></table>
+
+<P>
+  To unconditionally access a zipped-file (as the counter-part of a 
+  zip-file's directory) you should be using the functions having a
+  <code>zzip_file_</code> prefix which are the methods working on
+  ZZIP_FILE pointers directly and assuming those are references of
+  a zipped file with a ZZIP_DIR. 
+</P>
+<table cellpadding=10 width=100%><tr><td><table border=1 width=100%>
+  <tr><td width=50%> zzip_file_open  </td>
+      <td width=50%> open a file within a zip and prepare a zlib 
+                     compressor for it - note the ZZIP_DIR argument,
+                     multiple ZZIP_FILE's may share the same central
+                     directory shadow.</td></tr>
+  <tr><td width=50%> zzip_file_close  </td>
+      <td width=50%> close the handle of zippedfile
+                     and free zlib compressor of it</td></tr>
+  <tr><td width=50%> zzip_file_read  </td>
+      <td width=50%> decompress the next part of a compressed file
+                     within a zip-file</td></tr>
+</table></td></tr></table>
+<P>
+  From here it is only a short step to the magic wrappers for
+  file-access - when being given a filepath to zzip_open then
+  the filepath is checked first for being possibly a real file
+  (we can often do that by a <code>stat</code> call) and if there is
+  a real file under that name then the returned ZZIP_FILE is
+  nothing more than a wrapper around a file-descriptor of the
+  underlying operating system. Any other calls like zzip_read
+  will see the realfd-flag in the ZZIP_FILE and forward the 
+  execution to the read() function of the underlying operating system.
+</P>
+
+<P>
+  However if that fails then the filepath is cut at last directory
+  separator, i.e. a filepath of "this/test/README" is cut into the
+  dir-part "this/test" and a file-part "README". Then the possible
+  zip-extensions are attached (".zip" and ".ZIP") and we check if
+  there is a real file under that name. If a file "this/test.zip"
+  does exist then it is given to zzip_dir_open which will create
+  a ZZIP_DIR instance of it, and when that was successul (so it
+  was in zip-format) then we call zzip_file_open which will see
+  two arguments - the just opened ZZIP_DIR and the file-part. The
+  resulting ZZIP_FILE has its own copy of a ZZIP_DIR, so if you
+  open multiple files from the same zip-file than you will also
+  have multiple in-memory copies of the zip's central directory
+  whereas otherwise multiple ZZIP_FILE's may share a common
+  ZZIP_DIR when being opened with zzip_file_open directly - the
+  zzip_file_open's first argument is the ZZIP_DIR and the second
+  one the file-part to be looked up within that zip-directory.
+</P>
+
+<table cellpadding=10 width=100%><tr><td><table border=1 width=100%>
+  <tr><td width=50%> zzip_open  </td>
+      <td width=50%> try the file-path as a real-file, and if not
+                     there, look for the existance of ZZIP_DIR by
+                     applying extensions, and open the file 
+                     contained within that one.</td></tr>
+  <tr><td width=50%> zzip_close  </td>
+      <td width=50%> if the ZZIP_FILE wraps a real-file, then call
+                     read(), otherwise call zzip_file_read() </td></tr>
+  <tr><td width=50%> zzip_close  </td>
+      <td width=50%> if the ZZIP_FILE wraps a real-file, then call
+                     close(), otherwise call zzip_file_close() </td></tr>
+</table></td></tr></table>
+
+<P>
+  Up to here we have the original functionality of the zziplib
+  when I (Guido Draheim) created the magic functions around the work from 
+  Tomi Ollila who wrote the routines to read and decompress files from
+  a zip archive - unlike other libraries it was quite readable and
+  intelligible source code (after many changes there is not much
+  left of the original zip08x source code but that's another story).
+  Later however some request and proposals and patches were coming in.
+</P>
+
+<P>
+  Among the first extensions was the recursive zzip_open magic. In
+  the first instance, the library did just do as described above:
+  a file-path of "this/test/README" might be a zip-file known as
+  "this/test.zip" containing a compressed file "README". But if 
+  there is neither a real file "this/test/README" and no real
+  zip-file "this/test.zip" then the call would have failed but
+  know the zzip_open call will recursivly check the parent
+  directories - so it can now find a zip-file "this.zip" which
+  contains a file-part "test/README". 
+</P>
+
+<P>
+  This dissolves the original meaning of a ZZIP_DIR and it has lead 
+  to some confusion later on - you can not create a DIRENT-like handle
+  for "this/test/" being within a "test.zip" file. And actually, I did
+  never see a reason to implement it so far (open "this.zip" and set
+  an initial subpath of "test" and let zzip_readdir skip all entries
+  that do not start with "test/"). This is left for excercie ;-)
+</P>
+</section></section>

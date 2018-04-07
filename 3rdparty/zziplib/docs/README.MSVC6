@@ -1,0 +1,137 @@
+To compile zziplib with MSVC++ 6 you can use the workspace and project
+files shipped along with the zziplib tarball in the msvc6/ directory.
+This will save you most of the following steps, atleast skip step 1.
+
+Step 1: create zziplib workspace file
+
+- Create a workspace and a project file for "zzip". 
+- Add all .c and .h files in the zzip/ directory. Yes, all.
+- Add the toplevel directory (containing the zzip/ directory) as an
+  "Additional Include Directory" to the search path. Best do this in
+  -> Project -> Settings -> Tab: C/C++ 
+             -> Category: Preprocessor -> "Additional Include Directories".
+  This is a comma-separated list, in the workspace files shipped along
+  with the zziplib tarball, you will see ".." in there where ".." (or ..\..)
+  is the path to the toplevel directory of the unpacked sources.
+- if you did choose "DLL" as a project type then you will automatically
+  see a define _USRDLL and ZZIP_EXPORTS in (this is just a hint)...
+  -> Project -> Settings -> Tab: C/C++ 
+             -> Category: Preprocessor -> "Preprocessor Definitions".
+- remove any LIB imports other than "kernel32.lib"
+  -> Project -> Settings -> Tab: Link
+             -> Category: Input -> "Object/Library Modules"
+
+Step 2: add zlib dependencies of zziplib.dll
+
+- if you do not have installed zlib in the system then you may want to
+  download "lib" + "bin" parts from http://gnuwin32.sf.net/packages/zlib.htm
+  (I found this msvcrt package via a reference at http://www.zlib.org)
+- suppose you have the zlib.h file in "D:\include" and the libz.lib file
+  is in "D:\lib" then we need to add those dependencies to the project.
+- add the path to zlib.h as an "Additional Include Path", best do this in
+  -> Project -> Settings -> Tab: C/C++ 
+             -> Category: Preprocessor -> "Additional Include Directories".
+  This is a comma-separated list, after you have changed it, it might
+  look like "..,.,D:\include" (for ".." part see description in Step 1)
+- That is enough to build a zziplib.lib, in order to create a zziplib.dll
+  we need to resolve its linker dependencies as well, best do this in
+  -> Project -> Settings -> Tab: Link
+             -> Category: Input -> "Object/Library Modules"
+  This is a space separated list (!!), add "libz.lib" there, so after
+  changing it it might look like "kernel32.lib libz.lib". Also modify
+  -> Project -> Settings -> Tab: Link
+             -> Category: Input -> "Additional Library Path"
+  which is usually empty. After changing it, it might contain "D:\lib".
+- Also add ZZIP_DLL or ZZIP_EXPORTS for dllspec(exports), best do this in
+  -> Project -> Settings -> Tab: C/C++
+             -> Category: Preprocessor" -> "Preprocessor Definitions".
+  After changing it, it might look like
+  "NDEBUG,WIN32,_WINDOWS,_MBCS,_USRDLL,ZZIP_EXPORTS"
+
+Step 3: example binaries to link with zziplib.dll 
+
+- dynamic linking is best to avoid any copyright problems, the "Lesser GPL"
+  does not restrict usage of zziplib for the case of a separated zzip.dll
+- the example workspace builds two zziplib libraries, where zziplib.lib
+  points to the staticlink variant and zzip.lib to the dynalink variant
+  which will add a dependency on zzip-1.dll being in the PATH
+- the example binaries shipped with zziplib tarball do only have a single
+  .c file per output .exe, we pick zzcat.exe to guide you through.
+- if you do not use our shipped project files, create a project "zzcat" 
+  and add "bins/zzcat.c" in there.
+- adjust the "Additional Include Directories":
+  -> Project -> Settings -> Tab: C/C++ 
+             -> Category: Preprocessor -> "Additional Include Directories".
+  like in Step 1 add the path to "./zzip" owning the zziplib headers.
+  We do _not_ need the zlib headers to compile "zzcat.exe", so it might
+  just look like ".." (or "..\.." or "..\zziplib-0.10.82")
+- adjust the "Object/Library Modules"
+  -> Project -> Settings -> Tab: Link
+             -> Category: Input -> "Object/Library Modules"
+  adding "zzip.lib libz.lib" with a space. The result might look like
+  "kernel32.lib zzip.lib libz.lib" or "kernel32.lib zziplib.lib libz.lib".
+- adjust the "Additional Library Path"
+  -> Project -> Settings -> Tab: Link
+             -> Category: Input -> "Additional Library Path"
+  and add both zziplib libpath and libz libpath, separated by comma, i.e.
+  ".\Release,D:\lib" or ".\Debug,D:\lib"
+
+Step 4: Customization
+- have a look at the info parts that can be put into the DLL project:
+  -> Project -> Settings -> Tab: Link
+             -> Category: Output -> "Version Information"
+     e.g. Major: "10" Minor: "82" for Release 0.10.82 of zziplib
+  -> Project -> Settings -> Tab: Resources -> "Language"
+     or just ignore the value when no messages are there
+  -> Project -> Settings -> Tab: Link
+             -> Category: General -> "Output Filename"
+     e.g. "zzip-1.dll" intead of "zzip.dll" for this first generation
+     (needs also to rename dll dependencies from "zzip.lib" to "zzip-1.lib")
+- there are a few defines that trigger extra code in zziplib, e.g.
+   ZZIP_HARDEN - extra sanity check for obfuscated zip files
+   ZZIP_CHECK_BACKSLASH_DIRSEPARATOR - to check for win32-like paths
+   (for the magic part within a zip archive we always assume a "/" separator)
+   ZZIP_USE_ZIPLIKES - not only do magic checks for ".zip" files to
+   be handled like directories, also do that for a few other zip documents
+   ZZIP_WRAPWRAP - if there problems on unusual targets then try this one.
+  -> Project -> Settings -> Tab: C/C++
+             -> Category: Preprocessor" -> "Preprocessor Definitions".
+
+Step 5: Testing
+- copy the *.dll and *.exe files from msvc6/Release/ to a place reachable
+  from your PATH (perhaps d:\bin), or even simpler, go the other way round, 
+  copy the file test/test.zip to the msvc6/Release/ directory.
+- open a command window (usually with a "MSDOS" symbol) and go the 
+  directory containing the test.zip (e.g. cd zziplib-0.10.82/msvc6/Release)
+- run `zzcat test/README` which should extract the file README from the
+  test.zip archive and print it to the screen. Try `zzdir test` to see
+  that it was really a compressed file printed to the screen.
+- If it works then everything is alright round zziplib which is a good 
+  thing to know when there are other problems
+- at the time of writing (0.10.82 of zziplib), the set of bin files are
+  precompiled with msvc6 and pushed to the download center at sourceforge.
+
+cheers, -- guido
+
+# finally, the older description for zziplib 0.10.5x 
+
+To build zziplib you need to add the path to zlib to the include directories
+search path. You find this under
+
+    Project, Settings, C/C++, Preprocessor, Additional Include Directories.
+
+Example:
+You have installed zlib to D:\zlib. You then change the edit box
+    Additional Include Directories
+from
+    ..
+to
+    ..,D:\zlib
+
+
+Included are two project files for zziplib. One that creates
+zziplib as a DLL, and one that creates zziplib as a static library.
+The DLL version is compiled with multi-threaded support. The static library
+version is currently set to link with libc(d).lib, i.e. only single-threaded
+CRT. If this does not suit your needs, you can change this under
+    Project, Settings, C/C++, Code Generation, Use run-time library.

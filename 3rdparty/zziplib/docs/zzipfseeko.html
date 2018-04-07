@@ -1,0 +1,176 @@
+<html><head><title>zziplib Library Functions</title>
+</head><body>
+<h2>zziplib Library Functions</h2><p>Version 0.13.62</p><p><big><b><code>#include &lt;zzip/fseeko.h&gt;</code></b></big></p><table width="100%"><tr><td valign="top"><code><b><code><a href="#zzip_entry_fopen">zzip_entry_fopen</a></code></b>(ZZIP_ENTRY * entry, int takeover)
+ : zzip__new__ ZZIP_ENTRY_FILE *
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_ffile">zzip_entry_ffile</a></code></b>(FILE * disk, char *filename)
+ : zzip__new__ ZZIP_ENTRY_FILE *
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_fread">zzip_entry_fread</a></code></b>(void *ptr, zzip_size_t sized, zzip_size_t nmemb,
+                 ZZIP_ENTRY_FILE * file)
+ : zzip_size_t
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_fclose">zzip_entry_fclose</a></code></b>(ZZIP_ENTRY_FILE * file)
+ : int
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_feof">zzip_entry_feof</a></code></b>(ZZIP_ENTRY_FILE * file)
+ : int
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_data_offset">zzip_entry_data_offset</a></code></b>(ZZIP_ENTRY * entry)
+ : zzip_off_t
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_fread_file_header">zzip_entry_fread_file_header</a></code></b>(ZZIP_ENTRY * entry,
+                             struct zzip_file_header *file_header)
+ : static zzip_off_t
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_strdup_name">zzip_entry_strdup_name</a></code></b>(ZZIP_ENTRY * entry)
+ : zzip__new__ char *
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_findfile">zzip_entry_findfile</a></code></b>(FILE * disk, char *filename,
+                    ZZIP_ENTRY * _zzip_restrict entry, zzip_strcmp_fn_t compare)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_findfirst">zzip_entry_findfirst</a></code></b>(FILE * disk)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_findnext">zzip_entry_findnext</a></code></b>(ZZIP_ENTRY * _zzip_restrict entry)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_free">zzip_entry_free</a></code></b>(ZZIP_ENTRY * entry)
+ : int
+</code></td></tr><tr><td valign="top"><code><b><code><a href="#zzip_entry_findmatch">zzip_entry_findmatch</a></code></b>(FILE * disk, char *filespec,
+                     ZZIP_ENTRY * _zzip_restrict entry,
+                     zzip_fnmatch_fn_t compare, int flags)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr></table><h3>Documentation</h3><dl><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"><tr><td valign="top"><code><b><a name="zzip_entry_fopen">zzip_entry_fopen</a></b>(ZZIP_ENTRY * entry, int takeover)
+ : zzip__new__ ZZIP_ENTRY_FILE *
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_ffile">zzip_entry_ffile</a></b>(FILE * disk, char *filename)
+ : zzip__new__ ZZIP_ENTRY_FILE *
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_fread">zzip_entry_fread</a></b>(void *ptr, zzip_size_t sized, zzip_size_t nmemb,
+                 ZZIP_ENTRY_FILE * file)
+ : zzip_size_t
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_fclose">zzip_entry_fclose</a></b>(ZZIP_ENTRY_FILE * file)
+ : int
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_feof">zzip_entry_feof</a></b>(ZZIP_ENTRY_FILE * file)
+ : int
+</code></td></tr></table></dt><dd><table width="100%"><tr><td valign="top"><table border="0" width="100%" cellpadding="0" cellspacing="0"><td> &nbsp;<em> open a file within a zip disk for reading</em> </td><td align="right"> <em><small>zzip/fseeko.c</small></em></td></table><p>
+  The <code>zzip_entry_fopen</code> function does take an "entry" argument and copies it (or just takes
+  it over as owner) to a new ZZIP_ENTRY_FILE handle structure. That
+  structure contains also a zlib buffer for decoding. The <code>zzip_entry_fopen</code> function does
+  seek to the file_header of the given "entry" and validates it for the
+  data buffer following it. We do also prefetch some data from the data
+  buffer thereby trying to match the disk pagesize for faster access later.
+  The <code><a href="#zzip_entry_fread">zzip_entry_fread</a></code> will then read in chunks of pagesizes which is
+  the size of the internal readahead buffer. If an error occurs then null
+  is returned.
+</p>
+</td></tr><tr><td valign="top"><p>
+  The <code>zzip_entry_ffile</code> function opens a file found by name, so it does a search into
+  the zip central directory with <code><a href="#zzip_entry_findfile">zzip_entry_findfile</a></code> and whatever
+  is found first is given to <code><a href="#zzip_entry_fopen">zzip_entry_fopen</a></code>
+</p>
+</td></tr><tr><td valign="top"><p>
+  The <code>zzip_entry_fread</code> function reads more bytes into the output buffer specified as
+  arguments. The return value is null on eof or error, the stdio-like
+  interface can not distinguish between these so you need to check
+  with <code><a href="#zzip_entry_feof">zzip_entry_feof</a></code> for the difference.
+</p>
+</td></tr><tr><td valign="top"><p>  The <code>zzip_entry_fclose</code> function releases any zlib decoder info needed for decompression
+  and dumps the ZZIP_ENTRY_FILE struct then.
+</p>
+</td></tr><tr><td valign="top"><p>
+  The <code>zzip_entry_feof</code> function allows to distinguish an error from an eof condition.
+  Actually, if we found an error but we did already reach eof then we
+  just keep on saying that it was an eof, so the app can just continue.
+</p>
+</td></tr></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"><tr><td valign="top"><code><b><a name="zzip_entry_data_offset">zzip_entry_data_offset</a></b>(ZZIP_ENTRY * entry)
+ : zzip_off_t
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_fread_file_header">zzip_entry_fread_file_header</a></b>(ZZIP_ENTRY * entry,
+                             struct zzip_file_header *file_header)
+ : static zzip_off_t
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_strdup_name">zzip_entry_strdup_name</a></b>(ZZIP_ENTRY * entry)
+ : zzip__new__ char *
+</code></td></tr></table></dt><dd><table width="100%"><tr><td valign="top"><table border="0" width="100%" cellpadding="0" cellspacing="0"><td> &nbsp;<em> helper functions for (fseeko) zip access api</em> </td><td align="right"> <em><small>zzip/fseeko.c</small></em></td></table><p>
+  The <code>zzip_entry_data_offset</code> functions returns the seekval offset of the data portion of the
+  file referenced by the given zzip_entry. It requires an intermediate
+  check of the file_header structure (i.e. it reads it from disk). After
+  this call, the contained diskfile readposition is already set to the
+  data_offset returned here. On error -1 is returned.
+</p>
+</td></tr><tr><td valign="top"><p>  The <code>zzip_entry_fread_file_header</code> functions read the correspoding struct zzip_file_header from
+  the zip disk of the given "entry". The returned off_t points to the
+  end of the file_header where the current fseek pointer has stopped.
+  This is used to immediatly parse out any filename/extras block following
+  the file_header. The return value is null on error.
+</p>
+</td></tr><tr><td valign="top"><p>  The <code>zzip_entry_strdup_name</code> function is a big helper despite its little name: in a zip file the
+  encoded filenames are usually NOT zero-terminated but for common usage
+  with libc we need it that way. Secondly, the filename SHOULD be present
+  in the zip central directory but if not then we fallback to the filename
+  given in the file_header of each compressed data portion.
+</p>
+</td></tr></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"><tr><td valign="top"><code><b><a name="zzip_entry_findfile">zzip_entry_findfile</a></b>(FILE * disk, char *filename,
+                    ZZIP_ENTRY * _zzip_restrict entry, zzip_strcmp_fn_t compare)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_findfirst">zzip_entry_findfirst</a></b>(FILE * disk)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_findnext">zzip_entry_findnext</a></b>(ZZIP_ENTRY * _zzip_restrict entry)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_free">zzip_entry_free</a></b>(ZZIP_ENTRY * entry)
+ : int
+</code></td></tr><tr><td valign="top"><code><b><a name="zzip_entry_findmatch">zzip_entry_findmatch</a></b>(FILE * disk, char *filespec,
+                     ZZIP_ENTRY * _zzip_restrict entry,
+                     zzip_fnmatch_fn_t compare, int flags)
+ : zzip__new__ ZZIP_ENTRY *
+</code></td></tr></table></dt><dd><table width="100%"><tr><td valign="top"><table border="0" width="100%" cellpadding="0" cellspacing="0"><td> &nbsp;<em> search for files in the (fseeko) zip central directory</em> </td><td align="right"> <em><small>zzip/fseeko.c</small></em></td></table><p>
+  The <code>zzip_entry_findfile</code> function is given a filename as an additional argument, to find the
+  disk_entry matching a given filename. The compare-function is usually
+  strcmp or strcasecmp or perhaps strcoll, if null then strcmp is used.
+  - use null as argument for "old"-entry when searching the first
+  matching entry, otherwise the last returned value if you look for other
+  entries with a special "compare" function (if null then a doubled search
+  is rather useless with this variant of _findfile). If no further entry is
+  found then null is returned and any "old"-entry gets already free()d.
+</p>
+</td></tr><tr><td valign="top"><p>
+  The <code>zzip_entry_findfirst</code> function is the first call of all the zip access functions here.
+  It contains the code to find the first entry of the zip central directory.
+  Here we require the stdio handle to represent a real zip file where the
+  disk_trailer is _last_ in the file area, so that its position would be at
+  a fixed offset from the end of the file area if not for the comment field
+  allowed to be of variable length (which needs us to do a little search
+  for the disk_tailer). However, in this simple implementation we disregard
+  any disk_trailer info telling about multidisk archives, so we just return
+  a pointer to the first entry in the zip central directory of that file.
+</p><p>
+  For an actual means, we are going to search backwards from the end
+  of the mmaped block looking for the PK-magic signature of a
+  disk_trailer. If we see one then we check the rootseek value to
+  find the first disk_entry of the root central directory. If we find
+  the correct PK-magic signature of a disk_entry over there then we
+  assume we are done and we are going to return a pointer to that label.
+</p><p>
+  The return value is a pointer to the first zzip_disk_entry being checked
+  to be within the bounds of the file area specified by the arguments. If
+  no disk_trailer was found then null is returned, and likewise we only
+  accept a disk_trailer with a seekvalue that points to a disk_entry and
+  both parts have valid PK-magic parts. Beyond some sanity check we try to
+  catch a common brokeness with zip archives that still allows us to find
+  the start of the zip central directory.
+</p>
+</td></tr><tr><td valign="top"><p>
+  The <code>zzip_entry_findnext</code> function takes an existing "entry" in the central root directory
+  (e.g. from zzip_entry_findfirst) and moves it to point to the next entry.
+  On error it returns 0, otherwise the old entry. If no further match is
+  found then null is returned and the entry already free()d. If you want
+  to stop searching for matches before that case then please call
+  <code><a href="#zzip_entry_free">zzip_entry_free</a></code> on the cursor struct ZZIP_ENTRY.
+</p>
+</td></tr><tr><td valign="top"><p>  the <code>zzip_entry_free</code> function releases the malloc()ed areas needed for zzip_entry, the
+  pointer is invalid afterwards. The <code>zzip_entry_free</code> function has #define synonyms of
+  zzip_entry_findlast(), zzip_entry_findlastfile(), zzip_entry_findlastmatch()
+</p>
+</td></tr><tr><td valign="top"><p>
+  The <code>zzip_entry_findmatch</code> function uses a compare-function with an additional argument
+  and it is called just like fnmatch(3) from POSIX.2 AD:1993), i.e.
+  the argument filespec first and the ziplocal filename second with
+  the integer-flags put in as third to the indirect call. If the
+  platform has fnmatch available then null-compare will use that one
+  and otherwise we fall back to mere strcmp, so if you need fnmatch
+  searching then please provide an implementation somewhere else.
+  - use null as argument for "after"-entry when searching the first
+  matching entry, or the last disk_entry return-value to find the
+  next entry matching the given filespec. If no further entry is
+  found then null is returned and any "old"-entry gets already free()d.
+</p>
+</td></tr></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd><dt><table width="100%"></table></dt><dd><table width="100%"></table></dd></dl>
+</body></html>

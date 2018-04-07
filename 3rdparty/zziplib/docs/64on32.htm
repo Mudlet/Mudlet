@@ -1,0 +1,195 @@
+<section>  <date> 13. Aug 2003 </date>
+<h2> 64on32 largefile information </h2>
+
+<section><!--border-->
+<h3> largefile problems </h3>
+
+<P>
+  Through actual problems with handling files larger than 2 Gigabyte,
+  I had to face the fact that there are serious problems with the
+  largefile implementation around shared-libraries. This is bound
+  to the effect that 64on32 platforms allow a preprocessor #define
+  _FILE_OFFSET_BITS=64 which will shift the integretal type of
+  off_t from a 32bit to a 64bit entity.
+</P>
+
+<P>
+  That will in fact lead to problems if an application is compiled
+  with a different off_t size than the shared-library it will be
+  linked to. Among the problems are different sizes of the callframe
+  for those functions that take an argument of off_t type. Note how
+  the "seek" call uses an off_t in the middle of its arguments which
+  may be 32bit or 64bit depending on a preprocessor define. And
+  you know that zziplib wraps up "seek"-like calls as well.
+</P>
+
+<P>
+  The observations were largely made independent of the zziplib 
+  however, as a zip-file does uses 32bit offsets in its header
+  fields anyway, and therefore a single zip-archive (or any of 
+  its wrapped files) can not be larger than 2 Gigabyte anyway.
+  I would to refer you for deeper information to my website
+  about this problem-space at
+</P>
+<p><center><big>
+  <a href="http://ac-archive.sf.net/largefile" remap="url">
+                  ac-archive.sf.net/largefile </a>
+</big></center></p>
+
+</section><section>
+<h3> zziplib related </h3>
+
+<P>
+  Still however the problems hold for zziplib usage when
+  the functions are linked dynamically as a shared-library.
+  Here we can face the fact that an application (or a higher
+  level library) uses a different off_t size than the
+  underlying zziplib shared-library.
+</P>
+
+<P>
+  If you read the <code>zzip/zzip.h</code> header file then
+  you will surely see a number of off_t usages around, here 
+  they are wrapped in the form of zzip_off_t to get away with
+  platforms not predefining off_t in the first place. Those
+  functions are (at the time of writing):
+<blockquote><ul>
+<li> <code>zzip_telldir</code> (return type) </li>
+<li> <code>zzip_seekdir</code> (second param) </li>
+<li> <code>zzip_tell</code> (return type) </li>
+<li> <code>zzip_seek</code> (second param of three)</li>
+</ul></blockquote>
+</P>
+
+<P>
+  What might be not as obvious however: you will find
+  also the off_t type being used in the plugin-handlers
+  callback functions. That is based on the fact that
+  the plugin-structures is filled by default with the
+  posix-functions from the C library. A 64on32 platform
+  however offers quite usually a mixedmode C library
+  exporting two symbols for tell/seek calls to match
+  either 32bit off_t or 64bit off_t
+<blockquote><ul>
+<li> <code>zzip_plugin_io->seeks</code> (return type and second param) </li>
+<li> <code>zzip_plugin_io->filesize</code> (return type) </li>
+</ul></blockquote>
+</P>
+
+<P>
+  The problem here: the application might not make use of
+  zzip_seek/zzip_tell explicitly, but may be the internal
+  implementation of a zzip call uses io->seeks or io->filesize.
+  When an application uses plugin-io with these callbacks
+  overridden then surely problems will arise.
+</P>
+
+</section><section>
+<h3> zziplib mixedmode option </h3>
+
+<P>
+  I have extended the zziplib implementation to allow itself to
+  live fine on 64on32 systems. The 64on32 system are like linux
+  and solaris where the default off_t is 32bit and only by the
+  preprocessor hint they shift into 64bit. The C library on
+  these systems is a mixedmode one offering a pair for each of
+  the problematic functions - lseek <em>and</em> lseek64 for
+  example.
+</P>
+
+<P>
+  The zziplib header file detects when it is present on a
+  64on32 system (through hints in configured zzip/conf.h)
+  and that _FILE_OFFSET_BITS has been set to 64bit. In that
+  case it does automatically issue #defines that shift the
+  symbol-name from zzip_seek into zzip_seek64. Likewise,
+  <em>all</em> the *_ext_io functions are renamed into
+  *_ext_io64 calls
+</P>
+
+<P>
+  The zziplib library itself will also pick up the renamings
+  when it is compiled with 64bit off_t - in effect an application
+  with a 64bit-off_t dependency can only link with a zziplib
+  compiled in 64bit-off_t mode. If the application does not
+  use any call symbol with an off_t dependency then it does 
+  not matter and the link will succeed. That's simply because
+  function calls without an off_t dependency will not be
+  renamed and they are the same for a 32bit-off_t zziplib or
+  a 64bit-off_t zziplib.
+</P>
+
+<P>
+  As an extra, the zziplib exports a few of its common calls
+  like being a mixedmode library when you compile it both in
+  64bit mode and as a shared library. In that case, the 
+  resulting shared library will export symbol pairs for the
+  calls with an off_t dependency, i.e. both zzip_seek and
+  zzip_seek64 are present.
+</P>
+
+<P>
+  Note that for reasons of being a lightweight library, the
+  zziplib library does not export mixmode call pairs for
+  the *_ext_io family of functions. The current generation
+  of zziplib does call io->seeks unconditionally of any
+  case'ing flag and so far there are no problems with the
+  current design.
+</P>
+
+</section><section>
+<h3> Implementation details </h3>
+
+<P>
+  In the header file zzip/zzip.h you will find the define
+  ZZIP_LARGEFILE_RENAME which triggers the renaming process.
+  See zzip/conf.h on the conditions where it is being triggered.
+</P>
+
+<P>
+  For the implementation of the mixedmode symbol pairs, see
+  zzip/dir.c for an example for the zzip_seekdir/zzip_seekdir64
+  pair - here we use libtools -DPIC to detect the situation of 
+  being compiled as shared-library, we use the preprocessor
+  #def ZZIP_LARGEFILE_RENAME to know we are on a 64on32
+  system compiled in 64bit-off_t, and we check the transitional
+  largefile API to be present by looking for EOVERFLOW errno.
+</P>
+
+<P>
+  When all the three are present then we simply #undef the
+  renaming preprocessor macro and define a function symbol 
+  (without the renaming) and call the renamed symbol 
+  already compiled a few lines before. We use the pre-off_t
+  type "long" for the 32bit entity of these calls. While
+  we mostly let the compiler do the shrink/expand of these
+  integer types, we do also sometimes check for overflows
+  of the seekvalue.
+</P>
+
+</section><section>
+<h3> rpm extras and pkg-config </h3>
+
+<P>
+  The provided .spec file shows how to compile both variants
+  of the zziplib shared library and to install them in
+  parallel in the system. Also we provide doubled sets
+  of .pc files for pkg-config installation. That should make
+  it a lot easier for applications to link to the correct
+  library they want.
+</P>
+
+<P>
+  Here are all the variants that you can find after installing
+  the vanilla rpm files from zziplib.sf.net:
+<pre>
+$ pkg-config --list-all | sort | grep zzip
+zziplib32                   zziplib32 - ZZipLib - libZ-based ZIP-access Library
+zziplib64                   zziplib64 - ZZipLib - libZ-based ZIP-access Library
+zziplib                     zziplib - ZZipLib - libZ-based ZIP-access Library
+zzip-sdl-config             zzip-sdl-config - SDL Config (for ZZipLib)
+zzip-sdl-rwops              zzip-sdl-rwops - SDL_rwops for ZZipLib
+zzipwrap                    zzipwrap - Callback Wrappers for ZZipLib
+zzip-zlib-config            zzip-zlib-config - ZLib Config (for ZZipLib)
+</pre></P>
+</section></section>
