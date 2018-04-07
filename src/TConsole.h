@@ -260,6 +260,10 @@ public:
     QWidget* mpButtonMainLayer;
 
 signals:
+    // Raised when new data is incoming to trigger Alert handling in mudlet
+    // class, second argument is true for a lower priority indication when
+    // locally produced information is painted into main console
+    void signal_newDataAlert(const QString&, const bool isLowerPriorityChange = false);
 
 
 public slots:
