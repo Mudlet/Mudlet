@@ -1116,7 +1116,11 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
     // on TConsole types:
-    emit signal_newDataAlert(mpHost->getName(), !isFromServer);
+    if (isFromServer) {
+        // Only flag up data from remote server (though it also includes REPLAY
+        // playback of remote server data)
+        emit signal_newDataAlert(mpHost->getName(), !isFromServer);
+    }
 }
 
 void TConsole::runTriggers(int line)
