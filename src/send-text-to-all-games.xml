@@ -6,9 +6,9 @@
     <AliasPackage>
         <Alias isActive="yes" isFolder="no">
             <name>Send text to all games with :</name>
-            <script>-- prefix with : to send text to all open profiles that have this script installed
+            <script>-- prefix with : to send text or run an alias in all open profiles that have this script installed
 -- for example - :hi or :follow bob
-send(matches[2])
+expandAlias(matches[2])
 raiseGlobalEvent(&quot;sysSendAllProfiles&quot;, matches[2])
 </script>
             <command></command>
@@ -22,7 +22,7 @@ raiseGlobalEvent(&quot;sysSendAllProfiles&quot;, matches[2])
             <name>sysSendAllProfiles</name>
             <packageName></packageName>
             <script>function sysSendAllProfiles(_, text)
-  send(text)
+  expandAlias(text)
 end</script>
             <eventHandlerList>
                 <string>sysSendAllProfiles</string>
