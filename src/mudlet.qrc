@@ -157,5 +157,6 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>send-text-to-all-games.xml</file>
     </qresource>
 </RCC>

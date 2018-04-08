@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+    <TriggerPackage/>
+    <TimerPackage/>
+    <AliasPackage>
+        <Alias isActive="yes" isFolder="no">
+            <name>Send text to all games with :</name>
+            <script>-- prefix with : to send text to all open profiles that have this script installed
+-- for example - :hi or :follow bob
+send(matches[2])
+raiseGlobalEvent(&quot;sysSendAllProfiles&quot;, matches[2])
+</script>
+            <command></command>
+            <packageName></packageName>
+            <regex>^:(.*)$</regex>
+        </Alias>
+    </AliasPackage>
+    <ActionPackage/>
+    <ScriptPackage>
+        <Script isActive="yes" isFolder="no">
+            <name>sysSendAllProfiles</name>
+            <packageName></packageName>
+            <script>function sysSendAllProfiles(_, text)
+  send(text)
+end</script>
+            <eventHandlerList>
+                <string>sysSendAllProfiles</string>
+            </eventHandlerList>
+        </Script>
+    </ScriptPackage>
+    <KeyPackage/>
+    <HelpPackage>
+        <helpURL></helpURL>
+    </HelpPackage>
+</MudletPackage>
