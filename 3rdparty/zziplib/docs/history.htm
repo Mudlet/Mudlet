@@ -1,0 +1,92 @@
+<section><date>created 1.Jun.2000, last updated 25.Apr.2002 </date>
+<h2> History and Links </h2>           plus Installation and Contact Hints
+
+<!--border--> 
+
+<section>
+<h3> A Bit Of History </h3>
+
+<P>
+You'll find <a href="http://www.gzip.org">gzip</a> using the same compression 
+that was written by Jean-loup <a href="http://gailly.net">Gailly</a>
+for the <a href="http://www.info-zip.org">Info-Zip</a> Group
+whose <a href="http://www.info-zip.org/pub/infozip/Zip.html">Zip</a>
+program is compatible with msdos PKZIP program from 
+<a href="http://www.pkware.com">PK&nbsp;Ware</a>. Then, in collaboration
+with <a href="http://www.alumni.caltech.edu/~madler">Mark Adler</a>
+he wrote the <a href="http://www.gzip.org/zlib">zlib</a>
+compression library which was later standardized in the 
+<a href="ftp://ftp.uu.net/graphics/png/documents/zlib/zdoc-index.html">
+zlib RFCs</a>, namely
+<a href="http://www.ietf.org/rfc/rfc1950.txt">RFC 1950</a>
+<a href="ftp://ftp.uu.net/graphics/png/documents/zlib/rfc-zlib.html.Z">
+zlib&nbsp;3.3</a>,
+<a href="http://www.ietf.org/rfc/rfc1951.txt">RFC 1951</a>
+<a href="ftp://ftp.uu.net/graphics/png/documents/zlib/rfc-deflate.html.Z">
+deflate&nbsp;1.3</a> and
+<a href="http://www.ietf.org/rfc/rfc1952.txt">RFC 1952</a>
+<a href="ftp://ftp.uu.net/graphics/png/documents/zlib/rfc-gzip.html">
+gzip&nbsp;4.3</a>. The free algorithm can be found in lots of places
+today including PPP packet compression and PNG picture compression.
+</P>
+
+</section><section>
+<h3> Installation </h3>
+
+<P>
+ The installation is from the source .tar.gz tarball does follow
+ the simple gnu style: type <tt>''configure  && make install''</tt> 
+ in the unpacked directory. This will actually perform the usual 
+ sequence of <tt>''configure && make && make install''</tt>. The
+ use of <tt>''make rpm''</tt> will make rpms based on your system
+ setup, and using a decent mingw32 compiler (e.g. the crossgcc
+ from <a href="http://libsdl.org/Xmingw32">libsdl.org/Xmingw32</a>)
+ will allow you to create windows dlls using a gnu development
+ environment. MSVC and Borland support (Make-)files should be
+ easy to be derived from the <a href="Makefile.am">Makefile.am</a>
+</P>
+
+</section><section>
+<h3> Contact </h3>
+
+<P>
+ The library was developed by 
+ <a href="mailto:guidod@gmx.de?subject=zziplib">
+ Guido Draheim </a> based on the library 
+ <a href="http://freshmeat.net/appindex/1999/08/02/933593367.html">
+ <tt>zip08x</tt> </a> 
+ by <a href="mailto:too@iki.fi"> Tomi Ollila </a> (many thanks
+ for his support of the zziplib project). He has provided 
+ a good deal of testing rounds and very helpful comments. 
+ It may be assumed that this library supersedes 
+ <a href="http://www.iki.fi/too/sw/zip08x.readme">
+ <tt>zip08x</tt></a>, and in April 2002, he 
+ has even given up copyright restrictions coming from zip08x
+ and changed the <a href="http://www.iki.fi/too/sw/zip08x.readme">zip08x</a> 
+ readme to point to <a href="http://zziplib.sf.net">zziplib</a>.
+ Anyone who wants to contribute in accessing zip-archives
+ with the zlib-library is hereby kindly invited to send us
+ comments and sourcecode.
+</P>
+
+</section><section>
+<h3> Links </h3>
+
+<P>
+The <a href="zziplib.html">zziplib library</a> must be
+linked with the free <b><a href="http://www.gzip.org/zlib/">zlib</a></b>
+<a href="http://www.info-zip.org/pub/infozip/zlib">[1]</a>
+<a href="http://www.lifl.fr/PRIVATE/Manuals/gnulang/zlib">[2]</a>
+<a href="http://pobox.com/~newt">[3]</a> package originally developed 
+by the <a href="http://www.info-zip.org">Info-Zip</a> Group
+and now maintained at the <a href="http://www.gzip.org">GZip</a> Group.
+As of late, the pkware appnote.txt has been revised into a whitepaper
+document named
+<a href="http://www.pkware.com/products/enterprise/white_papers/appnote.html">
+    "APPNOTE.TXT - .ZIP File Format Specification"</a>.
+Be also aware of other zzip like projects, e.g. 
+<a href="http://zipios.sourceforge.net">zipios++</a> that
+mangles zip access into C++ iostream facilities.
+</P>
+
+</section></section>

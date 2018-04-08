@@ -1,0 +1,8 @@
+prefix=/usr/local
+zzipsdldir=/usr/local/include/SDL_rwops_zzip
+ 
+Name: SDL_rwops_zzip
+Version: 0.13.62
+Description: SDL_rwops for ZZipLib
+Requires: sdl, zziplib
+Cflags: -I${zzipsdldir}
