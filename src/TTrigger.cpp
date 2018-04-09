@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -617,14 +617,9 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
     if (!pCT) {
         return false; //no color pattern created
     }
-    int mFgR = pCT->fgR;
-    int mFgG = pCT->fgG;
-    int mFgB = pCT->fgB;
-    int mBgR = pCT->bgR;
-    int mBgG = pCT->bgG;
-    int mBgB = pCT->bgB;
+
     for (auto it = bufferLine.begin(); it != bufferLine.end(); it++, pos++) {
-        if (((*it).fgR == mFgR) && ((*it).fgG == mFgG) && ((*it).fgB == mFgB) && ((*it).bgR == mBgR) && ((*it).bgG == mBgG) && ((*it).bgB == mBgB)) {
+        if (pCT->mFgColor == (*it).foreground() && pCT->mBgColor == (*it).background()) {
             if (matchBegin == -1) {
                 matchBegin = pos;
             }
@@ -632,6 +627,7 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
         } else {
             matching = false;
         }
+
         if ((!matching) || (matching && (pos + 1 >= static_cast<int>(bufferLine.size())))) {
             if (matchBegin > -1) {
                 std::string got;
@@ -999,202 +995,148 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 
 
 // Die Musternummer wird ID im color-pattern lookup table
+// This NOW uses proper ANSI numbers
 TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
 {
-    /* Mudlet simplified ANSI color codes
-      -----------------------------------
-      0  default text color
-      1  light black
-      2  dark black
-      3  light red
-      4  dark red
-      5  light green
-      6  dark green
-      7  light yellow
-      8  dark yellow
-      9  light blue
-      10 dark blue
-      11 light magenta
-      12 dark magenta
-      13 light cyan
-      14 dark cyan
-      15 light white
-      16 dark white */
+    /* OLD Mudlet simplified ANSI color codes
+                            -> proper ANSI numbers
+      ---------------------------------------
+      0  default text color -> -1 (NEW code)
+      1  light black        ->  8
+      2  dark black         ->  0
+      3  light red          ->  9
+      4  dark red           ->  1
+      5  light green        -> 10
+      6  dark green         ->  2
+      7  light yellow       -> 11
+      8  dark yellow        ->  3
+      9  light blue         -> 12
+      10 dark blue          ->  4
+      11 light magenta      -> 13
+      12 dark magenta       ->  5
+      13 light cyan         -> 14
+      14 dark cyan          ->  6
+      15 light white        -> 15
+      16 dark white         ->  7
+ */
 
-    bool invalidColorCode = false;
-
-    int fgColorR = 0;
-    int fgColorG = 0;
-    int fgColorB = 0;
-    int bgColorR = 0;
-    int bgColorG = 0;
-    int bgColorB = 0;
-
-    int tag = ansiFg;
-    if (tag <= 16) {
-        QColor c;
-        switch (tag) {
-        case 0:
-            c = mpHost->mFgColor;
-            break;
-        case 1:
-            c = mpHost->mLightBlack;
-            break;
-        case 2:
-            c = mpHost->mBlack;
-            break;
-        case 3:
-            c = mpHost->mLightRed;
-            break;
-        case 4:
-            c = mpHost->mRed;
-            break;
-        case 5:
-            c = mpHost->mLightGreen;
-            break;
-        case 6:
-            c = mpHost->mGreen;
-            break;
-        case 7:
-            c = mpHost->mLightYellow;
-            break;
-        case 8:
-            c = mpHost->mYellow;
-            break;
-        case 9:
-            c = mpHost->mLightBlue;
-            break;
-        case 10:
-            c = mpHost->mBlue;
-            break;
-        case 11:
-            c = mpHost->mLightMagenta;
-            break;
-        case 12:
-            c = mpHost->mMagenta;
-            break;
-        case 13:
-            c = mpHost->mLightCyan;
-            break;
-        case 14:
-            c = mpHost->mCyan;
-            break;
-        case 15:
-            c = mpHost->mLightWhite;
-            break;
-        case 16:
-            c = mpHost->mWhite;
-            break;
-        }
-        fgColorR = c.red();
-        fgColorG = c.green();
-        fgColorB = c.blue();
-    } else {
-        if (tag < 232) {
-            tag -= 16; // because color 1-15 behave like normal ANSI colors
+    // clang-format off
+    QColor fgColor;
+    switch (ansiFg) {
+    case -1:        fgColor = mpHost->mFgColor;         break;
+    case 0:         fgColor = mpHost->mBlack;           break;
+    case 1:         fgColor = mpHost->mRed;             break;
+    case 2:         fgColor = mpHost->mGreen;           break;
+    case 3:         fgColor = mpHost->mYellow;          break;
+    case 4:         fgColor = mpHost->mBlue;            break;
+    case 5:         fgColor = mpHost->mMagenta;         break;
+    case 6:         fgColor = mpHost->mCyan;            break;
+    case 7:         fgColor = mpHost->mWhite;           break;
+    case 8:         fgColor = mpHost->mLightBlack;      break;
+    case 9:         fgColor = mpHost->mLightRed;        break;
+    case 10:        fgColor = mpHost->mLightGreen;      break;
+    case 11:        fgColor = mpHost->mLightYellow;     break;
+    case 12:        fgColor = mpHost->mLightBlue;       break;
+    case 13:        fgColor = mpHost->mLightMagenta;    break;
+    case 14:        fgColor = mpHost->mLightCyan;       break;
+    case 15:        fgColor = mpHost->mLightWhite;      break;
+    // Grey scale divided into 24 values:
+    case 232:       fgColor = QColor(  0,   0,   0);    break; //   0.000
+    case 233:       fgColor = QColor( 11,  11,  11);    break; //  11.087
+    case 234:       fgColor = QColor( 22,  22,  22);    break; //  22.174
+    case 235:       fgColor = QColor( 33,  33,  33);    break; //  33.261
+    case 236:       fgColor = QColor( 44,  44,  44);    break; //  44.348
+    case 237:       fgColor = QColor( 55,  55,  55);    break; //  55.435
+    case 238:       fgColor = QColor( 67,  67,  67);    break; //  66.522
+    case 239:       fgColor = QColor( 78,  78,  78);    break; //  77.609
+    case 240:       fgColor = QColor( 89,  89,  89);    break; //  88.696
+    case 241:       fgColor = QColor(100, 100, 100);    break; //  99.783
+    case 242:       fgColor = QColor(111, 111, 111);    break; // 110.870
+    case 243:       fgColor = QColor(122, 122, 122);    break; // 121.957
+    case 244:       fgColor = QColor(133, 133, 133);    break; // 133.043
+    case 245:       fgColor = QColor(144, 144, 144);    break; // 144.130
+    case 246:       fgColor = QColor(155, 155, 155);    break; // 155.217
+    case 247:       fgColor = QColor(166, 166, 166);    break; // 166.304
+    case 248:       fgColor = QColor(177, 177, 177);    break; // 177.391
+    case 249:       fgColor = QColor(188, 188, 188);    break; // 188.478
+    case 250:       fgColor = QColor(200, 200, 200);    break; // 199.565
+    case 251:       fgColor = QColor(211, 211, 211);    break; // 210.652
+    case 252:       fgColor = QColor(222, 222, 222);    break; // 221.739
+    case 253:       fgColor = QColor(233, 233, 233);    break; // 232.826
+    case 254:       fgColor = QColor(244, 244, 244);    break; // 243.913
+    case 255:       fgColor = QColor(255, 255, 255);    break; // 255.000
+    default:
+        if (ansiFg >= 16 && ansiFg <= 231) {
+            // because color 1-15 behave like normal ANSI colors we need to subtract 16
             // 6x6 RGB color space
-            int r = tag / 36;
-            int g = (tag - (r * 36)) / 6;
-            int b = (tag - (r * 36)) - (g * 6);
-            fgColorR = r * 42;
-            fgColorG = g * 42;
-            fgColorB = b * 42;
-        } else if (tag < 256) {
-            // black + 23 tone grayscale from dark to light gray
-            tag -= 232;
-            fgColorR = tag * 10;
-            fgColorG = tag * 10;
-            fgColorB = tag * 10;
+            int r = (ansiFg - 16) / 36;
+            int g = (ansiFg - 16 - (r * 36)) / 6;
+            int b = (ansiFg - 16 - (r * 36)) - (g * 6);
+            // The following WERE using 42 as factor but that does not reflect
+            // changes already made in TBuffer::translateToPlainText a while ago:
+            fgColor = QColor(r * 51, g * 51, b * 51);
         } else {
-            //return invalid color error
-            invalidColorCode = true;
+            return nullptr;
         }
     }
 
-    tag = ansiBg;
-    if (tag <= 16) {
-        QColor c;
-        switch (tag) {
-        case 0:
-            c = mpHost->mBgColor;
-            break;
-        case 1:
-            c = mpHost->mLightBlack;
-            break;
-        case 2:
-            c = mpHost->mBlack;
-            break;
-        case 3:
-            c = mpHost->mLightRed;
-            break;
-        case 4:
-            c = mpHost->mRed;
-            break;
-        case 5:
-            c = mpHost->mLightGreen;
-            break;
-        case 6:
-            c = mpHost->mGreen;
-            break;
-        case 7:
-            c = mpHost->mLightYellow;
-            break;
-        case 8:
-            c = mpHost->mYellow;
-            break;
-        case 9:
-            c = mpHost->mLightBlue;
-            break;
-        case 10:
-            c = mpHost->mBlue;
-            break;
-        case 11:
-            c = mpHost->mLightMagenta;
-            break;
-        case 12:
-            c = mpHost->mMagenta;
-            break;
-        case 13:
-            c = mpHost->mLightCyan;
-            break;
-        case 14:
-            c = mpHost->mCyan;
-            break;
-        case 15:
-            c = mpHost->mLightWhite;
-            break;
-        case 16:
-            c = mpHost->mWhite;
-            break;
-        }
-        bgColorR = c.red();
-        bgColorG = c.green();
-        bgColorB = c.blue();
-    } else {
-        if (tag < 232) {
-            tag -= 16; // because color 1-15 behave like normal ANSI colors
+    QColor bgColor;
+    switch (ansiBg) {
+    case -1:        bgColor = mpHost->mBgColor;         break;
+    case 0:         bgColor = mpHost->mBlack;           break;
+    case 1:         bgColor = mpHost->mRed;             break;
+    case 2:         bgColor = mpHost->mGreen;           break;
+    case 3:         bgColor = mpHost->mYellow;          break;
+    case 4:         bgColor = mpHost->mBlue;            break;
+    case 5:         bgColor = mpHost->mMagenta;         break;
+    case 6:         bgColor = mpHost->mCyan;            break;
+    case 7:         bgColor = mpHost->mWhite;           break;
+    case 8:         bgColor = mpHost->mLightBlack;      break;
+    case 9:         bgColor = mpHost->mLightRed;        break;
+    case 10:        bgColor = mpHost->mLightGreen;      break;
+    case 11:        bgColor = mpHost->mLightYellow;     break;
+    case 12:        bgColor = mpHost->mLightBlue;       break;
+    case 13:        bgColor = mpHost->mLightMagenta;    break;
+    case 14:        bgColor = mpHost->mLightCyan;       break;
+    case 15:        bgColor = mpHost->mLightWhite;      break;
+    // Grey scale divided into 24 values:
+    case 232:       bgColor = QColor(  0,   0,   0);    break; //   0.000
+    case 233:       bgColor = QColor( 11,  11,  11);    break; //  11.087
+    case 234:       bgColor = QColor( 22,  22,  22);    break; //  22.174
+    case 235:       bgColor = QColor( 33,  33,  33);    break; //  33.261
+    case 236:       bgColor = QColor( 44,  44,  44);    break; //  44.348
+    case 237:       bgColor = QColor( 55,  55,  55);    break; //  55.435
+    case 238:       bgColor = QColor( 67,  67,  67);    break; //  66.522
+    case 239:       bgColor = QColor( 78,  78,  78);    break; //  77.609
+    case 240:       bgColor = QColor( 89,  89,  89);    break; //  88.696
+    case 241:       bgColor = QColor(100, 100, 100);    break; //  99.783
+    case 242:       bgColor = QColor(111, 111, 111);    break; // 110.870
+    case 243:       bgColor = QColor(122, 122, 122);    break; // 121.957
+    case 244:       bgColor = QColor(133, 133, 133);    break; // 133.043
+    case 245:       bgColor = QColor(144, 144, 144);    break; // 144.130
+    case 246:       bgColor = QColor(155, 155, 155);    break; // 155.217
+    case 247:       bgColor = QColor(166, 166, 166);    break; // 166.304
+    case 248:       bgColor = QColor(177, 177, 177);    break; // 177.391
+    case 249:       bgColor = QColor(188, 188, 188);    break; // 188.478
+    case 250:       bgColor = QColor(200, 200, 200);    break; // 199.565
+    case 251:       bgColor = QColor(211, 211, 211);    break; // 210.652
+    case 252:       bgColor = QColor(222, 222, 222);    break; // 221.739
+    case 253:       bgColor = QColor(233, 233, 233);    break; // 232.826
+    case 254:       bgColor = QColor(244, 244, 244);    break; // 243.913
+    case 255:       bgColor = QColor(255, 255, 255);    break; // 255.000
+    default:
+        if (ansiBg >= 16 && ansiBg <= 231) {
+            // because color 1-15 behave like normal ANSI colors we need to subtract 16
             // 6x6 RGB color space
-            int r = tag / 36;
-            int g = (tag - (r * 36)) / 6;
-            int b = (tag - (r * 36)) - (g * 6);
-            bgColorR = r * 42;
-            bgColorG = g * 42;
-            bgColorB = b * 42;
-        } else if (tag < 256) {
-            // black + 23 tone grayscale from dark to light gray
-            tag -= 232;
-            bgColorR = tag * 10;
-            bgColorG = tag * 10;
-            bgColorB = tag * 10;
+            int r = (ansiBg - 16)  / 36;
+            int g = (ansiBg - 16 - (r * 36)) / 6;
+            int b = (ansiBg - 16 - (r * 36)) - (g * 6);
+            bgColor = QColor(r * 51, g * 51, b * 51);
         } else {
-            //return invalid color error
-            invalidColorCode = true;
+            return nullptr;
         }
     }
-
-    if (invalidColorCode) {
-        return nullptr;
-    }
+    // clang-format on
 
     auto pCT = new TColorTable;
     if (!pCT) {
@@ -1203,12 +1145,8 @@ TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
 
     pCT->ansiBg = ansiBg;
     pCT->ansiFg = ansiFg;
-    pCT->bgB = bgColorB;
-    pCT->bgG = bgColorG;
-    pCT->bgR = bgColorR;
-    pCT->fgB = fgColorB;
-    pCT->fgG = fgColorG;
-    pCT->fgR = fgColorR;
+    pCT->mBgColor = bgColor;
+    pCT->mFgColor = fgColor;
     return pCT;
 }
 

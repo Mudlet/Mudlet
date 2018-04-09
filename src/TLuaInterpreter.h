@@ -3,7 +3,8 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -332,8 +333,10 @@ public:
     static int loadRawFile(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
-    static int setUnderline(lua_State*);
+    static int setOverline(lua_State*);
+    static int setReverse(lua_State*);
     static int setStrikeOut(lua_State*);
+    static int setUnderline(lua_State*);
     static int disconnect(lua_State*);
     static int reconnect(lua_State*);
     static int getMudletHomeDir(lua_State*);
@@ -425,6 +428,7 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int tempAnsiColorTrigger(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);

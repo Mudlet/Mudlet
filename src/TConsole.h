@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -60,7 +61,6 @@ public:
     TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
     void reset();
     void resetMainConsole();
-    void echoUserWindow(const QString&);
     Host* getHost();
     TCommandLine* mpCommandLine;
     void replace(const QString&);
@@ -111,7 +111,9 @@ public:
     bool selectSection(int, int);
     void skipLine();
     void setFgColor(int, int, int);
+    void setFgColor(const QColor&);
     void setBgColor(int, int, int);
+    void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
@@ -120,7 +122,6 @@ public:
     void print(const QString&, const QColor fgColor, const QColor bgColor);
     void print(const QString& msg);
     void print(const char*);
-    void printDebug(QColor&, QColor&, const QString&);
     void printSystemMessage(const QString& msg);
     void printOnDisplay(std::string&, const bool isFromServer = false);
     void printCommand(QString&);
@@ -141,11 +142,9 @@ public:
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
-    void setBold(bool);
-    void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
-    void setItalics(bool);
-    void setUnderline(bool);
-    void setStrikeOut(bool);
+    void setLink(QStringList& linkFunction, QStringList& linkHint);
+    // Cannot be called setAttributes as that would mask an inherited method
+    void setDisplayAttributes(const TChar::AttributeFlags, const bool);
     void finalize();
     void runTriggers(int);
     void showStatistics();

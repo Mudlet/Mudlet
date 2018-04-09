@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -4951,8 +4951,26 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 if (!pT->mColorPatternList[i]) {
                     break;
                 }
-                pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->fgR, pT->mColorPatternList[i]->fgG, pT->mColorPatternList[i]->fgB).name()));
-                pItem->pushButton_bgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->bgR, pT->mColorPatternList[i]->bgG, pT->mColorPatternList[i]->bgB).name()));
+                if (pT->mColorPatternList.at(i)->mFgColor.isValid()) {
+                    pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{color:%1 ; background-color: %2;}")
+                                                             .arg((pT->mColorPatternList.at(i)->mFgColor.lightness() > 127
+                                                                   ? QLatin1String("black") : QLatin1String("white")),
+                                                                  pT->mColorPatternList.at(i)->mFgColor.name()));
+                    pItem->pushButton_fgColor->setText(QString::number(pT->mColorPatternList.at(i)->ansiFg));
+                } else {
+                    pItem->pushButton_fgColor->setStyleSheet(QString());
+                    pItem->pushButton_fgColor->setText(tr("default"));
+                }
+                if (pT->mColorPatternList.at(i)->mBgColor.isValid()) {
+                    pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{color:%1 ; background-color: %2;}")
+                                                             .arg((pT->mColorPatternList.at(i)->mBgColor.lightness() > 127
+                                                                   ? QLatin1String("black") : QLatin1String("white")),
+                                                                  pT->mColorPatternList.at(i)->mBgColor.name()));
+                    pItem->pushButton_fgColor->setText(QString::number(pT->mColorPatternList.at(i)->ansiBg));
+                } else {
+                    pItem->pushButton_fgColor->setStyleSheet(QString());
+                    pItem->pushButton_fgColor->setText(tr("default"));
+                }
                 break;
             case REGEX_PROMPT:
                 palette.setColor(QPalette::Text, QColor(Qt::black));

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
@@ -25,6 +25,8 @@
  ***************************************************************************/
 
 
+#include "TBuffer.h"
+
 #include "pre_guard.h"
 #include <QMap>
 #include <QPointer>
@@ -35,7 +37,6 @@
 #include <string>
 
 class Host;
-class TBuffer;
 class TConsole;
 
 class QScrollBar;
@@ -52,10 +53,8 @@ public:
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    void drawFrame(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&);
-    void updateLastLine();
-    void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
+    void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
