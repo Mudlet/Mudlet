@@ -475,9 +475,11 @@ mudlet::mudlet()
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
-    // mToolbarIconSize has been set to 0 in the initialisation list so either
-    // value will be accepted:
-    setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+    // mToolbarIconSize has been set to 0 in the initialisation list but if it
+    // has not been changed from that in readSettings() then set it now:
+    if (!mToolbarIconSize) {
+        setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+    }
 
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
