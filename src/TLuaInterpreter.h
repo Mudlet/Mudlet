@@ -428,6 +428,7 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int setBlink(lua_State*);
     static int tempAnsiColorTrigger(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;

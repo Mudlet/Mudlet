@@ -142,6 +142,7 @@ mudlet::mudlet()
 , mReplaySpeed(1)
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
 , mpCurrentActiveHost(nullptr)
+, mIsBlinkingEnabled(false)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
@@ -164,7 +165,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-
+, mMasterBlinkPhase(0)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -460,6 +461,13 @@ mudlet::mudlet()
     readSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
+
+    mpBlinkTimer = new QTimer(this);
+    connect(mpBlinkTimer, SIGNAL(timeout()), this, SLOT(slot_updateBlinkPhase()));
+    mpBlinkTimer->setInterval(200);
+    if (mIsBlinkingEnabled) {
+        mpBlinkTimer->start();
+    }
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -2224,6 +2232,7 @@ void mudlet::readSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+    mIsBlinkingEnabled = settings.value("allowBlinkingText", QVariant(false)).toBool();
     resize(size);
     move(pos);
     if (settings.value("maximized", false).toBool()) {
@@ -2351,6 +2360,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
+    settings.setValue("allowBlinkingText", mIsBlinkingEnabled);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -3592,6 +3602,34 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
                 mpTabBar->setTabItalic(hostName, true);
                 mpTabBar->update();
             }
+        }
+    }
+}
+
+void mudlet::slot_updateBlinkPhase()
+{
+    if (mIsBlinkingEnabled) {
+        mMasterBlinkPhase = (++mMasterBlinkPhase) % 4;
+        emit signal_blinkingRedraw(mMasterBlinkPhase);
+    }
+}
+
+// state is true to disable blinking:
+void mudlet::slot_disableBlinkingText(const bool state)
+{
+    if (state) {
+        if (mIsBlinkingEnabled) {
+            mpBlinkTimer->stop();
+            mIsBlinkingEnabled = false;
+            // Emit a signal emulating a phase change which will be so that both
+            // blink modes leave their text showing (0):
+            mMasterBlinkPhase = 0;
+            emit signal_blinkingRedraw(mMasterBlinkPhase);
+        }
+    } else {
+        if (!mIsBlinkingEnabled) {
+            mIsBlinkingEnabled = true;
+            mpBlinkTimer->start();
         }
     }
 }

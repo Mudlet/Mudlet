@@ -28,6 +28,7 @@
 #include <QApplication>
 #include <QChar>
 #include <QColor>
+#include <QDebug>
 #include <QFlags>
 #include <QMap>
 #include <QPair>
@@ -69,9 +70,15 @@ public:
         // separate isSelected bool but they must be EX-ORed at the point of
         // painting the Character
         Reverse = 0x20,
+        // ANSI CSI SGR Slow blink < 2.5 Hz (5 on, 25 off):
+        SlowBlink = 0x40,
+        // ANSI CSI SGR Rapid blink >= 2.5 Hz (6 on, 25 off), mutually exclusive
+        // with previous and make it have priority:
+        FastBlink = 0x80,
+        BlinkingMask = 0xC0,
         // The attributes that are currently user settable and what should be
-        // consider in HTML generation
-        TestMask = 0x3f,
+        // consider in HTML generation:
+        TestMask = 0xff,
         // Replaces TCHAR_ECHO 16
         Echo = 0x100
     };
@@ -87,8 +94,8 @@ public:
         mFgColor=newForeGroundColor;
         mBgColor=newBackGroundColor;
     }
-    // Only considers the following flags: Bold, Italic, Overline, Reverse, Strikeout, Underline
-    // Does not consider Echo or the currently unimplimented SlowBlink or FastBlink
+    // Only considers the following flags: Bold, Italic, Overline, Reverse,
+    // Strikeout, Underline, SlowBlink, FastBlink, does not consider Echo:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }
@@ -294,6 +301,17 @@ private:
     bool mCursorMoved;
 
     bool mBold;
+    // This and the next one impliment a 4 phase periodic redraw alternating
+    // between using the foreground and background colours for the foreground
+    // every 200mSec (so that the fast one is at 2.5Hz, 150 a minute which is
+    // the miminum)
+    // Phase:                  |      0|      1|      2|      3|
+    // Elapsed time:           |  0-199|200-399|400-599|600-799|
+    // elements with fast flash| Fore  | Back  | Fore  | Back  |
+    // elements with slow flash|     Fore      |     Back      |
+    bool mFlashSlow;
+    bool mFlashFast;
+
     bool mItalics;
     bool mOverline;
     bool mReverse;
@@ -315,5 +333,49 @@ private:
     QString mEncoding;
     QTextCodec* mMainIncomingCodec;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+
+// Dumper for the TChar::AttributeFlags - so that qDebug gives a detailed broken
+// down results when presented with the value rather than just a hex value.
+// Note "inline" is REQUIRED:
+inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes)
+{
+    QDebugStateSaver saver(debug);
+    QString result = QLatin1String("TChar::AttributeFlags(");
+    QStringList presentAttributes;
+    if (attributes & TChar::Bold) {
+        presentAttributes << QLatin1String("Bold (0x01)");
+    }
+    if (attributes & TChar::Italic) {
+        presentAttributes << QLatin1String("Italic (0x02)");
+    }
+    if (attributes & TChar::Underline) {
+        presentAttributes << QLatin1String("Underline (0x04)");
+    }
+    if (attributes & TChar::Overline) {
+        presentAttributes << QLatin1String("Overline (0x08)");
+    }
+    if (attributes & TChar::StrikeOut) {
+        presentAttributes << QLatin1String("StrikeOut (0x10)");
+    }
+    if (attributes & TChar::Reverse) {
+        presentAttributes << QLatin1String("Reverse (0x20)");
+    }
+    if (attributes & TChar::SlowBlink) {
+        presentAttributes << QLatin1String("SlowBlink (0x40)");
+    }
+    if (attributes & TChar::FastBlink) {
+        presentAttributes << QLatin1String("FastBlink (0x80)");
+    }
+    if (attributes & TChar::Echo) {
+        presentAttributes << QLatin1String("Echo (0x100)");
+    }
+    result.append(presentAttributes.join(", "));
+    result.append(QLatin1String(")"));
+    debug.nospace() << result;
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TBUFFER_H

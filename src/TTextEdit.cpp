@@ -66,6 +66,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mpConsole(pC)
 , mpHost(pH)
 , mpScrollBar(nullptr)
+, mIsBlinking(false)
+, mBlinkingPhase(0) // This phase of the four has both fast and slow blinking text showing (drawn foreground and background are different colors)
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -130,6 +132,13 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
+
+    if (mudlet::self()) {
+        // I think mudlet::self() will be a mullptr when setting up the central
+        // debug console which is attached to the "default_host"(?) so not
+        // having THAT one flash is probably okay:
+        connect(mudlet::self(), SIGNAL(signal_blinkingRedraw(const quint8)), this, SLOT(slot_blinkingUpdate(const quint8)), Qt::UniqueConnection);
+    }
 }
 
 void TTextEdit::forceUpdate()
@@ -435,6 +444,10 @@ inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QStr
 
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
+    // Set to true if we need to flash something and updates the member flag
+    // at the end of the process:
+    bool isStillBlinking = false;
+
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth, mScreenHeight * mFontHeight);
     pixmap.fill(palette().base().color());
@@ -484,6 +497,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
+
     if ((r.height() < rect().height()) && (lineOffset > 0)) {
         p.drawPixmap(0, 0, mScreenMap);
         if (!mForceUpdate && !mMouseTracking) {
@@ -497,33 +511,53 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mScrollVector = 0;
         }
     }
-    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
-        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
+
+    if ((!noScroll)
+         && (mScrollVector >= 0)
+         && (mScrollVector <= mScreenHeight)
+         && (!mForceUpdate)) {
+
+        if (mScrollVector * mFontHeight < mScreenMap.height()
+            && mScreenWidth * mFontWidth <= mScreenMap.width()
+            && (mScreenHeight - mScrollVector) * mFontHeight > 0
             && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
+
             screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
             p.drawPixmap(0, 0, screenPixmap);
             from = mScreenHeight - mScrollVector - 1;
         }
-    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
-        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
+
+    } else if ((!noScroll)
+               && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight))
+               && (!mForceUpdate)) {
+
+        if (abs(mScrollVector) * mFontHeight < mScreenMap.height()
+            && mScreenWidth * mFontWidth <= mScreenMap.width()
+            && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
             && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
+
             screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
             p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
             y2 = abs(mScrollVector);
         }
+
     }
+
     QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
     drawBackground(p, deleteRect, mBgColor);
     for (int i = from; i <= y2; ++i) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
+
         mpBuffer->dirty[lineOffset + i] = false;
+
         int timeOffset = 0;
         if (mShowTimeStamps) {
             timeOffset = 13;
         }
+
         int lineLength = timeOffset + mpBuffer->buffer.at(i + lineOffset).size();
         for (int i2 = x1; i2 < lineLength;) {
             QString text;
@@ -539,6 +573,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
                 if (i2 >= x2) {
                     break;
                 }
+
                 if (!mpBuffer->lineBuffer.at(i + lineOffset).isEmpty()) {
                     // Blank lines do not contain any text so QString::at(0) will fail...
                     text = mpBuffer->lineBuffer[i + lineOffset].at(i2 - timeOffset);
@@ -547,18 +582,71 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
                 }
 
                 TChar& f = mpBuffer->buffer.at(i + lineOffset).at(i2 - timeOffset);
+                TChar::AttributeFlags attributes = f.allDisplayAttributes();
                 int delta = 1;
                 QColor fgColor;
                 QColor bgColor;
-                if ((f.allDisplayAttributes() & TChar::Reverse) != f.isSelected()) {
+                // Use a single switch to decode all:
+                // * whether to swap fg/bg - (by adding 8 because text is Selected EX-OR Has Reverse attribute)
+                // * whether the blinking effect is the fast one - (by adding 4)
+                // * whether to use same colour for foregrounds and background
+                // because the phase of the blinking says to hide text or not:
+
+                bool isThisBitBlinking = false;
+                if (attributes & (TChar::FastBlink|TChar::SlowBlink)) {
+                    isStillBlinking = true;
+                    isThisBitBlinking = true;
+                }
+
+                switch ((((attributes & TChar::Reverse) != f.isSelected()) ? 8 : 0)
+                        + ((attributes & TChar::FastBlink) ? 4 : 0)
+                        + (isThisBitBlinking ? mBlinkingPhase : 0)) {
+
+                case 2: // No Fg/Bg Swap - Slow Blink - phase 2, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 3: // No Fg/Bg Swap - Slow Blink - phase 3, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 5: // No Fg/Bg Swap - Fast Blink - phase 1, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 7: // No Fg/Bg Swap - Fast Blink - phase 3, Foreground is same as background
+                    fgColor = f.background();
+                    bgColor = f.background();
+                    break;
+
+                case 10: // Fg/Bg Swap - Slow Blink - phase 2, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 11: // Fg/Bg Swap - Slow Blink - phase 3, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 13: // Fg/Bg Swap - Fast Blink - phase 1, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 15: // Fg/Bg Swap - Fast Blink - phase 3, Foreground is same as background
+                    fgColor = f.foreground();
+                    bgColor = f.foreground();
+                    break;
+
+                case 8: // Fg/Bg Swap - Slow Blink - phase 0, Foreground is different from background
+                    // Also NO BLINK - Fg/Bg Swap because either selected OR reversed
+                    [[clang::fallthrough]];
+                case 9: // Fg/Bg Swap - Slow Blink - phase 1, Foreground is different from background
+                    [[clang::fallthrough]];
+                case 12: // Fg/Bg Swap - Fast Blink - phase 0, Foreground is different from background
+                    [[clang::fallthrough]];
+                case 14: // Fg/Bg Swap - Fast Blink - phase 2, Foreground is different from background
                     fgColor = f.background();
                     bgColor = f.foreground();
-                } else {
+                    break;
+
+                default:
+                    // cases 0, 1: No Fg/Bg Swap - Slow Blink phase 0 & 1
+                    // cases 4, 6: No Fg/Bg Swap - Fast Blink phase 0 & 2,
+                    // Foreground is different from background
+                    // Also NO BLINK - no Fg/Bg Swap because neither or both selected AND reversed
                     fgColor = f.foreground();
                     bgColor = f.background();
                 }
+
                 while (i2 + delta + timeOffset < lineLength) {
-                    if (mpBuffer->buffer[i + lineOffset][i2 + delta - timeOffset] == f) {
+                    if (mpBuffer->buffer.at(i + lineOffset).at(i2 + delta - timeOffset) == f) {
                         // Is the format the same as the previous item - this
                         // should handle the second QChar when it is a low
                         // surrogate assuming the same format is allocated to
@@ -570,11 +658,15 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
                         break;
                     }
                 }
-                QRect textRect;
-                textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * delta, mFontHeight);
-                if (((f.allDisplayAttributes() & TChar::Reverse) != f.isSelected()) || (bgColor != mBgColor)) {
+
+                QRect textRect(mFontWidth * i2, mFontHeight * i, mFontWidth * delta, mFontHeight);
+                if (((attributes & TChar::Reverse) != f.isSelected()) || (bgColor != mBgColor)) {
+                    // Either (the current attributes include Reverse Ex-or the text is selected)
+                    // Or the current background colour is not the default so draw in whatever we need
+                    // behind the text as background:
                     drawBackground(p, textRect, bgColor);
                 }
+                // Now draw the block of text in the current format in the suitable colour:
                 drawCharacters(p, textRect, text, fgColor, f.allDisplayAttributes());
                 i2 += delta;
             }
@@ -590,6 +682,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // Only place this value is changed (apart from initialisation to 0):
     mLastRenderBottom = lineOffset;
     mForceUpdate = false;
+    // We still have some text that needs to blink - so update the member flag
+    // to keep/start the blinking redraws:
+    mIsBlinking = isStillBlinking;
 }
 
 
@@ -1503,4 +1598,14 @@ int TTextEdit::getRowCount()
     }
 
     return height() / rowHeight;
+}
+
+void TTextEdit::slot_blinkingUpdate(const quint8 phase)
+{
+    if (mBlinkingPhase != phase) {
+        mBlinkingPhase = phase;
+        if (mIsBlinking) {
+            update();
+        }
+    }
 }

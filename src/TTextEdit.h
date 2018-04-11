@@ -113,6 +113,7 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
+    void slot_blinkingUpdate(const quint8);
 
 private:
     void initDefaultSettings();
@@ -149,6 +150,11 @@ private:
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
+    // Used to gate blinking redraws and set if any blinking text is found
+    // during a redraw;
+    bool mIsBlinking;
+    // 0 - 3 and updated by master signal from mudlet class timer.
+    quint8 mBlinkingPhase;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

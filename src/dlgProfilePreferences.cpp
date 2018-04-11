@@ -148,6 +148,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "does not have a needed glyph (a font's individual character/symbol) to represent "
                                              "the grapheme (what is to be represented).  Clearing this checkbox will allow "
                                              "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+    checkBox_disableBlinkingText->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                             .arg("<p>The effects of the ANSI ESC codes for slow and fast blink are objectionable "
+                                                  "to <i>some</i> (<b>and may be harmful to those prone to Epilepsy</b>) however they can be "
+                                                  "used in some MUDs to indicate urgent or important information. Use this checkbox to "
+                                                  "disable the blinking effects should this be needed - the setting applies to all profiles, "
+                                                  "it is saved between sessions and it takes effect immediately.<p>"));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -156,6 +162,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*,quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
     connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
     connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
+
+    // Wire this control up directly so it takes effect immediately - some
+    // people find blinking text *violently* objectionable (or it can induce
+    // seizures for Epilepsy sufferers) so provide a means to kill it quickly:
+    checkBox_disableBlinkingText->setChecked(!mudlet::self()->mIsBlinkingEnabled);
+    connect(checkBox_disableBlinkingText, SIGNAL(toggled(bool)), mudlet::self(), SLOT(slot_disableBlinkingText(bool)));
 }
 
 void dlgProfilePreferences::disableHostDetails()

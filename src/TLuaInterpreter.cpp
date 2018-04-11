@@ -5297,6 +5297,57 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::setBlink(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    QString windowName;
+    int s = 0;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L,
+                            "setBlink: bad argument #%d type (more than one argument supplied and first,\n"
+                            "window name, as string expected {omission selects \"main\" console window}, got %s!",
+                            s,
+                            luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, s));
+        }
+    }
+
+    bool isBlinkEnabled = false;
+    bool isFastRate = false;
+    if (!(lua_isboolean(L, ++s) || lua_isnumber(L, s))) {
+        lua_pushfstring(L, "setBlink: bad argument #%d type (set blinking attribute as boolean {false = off, true = slow} or number {0 = off, 1 = slow, 2 = rapid} expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else if (lua_isnumber(L, s)) {
+        switch (lua_tointeger(L, s)) {
+        case 2:
+            isFastRate = true;
+            [[clang::fallthrough]];
+        case 1:
+            isBlinkEnabled = true;
+            break;
+        case 0:
+            break; // Valid but nothing to do here
+        default:
+            // Invalid
+            lua_pushnil(L);
+            lua_pushfstring(L, "blink rate as a number %d is out of range {use 0 = off, 1 = slow, 2 = rapid}", lua_tonumber(L, s));
+        }
+    } else if (lua_toboolean(L, s)) {
+        isBlinkEnabled = lua_toboolean(L, s);
+    }
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        host.mpConsole->setDisplayAttributes(isFastRate ? TChar::FastBlink : TChar::SlowBlink, isBlinkEnabled);
+    } else {
+        mudlet::self()->setDisplayAttributes(&host, windowName, isFastRate ? TChar::FastBlink : TChar::SlowBlink, isBlinkEnabled);
+    }
+    return 0;
+}
+
 int TLuaInterpreter::debug(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -12490,6 +12541,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "setBlink", TLuaInterpreter::setBlink);
     lua_register(pGlobalLua, "tempAnsiColorTrigger", TLuaInterpreter::tempAnsiColorTrigger);
     // PLACEMARKER: End of main Lua interpreter functions registration
 

@@ -724,6 +724,8 @@ TBuffer::TBuffer(Host* pH)
 , mpHost(pH)
 , mCursorMoved(false)
 , mBold(false)
+, mFlashSlow(false)
+, mFlashFast(false)
 , mItalics(false)
 , mOverline(false)
 , mReverse(false)
@@ -735,7 +737,7 @@ TBuffer::TBuffer(Host* pH)
 , mIsHighOrMillionsColorModeForeground(false)
 , mIsHighOrMillionsColorModeBackground(false)
 , mOpenMainQuote()
-, mEchoText()
+, mEchoText(false)
 , mIsDefaultColor()
 , isUserScrollBack()
 , currentFgColorProperty()
@@ -1382,6 +1384,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mReverse = false;
                             mStrikeOut = false;
                             mUnderline = false;
+                            mFlashSlow = false;
+                            mFlashFast = false;
                             break;
                         case 1:
                             mBold = true;
@@ -1396,11 +1400,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mUnderline = true;
                             break;
                         case 5:
-                            // TODO:
-                            break; //slow-blinking
+                            mFlashSlow = true;
+                            mFlashFast = false;
+                            break;
                         case 6:
-                            // TODO:
-                            break; //fast blinking
+                            mFlashSlow = false;
+                            mFlashFast = true;
+                            break;
                         case 7:
                             mReverse = true;
                             break;
@@ -1419,7 +1425,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mUnderline = false;
                             break;
                         case 25:
-                            break; // blink off
+                            mFlashSlow = false;
+                            mFlashFast = false;
+                            break;
                         case 27:
                             mReverse = false;
                             break;
@@ -2072,11 +2080,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
         }
 
-        const TChar::AttributeFlags attributeFlags = ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
+        const TChar::AttributeFlags attributeFlags =
+                ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
                 | (mItalics ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
                 | (mStrikeOut ? TChar::StrikeOut : TChar::None)
+                | (mUnderline ? TChar::Underline : TChar::None)
+                | (mFlashFast ? TChar::FastBlink : (mFlashSlow ? TChar::SlowBlink : TChar::None))
                 | (mUnderline ? TChar::Underline : TChar::None);
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);

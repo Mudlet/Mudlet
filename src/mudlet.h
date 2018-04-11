@@ -318,6 +318,9 @@ public:
     Updater* updater;
 #endif
 
+    bool mIsBlinkingEnabled;
+    const quint8& getMasterBlinkPhase() const { return mMasterBlinkPhase; }
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -362,6 +365,8 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
     void slot_newDataOnHost(const QString&, const bool isLowerPriorityChange = false);
+    void slot_updateBlinkPhase();
+    void slot_disableBlinkingText(const bool);
 
 
 protected:
@@ -374,6 +379,7 @@ signals:
     void signal_setTreeIconSize(const int);
     void signal_hostCreated(Host*, const quint8);
     void signal_hostDestroyed(Host*, const quint8);
+    void signal_blinkingRedraw(const quint8);
 
 private slots:
     void slot_close_profile();
@@ -456,6 +462,15 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+    QTimer* mpBlinkTimer;
+    // Updated every 200mS used for the state of slow and fast blinking text
+    // Relationship between phases and drawing state.
+    // Timing is based on a 2.5 Hz rate for the fast rate:
+    // Phase    |          0 |          1 |          2 |          3 |
+    // Time (ms)| 000 to 199 | 200 to 399 | 400 to 599 | 600 to 799 |
+    // Slow     | Foreground | Foreground | Background | Background |
+    // Fast     | Foreground | Background | Foreground | Background |
+    quint8 mMasterBlinkPhase;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

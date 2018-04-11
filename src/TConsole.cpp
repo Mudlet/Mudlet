@@ -1889,7 +1889,17 @@ void TConsole::setLink(QStringList& linkFunction, QStringList& linkHint)
 // Set or Reset ALL the specified (but not others)
 void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)
 {
-    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (b ? attributes : TChar::None));
+    // Need to handle blink ones correctly since they take two bit values and
+    // only one bit ought to be set at a time (the painting code in TTextEdit
+    // correctly prioritises the fast one if both are set but lets set it
+    // right here):
+    TChar::AttributeFlags andMask = ~(attributes);
+    if (attributes & TChar::BlinkingMask) {
+        // We are touching a blink attribute, so we must take BOTH of them out
+        // of the AND mask
+        andMask &= ~(TChar::BlinkingMask);
+    }
+    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & andMask) | (b ? attributes : TChar::None));
     buffer.applyAttribute(P_begin, P_end, attributes, b);
 }
 
