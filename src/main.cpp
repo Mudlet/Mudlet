@@ -465,7 +465,7 @@ int main(int argc, char* argv[])
     // set the timeout to 5min
 #if (QT_VERSION < QT_VERSION_CHECK(5, 9, 4))
     if (qgetenv("QT_BEARER_POLL_TIMEOUT").isEmpty()) {
-        qputenv("QT_BEARER_POLL_TIMEOUT", "300000");
+        qputenv("QT_BEARER_POLL_TIMEOUT", QByteArray::number(-1));
     }
 #endif
 
