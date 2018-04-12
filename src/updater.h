@@ -63,6 +63,8 @@ private:
 #endif
 
     void recordUpdateTime() const;
+    void recordUpdatedVersion() const;
+    QString getPreviousVersion() const;
     void finishSetup();
 
 #if defined(Q_OS_LINUX)

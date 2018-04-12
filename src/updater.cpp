@@ -90,6 +90,7 @@ void Updater::manuallyCheckUpdates()
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
 }
 
@@ -101,6 +102,7 @@ void Updater::finishSetup()
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
+    recordUpdatedVersion();
     mUpdateInstalled = true;
     emit updateInstalled();
 }
@@ -328,6 +330,22 @@ void Updater::recordUpdateTime() const
     file.close();
 }
 
+// records the previous version of Mudlet that we updated from, so we can show
+// the changelog on next startup for the latest version only
+void Updater::recordUpdatedVersion() const
+{
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_from")));
+    bool opened = file.open(QIODevice::WriteOnly);
+    if (!opened) {
+        qWarning() << "Couldn't open update version file for writing.";
+        return;
+    }
+
+    QDataStream ifs(&file);
+    ifs << APP_VERSION;
+    file.close();
+}
+
 // returns true if Mudlet was updated automatically and a changelog should be shown
 // now that the user is on the new version. If the user updated manually, then there
 // is no need as they would have seen the changelog while updating
@@ -361,4 +379,22 @@ bool Updater::shouldShowChangelog()
     file.remove();
 
     return minsSinceUpdate >= 5;
+}
+
+// return the previous version of Mudlet that we updated from
+// return a null QString on failure
+QString Updater::getPreviousVersion() const
+{
+    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_from")));
+    bool opened = file.open(QIODevice::ReadOnly);
+    QString previousVersion;
+    if (!opened) {
+        file.remove();
+        return QString();
+    }
+    QDataStream ifs(&file);
+    ifs >> previousVersion;
+    file.close();
+
+    return previousVersion;
 }
