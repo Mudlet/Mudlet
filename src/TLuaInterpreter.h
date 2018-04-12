@@ -372,6 +372,7 @@ public:
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setLabelStyleSheet(lua_State*);
     static int getTime(lua_State*);
+    static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
     static int getTimestamp(lua_State*);
     static int setLink(lua_State*);

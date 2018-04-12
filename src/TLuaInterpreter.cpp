@@ -10147,6 +10147,18 @@ int TLuaInterpreter::getTime(lua_State* L)
 }
 
 
+// syntax: getEpoch()
+// returns: seconds since unix epoch with milliseconds (e.g. 1523555867.191)
+int TLuaInterpreter::getEpoch(lua_State *L)
+{
+    QDateTime time = QDateTime::currentDateTime();
+
+    lua_pushnumber(L, double(time.toMSecsSinceEpoch()) / 1000.0);
+
+    return 1;
+}
+
+
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
     string a1;
@@ -12115,6 +12127,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killAlias", TLuaInterpreter::killAlias);
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
+    lua_register(pGlobalLua, "getEpoch", TLuaInterpreter::getEpoch);
     lua_register(pGlobalLua, "invokeFileDialog", TLuaInterpreter::invokeFileDialog);
     lua_register(pGlobalLua, "getTimestamp", TLuaInterpreter::getTimestamp);
     lua_register(pGlobalLua, "setLink", TLuaInterpreter::setLink);
