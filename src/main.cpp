@@ -463,9 +463,11 @@ int main(int argc, char* argv[])
 
     // workaround latency spikes with wifi on Qt < 5.9.4, see https://github.com/Mudlet/Mudlet/issues/1587
     // set the timeout to 5min
+#if (QT_VERSION < QT_VERSION_CHECK(5, 9, 4))
     if (qgetenv("QT_BEARER_POLL_TIMEOUT").isEmpty()) {
         qputenv("QT_BEARER_POLL_TIMEOUT", "300000");
     }
+#endif
 
     QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
     QDir dir;
