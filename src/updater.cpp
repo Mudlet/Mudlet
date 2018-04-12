@@ -43,7 +43,7 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdat
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("release"));
+    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("testing"));
 }
 
 // start the update process and figure out what needs to be done
