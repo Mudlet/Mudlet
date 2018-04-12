@@ -89,6 +89,14 @@ void Updater::manuallyCheckUpdates()
 
 void Updater::showChangelog() const
 {
+    QProcess sendnotification;
+    sendnotification.setProcessChannelMode(QProcess::MergedChannels);
+    sendnotification.start("notify-send", QStringList() << "showChangelog called up");
+    sendnotification.waitForFinished();
+
+    sendnotification.start("notify-send", QStringList() << getPreviousVersion());
+    sendnotification.waitForFinished();
+
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
     changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
