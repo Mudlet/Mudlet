@@ -461,6 +461,12 @@ int main(int argc, char* argv[])
     // seed random number generator (should be done once per lifetime)
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
+    // workaround latency spikes with wifi on Qt < 5.9.4, see https://github.com/Mudlet/Mudlet/issues/1587
+    // set the timeout to 5min
+    if (qgetenv("QT_BEARER_POLL_TIMEOUT").isEmpty()) {
+        qputenv("QT_BEARER_POLL_TIMEOUT", "300000");
+    }
+
     QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
     QDir dir;
     bool first_launch = false;
