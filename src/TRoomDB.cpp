@@ -19,7 +19,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QRegularExpression>
 #include "TRoomDB.h"
 
 #include "Host.h"
@@ -33,6 +32,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QRegularExpression>
 #include <QStringBuilder>
 #include "post_guard.h"
 
