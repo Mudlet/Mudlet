@@ -1724,7 +1724,10 @@ void dlgProfilePreferences::slot_save_and_exit()
                 pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
             }
 
-            pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+            // If a map was loaded
+            if (mpDoubleSpinBox_mapSymbolFontFudge) {
+                pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+            }
 
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
