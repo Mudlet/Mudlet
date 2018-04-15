@@ -462,7 +462,7 @@ int main(int argc, char* argv[])
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
     // workaround latency spikes with wifi on Qt < 5.9.4, see https://github.com/Mudlet/Mudlet/issues/1587
-    // set the timeout to 5min
+    // set the timeout to infinite
 #if (QT_VERSION < QT_VERSION_CHECK(5, 9, 4))
     if (qgetenv("QT_BEARER_POLL_TIMEOUT").isEmpty()) {
         qputenv("QT_BEARER_POLL_TIMEOUT", QByteArray::number(-1));
