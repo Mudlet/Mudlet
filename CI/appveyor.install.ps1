@@ -175,8 +175,9 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l-i386-win32.zip"
-  ExtractZip "openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l"
+  DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o-i386-win32.zip"
+  ExtractZip "openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o"
+  Copy-Item "openssl-1.0.2o\*" "$Env:MINGW_BASE_DIR\bin"
 }
 
 function InstallHunspell() {
@@ -328,7 +329,7 @@ $ShPath = "$Env:MINGW_BASE_DIR\bin;C:\Python27;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
 $Env:PATH = $ShPath
 
-CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { InstallOpenssl }
+CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\ssleay32.dll" { InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { InstallYajl }
 CheckAndInstall "lua" "$Env:MINGW_BASE_DIR\bin\lua51.dll" { InstallLua }
