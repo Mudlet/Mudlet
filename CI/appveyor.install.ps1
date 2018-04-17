@@ -92,6 +92,11 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
   exec "7z" @("-o$outputPath", "x", "$zipFile", "-y")
 }
 
+function RunAutoReconfig(){
+  Step "Running autoreconfig"
+  exec "bash" @("-c", "`"autoreconf -i`"")
+}
+
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
   exec "bash" @("-c", "`"./configure $configureArguments`"")
@@ -184,6 +189,7 @@ function InstallHunspell() {
   DownloadFile "https://github.com/hunspell/hunspell/archive/v1.6.2.tar.gz" "hunspell-1.6.2.tar.gz"
   ExtractTar "hunspell-1.6.2.tar.gz" "hunspell-1.6.2"
   Set-Location "hunspell-1.6.2\hunspell-1.6.2"
+  RunAutoReconfig
   RunConfigure
   RunMake
   RunMakeInstall
