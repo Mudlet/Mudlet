@@ -39,6 +39,7 @@
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
+#include <QProxyStyle>
 #include <QQueue>
 #include <QSettings>
 #include <QTextOption>
@@ -66,12 +67,12 @@ class TConsole;
 class TDockWidget;
 class TEvent;
 class TLabel;
+class TTabBar;
 class TTimer;
 class TToolBar;
 class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
-
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -207,7 +208,7 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
     QList<QMediaPlayer*> mMusicBoxList;
-    QTabBar* mpTabBar;
+    TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
     bool mHasSavedLayout;
@@ -359,6 +360,8 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_newDataOnHost(const QString&, const bool isLowerPriorityChange = false);
+
 
 protected:
     void closeEvent(QCloseEvent* event) override;

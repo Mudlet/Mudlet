@@ -145,7 +145,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.7.1
+VERSION = 3.8.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -517,6 +517,7 @@ SOURCES += \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TTabBar.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -593,6 +594,7 @@ HEADERS += \
     TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TTabBar.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -604,7 +606,6 @@ HEADERS += \
     XMLimport.h
 
 
-
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
     ui/about_dialog.ui \
@@ -614,6 +615,7 @@ FORMS += \
     ui/composer.ui \
     ui/connection_profiles.ui \
     ui/dlgPackageExporter.ui \
+    ui/glyph_usage.ui \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
@@ -1351,6 +1353,7 @@ DISTFILES += \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.set-environment.ps1 \
     ../CI/appveyor.build.ps1 \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \

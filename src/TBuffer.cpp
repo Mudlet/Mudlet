@@ -757,7 +757,11 @@ TBuffer::TBuffer(Host* pH)
 , mStrikeOut(false)
 , mFgColorCode(false)
 , mBgColorCode(false)
-, mIsHighColorMode(false)
+, mWaitingForHighColorCode(false)
+, mWaitingForMillionsColorCode(false)
+, mIsHighOrMillionsColorMode(false)
+, mIsHighOrMillionsColorModeForeground(false)
+, mIsHighOrMillionsColorModeBackground(false)
 , mOpenMainQuote()
 , mEchoText()
 , mIsDefaultColor()
@@ -776,9 +780,6 @@ TBuffer::TBuffer(Host* pH)
     newLines = 0;
     mLastLine = 0;
     updateColors();
-    mWaitingForHighColorCode = false;
-    mHighColorModeForeground = false;
-    mHighColorModeBackground = false;
 
     TMxpElement _element;
     _element.name = "SEND";
@@ -1259,13 +1260,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                     numCodes += codeRet;
                     for (int i = 1; i < codeRet + 1; i++) {
+                        // Parse the groups of numeric SGR codes
                         int tag = mCode[i];
                         if (mWaitingForHighColorCode) {
-                            if (mHighColorModeForeground) {
+                            if (mIsHighOrMillionsColorModeForeground) {
                                 if (tag < 16) {
-                                    mHighColorModeForeground = false;
-                                    mWaitingForHighColorCode = false;
-                                    mIsHighColorMode = false;
 
                                     if (tag >= 8) {
                                         tag -= 8;
@@ -1347,7 +1346,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                         mIsDefaultColor = false;
                                         break;
                                     }
-                                    continue;
+
                                 } else if (tag < 232) {
                                     tag -= 16; // because color 1-15 behave like normal ANSI colors
                                     // 6x6x6 RGB color space
@@ -1412,17 +1411,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     fgColorB = value;
                                     fgColorLightB = value;
                                 }
-                                mHighColorModeForeground = false;
-                                mWaitingForHighColorCode = false;
-                                mIsHighColorMode = false;
-                                continue;
-                            }
 
-                            if (mHighColorModeBackground) {
+                                mWaitingForHighColorCode = false;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeForeground = false;
+                                continue;
+                            } else if (mIsHighOrMillionsColorModeBackground) {
                                 if (tag < 16) {
-                                    mHighColorModeBackground = false;
-                                    mWaitingForHighColorCode = false;
-                                    mIsHighColorMode = false;
 
                                     bool _bold;
                                     if (tag >= 8) {
@@ -1513,9 +1508,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                         bgColorG = bgColorLightG;
                                         bgColorB = bgColorLightB;
                                     }
-                                    continue;
-                                }
-                                if (tag < 232) {
+
+                                } else if (tag < 232) {
                                     tag -= 16;
                                     int r = tag / 36;
                                     int g = (tag - (r * 36)) / 6;
@@ -1561,33 +1555,120 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     bgColorG = value;
                                     bgColorB = value;
                                 }
-                                mHighColorModeBackground = false;
+
                                 mWaitingForHighColorCode = false;
-                                mIsHighColorMode = false;
-                                continue;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeBackground = false;
+
                             }
+
+                            continue;
+                        } else if (mWaitingForMillionsColorCode) {
+                            // Need to consume this and two more codes from mCode
+                            // This is not a true ANSI spec decoder because it
+                            // uses only ';' to separate the sub-options and
+                            // only takes a maximum of three after the 38;2 or 48;2
+                            // a full implementation would use ':' and handle a
+                            // a variable number of up to six more numbers...
+                            // the use of ':' would make it is possible to
+                            // separate the sub-options as compared to a whole
+                            // new SGR code...
+                            if (mIsHighOrMillionsColorModeForeground) {
+                                if (i + 2 <= codeRet) {
+                                    // Have enough for all three suboptions
+                                    fgColorR = qBound(0, mCode[i++], 255);
+                                    fgColorG = qBound(0, mCode[i++], 255);
+                                    fgColorB = qBound(0, mCode[i++], 255);
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                } else if (i + 1 <= codeRet) {
+                                    // Have enough for two suboptions, but third, blue component is zero
+                                    fgColorR = qBound(0, mCode[i++], 255);
+                                    fgColorG = qBound(0, mCode[i++], 255);
+                                    fgColorB = 0;
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                } else if (i <= codeRet) {
+                                    // Have enough for one suboption, but second and third, green and blue component are zero
+                                    fgColorR = qBound(0, mCode[i++], 255);
+                                    fgColorG = 0;
+                                    fgColorB = 0;
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                } else  {
+                                    // No codes left so colour must be black, as all of red, green and blue components are zero
+                                    fgColorR = 0;
+                                    fgColorG = 0;
+                                    fgColorB = 0;
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                }
+
+                                mWaitingForMillionsColorCode = false;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeBackground = false;
+
+                            } else if (mIsHighOrMillionsColorModeBackground) {
+                                if (i + 2 <= codeRet) {
+                                    // Have enough for all three suboptions
+                                    bgColorR = qBound(0, mCode[i++], 255);
+                                    bgColorG = qBound(0, mCode[i++], 255);
+                                    bgColorB = qBound(0, mCode[i++], 255);
+                                    mIsDefaultColor = false;
+                                } else if (i + 1 <= codeRet) {
+                                    // Have enough for two suboptions, but third, blue component is zero
+                                    bgColorR = qBound(0, mCode[i++], 255);
+                                    bgColorG = qBound(0, mCode[i++], 255);
+                                    bgColorB = 0;
+                                    mIsDefaultColor = false;
+                                } else if (i <= codeRet) {
+                                    // Have enough for one suboption, but second and third, green and blue component are zero
+                                    bgColorR = qBound(0, mCode[i++], 255);
+                                    bgColorG = 0;
+                                    bgColorB = 0;
+                                    mIsDefaultColor = false;
+                                } else  {
+                                    // No codes left so colour must be black, as all of red , green and blue components are zero
+                                    bgColorR = 0;
+                                    bgColorG = 0;
+                                    bgColorB = 0;
+                                    mIsDefaultColor = false;
+                                }
+
+                                mWaitingForMillionsColorCode = false;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeBackground = false;
+                            }
+
+                            continue;
                         }
 
                         if (tag == 38) {
-                            mIsHighColorMode = true;
-                            mHighColorModeForeground = true;
+                            mIsHighOrMillionsColorMode = true;
+                            mIsHighOrMillionsColorModeForeground = true;
                             continue;
-                        }
-                        if (tag == 48) {
-                            mIsHighColorMode = true;
-                            mHighColorModeBackground = true;
+                        } else if (tag == 48) {
+                            mIsHighOrMillionsColorMode = true;
+                            mIsHighOrMillionsColorModeBackground = true;
                             continue;
                         }
 
-                        if (mIsHighColorMode) {
+                        if (mIsHighOrMillionsColorMode) {
                             switch (tag) {
                             case 5: // Indexed 256 color mode
                                 mWaitingForHighColorCode = true;
                                 break;
                             case 2: // 24Bit RGB color mode
-                            // TODO:
-                            //                                mWaitingFor24BitColor = true;
-                            //                                break;
+                                mWaitingForMillionsColorCode = true;
+                                break;
                             case 4: // 24Bit CYMB color mode
                             case 3: // 24Bit CYM color mode
                             case 1: // "Transparent" mode
@@ -1605,10 +1686,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // we are dealing with standard ANSI colors
                         switch (tag) {
                         case 0:
-                            mHighColorModeForeground = false;
-                            mHighColorModeBackground = false;
                             mWaitingForHighColorCode = false;
-                            mIsHighColorMode = false;
+                            mWaitingForMillionsColorCode = false;
+                            mIsHighOrMillionsColorMode = false;
+                            mIsHighOrMillionsColorModeForeground = false;
+                            mIsHighOrMillionsColorModeBackground = false;
                             mIsDefaultColor = true;
                             fgColorR = mFgColorR;
                             fgColorG = mFgColorG;
@@ -3883,7 +3965,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_UTF8_PROCESSING)
             QString debugMsg;
             for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16));
+                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
             }
             qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
 #endif
@@ -3939,6 +4021,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
     } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80) {
         // Invalid as first byte
         isValid = false;
+        isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
         qDebug().nospace() << "TBuffer::processGBSequence(...) 1-byte sequence as " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " rejected!";
 #endif
@@ -4148,6 +4231,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // clang-format on
 
                     isValid = false;
+                    isToUseReplacementMark = true;
 
 #if defined(DEBUG_GB_PROCESSING)
                     qDebug().nospace() << "TBuffer::processGBSequence(...) 4-byte sequence as "
@@ -4251,6 +4335,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // Outside expected range
 
                     isValid = false;
+                    isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
                     qDebug().nospace() << "TBuffer::processGBSequence(...) 2-byte sequence as GB18030 rejected!";
 #endif
@@ -4322,7 +4407,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #if defined(DEBUG_GB_PROCESSING)
         QString debugMsg;
         for (size_t i = 0; i < gbSequenceLength; ++i) {
-            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16));
+            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
         qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
 #endif

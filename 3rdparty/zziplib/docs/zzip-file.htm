@@ -1,0 +1,183 @@
+<section> <date> 1. June 2000 </date>
+<h2> ZIP File Access </h2>  Using Zipped Files Transparently 
+
+<!--border-->
+
+<section>
+<h3>The Typedef</h3>
+
+<P>
+ The typedef <code>ZZIP_FILE</code> can serve as a replacement 
+ for a normal file descriptor. As long as it is only used
+ for reading a file, the zzlib-user can actually replace
+ the posix functions <code>open/read/close</code> 
+ by their counterparts from the 
+ <a href="zziplib.html">zziplib library</a>:
+ <code>zzip_open/zzip_read/zzip_close</code>.
+</P>
+<P>
+ As long as the filename path given to <code>zzip_open</code>
+ refers to a real file in the filesystem, it will almost
+ directly forward the call to the respective posix <code>open</code>
+ call. The returned file descriptor is then stored in
+ a member-variable of the <code>ZZIP_FILE</code> structure.
+</P>
+<P>
+ Any subsequent calls to <code>zzip_read</code> will then
+ be forwarded to the posix <code>read</code> call on the
+ memorized file descriptor. The same about <code>zzip_close</code>
+ which will call the posix <code>close</code> function and then
+ <code>free</code> the <code>ZZIP_FILE</code> structure.
+</P>
+<P>
+ The real benefit of the 
+ <a href="zziplib.html">zziplib library</a>
+ comes about when the filename argument does actually refer
+ to a file that is zipped in a zip-archive. It happens that
+ even both a real file and a zipped file can live under the
+ same pathname given to the <code>zzip_open</code> call,
+ whereas the real file is used in preference.
+</P>
+
+</section><section>
+<h3>Zipped File</h3>
+
+<P>
+ Suppose you have subdirectory called '<tt>test/</tt>'. In
+ this directory is just one file, called '<tt>README</tt>'.
+ Calling the <code>zzip_open</code> function with an
+ argument of '<i>optional-path/</i> <tt>test/README</tt>',
+ then it will open that file for subsequent reading with
+ <code>zzip_read</code>. In this case the real (<i>stat'able</i>)
+ file is opened.
+</P>
+<P>
+ Now you can go to the '<tt>test/</tt>' directory and zip up
+ the files in there by calling 
+ <nobr><tt>`zip ../test.zip *`</tt></nobr>.
+ After this, you can delete the '<tt>test/</tt>' directory and
+ the call to <code>zzip_open</code> will still succeed.
+ The reason is that the part of the path saying 
+ '<tt>test/README</tt>' will be replaced by sth. like 
+ '<tt>test.zip:README</tt>' - that is the real file '<tt>test.zip</tt>'
+ is opened and searched for a contained file '<tt>README</tt>'.
+</P>
+<P>
+ Calling <code>zzip_read</code> on the zipped '<tt>README</tt>' file
+ will return the very same data as if it is a real file in a
+ real directory. If the zipped file is compressed it will be 
+ decompressed on the fly.
+</P>
+
+</section><section>
+<h3>Zip Directory</h3>
+
+<P>
+ The same applies to the use of <code>opendir/readdir/closedir</code>
+ which can safely be replaced with their counterparts from the
+ <a href="zziplib.html">zziplib library</a> - again their prototype
+ follows the scheme of the original calls, just prepend <tt>zzip_</tt>
+ to the function calls and <tt>ZZIP_</tt> to the struct-typedefs.
+</P>
+<P>
+ To call <code>zzip_opendir</code> on a real directory will then
+ return a <code>ZZIP_DIR</code> whose member-variable 
+ <code>realdir</code> points to the actual <code>DIR</code>-structure
+ returned by the underlying posix <code>opendir</code>-call.
+</P>
+<P>
+ If a real directory '<tt>test</tt>' does not exist, then the
+ <code>zzip_opendir</code> will try to open a file '<tt>test.zip</tt>'
+ with a call to <code>zzip_dir_open</code>.
+ Subsequent calls to <code>zzip_readdir</code> will then return
+ information as being obtained from the central archive directory
+ of the zip-file.
+</P>
+
+</section><section>
+<h3>Differences</h3>
+
+<P>
+ There are no differences between the posix calls and their counterparts
+ from the      <a href="zziplib.html">zziplib library</a> - well, just
+ as long as the zip-file contains just the plain files from a directory.
+</P>
+<P>
+ If the zip-file contains directory entries you may be prompted with
+ some awkward behaviour, since in zip-file a directory happens to be
+ just an empty file. Note that the posix function <code>open</code>
+ may also open a directory for reading - it will only return 
+ <code>EISDIR</code> if the <code>open</code> mode-argument included
+ write-access.
+</P>
+<P>
+ What the current of version of the 
+ <a href="zziplib.html">zziplib library</a>
+ can definitly not do: calling zzip_opendir on a directory zippend
+ <em>inside</em> a zip-file.
+</P>
+<P>
+ To prevent the enrollment of directories into the zip-archive, you
+ can use the <tt>-D</tt> option of the <tt>zip</tt> program. That
+ is in any <tt>Makefile</tt> you may want to use
+ <nobr><tt>`cd $(dir) &amp;&amp; zip -D ../$(dir).zip *`</tt></nobr>.
+</P> 
+
+</section><section>
+<h3>Advantages</h3>
+
+<P>
+ Distribution of a set of files is much easier if it just means
+ to wrap up a group of files into a zip-archive - and copy that
+ zip-archive to the respective destination directory.
+ Even more the files can be compressed and unlike a <tt>tar.gz</tt>
+ archive there is no need to decompress the archive in temporary
+ location before accessing a member-file.
+</P>
+<P>
+ On the other hand, there is no chance to scatter files around
+ on the disk like it could easily happen with a set of gzip'ed
+ man-pages in a single `<tt>man</tt>`-directory. The reader
+ application does not specifically need to know that the file
+ is compressed, so that reading a script like 
+ `<tt>share/guile/x.x.x/ice-9/popen.scm</tt>` is done by simple
+ calls to <code>zzip_read</code> which works on zip-file named
+ `<tt>share/guile/x.x.x/ice-9.zip</tt>`.
+</P>
+<P>
+ A version mismatch between different files in a group is now
+ obvious: either the opened file belongs to the distribution
+ archive, or otherwise in resides in a real directory <em>just
+ next to the zip-archive that contains the original</em>.
+</P>
+
+</section><section>
+<h3>Issues</h3>
+
+<P>
+ The  <a href="zziplib.html">zziplib library</a> does not
+ use any code piece from the <code>zip</code> programs, neither
+ <em>pkzip</em> nor <em>infozip</em>, so there is no license
+ issue here. The decompression is done by using the free
+ <a href="http://www.gzip.org/zlib">zlib library</a> which has no special
+ issues with respect to licensing. 
+ The  rights to the <a href="zziplib.html">zziplib library</a> 
+ are reserved to the copyright holders, there is a public
+ license that puts most the sources themselves under 
+ <a href="COPYING.LIB">the GNU Lesser General Public License</a>,
+ so that the use of a shared library instance of the
+ <a href="zziplib.html">zziplib library</a>
+ has no restrictions of interest to application programmers.
+ For more details and hints about static linking, check
+ the <a href="copying.html">COPYING</a> information.
+</P>
+<P>
+ The only issue you have with the
+ <a href="zziplib.html">zziplib library</a>
+ is the fact that you can only <em>read</em> the contained files.
+ Writing/Compression is not implemented. Even more, a compressed
+ file is not seekable at the moment although I hope that someone
+ will stand up to implement that functionality someday.
+</P>
+
+</section></section>

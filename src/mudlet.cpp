@@ -37,6 +37,7 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "XMLimport.h"
@@ -66,6 +67,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QTabBar>
 #include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
@@ -184,7 +186,7 @@ mudlet::mudlet()
     auto frame = new QWidget(this);
     frame->setFocusPolicy(Qt::NoFocus);
     setCentralWidget(frame);
-    mpTabBar = new QTabBar(frame);
+    mpTabBar = new TTabBar(frame);
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
@@ -370,7 +372,12 @@ mudlet::mudlet()
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
     }
-    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 6, QFont::Normal);
+    // This is the only place the tabBar font is set and it influences the
+    // height of the tabs used - since we now want to adjust the appearance of
+    // the tab if it is not the active one and new data has arrived to show in
+    // the related profile - make the font size a little larger that the 6 it
+    // once was so that it is a bit more obvious when it changes:
+    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     setFont(mainFont);
     mainPane->setFont(mainFont);
     mpTabBar->setFont(mdiFont);
@@ -468,9 +475,11 @@ mudlet::mudlet()
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
-    // mToolbarIconSize has been set to 0 in the initialisation list so either
-    // value will be accepted:
-    setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+    // mToolbarIconSize has been set to 0 in the initialisation list but if it
+    // has not been changed from that in readSettings() then set it now:
+    if (!mToolbarIconSize) {
+        setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+    }
 
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
@@ -1015,6 +1024,12 @@ void mudlet::slot_tab_changed(int tabID)
         mpCurrentActiveHost = nullptr;
         return;
     }
+
+    // Reset the tab back to "normal" to undo the effect of it having it's style
+    // changed on new data:
+    mpTabBar->setTabBold(tabID, false);
+    mpTabBar->setTabItalic(tabID, false);
+    mpTabBar->setTabUnderline(tabID, false);
 
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         mpCurrentActiveHost->mpConsole->hide();
@@ -3607,4 +3622,25 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
     }
 
     return pHost->mTelnet.loadReplay(absoluteReplayFileName, pErrMsg);
+}
+
+void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
+{
+    Host* pHost = mHostManager.getHost(hostName);
+    if (pHost && pHost != mpCurrentActiveHost) {
+        if (mpTabBar->count() > 1) {
+            if (!isLowerPriorityChange) {
+                mpTabBar->setTabBold(hostName, true);
+                mpTabBar->setTabItalic(hostName, false);
+                mpTabBar->update();
+            } else if (isLowerPriorityChange && !mpTabBar->tabBold(hostName)) {
+                // Local, lower priority change so only change the
+                // styling if it is not already modified - so that the
+                // higher priority remote change indication will not
+                // get changed by a later local one:
+                mpTabBar->setTabItalic(hostName, true);
+                mpTabBar->update();
+            }
+        }
+    }
 }

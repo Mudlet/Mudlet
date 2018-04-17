@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
+*   Copyright (C) 2013-2018 by Stephen Lyons - slysven@virginmedia.com    *
 *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
 *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
 *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -9174,59 +9174,65 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
 int TLuaInterpreter::setRoomChar(lua_State* L)
 {
     int id;
-    string c;
+    QString symbol;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomChar: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
+
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomChar: bad argument #2 type (room symbol as string expected, got %s!)",
+                       luaL_typename(L, 2));
+        return lua_error(L);
     } else {
-        c = lua_tostring(L, 2);
+        symbol = QString::fromUtf8(lua_tostring(L, 2));
     }
+
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushstring(L, "setRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
-        if (c.size() >= 1) {
-            pR->c = c[0];
+        if (symbol.isEmpty()) {
+            // Allow an empty string to be used to clear the symbol:
+            pR->mSymbol.clear();
+        } else {
+            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+            // handle/use/allow:
+            pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
         }
+        lua_pushboolean(L, true);
+        return 1;
     }
-    return 0;
 }
 
 int TLuaInterpreter::getRoomChar(lua_State* L)
 {
     int id;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomChar: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "getRoomChar: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
     }
+
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushstring(L, "getRoomChar: room ID does not exist");
-        lua_error(L);
-        return 1;
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
-        QString c = (QString)pR->c;
-        lua_pushstring(L, c.toLatin1().data());
+        lua_pushstring(L, pR->mSymbol.toUtf8().constData());
         return 1;
     }
-    return 0;
 }
-
 
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
@@ -12820,6 +12826,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
+
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");
 
@@ -12990,12 +12997,9 @@ void TLuaInterpreter::initIndenterGlobals()
                       .toUtf8().constData());
 
 #elif defined(Q_OS_UNIX)
-    // Need to tweak the lua path for the installed *nix case and to allow
-    // running from a shadow build directory, the latter means we HAVE to rename
-    // where the module code is stored or use a symbolic link from "lcf" to
-    // "lua_code_formatter" in the "3rdparty" source directory - a rename was
-    // choosen.
-    luaL_dostring(pIndenterState, QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/../3rdparty/?.lua;' .. package.path")
+    // Need to tweak the lua path for the installed *nix case and AppImage builds as well as
+    // to allow running from a shadow build directory (both qmake and cmake).
+    luaL_dostring(pIndenterState, QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;' .. package.path")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
 

@@ -1,0 +1,59 @@
+<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+          "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+<!-- using <chapter> allows to append a <reference> with manpages -->
+<section>
+<sectioninfo>
+<date> 2006-01-01</date>
+<authorblurb><simpara> Guido Draheim </simpara></authorblurb>
+</sectioninfo>
+<title> ZZIPlib Documentation </title>
+
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-index.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-zip.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-file.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-sdl-rwops.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-extio.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-xor.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-crypt.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-cryptoid.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-api.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-basics.xml" />
+<!--
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-extras.xml" />
+-->
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="zzip-parse.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="64on32.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="future.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="fseeko.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="mmapped.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="memdisk.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="configs.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="sfx-make.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="history.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="referentials.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="copying.xml" />
+<xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml"
+    href="faq.xml" />
+</section>

@@ -8,6 +8,7 @@ $global:ErrorActionPreference = "Stop"
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
 $logFile = "$workingBaseDir\verbose_output.log"
+$ciScriptDir = (Get-Item -Path ".\" -Verbose).FullName
 
 if (-not $(Test-Path "$workingBaseDir")) {
     New-Item "$workingBaseDir" -ItemType "directory"
@@ -264,14 +265,18 @@ function InstallLibzip() {
 }
 
 function InstallZziplib() {
-  DownloadFile "https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download" "zziplib-0.13.62.tar.bz2"
-  ExtractTar "zziplib-0.13.62.tar.bz2" "zziplib"
-  Set-Location zziplib\zziplib-0.13.62
+  # The three lines below are changed because of https://github.com/gdraheim/zziplib/issues/8
+  #DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.62.tar.gz" "zziplib-0.13.62.tar.gz"
+  #ExtractTar "zziplib-0.13.62.tar.gz" "zziplib"
+  #Set-Location zziplib\zziplib-0.13.62
+
+  Set-Location "$ciScriptDir\..\3rdparty\zziplib"
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
   RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
+  Set-Location "$workingBaseDir"
 }
 
 function InstallLuarocks() {

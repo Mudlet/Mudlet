@@ -2052,6 +2052,7 @@ void dlgRoomExits::init(int id)
     connect( doortype_se,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
     connect( doortype_in,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
     connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_out,         SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
 }
 
 TExit* dlgRoomExits::makeExitFromControls(int direction)

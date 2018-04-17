@@ -211,9 +211,10 @@ private:
     int codeRet;
     std::string tempLine;
     bool mWaitingForHighColorCode;
-    bool mHighColorModeForeground;
-    bool mHighColorModeBackground;
-    bool mIsHighColorMode;
+    bool mWaitingForMillionsColorCode;
+    bool mIsHighOrMillionsColorMode;
+    bool mIsHighOrMillionsColorModeForeground;
+    bool mIsHighOrMillionsColorModeBackground;
     bool mIsDefaultColor;
     bool isUserScrollBack;
     int currentFgColorProperty;
