@@ -144,15 +144,20 @@ function InstallCmake() {
   }
 }
 
-function InstallMsys() {
-  DownloadFile "https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys%2B7za%2Bwget%2Bsvn%2Bgit%2Bmercurial%2Bcvs-rev13.7z/download" "msys.7z" $true
-  if (!(Test-Path -Path "C:\MinGW\msys\1.0" -PathType Container)) {
+function InstallMingwGet() {
+  DownloadFile "https://downloads.sourceforge.net/project/mingw/Installer/mingw-get/mingw-get-0.6.2-beta-20131004-1/mingw-get-0.6.2-mingw32-beta-20131004-1-bin.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fmingw%2Ffiles%2FInstaller%2Fmingw-get%2Fmingw-get-0.6.2-beta-20131004-1%2Fmingw-get-0.6.2-mingw32-beta-20131004-1-bin.zip%2Fdownload%3Fuse_mirror%3Dautoselect&ts=1524054843&use_mirror=autoselect" "mingw-get.zip"
+  if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
     Step "Creating MinGW path"
-    New-Item -Path "C:\MinGW\msys\1.0" -ItemType "directory" >> "$logFile" 2>&1
+    New-Item -Path "C:\MinGW" -ItemType "directory" >> "$logFile" 2>&1
   }
-  ExtractZip "msys.7z" "."
-  Step "Copying folder"
-  Move-Item "msys\*" "C:\MinGW\msys\1.0" >> "$logFile" 2>&1
+  ExtractZip "mingw-get.zip" "C:\MinGW"
+}
+
+function InstallMsys() {
+  Step "Updating mingw-get info"
+  exec "mingw-get" @("update")
+  Step "Installing mingw32-autoconf"
+  exec "mingw-get" @("install", "mingw-32-autoconf")
 }
 
 function InstallBoost() {
@@ -326,7 +331,8 @@ function InstallLuaModules(){
 
 CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { InstallSevenZ }
 CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
-CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { InstallMsys }
+CheckAndInstall "mingw-get" "C:\MinGW\bin\mingw-get.exe" { InstallMingwGet }
+CheckAndInstall "MSYS and autotools" "C:\MinGW\bin\autoconf" { InstallMsys }
 CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { InstallBoost }
 CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
 CheckAndInstall "Python" "C:\Python27\python.exe" { InstallPython }
