@@ -93,7 +93,8 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
 }
 
 function RunAutoReconfig(){
-  Step "Running autoreconfig"
+  Step "Running autoreconf"
+  exec "bash" @("-c", "ls -la /bin/")
   exec "bash" @("-c", "/bin/autoreconf -i")
 }
 
