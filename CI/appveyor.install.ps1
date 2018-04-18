@@ -189,6 +189,8 @@ function InstallHunspell() {
   DownloadFile "https://github.com/hunspell/hunspell/archive/v1.6.2.tar.gz" "hunspell-1.6.2.tar.gz"
   ExtractTar "hunspell-1.6.2.tar.gz" "hunspell-1.6.2"
   Set-Location "hunspell-1.6.2\hunspell-1.6.2"
+  Step "Changing src\tools\Makefile.am"
+  (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
   RunAutoReconfig
   RunConfigure
   RunMake
