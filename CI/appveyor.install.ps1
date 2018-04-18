@@ -24,7 +24,7 @@ if($64Bit){
 . .\appveyor.set-environment.ps1
 SetQtBaseDir "$logFile"
 
-$Env:PATH = "$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
+$Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 
 # Helper functions
 # see http://patrick.lioi.net/2011/08/18/powershell-and-calling-external-executables/
@@ -94,7 +94,7 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
 
 function RunAutoReconfig(){
   Step "Running autoreconf"
-  exec "bash" @("-c", "/mingw/bin/autoreconf -i")
+  exec "bash" @("-c", "autoreconf -i")
 }
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
