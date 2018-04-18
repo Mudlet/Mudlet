@@ -157,7 +157,7 @@ function InstallMsys() {
   Step "Updating mingw-get info"
   exec "mingw-get" @("update")
   Step "Installing mingw32-autoconf"
-  exec "mingw-get" @("install", "mingw-32-autoconf")
+  exec "mingw-get" @("install", "mingw32-autoconf")
 }
 
 function InstallBoost() {
