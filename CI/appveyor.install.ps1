@@ -247,9 +247,9 @@ function InstallPcre() {
 }
 
 function InstallSqlite() {
-  DownloadFile "http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz" "sqlite-autoconf-3071700.tar.gz"
-  ExtractTar "sqlite-autoconf-3071700.tar.gz" "sqlite"
-  Set-Location sqlite\sqlite-autoconf-3071700
+  DownloadFile "https://www.sqlite.org/2018/sqlite-autoconf-3230100.tar.gz" "sqlite-autoconf-3230100.tar.gz"
+  ExtractTar "sqlite-autoconf-3230100.tar.gz" "sqlite"
+  Set-Location sqlite\sqlite-autoconf-3230100
   RunConfigure
   RunMake
   RunMakeInstall
