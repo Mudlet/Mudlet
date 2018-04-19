@@ -197,7 +197,7 @@ function InstallHunspell() {
   Step "Changing src\tools\Makefile.am"
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
   RunAutoReconfig
-  RunConfigure
+  RunConfigure "--prefix=$Env:MINGW_BASE_DIR_BASH MAKE=mingw32-make"
   RunMake
   RunMakeInstall
 }
