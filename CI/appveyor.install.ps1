@@ -251,9 +251,9 @@ function InstallSqlite() {
   ExtractTar "sqlite-autoconf-3230100.tar.gz" "sqlite"
   Set-Location sqlite\sqlite-autoconf-3230100
   Step "building sqlite"
-  exec "gcc" @("-shared", "sqlite3.c", "-o", "libsqlite3-0.dll", "-O2", "-DSQLITE_ENABLE_FTS4", "-DSQLITE_ENABLE_RTREE")
+  exec "gcc" @("-static", "sqlite3.c", "-o", "libsqlite3.a", "-O2", "-DSQLITE_ENABLE_FTS4", "-DSQLITE_ENABLE_RTREE")
   Step "installing sqlite"
-  Copy-Item "libsqlite3-0.dll" "$Env:MINGW_BASE_DIR\bin"
+  Copy-Item "libsqlite3.a" "$Env:MINGW_BASE_DIR\lib"
   Copy-Item "sqlite3.h" "$Env:MINGW_BASE_DIR\include"
 }
 
@@ -350,7 +350,7 @@ CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll" { Ins
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { InstallYajl }
 CheckAndInstall "lua" "$Env:MINGW_BASE_DIR\bin\lua51.dll" { InstallLua }
 CheckAndInstall "pcre" "$Env:MINGW_BASE_DIR\bin\libpcre-1.dll" { InstallPcre }
-CheckAndInstall "sqlite" "$Env:MINGW_BASE_DIR\bin\libsqlite3-0.dll" { InstallSqlite }
+CheckAndInstall "sqlite" "$Env:MINGW_BASE_DIR\lib\libsqlite3.a" { InstallSqlite }
 CheckAndInstall "zlib" "$Env:MINGW_BASE_DIR\bin\zlib1.dll" { InstallZlib }
 CheckAndInstall "libzip" "$Env:MINGW_BASE_DIR\include\zipconf.h" { InstallLibzip }
 CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { InstallZziplib }
