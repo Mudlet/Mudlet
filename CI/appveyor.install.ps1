@@ -251,7 +251,7 @@ function InstallSqlite() {
   ExtractTar "sqlite-autoconf-3230100.tar.gz" "sqlite"
   Set-Location sqlite\sqlite-autoconf-3230100
   Step "building sqlite"
-  exec "gcc" @("-shared", "sqlite3.c", "-o", "libsqlite3-0.dll")
+  exec "gcc" @("-shared", "sqlite3.c", "-o", "libsqlite3-0.dll", "-O2", "-DSQLITE_ENABLE_FTS4", "-DSQLITE_ENABLE_RTREE")
   Step "installing sqlite"
   Copy-Item "libsqlite3-0.dll" "$Env:MINGW_BASE_DIR\bin"
   Copy-Item "sqlite3.h" "$Env:MINGW_BASE_DIR\include"
