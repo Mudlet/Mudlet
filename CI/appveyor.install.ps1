@@ -250,9 +250,11 @@ function InstallSqlite() {
   DownloadFile "https://www.sqlite.org/2018/sqlite-autoconf-3230100.tar.gz" "sqlite-autoconf-3230100.tar.gz"
   ExtractTar "sqlite-autoconf-3230100.tar.gz" "sqlite"
   Set-Location sqlite\sqlite-autoconf-3230100
-  RunConfigure
-  RunMake
-  RunMakeInstall
+  Step "building sqlite"
+  exec "gcc" @("-shared", "sqlite3.c", "-o", "libsqlite3-0.dll")
+  Step "installing sqlite"
+  Copy-Item "libsqlite3-0.dll" "$Env:MINGW_BASE_DIR\bin"
+  Copy-Item "sqlite3.h" "$Env:MINGW_BASE_DIR\include"
 }
 
 function InstallZlib() {
