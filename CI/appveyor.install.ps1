@@ -99,7 +99,7 @@ function RunAutoReconfig(){
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
-  exec "bash" @("-c", "`"./configure $configureArguments`"")
+  exec "bash" @("-c", "`"./configure $configureArguments MAKE=mingw32-make`"")
 }
 
 function RunMake([string] $makefile = "Makefile"){
@@ -197,7 +197,7 @@ function InstallHunspell() {
   Step "Changing src\tools\Makefile.am"
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
   RunAutoReconfig
-  RunConfigure "--prefix=$Env:MINGW_BASE_DIR_BASH MAKE=mingw32-make"
+  RunConfigure
   RunMake
   RunMakeInstall
 }
