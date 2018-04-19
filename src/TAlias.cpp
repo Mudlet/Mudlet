@@ -41,7 +41,7 @@ TAlias::TAlias(TAlias* parent, Host* pHost)
 }
 
 TAlias::TAlias(const QString& name, Host* pHost)
-: Tree<TAlias>(0)
+: Tree<TAlias>(nullptr)
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
@@ -89,16 +89,18 @@ bool TAlias::match(const QString& toMatch)
     //bool ret = false;
     //bool conditionMet = false;
     QSharedPointer<pcre> re = mpRegex;
-    if (re == NULL) {
+    if (re == nullptr) {
         return false; //regex compile error
     }
 
-    //const char *error;
-    char* subject = (char*)malloc(strlen(toMatch.toLocal8Bit().data()) + 1);
-    strcpy(subject, toMatch.toLocal8Bit().data());
+#if defined(Q_OS_WIN32)
+    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+    char* subject = (char*)malloc(strlen(toMatch.toUtf8().constData()) + 1);
+    strcpy(subject, toMatch.toUtf8().constData());
+#else
+    char* subject = strndup(toMatch.toUtf8().constData(), strlen(toMatch.toUtf8().constData()));
+#endif
     unsigned char* name_table;
-    //int erroffset;
-    //int find_all;
     int namecount;
     int name_entry_size;
 
@@ -110,28 +112,19 @@ bool TAlias::match(const QString& toMatch)
 
     //cout <<" LINE="<<subject<<endl;
     if (mRegexCode.size() > 0) {
-        rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
     } else {
         goto MUD_ERROR;
     }
 
     if (rc < 0) {
-        switch (rc) {
-        case PCRE_ERROR_NOMATCH:
-            goto MUD_ERROR;
-
-        default:
-            goto MUD_ERROR;
-        }
-    }
-    if (rc > 0) {
+        goto MUD_ERROR;
+    } else if (rc == 0) {
+        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+    } else {
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::cyan), QColor(Qt::black)) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> 0;
         }
-    }
-
-    if (rc == 0) {
-        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
     }
 
     matchCondition = true; // alias has matched
@@ -154,15 +147,15 @@ bool TAlias::match(const QString& toMatch)
             TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
         }
     }
-    pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMECOUNT, &namecount);
+    pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
     if (namecount <= 0) {
         //cout << "no named substrings detected" << endl;
     } else {
         unsigned char* tabptr;
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMETABLE, &name_table);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
 
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
 
         tabptr = name_table;
         for (i = 0; i < namecount; i++) {
@@ -182,23 +175,19 @@ bool TAlias::match(const QString& toMatch)
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), NULL, subject, subject_length, start_offset, options, ovector, 30);
-
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
                 break;
             }
             ovector[1] = start_offset + 1;
             continue;
-        }
-
-        if (rc < 0) {
+        } else if (rc < 0) {
             goto END;
-        }
-
-        if (rc == 0) {
+        } else if (rc == 0) {
             qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
         }
+
         for (i = 0; i < rc; i++) {
             char* substring_start = subject + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
@@ -251,12 +240,13 @@ void TAlias::setRegexCode(const QString& code)
 void TAlias::compileRegex()
 {
     const char* error;
-    const QByteArray& local8Bit = mRegexCode.toLocal8Bit();
     int erroffset;
 
-    QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, NULL), pcre_deleter);
+    // PCRE_UTF8 needed to run compile in UTF-8 mode
+    // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
+    QSharedPointer<pcre> re(pcre_compile(mRegexCode.toUtf8().constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
 
-    if (re == NULL) {
+    if (re == nullptr) {
         mOK_init = false;
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> 0;

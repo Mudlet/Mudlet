@@ -1,0 +1,34 @@
+version: 1.0.{build}
+init:
+- cmd: mkdir C:\src\
+environment:
+  matrix:
+  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
+#  - QT_BASE_DIR: C:\Qt\5.9\mingw53_32
+install:
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- powershell ".\appveyor.install.ps1"
+
+build_script:
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- powershell ".\appveyor.build.ps1"
+
+on_failure:
+- cd C:\src
+- bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+
+artifacts:
+- path: src\release
+  name: mudlet
+
+notifications:
+- provider: Webhook
+  url: https://webhooks.gitter.im/e/2d6f7bea328a9dd60769
+  on_build_success: true
+  on_build_failure: true
+  on_build_status_changed: true
+  body: >-
+    {
+      "message": "Appveyor {{repositoryName}}{{#isPullRequest}}#{{pullRequestId}}{{/isPullRequest}}{{^isPullRequest}} ({{branch}}){{/isPullRequest}} {{#passed}}passed{{/passed}}{{#failed}}failed{{/failed}} ({{buildNumber}})",
+      "level": "{{#passed}}info{{/passed}}{{#failed}}error{{/failed}}"
+    }

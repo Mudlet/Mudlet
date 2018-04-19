@@ -1,0 +1,116 @@
+<section> <date> 2005 </date>
+<H2> zzip/memdisk </H2> zip cache for mmapped views
+
+<BLOCKQUOTE>
+  These routines are fully independent from the traditional zzip
+  implementation. They build on top of 
+  <a href="mmapped.html">zzip/mmapped</a> that uses a readonly
+  mmapped sharedmem block. These functions add additional hints
+  how to parse extension blocks and how to cache the zip central
+  directory entries which does furthermore allow to convert them
+  to any host-local format as required.
+</BLOCKQUOTE>
+
+<section>
+<H3> zzip disk handle </H3>
+
+<P>
+  Other than with the <a href="fseeko.html">fseeko</a> alternative
+  interface there is no need to have an actual disk handle to the
+  zip archive. Instead you can use a bytewise copy of a file or
+  even use a mmapped view of a file. This is generally the fastest
+  way to get to the data contained in a zipped file. All it requires
+  is enough of virtual memory space but a desktop computer with a
+  a modern operating system will easily take care of that.
+</P>
+
+<P>
+  The zzipmmapped library provides a number of calls to create a
+  disk handle representing a zip archive in virtual memory. Per
+  default we use the sys/mmap.h (or MappedView) functionality
+  of the operating system. See for more details in the
+   <a href="mmapped.html">zzip/mmapped</a> descriptions.
+</P>
+<P>
+  The zzip/memdisk extensions of zzip/mmapped are made to have a
+  very similar call API - therefore you will find again open and
+  close functions for filenames or filehandles. However the 
+  direct mmap interface is not re-exported under the zzip_mem_disk
+  prefix (of the underlying zzip_disk prefix). The "_mem_" part
+  hints that the central directory of the underlying zzip_disk
+  is preparsed to a separate memory block.
+<PRE>
+  ZZIP_MEM_DISK*  zzip_mem_disk_open(char* filename);
+  ZZIP_MEM_DISK*  zzip_mem_disk_fdopen(int fd);
+  void            zzip_mem_disk_close(ZZIP_MEM_DISK* disk);
+
+  int  zzip_mem_disk_load (ZZIP_MEM_DISK* dir, ZZIP_DISK* disk);
+  void zzip_mem_disk_unload (ZZIP_MEM_DISK* dir);
+</PRE>
+  The last two functions export some parts of the underlying
+  interface. It is possible to bind an existing ZZIP_MEM_DISK
+  handle with an arbitrary ZZIP_DISK handle. Upon calling "load"
+  the central directory will be loaded from the underlying zip
+  disk content and parsed to an internal mem block. The corresponding
+  "unload" function will trash that central directory cache but it
+  leaves the handles intact.
+</P>
+
+</section><section>
+<H3> reading the central directory </H3>
+
+<P>
+  All other zzip_mem_disk functions are simply re-exporting the
+  underlying zzip_disk functions. Note that the first field in
+  the ZZIP_MEM_DISK is a "ZZIP_DISK* disk" - the header file
+  zzip/memdisk.h will simply export inline functions where there
+  is no special zzip_mem_disk function. Therefore, whenever a
+  function call on a ZZIP_DISK handle is appropriate one can
+  also use its cousin for a ZZIP_MEM_DISK handle without any
+  penalties but future compatibility for extra functionality in
+  zzip/memdisk layer of the zzip/mmapped library.
+</P>
+
+<P><small>Note: by default the re-exports are done with the help
+  of the C precompiler as precompiler macros. Using USE_INLINE
+  will force to make them real inlines. In the future that may
+  change in favor of a better autodetection for inline capabilities
+  of the compiler and/or using a standard cpp-define that enables
+  the C/C++ inline functions. The inline functions do have the
+  added value of having strongtyped arguments provoking more
+  readable warning messages in user application code.</small></P>
+
+<PRE>
+     inline ZZIP_DISK_ENTRY*
+zzip_mem_disk_findfirst(ZZIP_MEM_DISK* dir);
+     inline ZZIP_DISK_ENTRY*
+zzip_mem_disk_findnext(ZZIP_MEM_DISK* dir, ZZIP_DISK_ENTRY* entry);
+     inline char* _zzip_restrict
+zzip_mem_disk_entry_strdup_name(ZZIP_MEM_DISK* dir, 
+                                ZZIP_DISK_ENTRY* entry);
+     inline struct zzip_file_header*
+zzip_mem_disk_entry_to_file_header(ZZIP_MEM_DISK* dir, 
+				   ZZIP_DISK_ENTRY* entry);
+     inline char*
+zzip_mem_disk_entry_to_data(ZZIP_MEM_DISK* dir, ZZIP_DISK_ENTRY* entry);
+     inline ZZIP_DISK_ENTRY*
+zzip_mem_disk_findfile(ZZIP_MEM_DISK* dir, 
+                       char* filename, ZZIP_DISK_ENTRY* after,
+		       zzip_strcmp_fn_t compare);
+     inline ZZIP_DISK_ENTRY*
+zzip_mem_disk_findmatch(ZZIP_MEM_DISK* dir, 
+                        char* filespec, ZZIP_DISK_ENTRY* after,
+			zzip_fnmatch_fn_t compare, int flags);
+     inline ZZIP_DISK_FILE* _zzip_restrict
+zzip_mem_disk_entry_fopen (ZZIP_MEM_DISK* dir, ZZIP_DISK_ENTRY* entry);
+     inline ZZIP_DISK_FILE* _zzip_restrict
+zzip_mem_disk_fopen (ZZIP_MEM_DISK* dir, char* filename);
+     inline _zzip_size_t
+zzip_mem_disk_fread (void* ptr, _zzip_size_t size, _zzip_size_t nmemb,
+                     ZZIP_DISK_FILE* file);
+     inline int
+zzip_mem_disk_fclose (ZZIP_DISK_FILE* file);
+     inline int
+zzip_mem_disk_feof (ZZIP_DISK_FILE* file);
+</PRE>
+</section></section>

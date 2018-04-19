@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -60,7 +60,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpHost(pH)
 , buffer(pH)
 , emergencyStop(new QToolButton)
-, layerCommandLine(0)
+, layerCommandLine(nullptr)
 , mBgColor(QColor(Qt::black))
 , mClipboard(mpHost)
 , mCommandBgColor(Qt::black)
@@ -85,7 +85,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpMainFrame(new QWidget(mpBaseHFrame))
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
-, mpMapper(0)
+, mpMapper(nullptr)
+, mpButtonMainLayer(nullptr)
 , mpScrollBar(new QScrollBar)
 
 , mRecordReplay(false)
@@ -166,10 +167,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mFormatSystemMessage.fgB = 0;
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
-    mWaitingForHighColorCode = false;
-    mHighColorModeForeground = false;
-    mHighColorModeBackground = false;
-    mIsHighColorMode = false;
 
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -346,18 +343,22 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
 
-    auto buttonMainLayer = new QWidget; //( layerCommandLine );
-    buttonMainLayer->setSizePolicy(sizePolicy);
-    buttonMainLayer->setContentsMargins(0, 0, 0, 0);
-    auto layoutButtonMainLayer = new QVBoxLayout(buttonMainLayer);
+    mpButtonMainLayer = new QWidget;
+    mpButtonMainLayer->setObjectName(QStringLiteral("mpButtonMainLayer"));
+    mpButtonMainLayer->setSizePolicy(sizePolicy);
+    mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
+    auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
+    layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
     layoutButtonMainLayer->setMargin(0);
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
     layoutButtonMainLayer->setSpacing(0);
-    /*buttonMainLayer->setMinimumHeight(31);
-           buttonMainLayer->setMaximumHeight(31);*/
+    /*mpButtonMainLayer->setMinimumHeight(31);
+           mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
+    buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
+    layoutButtonLayer->setObjectName(QStringLiteral("layoutButtonLayer"));
     layoutButtonLayer->setMargin(0);
     layoutButtonLayer->setSpacing(0);
 
@@ -477,7 +478,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     connect(mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
     layoutLayer2->addWidget(mpCommandLine);
-    layoutLayer2->addWidget(buttonMainLayer);
+    layoutLayer2->addWidget(mpButtonMainLayer);
     layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
     layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
     layoutButtonLayer->addWidget(mpBufferSearchDown, 0, 6);
@@ -536,8 +537,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     //buttonLayer->setMaximumWidth(31);
     buttonLayer->setMinimumWidth(400);
     buttonLayer->setMaximumWidth(400);
-    buttonMainLayer->setMinimumWidth(400);
-    buttonMainLayer->setMaximumWidth(400);
+    mpButtonMainLayer->setMinimumWidth(400);
+    mpButtonMainLayer->setMaximumWidth(400);
     setFocusPolicy(Qt::ClickFocus);
     setFocusProxy(mpCommandLine);
     console->setFocusPolicy(Qt::ClickFocus);
@@ -547,8 +548,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 
     buttonLayerSpacer->setAutoFillBackground(true);
     buttonLayerSpacer->setPalette(__pal);
-    buttonMainLayer->setAutoFillBackground(true);
-    buttonMainLayer->setPalette(__pal);
+    mpButtonMainLayer->setAutoFillBackground(true);
+    mpButtonMainLayer->setPalette(__pal);
 
     buttonLayer->setAutoFillBackground(true);
     buttonLayer->setPalette(__pal);
@@ -564,6 +565,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         // is not fatal...
         // So, this SHOULD be the main profile console - Slysven
         connect(mudlet::self(), SIGNAL(signal_profileMapReloadRequested(QList<QString>)), this, SLOT(slot_reloadMap(QList<QString>)), Qt::UniqueConnection);
+        connect(this, SIGNAL(signal_newDataAlert(const QString&, const bool)), mudlet::self(), SLOT(slot_newDataOnHost(const QString&, const bool)), Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
     }
@@ -730,8 +732,9 @@ void TConsole::closeEvent(QCloseEvent* event)
 
             if (mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
-                QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
-                QString filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (3 of 6)
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -766,8 +769,9 @@ void TConsole::closeEvent(QCloseEvent* event)
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
-                QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
-                QString filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (4 of 6)
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -812,14 +816,15 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         // We don't support logging anything other than main console (at present?)
     }
 
-    QFile file(QStringLiteral("%1/.config/mudlet/autolog").arg(QDir::homePath()));
+    // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
+    // but the action is "Per Profile"...!
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file);
         file.close();
 
-        QString directoryLogFile = QStringLiteral("%1/.config/mudlet/profiles/%2/log").arg(QDir::homePath(), profile_name);
-        mLogFileName = QStringLiteral("%1/%2").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
+        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         // Revised file name derived from time so that alphabetical filename and
         // date sort order are the same...
         QDir dirLogFile;
@@ -829,9 +834,9 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogFileName.append(QStringLiteral(".html"));
+            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
         } else {
-            mLogFileName.append(QStringLiteral(".txt"));
+            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
         }
         mLogFile.setFileName(mLogFileName);
         mLogFile.open(QIODevice::WriteOnly);
@@ -893,6 +898,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         }
         logButton->setToolTip(tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>"));
     } else {
+        buffer.logRemainingOutput();
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << "</div></body>\n";
             mLogStream << "</html>\n";
@@ -925,9 +931,9 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/log";
-        QString mLogFileName = directoryLogFile + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        mLogFileName.append(".dat");
+        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (5 of 6)
+        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -960,7 +966,7 @@ void TConsole::changeColors()
         console->setPalette(palette);
         console2->setPalette(palette);
     } else if (mIsSubConsole) {
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
@@ -1004,7 +1010,7 @@ void TConsole::changeColors()
         }
         mpHost->mDisplayFont.setFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
         QFont _font = mpHost->mDisplayFont;
@@ -1090,14 +1096,6 @@ void TConsole::setConsoleFgColor(int r, int g, int b)
     return time;
    } */
 
-
-void TConsole::loadRawFile(std::string n)
-{
-    QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/log";
-    QString fileName = directoryLogFile + "/" + QString(n.c_str());
-    mpHost->mTelnet.loadReplay(fileName);
-}
-
 void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
 {
     mProcessingTime.restart();
@@ -1111,6 +1109,11 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     } else {
         networkLatency->setText(QString("<no GA> S:%1").arg(processT / 1000, 0, 'f', 3));
     }
+    // Modify the tab text if this is not the currently active host - this
+    // method is only used on the "main" console so no need to filter depending
+    // on TConsole types:
+
+    emit signal_newDataAlert(mpHost->getName());
 }
 
 void TConsole::runTriggers(int line)
@@ -1434,10 +1437,11 @@ bool TConsole::saveMap(const QString& location)
 {
     QDir dir_map;
     QString filename_map;
-    QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
+    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
 
-    if (location == "") {
-        filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+    if (location.isEmpty()) {
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (6 of 6)
+        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     } else {
         filename_map = location;
     }
@@ -1554,7 +1558,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     if (!fileInfo.filePath().isEmpty()) {
         if (fileInfo.isRelative()) {
             // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), pHost->getName(), fileInfo.filePath()));
+            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
                 filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
@@ -1808,23 +1812,15 @@ void TConsole::_luaWrapLine(int line)
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
-bool TConsole::setMiniConsoleFontSize(std::string& buf, int size)
+bool TConsole::setMiniConsoleFontSize(int size)
 {
-    std::string key = buf;
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return false;
-        }
-        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console->updateScreenView();
-        pC->console->forceUpdate();
-        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-        pC->console2->updateScreenView();
-        pC->console2->forceUpdate();
-        return true;
-    }
-    return false;
+    console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    console->updateScreenView();
+    console->forceUpdate();
+    console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    console2->updateScreenView();
+    console2->forceUpdate();
+    return true;
 }
 
 QString TConsole::getCurrentLine()
@@ -2019,6 +2015,16 @@ void TConsole::setBgColor(int r, int g, int b)
     buffer.applyBgColor(P_begin, P_end, r, g, b);
 }
 
+void TConsole::setScrollBarVisible(bool isVisible)
+{
+    if (mpScrollBar) {
+        if (isVisible)
+            mpScrollBar->show();
+        else
+            mpScrollBar->hide();
+    }
+}
+
 void TConsole::printCommand(QString& msg)
 {
     if (mTriggerEngineMode) {
@@ -2150,7 +2156,7 @@ TConsole* TConsole::createBuffer(const QString& name)
         pC->setUserWindow();
         return pC;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2182,7 +2188,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
     if (mSubConsoleMap.find(key) == mSubConsoleMap.end()) {
         auto pC = new TConsole(mpHost, false, mpMainFrame);
         if (!pC) {
-            return 0;
+            return nullptr;
         }
         mSubConsoleMap[key] = pC;
         pC->setObjectName(name);
@@ -2196,11 +2202,11 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
         std::string _n = name.toStdString();
-        pC->setMiniConsoleFontSize(_n, 12);
+        pC->setMiniConsoleFontSize(12);
         pC->show();
         return pC;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2218,7 +2224,7 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
         pC->show();
         return pC;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2249,7 +2255,6 @@ void TConsole::createMapper(int x, int y, int width, int height)
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
-    mpMapper->mp2dMap->gridMapSizeChange = true; //mapper size has changed, but only init grid map when necessary
     mpMapper->show();
 }
 
@@ -2552,6 +2557,9 @@ void TConsole::slot_searchBufferUp()
     if (_txt != mSearchQuery) {
         mSearchQuery = _txt;
         mCurrentSearchResult = buffer.lineBuffer.size();
+    } else {
+        // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
+        mCurrentSearchResult = std::min(mCurrentSearchResult, buffer.lineBuffer.size());
     }
     if (buffer.lineBuffer.size() < 1) {
         return;

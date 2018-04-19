@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +24,9 @@
 
 
 #include "pre_guard.h"
+#include <QCache>
 #include <QColor>
+#include <QFont>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
@@ -46,14 +48,12 @@ class T2DMap : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(T2DMap)
-
 public:
+    Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = 0);
     void paintMap();
     void setMapZoom(int zoom);
     QColor getColor(int id);
-    QColor _getColor(int id);
     void init();
     void exportAreaImage(int);
     void paintEvent(QPaintEvent*) override;
@@ -74,13 +74,16 @@ public:
     void setRoomSize(double);
     void setExitSize(double);
     void createLabel(QRectF labelRect);
+    // Clears cache so new symbols are built at next paintEvent():
+    void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
+    void addSymbolToPixmapCache(const QString, const bool);
+
 
     TMap* mpMap;
     QPointer<Host> mpHost;
-    int xzoom;
-    int yzoom;
-    int _rx;
-    int _ry;
+    int xyzoom;
+    int mRX;
+    int mRY;
     QPoint mPHighlight;
     bool mPick;
     int mTarget;
@@ -93,9 +96,11 @@ public:
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
 
-    QPoint mMoveTarget;
     bool mRoomBeingMoved;
-    QPoint mPHighlightMove;
+    // These are the on-screen width and height pixel numbers of the area for a
+    // room symbol, (for the non-grid map mode case what gets filled in is
+    // multipled by rsize which is 1.0 to exactly fill space between adjacent
+    // coordinates):
     float mTX;
     float mTY;
     int mChosenRoomColor;
@@ -109,8 +114,7 @@ public:
 
     QRectF mMultiRect;
     bool mPopupMenu;
-    QSet<int> mMultiSelectionSet; // was mMultiSelectList
-    QPoint mOldMousePos;
+    QSet<int> mMultiSelectionSet;
     bool mNewMoveAction;
     QRectF mMapInfoRect;
     int mFontHeight;
@@ -137,8 +141,6 @@ public:
     QColor mCurrentLineColor;
     QCheckBox* mpCurrentLineArrow;
     bool mCurrentLineArrow;
-    bool mShowGrid;
-    QPointF mLastMouseClick;
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
     bool mLabelHilite;
@@ -148,7 +150,6 @@ public:
     int mCustomLineSelectedPoint;
     QTreeWidget mMultiSelectionListWidget;
     bool mSizeLabel;
-    bool gridMapSizeChange;
     bool isCenterViewCall;
     QString mHelpMsg;
 
@@ -170,7 +171,7 @@ public slots:
     void shiftDown();
     void shiftLeft();
     void shiftRight();
-    void slot_setCharacter();
+    void slot_setSymbol();
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
@@ -212,7 +213,7 @@ private:
     // modified or be the center of those
     // modifications. {for slot_spread(),
     // slot_shrink(), slot_setUserData() - if ever
-    // implimented, slot_setExits(),
+    // implemented, slot_setExits(),
     // slot_movePosition(), etc.}
     int mMultiSelectionHighlightRoomId;
 
@@ -223,6 +224,10 @@ private:
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames;
+
+    QCache<QString, QPixmap> mSymbolPixmapCache;
+    ushort mSymbolFontSize;
+    QFont mMapSymbolFont;
 };
 
 #endif // MUDLET_T2DMAP_H

@@ -3,6 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -144,7 +145,7 @@ void dlgIRC::startClient()
 QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
 {
     if (message.isEmpty()) {
-        return QPair<bool, QString>(true, QStringLiteral("message processed by client."));
+        return QPair<bool, QString>(true, QStringLiteral("message processed by client"));
     }
 
     QString msgTarget = target;
@@ -160,12 +161,12 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
     commandParser->setTarget(lastParserTarget);
 
     if (!command) {
-        return QPair<bool, QString>(false, QStringLiteral("command or message could not be parsed."));
+        return QPair<bool, QString>(false, QStringLiteral("message could not be parsed"));
     }
 
     bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
-        return QPair<bool, QString>(true, QStringLiteral("command processed by client."));
+        return QPair<bool, QString>(true, QStringLiteral("command processed by client"));
     }
 
     // update ping-started time if this command was a ping
@@ -173,13 +174,13 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         mPingStarted = QDateTime::currentMSecsSinceEpoch();
     }
 
-    bool rv = connection->sendCommand(command);
+    connection->sendCommand(command);
 
     // if the command was a quit command we should close the IRC window.
     if (command->type() == IrcCommand::Quit) {
         setAttribute(Qt::WA_DeleteOnClose);
         close();
-        return QPair<bool, QString>(true, QStringLiteral("closing client."));
+        return QPair<bool, QString>(true, QStringLiteral("closing client"));
     }
 
     // echo own messages (servers do not send our own messages back)
@@ -189,11 +190,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         delete msg;
     }
 
-    if (rv) {
-        return QPair<bool, QString>(true, QStringLiteral("sent to server."));
-    } else {
-        return QPair<bool, QString>(false, QStringLiteral("filtered by client."));
-    }
+    return QPair<bool, QString>(true, QStringLiteral("sent to server"));
 }
 
 void dlgIRC::ircRestart(bool reloadConfigs)
@@ -718,7 +715,7 @@ QString dlgIRC::readIrcNickName(Host* pH)
 
 QString dlgIRC::readAppDefaultIrcNick()
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/irc_nick").arg(QDir::homePath()));
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("irc_nick")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
@@ -731,7 +728,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/irc_nick").arg(QDir::homePath()));
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("irc_nick")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ifs(&file);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>roomExits</class>
- <widget class="QDialog" name="roomExits">
+ <class>custom_lines</class>
+ <widget class="QDialog" name="custom_lines">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -14,7 +14,7 @@
    <string>Custom Line selection</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet_alpha.qrc">
+   <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_custom_exit.png</normaloff>:/icons/mudlet_custom_exit.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_3">
@@ -503,7 +503,7 @@ custom line?</string>
              <string>Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.</string>
             </property>
             <property name="textAlignment">
-             <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             <set>AlignCenter</set>
             </property>
            </column>
            <column>
@@ -596,7 +596,7 @@ select the line and right-click to obtain a &quot;delete&quot; option.</string>
   <tabstop>out</tabstop>
  </tabstops>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>

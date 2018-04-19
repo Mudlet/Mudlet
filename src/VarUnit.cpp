@@ -132,7 +132,7 @@ TVar* VarUnit::getTVar(QTreeWidgetItem* p)
     if (tVars.contains(p)) {
         return tVars[p];
     }
-    return 0;
+    return nullptr;
 }
 
 TVar* VarUnit::getWVar(QTreeWidgetItem* p)
@@ -140,7 +140,7 @@ TVar* VarUnit::getWVar(QTreeWidgetItem* p)
     if (wVars.contains(p)) {
         return wVars[p];
     }
-    return 0;
+    return nullptr;
 }
 
 QStringList VarUnit::varName(TVar* var)

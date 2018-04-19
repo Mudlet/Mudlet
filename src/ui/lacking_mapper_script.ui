@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>no_mapping_script</class>
- <widget class="QDialog" name="no_mapping_script">
+ <class>lacking_mapper_script</class>
+ <widget class="QDialog" name="lacking_mapper_script">
   <property name="enabled">
    <bool>true</bool>
   </property>
@@ -117,7 +117,7 @@ p, li { white-space: pre-wrap; }
   <connection>
    <sender>close</sender>
    <signal>clicked()</signal>
-   <receiver>no_mapping_script</receiver>
+   <receiver>lacking_mapper_script</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -133,7 +133,7 @@ p, li { white-space: pre-wrap; }
   <connection>
    <sender>find_scripts</sender>
    <signal>clicked()</signal>
-   <receiver>no_mapping_script</receiver>
+   <receiver>lacking_mapper_script</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">

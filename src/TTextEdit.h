@@ -6,6 +6,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -45,9 +46,8 @@ class TTextEdit : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TTextEdit)
-
 public:
+    Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
@@ -55,15 +55,7 @@ public:
     void drawFrame(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&);
     void updateLastLine();
-    void              drawCharacters( QPainter & painter,
-                                      const QRect & rect,
-                                      QString & text,
-                                      bool isBold,
-                                      bool isUnderline,
-                                      bool isItalics,
-                                      bool isStrikeOut,
-                                      QColor & fgColor,
-                                      QColor & bgColor );
+    void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -78,7 +70,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void highlight();
-    void unHighlight(QRegion&);
+    void unHighlight();
     void swap(QPoint& p1, QPoint& p2);
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
@@ -90,6 +82,9 @@ public:
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void copySelectionToClipboardHTML();
+    void searchSelectionOnline();
+    int getColumnCount();
+    int getRowCount();
 
     QColor mBgColor;
     int mCursorY;
@@ -110,15 +105,16 @@ public:
 public slots:
     void slot_toggleTimeStamps();
     void slot_copySelectionToClipboard();
+    void slot_selectAll();
     void slot_scrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
+    void slot_searchSelectionOnline();
 
 private:
     void initDefaultSettings();
+    QString getSelectedText(char newlineChar = '\n');
 
-    QFont mCommandLineFont;
-    QFont mCommandSeperator;
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
@@ -136,9 +132,7 @@ private:
     bool mCtrlSelecting;
     int mDragStartY;
     int mOldScrollPos;
-    QPoint mP_aussen;
     QPoint mPA;
-    bool mPainterInit;
     QPoint mPB;
     TBuffer* mpBuffer;
     TConsole* mpConsole;
@@ -147,9 +141,6 @@ private:
     int mScreenHeight;
     QPixmap mScreenMap;
     int mScreenWidth;
-    bool mScrollUp;
-    int mTopMargin;
-    bool mUpdateSlice;
     QTime mLastClickTimer;
 };
 

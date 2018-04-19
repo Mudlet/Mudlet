@@ -16,9 +16,6 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="windowTitle">
-   <string>Script editor</string>
-  </property>
   <widget class="QWidget" name="widget_main">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -434,30 +431,34 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="button_displayAllVariables">
-          <property name="text">
-           <string>Display All Variables</string>
-          </property>
-          <property name="icon">
-           <iconset resource="../mudlet_alpha.qrc">
-            <normaloff>:/icons/tag_checkbox.png</normaloff>
-            <normalon>:/icons/tag_checkbox_checked.png</normalon>:/icons/tag_checkbox.png</iconset>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-          <property name="autoDefault">
-           <bool>false</bool>
-          </property>
-          <property name="default">
-           <bool>false</bool>
-          </property>
-          <property name="flat">
-           <bool>false</bool>
-          </property>
+         <widget class="QFrame" name="frame_">
+          <layout class="QGridLayout" name="gridLayout_display_hidden_variables">
+           <property name="leftMargin">
+            <number>8</number>
+           </property>
+           <property name="topMargin">
+            <number>3</number>
+           </property>
+           <property name="rightMargin">
+            <number>8</number>
+           </property>
+           <property name="bottomMargin">
+            <number>3</number>
+           </property>
+           <item row="0" column="0" alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+            <widget class="QCheckBox" name="button_displayAllVariables">
+             <property name="text">
+              <string>Show normally hidden variables</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </widget>
         </item>
         <item>
@@ -571,7 +572,7 @@
               </property>
               <item>
                <widget class="QWidget" name="widget_searchTerm" native="true">
-                <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
+                <layout class="QGridLayout" name="gridLayout" columnstretch="0,0,0">
                  <property name="leftMargin">
                   <number>3</number>
                  </property>
@@ -646,7 +647,7 @@
                     </size>
                    </property>
                    <property name="toolTip">
-                    <string>Toggles the display of the search results area.</string>
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -745,9 +746,9 @@
        <zorder>treeWidget_actions</zorder>
        <zorder>treeWidget_scripts</zorder>
        <zorder>treeWidget_triggers</zorder>
-       <zorder>button_displayAllVariables</zorder>
        <zorder>widget_searchArea</zorder>
        <zorder>treeWidget_variables</zorder>
+       <zorder>frame_</zorder>
       </widget>
       <widget class="QFrame" name="frame_right">
        <property name="sizePolicy">
@@ -1085,8 +1086,6 @@
    <header>TTreeWidget.h</header>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="../mudlet_alpha.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

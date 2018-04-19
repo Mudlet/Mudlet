@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -64,9 +64,12 @@ TMap::TMap(Host* pH)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(18)
+, mMaxVersion(19)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
+, mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
+, mMapSymbolFontFudgeFactor(1.0)
+, mIsOnlyMapSymbolFontToBeUsed(false)
 , mIsFileViewingRecommended(false)
 , mpNetworkAccessManager(Q_NULLPTR)
 , mpProgressDialog(Q_NULLPTR)
@@ -511,6 +514,12 @@ void TMap::audit()
         postMessage(infoMsg);
         appendErrorMsg(infoMsg);
     }
+
+    auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
+    if (loadTime != -1.0) {
+        QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
+        postMessage(msg);
+    }
 }
 
 
@@ -953,8 +962,8 @@ bool TMap::findPath(int from, int to)
     vertex goal = roomidToIndex.value(to);
 
     std::vector<vertex> p(num_vertices(g));
-    // Somehow p is an acending, monotonic series of numbers start at 0, it
-    // seems we have a redundent indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
+    // Somehow p is an ascending, monotonic series of numbers start at 0, it
+    // seems we have a redundant indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
     std::vector<cost> d(num_vertices(g));
     try {
         astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
@@ -1056,7 +1065,19 @@ bool TMap::serialize(QDataStream& ofs)
     ofs << customEnvColors;
     ofs << mpRoomDB->hashTable;
     if (mSaveVersion >= 17) {
+        if (mSaveVersion < 19) {
+            // Save the data in the map user data for older versions
+            mUserData.insert(QStringLiteral("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
+            mUserData.insert(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
+            mUserData.insert(QStringLiteral("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? QStringLiteral("true") : QStringLiteral("false"));
+        }
         ofs << mUserData;
+        if (mSaveVersion >= 19) {
+            // Save the data directly in supported format versions
+            ofs << mMapSymbolFont;
+            ofs << mMapSymbolFontFudgeFactor;
+            ofs << mIsOnlyMapSymbolFontToBeUsed;
+        }
     }
     // TODO: Remove when versions < 17 are not an option...
     else {
@@ -1147,7 +1168,7 @@ bool TMap::serialize(QDataStream& ofs)
         QString message = tr("[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
                              "format of at least 17 to preserve it before quitting!\n"
                              "Areas id affected: %1.")
-                                  .arg(areaIds.join(tr(", "))); // Translatable in case list separators are locale dependendent!
+                                  .arg(areaIds.join(tr(", "))); // Translatable in case list separators are locale dependant!
         mpHost->mTelnet.postMessage(message);
     }
     // End of TODO
@@ -1194,6 +1215,11 @@ bool TMap::serialize(QDataStream& ofs)
         }
 
         ofs << pR->getId();
+        if (mSaveVersion <= 19) {
+            if (!pR->mSymbol.isEmpty()) {
+                pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+            }
+        }
         ofs << pR->getArea();
         ofs << pR->x;
         ofs << pR->y;
@@ -1215,7 +1241,25 @@ bool TMap::serialize(QDataStream& ofs)
         ofs << pR->name;
         ofs << pR->isLocked;
         ofs << pR->getOtherMap();
-        ofs << pR->c;
+        if (mSaveVersion >= 19) {
+            ofs << pR->mSymbol;
+        } else {
+            qint8 oldCharacterCode = 0;
+            if (pR->mSymbol.length()) {
+                // There is something for a symbol
+                QChar firstChar = pR->mSymbol.at(0);
+                if (pR->mSymbol.length() == 1 && firstChar.row() == 0 && firstChar.cell() > 32) {
+                    // It is something that can be represented by the past unsigned short
+                    oldCharacterCode = firstChar.toLatin1();
+                } else {
+                    // Not representable - put in a '?' for older Mudlet
+                    // versions that cannot display the character and will not
+                    // parse the value placed in the room's user data:
+                    oldCharacterCode = QChar('?').toLatin1();
+                }
+            }
+            ofs << oldCharacterCode;
+        }
         ofs << pR->userData;
         ofs << pR->customLines;
         ofs << pR->customLinesArrow;
@@ -1239,7 +1283,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     QStringList entries;
 
     if (location.isEmpty()) {
-        folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), mpHost->getName());
+        folder = mudlet::getMudletPath(mudlet::profileMapsPath, mpHost->getName());
         QDir dir(folder);
         dir.setSorting(QDir::Time);
         entries = dir.entryList(QDir::Files, QDir::Time);
@@ -1247,7 +1291,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
     bool canRestore = true;
     if (entries.size() || !location.isEmpty()) {
-        QFile file(location.isEmpty() ? QStringLiteral("%1%2").arg(folder, entries.at(0)) : location);
+        QFile file(location.isEmpty() ? QStringLiteral("%1/%2").arg(folder, entries.at(0)) : location);
 
         if (!file.open(QFile::ReadOnly)) {
             QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
@@ -1259,7 +1303,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         QDataStream ifs(&file);
         ifs >> mVersion;
         if (mVersion > mMaxVersion) {
-            QString errMsg = tr("[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
+            QString errMsg = tr("[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of\n"
                                 "Mudlet can handle (%2)!  The file is:\n\"%3\".")
                                      .arg(mVersion)
                                      .arg(mMaxVersion)
@@ -1307,9 +1351,39 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (mVersion >= 7) {
             ifs >> mpRoomDB->hashTable;
         }
+
         if (mVersion >= 17) {
             ifs >> mUserData;
+            if (mVersion >= 19) {
+                // Read the data from the file directly in version 19 or later
+                ifs >> mMapSymbolFont;
+                ifs >> mMapSymbolFontFudgeFactor;
+                ifs >> mIsOnlyMapSymbolFontToBeUsed;
+            } else {
+                // Fallback to reading the data from the map user data - and
+                // remove it from the data the user will see:
+                QString fontString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFont"));
+                QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
+                QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
+                if (!fontString.isEmpty()) {
+                    mMapSymbolFont = QFont(fontString);
+                }
+                if (!fontFudgeFactorString.isEmpty()) {
+                    mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
+                }
+                if (!onlyUseSymbolFontString.isEmpty()) {
+                    mIsOnlyMapSymbolFontToBeUsed = (onlyUseSymbolFontString != QLatin1String("false"));
+                }
+            }
         }
+
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(( mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
+                                                                          | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+#if QT_VERSION >= 0x050a00
+                                                                          | QFont::PreferNoShaping
+#endif
+                                                                          ));
+
         if (mVersion >= 14) {
             int areaSize;
             ifs >> areaSize;
@@ -1451,9 +1525,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr("[ INFO ]  - Sucessfully read the map file (%1s), checking some\n"
-                           "consistency details...")
-                                .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+        QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
+                                        "consistency details..." )
+                            .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
 
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
@@ -1491,7 +1565,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 // player location. Though this is written as a member function it is intended
 // also for use to retrieve details from maps from OTHER profiles, importantly
 // it does (or should) NOT interact with this TMap instance...!
-bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, int* fileVersion = 0, int* roomId = 0, int* areaCount = 0, int* roomCount = 0)
+bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, int* areaCount = nullptr, int* roomCount = nullptr)
 {
     if (profile.isEmpty()) {
         return false;
@@ -1499,7 +1573,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
 
     QString folder;
     QStringList entries;
-    folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), profile);
+    folder = mudlet::getMudletPath(mudlet::profileMapsPath, profile);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
@@ -1509,7 +1583,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
     }
 
     // As the files are sorted by time this gets the latest one
-    QFile file(QStringLiteral("%1%2").arg(folder, entries.at(0)));
+    QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
 
     if (!file.open(QFile::ReadOnly)) {
         QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
@@ -1596,7 +1670,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
         }
         // read each area
         for (int i = 0; i < areaSize; i++) {
-            TArea pA(0, 0);
+            TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
@@ -1691,7 +1765,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
         }
     }
 
-    TRoom _pT(0);
+    TRoom _pT(nullptr);
     QSet<int> _dummyRoomIdSet;
     while (!ifs.atEnd()) {
         int i;
@@ -1988,7 +2062,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt").arg(QDir::homePath(), mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
     } else if (mIsFileViewingRecommended && mudlet::self()->showMapAuditErrors()) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
@@ -1996,7 +2070,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt").arg(QDir::homePath(), mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2040,7 +2114,7 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     }
 
     if (!localFileName || localFileName->isEmpty()) {
-        mLocalMapFileName = QStringLiteral("%1/.config/mudlet/profiles/%2/map.xml").arg(QDir::homePath(), pHost->getName());
+        mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, pHost->getName());
     } else {
         mLocalMapFileName = *localFileName;
     }
@@ -2177,7 +2251,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     if (isLocalImport) {
         // clean-up
         mpProgressDialog->deleteLater();
-        mpProgressDialog = 0;
+        mpProgressDialog = nullptr;
     }
     mpMapper->show();
 
@@ -2330,4 +2404,23 @@ void TMap::reportProgressToProgressDialog(const int current, const int maximum)
         }
         mpProgressDialog->setValue(current);
     }
+}
+
+QHash<QString, QSet<int>> TMap::roomSymbolsHash()
+{
+    QHash<QString, QSet<int>> results;
+    QHashIterator<int, TRoom*> itRoom(mpRoomDB->getRoomMap());
+    while (itRoom.hasNext()) {
+        itRoom.next();
+        if (itRoom.value() && !itRoom.value()->mSymbol.isEmpty()) {
+            if (results.contains(itRoom.value()->mSymbol)) {
+                results[itRoom.value()->mSymbol].insert(itRoom.key());
+            } else {
+                QSet<int> newEntry;
+                newEntry << itRoom.key();
+                results.insert(itRoom.value()->mSymbol, newEntry);
+            }
+        }
+    }
+    return results;
 }

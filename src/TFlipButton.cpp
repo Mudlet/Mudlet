@@ -35,7 +35,7 @@
 #include "post_guard.h"
 
 TFlipButton::TFlipButton(TAction* pTAction, Host* pHost)
-: QPushButton( 0 )
+: QPushButton( nullptr )
 , mpTAction( pTAction )
 , mID( pTAction->getID() )
 , mpHost( pHost )

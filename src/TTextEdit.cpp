@@ -1,8 +1,10 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +26,7 @@
 #include "TTextEdit.h"
 
 
+#include "mudlet.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -32,10 +35,12 @@
 #include <QtEvents>
 #include <QApplication>
 #include <QClipboard>
+#include <QDesktopServices>
 #include <QMenu>
 #include <QPainter>
 #include <QScrollBar>
 #include <QString>
+#include <QTextCursor>
 #include <QToolTip>
 #include "post_guard.h"
 
@@ -57,11 +62,10 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mIsSplitScreen(isSplitScreen)
 , mLastRenderBottom(0)
 , mMouseTracking(false)
-, mPainterInit(false)
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
-, mpScrollBar(0)
+, mpScrollBar(nullptr)
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -73,7 +77,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
         }
 
         mpHost->mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
         p.setFont(mpHost->mDisplayFont);
@@ -91,7 +95,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
         mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
         p.setFont(mDisplayFont);
@@ -188,7 +192,7 @@ void TTextEdit::initDefaultSettings()
     mFgColor = QColor(192, 192, 192);
     mBgColor = QColor(Qt::black);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     int width = mScreenWidth * mFontWidth * 2;
     int height = mFontHeight * 2;
     // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -208,8 +212,6 @@ void TTextEdit::initDefaultSettings()
     mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
     mDisplayFont.setFixedPitch(true);
     setFont(mDisplayFont);
-    mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-    mCommandSeperator = QString(";");
     mWrapAt = 100;
     mWrapIndentCount = 5;
 }
@@ -221,7 +223,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -245,7 +247,7 @@ void TTextEdit::updateScreenView()
         mFontHeight = mFontAscent + mFontDescent;
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -264,7 +266,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         int width = mScreenWidth * mFontWidth * 2;
         int height = mFontHeight * 2;
         // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -314,9 +316,6 @@ void TTextEdit::showNewLines()
     mCursorY = mpBuffer->size();
     if (!mIsSplitScreen) {
         mpBuffer->mCursorY = mpBuffer->size();
-    }
-    if (mCursorY > mScreenHeight) {
-        mScrollUp = true;
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
     if (!mIsSplitScreen) {
@@ -402,7 +401,7 @@ inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QStr
         font.setUnderline(isUnderline);
         font.setItalic(isItalics);
         font.setStrikeOut(isStrikeOut);
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
 #endif
         painter.setFont(font);
@@ -410,7 +409,7 @@ inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QStr
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     QPointF _p(rect.x(), rect.bottom() - mFontDescent);
     painter.drawText(_p, text);
 #else
@@ -590,34 +589,18 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mScrollVector = 0;
         }
     }
-    if( ( ! noScroll ) && ( mScrollVector >= 0 ) && ( mScrollVector <= mScreenHeight ) && ( ! mForceUpdate ) )
-    {
-
-        if( mScrollVector*mFontHeight < mScreenMap.height()
-            && mScreenWidth*mFontWidth <= mScreenMap.width()
-            && (mScreenHeight-mScrollVector)*mFontHeight > 0
-            && (mScreenHeight-mScrollVector)*mFontHeight <= mScreenMap.height() )
-        {
-            screenPixmap = mScreenMap.copy( 0,
-                                            mScrollVector*mFontHeight,
-                                            mScreenWidth*mFontWidth,
-                                            (mScreenHeight-mScrollVector)*mFontHeight );
-            p.drawPixmap( 0, 0, screenPixmap );
+    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
+        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
+            && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
+            p.drawPixmap(0, 0, screenPixmap);
             from = mScreenHeight - mScrollVector - 1;
         }
-    }
-    else if( ( ! noScroll ) && ( mScrollVector < 0 && mScrollVector >= ((-1)*mScreenHeight) ) && ( ! mForceUpdate ) )
-    {
-        if( abs(mScrollVector)*mFontHeight < mScreenMap.height()
-            && mScreenWidth*mFontWidth <= mScreenMap.width()
-            && (mScreenHeight-abs(mScrollVector))*mFontHeight > 0
-            && (mScreenHeight-abs(mScrollVector))*mFontHeight <= mScreenMap.height() )
-        {
-            screenPixmap = mScreenMap.copy( 0,
-                                            0,
-                                            mScreenWidth*mFontWidth,
-                                            (mScreenHeight-abs(mScrollVector))*mFontHeight );
-            p.drawPixmap( 0, abs(mScrollVector)*mFontHeight, screenPixmap );
+    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
+        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
+            && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
+            p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
             y2 = abs(mScrollVector);
         }
@@ -720,7 +703,6 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
     drawBackground(painter, borderRect2, mBgColor);
     drawForeground(painter, rect);
-    mUpdateSlice = false;
 }
 
 
@@ -766,13 +748,20 @@ void TTextEdit::highlight()
         if (y == y1) {
             x = mPA.x();
         }
+
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            break;
+        }
+
         for (;; x++) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
-            mpBuffer->dirty[y] = true;
-            if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                mpBuffer->buffer[y][x].flags |= TCHAR_INVERSE;
+            if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                if (!(mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE)) {
+                    mpBuffer->buffer.at(y).at(x).flags |= TCHAR_INVERSE;
+                    mpBuffer->dirty[y] = true;
+                }
             } else {
                 break;
             }
@@ -783,7 +772,7 @@ void TTextEdit::highlight()
     mSelectedRegion = newRegion;
 }
 
-void TTextEdit::unHighlight(QRegion& region)
+void TTextEdit::unHighlight()
 {
     int y1 = mPA.y();
     if (y1 < 0) {
@@ -794,17 +783,20 @@ void TTextEdit::unHighlight(QRegion& region)
         if (y == y1) {
             x = mPA.x();
         }
+
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            break;
+        }
+
         for (;; x++) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
-            if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-                break;
-            }
-            mpBuffer->dirty[y] = true;
-            if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
-                mpBuffer->dirty[y] = true;
+            if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
+                    mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                    mpBuffer->dirty[y] = true;
+                }
             } else {
                 break;
             }
@@ -916,32 +908,31 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
                 if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
                     break;
                 }
-                int x = mpBuffer->buffer[y].size() - 1;
+                int x = mpBuffer->buffer.at(y).size() - 1;
                 if (y == y1) {
                     x = PC.x();
-                    if (x >= static_cast<int>(mpBuffer->buffer[y].size())) {
-                        x = static_cast<int>(mpBuffer->buffer[y].size()) - 1;
+                    if (x >= static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                        x = static_cast<int>(mpBuffer->buffer.at(y).size()) - 1;
                     }
                     if (x < 0) {
                         x = 0;
                     }
                 }
-                mpBuffer->dirty[y] = true;
                 for (;; x--) {
                     if ((y == mPA.y()) && (x < mPA.x())) {
                         break;
                     }
 
                     if (x < static_cast<int>(mpBuffer->buffer[y].size()) && x >= 0) {
-                        mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                        if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
+                            mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                            mpBuffer->dirty[y] = true;
+                        }
                     } else {
                         break;
                     }
                 }
             }
-            mP_aussen = mPA;
-        } else {
-            mP_aussen = PC;
         }
         mPA = PC;
     } else {
@@ -955,22 +946,22 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
                 if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
                     break;
                 }
-                mpBuffer->dirty[y] = true;
                 for (;; x++) {
                     if ((y == mPB.y()) && (x > mPB.x())) {
                         break;
                     }
-                    if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                        mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                    if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                        if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
+                            mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                            mpBuffer->dirty[y] = true;
+                        }
                     } else {
                         break;
                     }
                 }
             }
-            mP_aussen = mPB;
-        } else {
-            mP_aussen = PC;
         }
+
         mPB = PC;
     }
     if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
@@ -979,7 +970,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     if (mPA.y() > mPB.y()) {
         swap(mPA, mPB);
     }
-    mP_aussen = PC;
+
     highlight();
 }
 
@@ -1019,7 +1010,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mudletEvent.mArgumentList.append(QString::number(3));
             break;
         default: // TODO: What about those of us with more than three mouse buttons?
-            mudletEvent.mArgumentList.append(0);
+            mudletEvent.mArgumentList.append(QString());
             break;
         }
         mudletEvent.mArgumentList.append(QString::number(event->x()));
@@ -1062,7 +1053,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 }
             }
         }
-        unHighlight(mSelectedRegion);
+        unHighlight();
         mSelectedRegion = QRegion(0, 0, 0, 0);
         if (mLastClickTimer.elapsed() < 300) {
             int xind = x;
@@ -1169,15 +1160,55 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mIsCommandPopup = false;
 
+
         QAction* action = new QAction("copy", this);
-        action->setStatusTip(tr("copy selected text to clipboard"));
+        // According to the Qt Documentation:
+        // "This text is used for the tooltip."
+        // "If no tooltip is specified, the action's text is used."
+        // "By default, this property contains the action's text."
+        // So it seems that if we turn on tooltips (for all QAction) on a menu
+        // (with QMenu::setToolTipsVisible(true)) we should forcible clear
+        // the tooltip contents which are presumable filled with the default
+        // in the QAction constructor:
+        action->setToolTip(QString());
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
         QAction* action2 = new QAction("copy HTML", this);
-        action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
+        action2->setToolTip(QString());
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+        QAction* action3 = new QAction("select all", this);
+        action3->setToolTip(QString());
+        connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
+
+        QString selectedEngine = mpHost->getSearchEngine().first;
+        QAction* action4 = new QAction(("search on " + selectedEngine), this);
+        action4->setToolTip(QString());
+        connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+
         auto popup = new QMenu(this);
+        popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addSeparator();
+        popup->addAction(action3);
+        popup->addSeparator();
+        popup->addAction(action4);
+
+        if (!mudlet::self()->isControlsVisible()) {
+            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
+            connect(actionRestoreMainMenu, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainMenu()));
+            actionRestoreMainMenu->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                              .arg(tr("Use this to restore the Main menu to get access to controls.")));
+
+            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
+            connect(actionRestoreMainToolBar, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainToolBar()));
+            actionRestoreMainToolBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                 .arg(tr("Use this to restore the Main Toolbar to get access to controls.")));
+
+            popup->addSeparator();
+            popup->addAction(actionRestoreMainMenu);
+            popup->addAction(actionRestoreMainToolBar);
+        }
+
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
@@ -1202,53 +1233,30 @@ void TTextEdit::slot_copySelectionToClipboard()
     copySelectionToClipboard();
 }
 
+void TTextEdit::slot_selectAll()
+{
+    mPA = QPoint(0, 0);
+    mPB = mpBuffer->getEndPos();
+    highlight();
+    update();
+}
+
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
     copySelectionToClipboardHTML();
 }
 
+void TTextEdit::slot_searchSelectionOnline()
+{
+    searchSelectionOnline();
+}
+
 
 void TTextEdit::copySelectionToClipboard()
 {
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
-    QString text;
-
-    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            QClipboard* clipboard = QApplication::clipboard();
-            clipboard->setText(text);
-            mSelectedRegion = QRegion(0, 0, 0, 0);
-            forceUpdate();
-            return;
-        }
-        // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
-        if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y()) {
-            text.append(mpBuffer->timeBuffer[y].left(13));
-        }
-        int x = 0;
-        if (y == mPA.y()) {
-            x = mPA.x();
-        }
-        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            text.append(mpBuffer->lineBuffer[y].at(x));
-            if (y >= mPB.y()) {
-                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
-                    QClipboard* clipboard = QApplication::clipboard();
-                    clipboard->setText(text);
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-                    forceUpdate();
-                    return;
-                }
-            }
-            x++;
-        }
-        text.append("\n");
-    }
+    QString selectedText = getSelectedText();
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(selectedText);
 }
 
 void TTextEdit::copySelectionToClipboardHTML()
@@ -1350,6 +1358,67 @@ void TTextEdit::copySelectionToClipboardHTML()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
     return;
+}
+
+void TTextEdit::searchSelectionOnline()
+{
+    QString selectedText = getSelectedText(' ');
+    QString url = QUrl::toPercentEncoding(selectedText.trimmed());
+    url.prepend(mpHost->getSearchEngine().second);
+    QDesktopServices::openUrl(QUrl(url));
+}
+
+QString TTextEdit::getSelectedText(char newlineChar)
+{
+    // mPA QPoint where selection started
+    // mPB QPoint where selection ended
+
+    // if selection was made backwards swap
+    // right to left
+    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
+        swap(mPA, mPB);
+    }
+    // down to up
+    if (mPA.y() > mPB.y()) {
+        swap(mPA, mPB);
+    }
+
+    QString text;
+
+    // for each selected line
+    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
+        // stop if we are at the end of the buffer lines
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            mSelectedRegion = QRegion(0, 0, 0, 0);
+            forceUpdate();
+            return text;
+        }
+
+        int x = 0;
+        // if the selection started on this line
+        if (y == mPA.y()) {
+            // start from the column where the selection started
+            x = mPA.x();
+        }
+        // while we are not at the end of the buffer line
+        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
+            text.append(mpBuffer->lineBuffer[y].at(x));
+            // if the selection ended on this line
+            if (y >= mPB.y()) {
+                // stop if the selection ended on this column or the buffer line is ending
+                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+                    forceUpdate();
+                    return text;
+                }
+            }
+            x++;
+        }
+        // we never append the last character of a buffer line se we set our own
+        text.append(newlineChar);
+    }
+    qDebug() << "TTextEdit::getSelectedText(...) INFO - unexpectedly hit bottom of method so returning:" << text;
+    return text;
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
@@ -1504,4 +1573,30 @@ int TTextEdit::bufferScrollDown(int lines)
 
         return lines;
     }
+}
+
+int TTextEdit::getColumnCount()
+{
+    int charWidth;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        charWidth = qRound(QFontMetricsF(mpHost->mDisplayFont).averageCharWidth());
+    } else {
+        charWidth = qRound(QFontMetricsF(mDisplayFont).averageCharWidth());
+    }
+
+    return width() / charWidth;
+}
+
+int TTextEdit::getRowCount()
+{
+    int rowHeight;
+
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        rowHeight = qRound(QFontMetricsF(mpHost->mDisplayFont).lineSpacing());
+    } else {
+        rowHeight = qRound(QFontMetricsF(mDisplayFont).lineSpacing());
+    }
+
+    return height() / rowHeight;
 }

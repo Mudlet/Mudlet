@@ -134,9 +134,6 @@ public:
     void reloadModule(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
 
-    void setIsAutologin(bool b) { mIsAutologin = b; }
-    bool isAutologin() { return mIsAutologin; }
-    void setReplacementCommand(const QString&);
     void registerEventHandler(const QString&, TScript*);
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
@@ -146,6 +143,9 @@ public:
     void callEventHandlers();
     void stopAllTriggers();
     void reenableAllTriggers();
+
+    // get Search Engine
+    QPair<QString, QString> getSearchEngine();
 
     void set_USE_IRE_DRIVER_BUGFIX(bool b)
     {
@@ -160,15 +160,6 @@ public:
     }
 
     void adjustNAWS();
-
-    class Exception_NoLogin
-    {
-    };
-
-    class Exception_NoConnectionAvailable
-    {
-    };
-
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
@@ -247,6 +238,10 @@ public:
     QString mEditorTheme;
     // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
+
+    // search engine URL prefix to search query
+    QMap<QString, QString> mSearchEngineData;
+    QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
     // remembering this value to show what the user has selected does have its
@@ -344,32 +339,20 @@ private:
     int mHostID;
     QString mHostName;
 
-    bool mIsAutologin;
-
     bool mIsClosingDown;
 
     QString mLine;
     QMutex mLock;
     QString mLogin;
-    int mMainIconSize;
-    QString mMudOutputBuffer;
+
     int mMXPMode;
 
     QString mPass;
-    QStringList mParagraphList;
 
     int mPort;
-    QString mPrompt;
-
-    QString mReplacementCommand;
-
-    QString mRest;
 
     int mRetries;
     bool mSaveProfileOnExit;
-    bool mShowToolbar;
-    int mTEFolderIconSize;
-    QStringList mTextBufferList;
 
     QString mUserDefinedName;
 

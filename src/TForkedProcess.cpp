@@ -91,14 +91,14 @@ int TForkedProcess::sendMessage(lua_State* L)
 {
     QPointer<TForkedProcess>* forkedProcess = *((QPointer<TForkedProcess>**)lua_topointer(L, lua_upvalueindex(1)));
 
-    if (forkedProcess == 0 || forkedProcess->isNull() || !(*forkedProcess)->running) {
+    if (!forkedProcess || forkedProcess->isNull() || !(*forkedProcess)->running) {
         lua_pushstring(L, "Unable to send data to process. Process has ended.");
         return lua_error(L);
     }
 
     size_t stringLength = 0;
     const char* toWrite = lua_tolstring(L, 1, &stringLength);
-    if (toWrite == 0) {
+    if (!toWrite) {
         lua_pushstring(L, "Unable to get data to send.");
         lua_error(L);
     }
@@ -118,7 +118,7 @@ int TForkedProcess::isProcessRunning(lua_State* L)
 {
     QPointer<TForkedProcess>* forkedProcess = *((QPointer<TForkedProcess>**)lua_topointer(L, lua_upvalueindex(1)));
 
-    bool running = (forkedProcess != 0 && !forkedProcess->isNull() && (*forkedProcess)->running);
+    bool running = (forkedProcess != nullptr && !forkedProcess->isNull() && (*forkedProcess)->running);
     lua_pushboolean(L, running);
     return 1;
 }
@@ -127,7 +127,7 @@ int TForkedProcess::closeInputOfProcess(lua_State* L)
 {
     QPointer<TForkedProcess>* forkedProcess = *((QPointer<TForkedProcess>**)lua_topointer(L, lua_upvalueindex(1)));
 
-    if (forkedProcess == 0 || forkedProcess->isNull() || !(*forkedProcess)->running) {
+    if (!forkedProcess || forkedProcess->isNull() || !(*forkedProcess)->running) {
         // Process is already finished. Nothing to do.
         return 0;
     }

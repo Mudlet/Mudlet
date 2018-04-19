@@ -123,11 +123,9 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
-        if (pChild) {
-            pChild->setParent(pNewParent);
-        }
+        pChild->setParent(pNewParent);
     } else {
-        pChild->Tree<TTimer>::setParent(0);
+        pChild->Tree<TTimer>::setParent(nullptr);
         addTimerRootNode(pChild, parentPosition, childPosition);
     }
 
@@ -168,7 +166,7 @@ TTimer* TimerUnit::getTimer(int id)
     if (mTimerMap.find(id) != mTimerMap.end()) {
         return mTimerMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -177,7 +175,7 @@ TTimer* TimerUnit::getTimerPrivate(int id)
     if (mTimerMap.find(id) != mTimerMap.end()) {
         return mTimerMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -249,8 +247,8 @@ void TimerUnit::_removeTimer(TTimer* pT)
 bool TimerUnit::enableTimer(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTimer*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTimer* pT = it.value();
 
         if (!pT->isOffsetTimer()) {
@@ -288,8 +286,8 @@ bool TimerUnit::enableTimer(const QString& name)
 bool TimerUnit::disableTimer(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTimer*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTimer* pT = it.value();
         if (pT->isOffsetTimer()) {
             pT->setShouldBeActive(false);
@@ -306,12 +304,12 @@ bool TimerUnit::disableTimer(const QString& name)
 
 TTimer* TimerUnit::findTimer(const QString& name)
 {
-    QMap<QString, TTimer*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTimer* pT = it.value();
         return pT;
     }
-    return 0;
+    return nullptr;
 }
 
 

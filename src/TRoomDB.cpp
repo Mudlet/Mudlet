@@ -19,7 +19,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "TRoomDB.h"
 
 #include "Host.h"
@@ -33,13 +32,14 @@
 #include <QApplication>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QRegularExpression>
 #include <QStringBuilder>
 #include "post_guard.h"
 
 
 TRoomDB::TRoomDB( TMap * pMap )
 : mpMap( pMap )
-, mpTempRoomDeletionSet( 0 )
+, mpTempRoomDeletionSet( nullptr )
 , mUnnamedAreaName( tr( "Unnamed Area" ) )
 , mDefaultAreaName( tr( "Default Area" ) )
 {
@@ -51,18 +51,17 @@ TRoomDB::TRoomDB( TMap * pMap )
 TRoom* TRoomDB::getRoom(int id)
 {
     if (id < 0) {
-        return 0;
+        return nullptr;
     }
     auto i = rooms.find(id);
     if (i != rooms.end() && i.key() == id) {
         return i.value();
     }
-    return 0;
+    return nullptr;
 }
 
 bool TRoomDB::addRoom(int id)
 {
-    qDebug() << "addRoom(" << id << ")";
     if (!rooms.contains(id) && id > 0) {
         rooms[id] = new TRoom(this);
         rooms[id]->setId(id);
@@ -208,13 +207,13 @@ bool TRoomDB::__removeRoom(int id)
 
         // FIXME: make a proper exit controller so we don't need to do all these if statements
         // Remove the links from the rooms entering this room
-        QMultiHash<int, int>::const_iterator i = _entranceMap.find(id);
+        QMultiHash<int, int>::const_iterator i = _entranceMap.constFind(id);
         // The removeAllSpecialExitsToRoom below modifies the entranceMap - and
         // it is unsafe to modify (use copy operations on) something that an STL
         // iterator is active on - see "Implicit sharing iterator problem" in
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
         // copy and iterating through that instead whilst modifying the original
-        while (i != entranceMap.end() && i.key() == id) {
+        while (i != entranceMap.cend() && i.key() == id) {
             if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
                 ++i;
                 continue; // Bypass rooms we know are also to be deleted
@@ -336,7 +335,7 @@ void TRoomDB::removeRoom(QSet<int>& ids)
     }
     deleteValuesFromEntranceMap(deletedRoomIds);
     mpTempRoomDeletionSet->clear();
-    mpTempRoomDeletionSet = 0;
+    mpTempRoomDeletionSet = nullptr;
     qDebug() << "TRoomDB::removeRoom(QList<int>) run time for" << roomcount << "rooms:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
@@ -442,14 +441,14 @@ TArea* TRoomDB::getArea(int id)
 {
     //area id of -1 is a room in the "void", 0 is a failure
     if (id > 0 || id == -1) {
-        return areas.value(id, 0);
+        return areas.value(id, nullptr);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
 // Used by TMap::audit() - can detect and return areas with normally invalids Id (less than -1 or zero)!
-TArea* TRoomDB::getRawArea(int id, bool* isValid = 0)
+TArea* TRoomDB::getRawArea(int id, bool* isValid = nullptr)
 {
     if (areas.contains(id)) {
         if (isValid) {
@@ -460,7 +459,7 @@ TArea* TRoomDB::getRawArea(int id, bool* isValid = 0)
         if (isValid) {
             *isValid = false;
         }
-        return 0;
+        return nullptr;
     }
 }
 
@@ -788,7 +787,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->appendAreaErrorMsg(faultyAreaId, tr("[ INFO ]  - The area with this bad id was renumbered to: %1.").arg(replacementAreaId), true);
             mpMap->appendAreaErrorMsg(replacementAreaId, tr("[ INFO ]  - This area was renumbered from the bad id: %1.").arg(faultyAreaId), true);
 
-            TArea* pA = 0;
+            TArea* pA = nullptr;
             if (areas.contains(faultyAreaId)) {
                 pA = areas.take(faultyAreaId);
             } else {
@@ -1127,7 +1126,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         }
         if (areaNamesMap.values().contains(nonEmptyAreaName)) {
             // Oh dear, we have a duplicate
-            if (nonEmptyAreaName.contains(QRegExp(R"(_\d\d\d$)"))) {
+            if (nonEmptyAreaName.contains(QRegularExpression(QStringLiteral(R"(_\d\d\d$)")))) {
                 // the areaName already is of form "something_###" where # is a
                 // digit, have to strip that off and remember so warning message
                 // can include advice on this change

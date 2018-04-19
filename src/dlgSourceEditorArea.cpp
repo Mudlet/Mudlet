@@ -30,8 +30,6 @@
 #include "edbee/views/textrenderer.h"
 #include "edbee/views/texttheme.h"
 
-//#include "ui_source_editor_area.h"
-
 dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
