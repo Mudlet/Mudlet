@@ -48,7 +48,7 @@ class TTextEdit : public QWidget
 
 public:
     Q_DISABLE_COPY(TTextEdit)
-    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen);
+    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
@@ -125,7 +125,7 @@ private:
     bool mInversOn;
     bool mIsDebugConsole;
     bool mIsMiniConsole;
-    bool mIsSplitScreen;
+    bool mIsLowerPane;
     int mLastRenderBottom;
     int mLeftMargin;
     bool mMouseTracking;

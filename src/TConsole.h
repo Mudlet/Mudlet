@@ -171,8 +171,8 @@ public:
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;
-    TTextEdit* console;
-    TTextEdit* console2;
+    TTextEdit* mUpperPane;
+    TTextEdit* mLowerPane;
     int currentFgColorProperty;
     QToolButton* emergencyStop;
     bool isUserScrollBack;

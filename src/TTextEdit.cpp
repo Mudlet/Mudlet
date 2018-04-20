@@ -45,7 +45,7 @@
 #include "post_guard.h"
 
 
-TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen)
+TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane)
 : QWidget(pW)
 , mCursorY(0)
 , mIsCommandPopup(false)
@@ -59,7 +59,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mInversOn(false)
 , mIsDebugConsole(isDebugConsole)
 , mIsMiniConsole(false)
-, mIsSplitScreen(isSplitScreen)
+, mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
 , mMouseTracking(false)
 , mpBuffer(pB)
@@ -303,7 +303,7 @@ void TTextEdit::updateScreenView()
 
 void TTextEdit::showNewLines()
 {
-    if (!mIsSplitScreen) {
+    if (!mIsLowerPane) {
         if (!isTailMode()) {
             return;
         }
@@ -314,20 +314,20 @@ void TTextEdit::showNewLines()
     }
 
     mCursorY = mpBuffer->size();
-    if (!mIsSplitScreen) {
+    if (!mIsLowerPane) {
         mpBuffer->mCursorY = mpBuffer->size();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
-    if (!mIsSplitScreen) {
+    if (!mIsLowerPane) {
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            disconnect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
+            disconnect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->mUpperPane, SLOT(slot_scrollBarMoved(int)));
             mpConsole->mpScrollBar->setRange(0, mpBuffer->getLastLineNumber());
             mpConsole->mpScrollBar->setSingleStep(1);
             mpConsole->mpScrollBar->setPageStep(mScreenHeight);
-            if (mpConsole->console->isTailMode()) {
+            if (mpConsole->mUpperPane->isTailMode()) {
                 mpConsole->mpScrollBar->setValue(mpBuffer->mCursorY);
             }
-            connect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
+            connect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->mUpperPane, SLOT(slot_scrollBarMoved(int)));
         }
     }
     update();
@@ -337,18 +337,18 @@ void TTextEdit::scrollTo(int line)
 {
     if ((line > -1) && (line < mpBuffer->size())) {
         if ((line < (mpBuffer->getLastLineNumber() - mScreenHeight) && mIsTailMode)) {
-            mpConsole->console2->mCursorY = mpBuffer->size();
-            mpConsole->console2->mIsTailMode = true;
+            mpConsole->mLowerPane->mCursorY = mpBuffer->size();
+            mpConsole->mLowerPane->mIsTailMode = true;
             mIsTailMode = false;
-            mpConsole->console2->show();
-            mpConsole->console2->forceUpdate();
+            mpConsole->mLowerPane->show();
+            mpConsole->mLowerPane->forceUpdate();
         } else if ((line > (mpBuffer->getLastLineNumber() - mScreenHeight)) && !mIsTailMode) {
-            mpConsole->console2->mCursorY = mpConsole->buffer.getLastLineNumber();
-            mpConsole->console2->hide();
-            mpConsole->console->mCursorY = mpConsole->buffer.getLastLineNumber();
-            mpConsole->console->mIsTailMode = true;
-            mpConsole->console->updateScreenView();
-            mpConsole->console->forceUpdate();
+            mpConsole->mLowerPane->mCursorY = mpConsole->buffer.getLastLineNumber();
+            mpConsole->mLowerPane->hide();
+            mpConsole->mUpperPane->mCursorY = mpConsole->buffer.getLastLineNumber();
+            mpConsole->mUpperPane->mIsTailMode = true;
+            mpConsole->mUpperPane->updateScreenView();
+            mpConsole->mUpperPane->forceUpdate();
         }
         mpBuffer->mCursorY = line;
 
@@ -359,7 +359,7 @@ void TTextEdit::scrollTo(int line)
 
 void TTextEdit::scrollUp(int lines)
 {
-    if (mIsSplitScreen) {
+    if (mIsLowerPane) {
         return;
     }
     lines = bufferScrollUp(lines);
@@ -375,7 +375,7 @@ void TTextEdit::scrollUp(int lines)
 
 void TTextEdit::scrollDown(int lines)
 {
-    if (mIsSplitScreen) {
+    if (mIsLowerPane) {
         return;
     }
     lines = bufferScrollDown(lines);
@@ -1215,13 +1215,13 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::MidButton) {
-        mpConsole->console2->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->console2->hide();
+        mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size(); //
+        mpConsole->mLowerPane->hide();
         mpBuffer->mCursorY = mpBuffer->size();
-        mpConsole->console->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->console->mIsTailMode = true;
-        mpConsole->console->updateScreenView();
-        mpConsole->console->forceUpdate();
+        mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size(); //
+        mpConsole->mUpperPane->mIsTailMode = true;
+        mpConsole->mUpperPane->updateScreenView();
+        mpConsole->mUpperPane->forceUpdate();
         event->accept();
         return;
     }
@@ -1466,7 +1466,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
-    if (!mIsSplitScreen && !mIsDebugConsole) {
+    if (!mIsLowerPane && !mIsDebugConsole) {
         mpHost->adjustNAWS();
     }
 
@@ -1492,7 +1492,7 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
 
 int TTextEdit::imageTopLine()
 {
-    if (!mIsSplitScreen) {
+    if (!mIsLowerPane) {
         mCursorY = mpBuffer->mCursorY;
     }
     if (mCursorY > mScreenHeight) {

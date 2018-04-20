@@ -310,18 +310,18 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     splitter->setParent(layer);
     setFocusProxy(mpCommandLine);
 
-    console = new TTextEdit(this, splitter, &buffer, mpHost, isDebugConsole, false);
-    console->setContentsMargins(0, 0, 0, 0);
-    console->setSizePolicy(sizePolicy3);
-    console->setFocusPolicy(Qt::NoFocus);
+    mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, isDebugConsole, false);
+    mUpperPane->setContentsMargins(0, 0, 0, 0);
+    mUpperPane->setSizePolicy(sizePolicy3);
+    mUpperPane->setFocusPolicy(Qt::NoFocus);
 
-    console2 = new TTextEdit(this, splitter, &buffer, mpHost, isDebugConsole, true);
-    console2->setContentsMargins(0, 0, 0, 0);
-    console2->setSizePolicy(sizePolicy3);
-    console2->setFocusPolicy(Qt::NoFocus);
+    mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, isDebugConsole, true);
+    mLowerPane->setContentsMargins(0, 0, 0, 0);
+    mLowerPane->setSizePolicy(sizePolicy3);
+    mLowerPane->setFocusPolicy(Qt::NoFocus);
 
-    splitter->addWidget(console);
-    splitter->addWidget(console2);
+    splitter->addWidget(mUpperPane);
+    splitter->addWidget(mLowerPane);
 
     splitter->setCollapsible(1, false);
     splitter->setCollapsible(0, false);
@@ -375,7 +375,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     timeStampButton->setFocusPolicy(Qt::NoFocus);
     timeStampButton->setToolTip(tr("<html><head/><body><p>Show Time Stamps.</p></body></html>"));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
+    connect(timeStampButton, SIGNAL(pressed()), mUpperPane, SLOT(slot_toggleTimeStamps()));
 
     auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -501,20 +501,20 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     sizeList << 6 << 2;
     splitter->setSizes(sizeList);
 
-    console->show();
-    console2->show();
-    console2->hide();
+    mUpperPane->show();
+    mLowerPane->show();
+    mLowerPane->hide();
     if (mIsDebugConsole) {
         mpCommandLine->hide();
     }
 
     isUserScrollBack = false;
 
-    connect(mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
+    connect(mpScrollBar, SIGNAL(valueChanged(int)), mUpperPane, SLOT(slot_scrollBarMoved(int)));
 
     if (mIsSubConsole) {
         mpScrollBar->hide();
-        console2->hide();
+        mLowerPane->hide();
         layerCommandLine->hide();
         mpMainFrame->move(0, 0);
         mpMainDisplay->move(0, 0);
@@ -541,10 +541,10 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpButtonMainLayer->setMaximumWidth(400);
     setFocusPolicy(Qt::ClickFocus);
     setFocusProxy(mpCommandLine);
-    console->setFocusPolicy(Qt::ClickFocus);
-    console->setFocusProxy(mpCommandLine);
-    console2->setFocusPolicy(Qt::ClickFocus);
-    console2->setFocusProxy(mpCommandLine);
+    mUpperPane->setFocusPolicy(Qt::ClickFocus);
+    mUpperPane->setFocusProxy(mpCommandLine);
+    mLowerPane->setFocusPolicy(Qt::ClickFocus);
+    mLowerPane->setFocusProxy(mpCommandLine);
 
     buttonLayerSpacer->setAutoFillBackground(true);
     buttonLayerSpacer->setPalette(__pal);
@@ -563,7 +563,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         // non-null mudlet::self() - the connect(...) will produce a debug
         // message and not make THAT connection should it indeed be null but it
         // is not fatal...
-        // So, this SHOULD be the main profile console - Slysven
+        // So, this SHOULD be the main profile mUpperPane - Slysven
         connect(mudlet::self(), SIGNAL(signal_profileMapReloadRequested(QList<QString>)), this, SLOT(slot_reloadMap(QList<QString>)), Qt::UniqueConnection);
         connect(this, SIGNAL(signal_newDataAlert(const QString&, const bool)), mudlet::self(), SLOT(slot_newDataOnHost(const QString&, const bool)), Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the
@@ -704,8 +704,8 @@ void TConsole::closeEvent(QCloseEvent* event)
             std::string key = objectName().toLatin1().data();
             TConsole* pC = mpHost->mpConsole;
             if (pC->mSubConsoleMap.find(key) != pC->mSubConsoleMap.end()) {
-                console->close();
-                console2->close();
+                mUpperPane->close();
+                mLowerPane->close();
 
                 pC->mSubConsoleMap.erase(key);
             }
@@ -957,14 +957,14 @@ void TConsole::changeColors()
     if (mIsDebugConsole) {
         mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
         mDisplayFont.setFixedPitch(true);
-        console->setFont(mDisplayFont);
-        console2->setFont(mDisplayFont);
+        mUpperPane->setFont(mDisplayFont);
+        mLowerPane->setFont(mDisplayFont);
         QPalette palette;
         palette.setColor(QPalette::Text, mFgColor);
         palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
         palette.setColor(QPalette::Base, QColor(Qt::black));
-        console->setPalette(palette);
-        console2->setPalette(palette);
+        mUpperPane->setPalette(palette);
+        mLowerPane->setPalette(palette);
     } else if (mIsSubConsole) {
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
@@ -979,22 +979,22 @@ void TConsole::changeColors()
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
         qreal letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
-        console->mLetterSpacing = letterSpacing;
-        console2->mLetterSpacing = letterSpacing;
+        mUpperPane->mLetterSpacing = letterSpacing;
+        mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, console->mLetterSpacing);
+        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
         mDisplayFont.setFixedPitch(true);
-        console->setFont(mDisplayFont);
-        console2->setFont(mDisplayFont);
+        mUpperPane->setFont(mDisplayFont);
+        mLowerPane->setFont(mDisplayFont);
         QPalette palette;
         palette.setColor(QPalette::Text, mFgColor);
         palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
         palette.setColor(QPalette::Base, mBgColor);
         setPalette(palette);
         layer->setPalette(palette);
-        console->setPalette(palette);
-        console2->setPalette(palette);
+        mUpperPane->setPalette(palette);
+        mLowerPane->setPalette(palette);
     } else {
         QPalette pal;
         pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
@@ -1023,21 +1023,21 @@ void TConsole::changeColors()
         // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
         qreal letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
-        console->mLetterSpacing = letterSpacing;
-        console2->mLetterSpacing = letterSpacing;
+        mUpperPane->mLetterSpacing = letterSpacing;
+        mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, console->mLetterSpacing);
+        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
-        console->setFont(mpHost->mDisplayFont);
-        console2->setFont(mpHost->mDisplayFont);
+        mUpperPane->setFont(mpHost->mDisplayFont);
+        mLowerPane->setFont(mpHost->mDisplayFont);
         QPalette palette;
         palette.setColor(QPalette::Text, mpHost->mFgColor);
         palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
         palette.setColor(QPalette::Base, mpHost->mBgColor);
         setPalette(palette);
         layer->setPalette(palette);
-        console->setPalette(palette);
-        console2->setPalette(palette);
+        mUpperPane->setPalette(palette);
+        mLowerPane->setPalette(palette);
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         mpCommandLine->setFont(mpHost->mDisplayFont);
@@ -1054,8 +1054,8 @@ void TConsole::changeColors()
     palette.setColor(QPalette::Base, QColor(Qt::red));
 
     if (!mIsSubConsole) {
-        console->mWrapAt = mWrapAt;
-        console2->mWrapAt = mWrapAt;
+        mUpperPane->mWrapAt = mWrapAt;
+        mLowerPane->mWrapAt = mWrapAt;
         splitter->setPalette(palette);
     }
 
@@ -1069,14 +1069,14 @@ void TConsole::changeColors()
 void TConsole::setConsoleBgColor(int r, int g, int b)
 {
     mBgColor = QColor(r, g, b);
-    console->setConsoleBgColor(r, g, b);
+    mUpperPane->setConsoleBgColor(r, g, b);
     changeColors();
 }
 
 void TConsole::setConsoleFgColor(int r, int g, int b)
 {
     mFgColor = QColor(r, g, b);
-    console->setConsoleFgColor(r, g, b);
+    mUpperPane->setConsoleFgColor(r, g, b);
     changeColors();
 }
 
@@ -1140,8 +1140,8 @@ void TConsole::runTriggers(int line)
 
 void TConsole::finalize()
 {
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
@@ -1181,25 +1181,25 @@ void TConsole::finalize()
 
 void TConsole::scrollDown(int lines)
 {
-    console->scrollDown(lines);
-    if (console->isTailMode()) {
-        console2->mCursorY = buffer.lineBuffer.size(); //getLastLineNumber();
-        console2->hide();
-        console->mCursorY = buffer.lineBuffer.size(); //getLastLineNumber();
-        console->mIsTailMode = true;
-        console->updateScreenView();
-        console->forceUpdate();
+    mUpperPane->scrollDown(lines);
+    if (mUpperPane->isTailMode()) {
+        mLowerPane->mCursorY = buffer.lineBuffer.size(); //getLastLineNumber();
+        mLowerPane->hide();
+        mUpperPane->mCursorY = buffer.lineBuffer.size(); //getLastLineNumber();
+        mUpperPane->mIsTailMode = true;
+        mUpperPane->updateScreenView();
+        mUpperPane->forceUpdate();
     }
 }
 
 void TConsole::scrollUp(int lines)
 {
-    console2->mIsTailMode = true;
-    console2->mCursorY = buffer.size(); //getLastLineNumber();
-    console2->show();
-    console2->updateScreenView();
-    console2->forceUpdate();
-    console->scrollUp(lines);
+    mLowerPane->mIsTailMode = true;
+    mLowerPane->mCursorY = buffer.size(); //getLastLineNumber();
+    mLowerPane->show();
+    mLowerPane->updateScreenView();
+    mLowerPane->forceUpdate();
+    mUpperPane->scrollUp(lines);
 }
 
 void TConsole::deselect()
@@ -1280,7 +1280,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
                 buffer.insertInLine(P, text, _f);
             }
             buffer.applyLink(P, P2, text, func, hint);
-            console->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
+            mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
         } else if (y >= mEngineCursor) {
             if (customFormat) {
                 buffer.insertInLine(P, text, mFormatCurrent);
@@ -1312,8 +1312,8 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
                                        mFormatCurrent.bold,
                                        mFormatCurrent.italics,
                                        mFormatCurrent.underline );*/
-            console->showNewLines();
-            console2->showNewLines();
+            mUpperPane->showNewLines();
+            mLowerPane->showNewLines();
 
         } else {
             if (customFormat) {
@@ -1327,7 +1327,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
                 int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
-                console->needUpdate(y_tmp, y_tmp + down + 1);
+                mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
                 int y_neu = y_tmp + down;
                 int x_adjust = text.lastIndexOf("\n");
                 int x_neu = 0;
@@ -1336,7 +1336,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
                 }
                 moveCursor(x_neu, y_neu);
             } else {
-                console->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
+                mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
                 moveCursor(mUserCursor.x() + text.size(), mUserCursor.y());
             }
         }
@@ -1364,7 +1364,7 @@ void TConsole::insertText(const QString& text, QPoint P)
         }
         if (y < mEngineCursor) {
             buffer.insertInLine(P, text, mFormatCurrent);
-            console->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
+            mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
         } else if (y >= mEngineCursor) {
             buffer.insertInLine(P, text, mFormatCurrent);
         }
@@ -1384,16 +1384,16 @@ void TConsole::insertText(const QString& text, QPoint P)
                           mFormatCurrent.flags & TCHAR_ITALICS,
                           mFormatCurrent.flags & TCHAR_UNDERLINE,
                           mFormatCurrent.flags & TCHAR_STRIKEOUT);
-            console->showNewLines();
-            console2->showNewLines();
+            mUpperPane->showNewLines();
+            mLowerPane->showNewLines();
         } else {
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
                 int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
-                console->needUpdate(y_tmp, y_tmp + down + 1);
+                mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
-                console->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
+                mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
             }
         }
     }
@@ -1814,12 +1814,12 @@ void TConsole::_luaWrapLine(int line)
 
 bool TConsole::setMiniConsoleFontSize(int size)
 {
-    console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-    console->updateScreenView();
-    console->forceUpdate();
-    console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-    console2->updateScreenView();
-    console2->forceUpdate();
+    mUpperPane->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    mUpperPane->updateScreenView();
+    mUpperPane->forceUpdate();
+    mLowerPane->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    mLowerPane->updateScreenView();
+    mLowerPane->forceUpdate();
     return true;
 }
 
@@ -2067,8 +2067,8 @@ void TConsole::printCommand(QString& msg)
                 buffer.insertInLine(P, msg, format);
                 int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
 
-                console->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
-                console2->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
+                mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
+                mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 buffer.promptBuffer[lineBeforeNewContent] = false;
                 return;
             }
@@ -2130,16 +2130,16 @@ void TConsole::print(const char* txt)
                   mFormatCurrent.flags & TCHAR_ITALICS,
                   mFormatCurrent.flags & TCHAR_UNDERLINE,
                   mFormatCurrent.flags & TCHAR_STRIKEOUT);
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 void TConsole::printDebug(QColor& c, QColor& d, const QString& msg)
 {
     buffer.append(msg, 0, msg.size(), c.red(), c.green(), c.blue(), d.red(), d.green(), d.blue(), false, false, false, false);
 
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 TConsole* TConsole::createBuffer(const QString& name)
@@ -2194,8 +2194,8 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->setObjectName(name);
         pC->setFocusPolicy(Qt::NoFocus);
         pC->setUserWindow();
-        pC->console->setIsMiniConsole();
-        pC->console2->setIsMiniConsole();
+        pC->mUpperPane->setIsMiniConsole();
+        pC->mLowerPane->setIsMiniConsole();
         pC->resize(width, height);
         pC->mOldX = x;
         pC->mOldY = y;
@@ -2295,8 +2295,8 @@ bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int 
         QPalette mainPalette;
         mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
         mSubConsoleMap[key]->setPalette(mainPalette);
-        mSubConsoleMap[key]->console->mBgColor = QColor(r, g, b, alpha);
-        mSubConsoleMap[key]->console2->mBgColor = QColor(r, g, b, alpha);
+        mSubConsoleMap[key]->mUpperPane->mBgColor = QColor(r, g, b, alpha);
+        mSubConsoleMap[key]->mLowerPane->mBgColor = QColor(r, g, b, alpha);
         return true;
     } else if (mLabelMap.find(key) != mLabelMap.end()) {
         QPalette mainPalette;
@@ -2342,12 +2342,12 @@ bool TConsole::showWindow(const QString& name)
 {
     std::string key = name.toLatin1().data();
     if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        mSubConsoleMap[key]->console->updateScreenView();
-        mSubConsoleMap[key]->console->forceUpdate();
+        mSubConsoleMap[key]->mUpperPane->updateScreenView();
+        mSubConsoleMap[key]->mUpperPane->forceUpdate();
         mSubConsoleMap[key]->show();
 
-        mSubConsoleMap[key]->console2->updateScreenView();
-        mSubConsoleMap[key]->console2->forceUpdate();
+        mSubConsoleMap[key]->mLowerPane->updateScreenView();
+        mSubConsoleMap[key]->mLowerPane->forceUpdate();
         //mSubConsoleMap[key]->move(mSubConsoleMap[key]->mOldX, mSubConsoleMap[key]->mOldY);
         return true;
     } else if (mLabelMap.find(key) != mLabelMap.end()) {
@@ -2402,15 +2402,15 @@ void TConsole::print(const QString& msg)
                   mFormatCurrent.flags & TCHAR_ITALICS,
                   mFormatCurrent.flags & TCHAR_UNDERLINE,
                   mFormatCurrent.flags & TCHAR_STRIKEOUT);
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor)
 {
     buffer.append(msg, 0, msg.size(), fgColor.red(), fgColor.green(), fgColor.blue(), bgColor.red(), bgColor.green(), bgColor.blue(), false, false, false, false);
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 
@@ -2443,8 +2443,8 @@ void TConsole::printSystemMessage(const QString& msg)
                   false,
                   false,
                   false);
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 void TConsole::echoUserWindow(const QString& msg)
@@ -2466,12 +2466,12 @@ void TConsole::paste()
 {
     if (buffer.size() - 1 > mUserCursor.y()) {
         buffer.paste(mUserCursor, mClipboard);
-        console->needUpdate(mUserCursor.y(), mUserCursor.y());
+        mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y());
     } else {
         buffer.appendBuffer(mClipboard);
     }
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 void TConsole::pasteWindow(TBuffer bufferSlice)
@@ -2483,15 +2483,15 @@ void TConsole::pasteWindow(TBuffer bufferSlice)
 void TConsole::appendBuffer()
 {
     buffer.appendBuffer(mClipboard);
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 void TConsole::appendBuffer(TBuffer bufferSlice)
 {
     buffer.appendBuffer(bufferSlice);
-    console->showNewLines();
-    console2->showNewLines();
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 
@@ -2582,7 +2582,7 @@ void TConsole::slot_searchBufferUp()
         } while (begin > -1);
         if (_found) {
             scrollUp(buffer.mCursorY - i - 3);
-            console->forceUpdate();
+            mUpperPane->forceUpdate();
             mCurrentSearchResult = i;
             return;
         }
@@ -2621,7 +2621,7 @@ void TConsole::slot_searchBufferDown()
         } while (begin > -1);
         if (_found) {
             scrollUp(buffer.mCursorY - i - 3);
-            console->forceUpdate();
+            mUpperPane->forceUpdate();
             mCurrentSearchResult = i;
             return;
         }
