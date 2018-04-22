@@ -6408,6 +6408,7 @@ void dlgTriggerEditor::saveOpenChanges()
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
     if (mNeedUpdateData) {
+        saveOpenChanges();
         treeWidget_triggers->clear();
         treeWidget_aliases->clear();
         treeWidget_timers->clear();
@@ -6423,6 +6424,7 @@ void dlgTriggerEditor::enterEvent(QEvent* pE)
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
     if (mNeedUpdateData) {
+        saveOpenChanges();
         treeWidget_triggers->clear();
         treeWidget_aliases->clear();
         treeWidget_timers->clear();
