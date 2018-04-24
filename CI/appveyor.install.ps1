@@ -290,7 +290,7 @@ function InstallLibzip() {
 
 function InstallZziplib() {
   DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.69.tar.gz" "zziplib-0.13.69.tar.gz"
-  ExtractTar "zziplib-0.19.62.tar.gz" "zziplib"
+  ExtractTar "zziplib-0.19.69.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-0.13.69
 
   #Set-Location "$ciScriptDir\..\3rdparty\zziplib"
