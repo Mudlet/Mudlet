@@ -12475,7 +12475,7 @@ void TLuaInterpreter::initIndenterGlobals()
     int error = luaL_dostring(pIndenterState, R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
-      get_formatted_code = request('!.formats.lua.save')
+      get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
         string e = "no error message available from Lua";
