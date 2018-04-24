@@ -241,7 +241,7 @@ function InstallPcre() {
   DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.42.tar.gz" "pcre-8.42.tar.gz"
   ExtractTar "pcre-8.42.tar.gz" "pcre-8.42"
   Set-Location pcre-8.42\pcre-8.42
-  RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
+  RunConfigure "--enable-utf --enable-unicode-properties --enable-pcre16 --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
 }
