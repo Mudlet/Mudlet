@@ -272,13 +272,20 @@ function InstallZlib() {
 }
 
 function InstallLibzip() {
-  DownloadFile "https://libzip.org/download/libzip-1.3.0.tar.gz" "libzip-1.3.0.tar.gz"
-  ExtractTar "libzip-1.3.0.tar.gz" "libzip"
-  Set-Location libzip\libzip-1.3.0
-  RunConfigure
+  $Env:Path = $NoShPath
+  DownloadFile "https://libzip.org/download/libzip-1.5.1.tar.gz" "libzip-1.5.1.tar.gz"
+  ExtractTar "libzip-1.5.1.tar.gz" "libzip"
+  Set-Location libzip\libzip-1.5.1
+  if (!(Test-Path -Path "build" -PathType Container)) {
+    Step "Creating libzip build path"
+    New-Item build -ItemType Directory >> "$logFile" 2>&1
+  }
+  Set-Location build
+  Step "running cmake"
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
-  Copy-Item "lib\zipconf.h" "$Env:MINGW_BASE_DIR\include"
+  $Env:Path = $ShPath
 }
 
 function InstallZziplib() {
