@@ -289,12 +289,11 @@ function InstallLibzip() {
 }
 
 function InstallZziplib() {
-  # The three lines below are changed because of https://github.com/gdraheim/zziplib/issues/8
-  #DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.62.tar.gz" "zziplib-0.13.62.tar.gz"
-  #ExtractTar "zziplib-0.13.62.tar.gz" "zziplib"
-  #Set-Location zziplib\zziplib-0.13.62
+  DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.69.tar.gz" "zziplib-0.13.69.tar.gz"
+  ExtractTar "zziplib-0.19.62.tar.gz" "zziplib"
+  Set-Location zziplib\zziplib-0.13.69
 
-  Set-Location "$ciScriptDir\..\3rdparty\zziplib"
+  #Set-Location "$ciScriptDir\..\3rdparty\zziplib"
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
   RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
