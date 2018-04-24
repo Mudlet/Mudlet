@@ -3,7 +3,7 @@
 	url = http://github.com/edbee/edbee-lib.git
 [submodule "3rdparty/lua_code_formatter"]
 	path = 3rdparty/lcf
-	url = https://github.com/Mudlet/lua_code_formatter.git
+	url = https://github.com/martin-eden/lua_code_formatter.git
 [submodule "3rdparty/dblsqd"]
 	path = 3rdparty/dblsqd
 	url = https://bitbucket.org/pentacent/dblsqd-sdk-qt.git
