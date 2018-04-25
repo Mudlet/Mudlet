@@ -1706,8 +1706,7 @@ void dlgProfilePreferences::slot_resetLogDir()
         return;
     }
 
-    logDirPath = "";
-
+    logDirPath.clear();
     return;
 }
 
