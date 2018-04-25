@@ -826,17 +826,17 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         QString directoryLogFile;
         QString logFileNameFormat;
-
         // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir.isEmpty()) {
             directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
-
         // If no log name format is set, default to "yyyy-MM-dd#hh-mm-ss"
         if (mpHost->mLogFileNameFormat.isEmpty()) {
             logFileNameFormat = "yyyy-MM-dd#hh-mm-ss";
+        } else {
+            logFileNameFormat = mpHost->mLogFileNameFormat;
         }
 
         // Revised file name derived from time so that alphabetical filename and
@@ -854,7 +854,10 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(logFileNameFormat));
         }
         mLogFile.setFileName(mLogFileName);
-        mLogFile.open(QIODevice::WriteOnly | QIODevice::Append);
+        if (mpHost->mIsCurrentLogFileInHtmlFormat)
+            mLogFile.open(QIODevice::ReadWrite);
+        else
+            mLogFile.open(QIODevice::WriteOnly | QIODevice::Append);
         mLogStream.setDevice(&mLogFile);
         if (isMessageEnabled) {
             QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
@@ -876,6 +879,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
     if (mLogToLogFile) {
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+            QString log;
+            QTextStream logStream(&log);
             QStringList fontsList;                  // List of fonts to become the font-family entry for
                                                     // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
@@ -890,32 +895,56 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             fontsList << QStringLiteral("Courier");
             fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
 
-            mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
-            mLogStream << "<html>\n";
-            mLogStream << " <head>\n";
-            mLogStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
+            logStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
+            logStream << "<html>\n";
+            logStream << " <head>\n";
+            logStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
             // put the charset as early as possible as the parser MUST restart when it
             // switches away from the ASCII default
-            mLogStream << "  <meta name='generator' content='Mudlet MUD Client version: " << APP_VERSION << APP_BUILD << "'>\n";
+            logStream << tr("  <meta name='generator' content='Mudlet MUD Client version: %1%2'>\n").arg(APP_VERSION, APP_BUILD);
             // Nice to identify what made the file!
-            mLogStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(profile_name) << "</title>\n";
+            logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(profile_name) << "</title>\n";
             // Web-page title
-            mLogStream << "  <style type='text/css'>\n";
-            mLogStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(255,255,255); background-color:rgb("
-                       << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
-            mLogStream << "        span { white-space: pre; } -->\n";
-            mLogStream << "  </style>\n";
-            mLogStream << "  </head>\n";
-            mLogStream << "  <body><div>";
+            logStream << "  <style type='text/css'>\n";
+            logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(255,255,255); background-color:rgb("
+                << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
+            logStream << "        span { white-space: pre; } -->\n";
+            logStream << "  </style>\n";
+            logStream << "  </head>\n";
+            bool isAtBody = false;
+            bool foundBody = false;
+            while (!mLogStream.atEnd()) {
+                QString line = mLogStream.readLine();
+                if (line.contains("<body><div>")) {
+                    // Begin writing old log to the current log when the body is
+                    // found.
+                    isAtBody = true;
+                    foundBody = true;
+                } else if (line.contains("</div></body>")) {
+                    // Stop writing to current log once the end of the old log's
+                    // <body> is reached.
+                    isAtBody = false;
+                }
+
+                if (isAtBody) {
+                    logStream << line << "\n";
+                }
+            }
+            if (!foundBody) {
+                logStream << "  <body><div>";
+            }
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
+
+            mLogFile.resize(0);
+            mLogStream << log;
             mLogFile.flush();
         }
         logButton->setToolTip(tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>"));
     } else {
         buffer.logRemainingOutput();
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogStream << "</div></body>\n";
+            mLogStream << "  </div></body>\n";
             mLogStream << "</html>\n";
         }
         mLogFile.flush();

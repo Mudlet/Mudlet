@@ -163,6 +163,7 @@ private:
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+
     QString logDirPath;
     QString logFileNameFormat;
 };
