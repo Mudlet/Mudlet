@@ -289,9 +289,9 @@ function InstallLibzip() {
 }
 
 function InstallZziplib() {
-  DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-0.13.69.tar.gz"
-  ExtractTar "zziplib-0.13.69.tar.gz" "zziplib"
-  Set-Location zziplib\zziplib-0.13.69
+  DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-FixZzipStrndup.tar.gz"
+  ExtractTar "zziplib-FixZzipStrndup.tar.gz" "zziplib"
+  Set-Location zziplib\zziplib-FixZzipStrndup.tar.gz
 
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
