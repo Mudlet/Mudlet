@@ -302,9 +302,9 @@ function InstallZziplib() {
 }
 
 function InstallLuarocks() {
-  DownloadFile "http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip" "luarocks-2.4.0-win32.zip"
-  ExtractZip "luarocks-2.4.0-win32.zip" "luarocks"
-  Set-Location luarocks\luarocks-2.4.0-win32
+  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-2.4.4-win32.zip" "luarocks-2.4.4-win32.zip"
+  ExtractZip "luarocks-2.4.4-win32.zip" "luarocks"
+  Set-Location luarocks\luarocks-2.4.4-win32
   Step "installing luarocks"
   exec ".\install.bat" @("/P", "C:\LuaRocks", "/MW", "/Q")
   Set-Location \LuaRocks\lua\luarocks
