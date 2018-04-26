@@ -219,8 +219,12 @@ public:
     bool mIsNextLogFileInHtmlFormat;
 
     bool mIsLoggingTimestamps;
+
     QString mLogDir;
+    QString mLogFileName;
     QString mLogFileNameFormat;
+    int mLogFileNameFormatIndex;
+
     bool mResetProfile;
     int mScreenHeight;
     int mScreenWidth;

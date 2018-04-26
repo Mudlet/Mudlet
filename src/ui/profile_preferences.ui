@@ -2116,35 +2116,30 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_setLogNameFormat">
+           <widget class="QLabel" name="label_logFileNameFormat">
             <property name="text">
-             <string>Format of log file name:</string>
+             <string>Log format:</string>
             </property>
             <property name="buddy">
-             <cstring>lineEdit_setLogNameFormat</cstring>
+              <cstring>comboBox_logFileNameFormat</cstring>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QLineEdit" name="lineEdit_setLogNameFormat">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Customize the format of the log file name. Leave blank to default to &lt;code&gt;&quot;yyyy-MM-dd#hh-mm-ss&quot;&lt;/code&gt;.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Examples:&lt;/span&gt;&lt;/p&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Year:&lt;br/&gt;yyyy (e.g., 1997)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Year and month:&lt;br/&gt;yyyy-MM (e.g., 1997-07)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Complete date:&lt;br/&gt;yyyy-MM-dd (e.g., 1997-07-16)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Complete date plus hours and minutes:&lt;br/&gt;yyyy-MM-ddTHH:mm (e.g., 1997-07-16T19:20)&lt;/span&gt;&lt;/pre&gt;&lt;pre style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Courier New,courier';&quot;&gt;Complete date plus hours, minutes and seconds:&lt;br/&gt;yyyy-MM-ddTHH:mm:ss (e.g., 1997-07-16T19:20:30)&lt;/span&gt;&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_logFileName">
+            <property name="text">
+             <string>Log name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_dateTimeFormatInfoLink">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="acceptDrops">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>&lt;p&gt;More information on date and time formatting &lt;a href=&quot;https://doc.qt.io/qt-5/qdatetime.html#toString-1&quot;&gt;here&lt;/a&gt;.</string>
-            </property>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEdit_logFileName">
            </widget>
           </item>
          </layout>

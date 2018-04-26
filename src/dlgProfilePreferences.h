@@ -114,6 +114,7 @@ public slots:
     // Log.
     void slot_setLogDir();
     void slot_resetLogDir();
+    void slot_logFileNameFormatChange(const int index);
 
     // Save.
     void slot_save_and_exit();
@@ -164,8 +165,7 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
 
-    QString logDirPath;
-    QString logFileNameFormat;
+    QString mLogDirPath;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

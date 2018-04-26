@@ -143,11 +143,25 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                         .arg("<p>Select the only or the primary font used (depending on <i>Only use symbols "
                                              "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                        .arg("<p>Using a single font is likely to produce a more consistent style but may "
-                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+                                                             .arg("<p>Using a single font is likely to produce a more consistent style but may "
+                                                                  "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                                  "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                                  "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                                  "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+
+    // Set the properties on tab_logging
+    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
+                                                   .arg("<p>This option sets the format of the log name.</p>"
+                                                        "<p>If 'Named file' is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH:mm:ss (e.g., 1970-01-01#00:00:00)"), QStringLiteral("yyyy-MM-dd#HH:mm:ss"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH:mm:ss (e.g., 1970-01-01T00:00:00)"), QStringLiteral("yyyy-MM-dd#THH:mm:ss"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate logs by day)"), QStringLiteral("yyyy-MM-dd"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate logs by month)"), QStringLiteral("yyyy-MM"));
+    comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
+    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (Logs are appended if a log file of the same name already exists).</p>"));
+    lineEdit_logFileName->setPlaceholderText(tr("logfile"));
+    lineEdit_logFileName->setEnabled(false);
+
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -401,8 +415,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
     rightBorderWidth->setValue(pHost->mBorderRightWidth);
-    logDirPath = pHost->mLogDir;
-    lineEdit_setLogNameFormat->setText(pHost->mLogFileNameFormat);
+    comboBox_logFileNameFormat->setCurrentIndex(pHost->mLogFileNameFormatIndex);
+    lineEdit_logFileName->setText(pHost->mLogFileName);
+    lineEdit_logFileName->setEnabled(pHost->mLogFileNameFormat.isEmpty());
     mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
@@ -603,6 +618,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_whereToLog, SIGNAL(clicked()), this, SLOT(slot_setLogDir()));
     connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
+    connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1689,12 +1705,11 @@ void dlgProfilePreferences::copyMap()
 void dlgProfilePreferences::slot_setLogDir()
 {
     Host* pHost = mpHost;
-    if (!pHost) {
+    if (!pHost)
         return;
-    }
 
-    QDir currentLogDir = QFileDialog::getExistingDirectory(this, tr("Select log directory"), logDirPath, QFileDialog::ShowDirsOnly);
-    logDirPath = currentLogDir.absolutePath();
+    QDir currentLogDir = QFileDialog::getExistingDirectory(this, tr("Select log directory"), pHost->mLogDir, QFileDialog::ShowDirsOnly);
+    mLogDirPath = currentLogDir.absolutePath();
 
     return;
 }
@@ -1702,12 +1717,22 @@ void dlgProfilePreferences::slot_setLogDir()
 void dlgProfilePreferences::slot_resetLogDir()
 {
     Host* pHost = mpHost;
-    if (!pHost) {
+    if (!pHost)
         return;
-    }
 
-    logDirPath.clear();
+    mLogDirPath.clear();
     return;
+}
+
+void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
+{
+    Q_UNUSED(index);
+
+    Host* pHost = mpHost;
+    if (!pHost)
+        return;
+
+    lineEdit_logFileName->setEnabled(pHost->mLogFileNameFormat.isEmpty());
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
@@ -1769,8 +1794,10 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
-        pHost->mLogDir = logDirPath;
-        pHost->mLogFileNameFormat = lineEdit_setLogNameFormat->text();
+        pHost->mLogDir = mLogDirPath;
+        pHost->mLogFileName = lineEdit_logFileName->text();
+        pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
+        pHost->mLogFileNameFormatIndex = comboBox_logFileNameFormat->currentIndex();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
