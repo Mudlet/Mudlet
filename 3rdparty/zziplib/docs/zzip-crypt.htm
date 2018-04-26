@@ -1,0 +1,92 @@
+<section> <date> 15. July 2002 </date>
+<h2> ZIP Std Encryption </h2>       Standard Zip Encryption is Weak!
+
+<!--border-->
+
+<section>
+<h3> Some rationale </h3>
+
+<P>
+  Some people might ask why not adding standard zip-encryption. Well,
+  first of all the standard zip-encryption has not been strong enough
+  for modern computers, and there are hacker tools that even a 
+  half-literate computer-user can use to crack the password of a
+  zip-archive. In other words: <b> every encrypted zip file can be
+  cracked using freely downloadable helper tools </b>. That's because
+  standard zip encryption is weak regarding modern personal computer 
+  power. Furthermore, adding <em>real</em> encryption is a heavy weight
+  that many people do not need, see the last argument for seeing the
+  standard one is useless anyway, and adding a non-standard one 
+  should not be the case of the standard zziplib either, ye know.
+</P><P>
+  On the other hand, obfuscation is a means to fear off half-literates
+  just as well - there are no <em>premade</em> tools for the obfuscation you
+  can invent from the xor examples. And a hacker that can de-obfuscate
+  such a dat-file is able to dissassemble your program as well - just to
+  remind you that the disassembly of a program will reveal the decryption
+  routine <em>and</em> the decryption key, even for a heavyweight crypt
+  algorithm. Although there is a difference, it just ranges on about times 
+  and exprience, not magnitudes. Remember the old saying: you can irritate
+  some people for some time but not irritate all people for all the time.
+  As for encryption of artwork and AI scripts in games and applications,
+  just keep in mind that the final recipient has the decryption key on
+  his system anyway, just obfuscated. So each such encryption is nothing
+  more than just a clever form of obfuscation, nothing mathematical strong.
+</P><P>
+  Some other people might ask why to obfuscate anyway. Well, the reason
+  is theft. Even people who write opensource free software generally
+  like to get some reward for what they do, some fame or atleast some 
+  sweet dream to have helped the world go a bit easier in the future.
+  As for program text this is quite natural for the programmers who
+  pick up some code from somewhere else - it happens that most of them
+  have gone through some formation and they know how hard it is to get
+  even some lines of code out of your brain. This is not the case for
+  some artwork and AI parameters, people do not have much respect for
+  those - they just pick it up, put it under their umbrella, and 
+  that's it - they even claim they could have done that themselves,
+  and in most cases it is that they never have been really trying to
+  do it and think of it as being comparable to that action-art they've
+  seen on TV. 
+</P><P>
+  Just be sure that there is nothing wrong with obfuscating
+  things for a binary distribution of your program even for the
+  opensource case - the program text itself is an obfuscation in its
+  source form when being compiled into cpu instructions. Still, the
+  interested people can get hold of the source code since you provide
+  it somewhere and actually the original programmers like to hear 
+  from literate people who could help with modifying the project. The
+  same is true for you artwork and AI scripts, the interested people
+  can still see them in the opensource project material, but only
+  those will look who dare to, not just the halfwit next door. 
+</P><P>
+  Well, you do not need to that on the other hand - ID software has
+  shown that it can be very helpful since people will start to
+  write new maps and new bots, pack them and publish them. An open
+  data format is a form of attraction for people who can use a 
+  graphics program and an editor but who do not know how to program.
+  And if you use obfuscation within an opensource program, it is
+  surely enought to just use the xor-format presented here, so that
+  it easy for third people to get involved if they want to, they
+  just have to rewrite their new datapacks with zzxorcopy, and
+  that's it.
+</P><P>
+  As for the non-opensource projects, be aware that there are
+  some ways to even staticlink the zziplib into your project, so
+  you can even hide that you used zip tools to create your dat files.
+  This is well enough for anyone to do - as soon as a hacker will
+  get to the point to notice you used a zip format, he would have
+  had found any other deobfusation or decryption routine as well.
+  If you are frightened, just encrypt the executable with tools
+  you bought from somewhere else. On the other hand, should there
+  be problems or bugs, you have an easier time to find them when
+  they could be caused by your dat entries, and it is again easy
+  to send a fixup file to your clients, since the command line
+  tools are just a breeze compared with some other anti-hacking
+  tools you'll find on the market.
+</P><P>
+  Well, hope this is enough rationale to tell you that I do not
+  see a need to implement anything more than obfuscation within
+  zziplib - if you need real encryption, use real encryption
+  software and its fileformat that supports it, not zip files.
+</P>
+</section></section>

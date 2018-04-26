@@ -41,7 +41,7 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 , mpWidget( new QWidget( this ) )
 , mName( name )
 , mRecordMove( false )
-, mpLayout( 0 )
+, mpLayout( nullptr )
 , mItemCount( 0 )
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
@@ -137,7 +137,7 @@ void TToolBar::addButton(TFlipButton* pB)
 
     if (!mpTAction->mUseCustomLayout) {
         // tool bar mButtonColumns > 0 -> autolayout
-        // case == 0: use individual button placment for user defined layouts
+        // case == 0: use individual button placement for user defined layouts
         int columns = mpTAction->getButtonColumns();
         if (columns <= 0) {
             columns = 1;
@@ -176,7 +176,7 @@ void TToolBar::finalize()
     int row = (++mItemCount) / columns;
     int column = (mItemCount - 1) % columns;
     mpLayout->addWidget(fillerWidget, row, column);
-    // 3 lines above are to avoid order of operations problem of orginal line
+    // 3 lines above are to avoid order of operations problem of original line
     // (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:
     //    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
 }
@@ -225,7 +225,7 @@ void TToolBar::clear()
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
-        mpLayout = 0;
+        mpLayout = nullptr;
     }
     auto test = new QWidget;
     setStyleSheet(mpTAction->css);

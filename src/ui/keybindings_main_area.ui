@@ -1,80 +1,74 @@
-<ui version="4.0" >
- <class>keys_main_area</class>
- <widget class="QWidget" name="keys_main_area" >
-  <property name="geometry" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>keybindings_main_area</class>
+ <widget class="QWidget" name="keybindings_main_area">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>402</width>
-    <height>80</height>
+    <width>600</width>
+    <height>100</height>
    </rect>
   </property>
-  <property name="sizePolicy" >
-   <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="minimumSize" >
-   <size>
-    <width>0</width>
-    <height>80</height>
-   </size>
-  </property>
-  <property name="maximumSize" >
-   <size>
-    <width>16777215</width>
-    <height>80</height>
-   </size>
-  </property>
-  <property name="windowTitle" >
-   <string>Form</string>
-  </property>
-  <layout class="QGridLayout" name="gridLayout" >
-   <property name="horizontalSpacing" >
-    <number>0</number>
-   </property>
-   <property name="verticalSpacing" >
-    <number>4</number>
-   </property>
-   <property name="margin" >
-    <number>0</number>
-   </property>
-   <item row="0" column="0" >
-    <widget class="QLabel" name="label_4" >
-     <property name="text" >
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_key_name">
+     <property name="text">
       <string>Name:</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
     </widget>
    </item>
-   <item row="0" column="1" colspan="2" >
-    <widget class="QLineEdit" name="lineEdit_name" />
+   <item row="0" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEdit_key_name">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
    </item>
-   <item row="1" column="0" >
-    <widget class="QLabel" name="label_2" >
-     <property name="text" >
+   <item row="1" column="0" alignment="Qt::AlignRight">
+    <widget class="QLabel" name="label_key_command">
+     <property name="text">
       <string>Command:</string>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="1" colspan="2" >
-    <widget class="QLineEdit" name="lineEdit_command" />
-   </item>
-   <item row="2" column="0" >
-    <widget class="QLabel" name="label_3" >
-     <property name="text" >
-      <string>Key Binding:</string>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
-   <item row="2" column="1" >
-    <widget class="QLineEdit" name="lineEdit_key" >
-     <property name="palette" >
+   <item row="1" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEdit_key_command">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in one or more commands you want the key to send directly to the MUD when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the MUD Server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_key_binding">
+     <property name="text">
+      <string>Key Binding:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLineEdit" name="lineEdit_key_binding">
+     <property name="palette">
       <palette>
        <active>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>225</red>
            <green>232</green>
            <blue>255</blue>
@@ -83,9 +77,9 @@
         </colorrole>
        </active>
        <inactive>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>225</red>
            <green>232</green>
            <blue>255</blue>
@@ -94,9 +88,9 @@
         </colorrole>
        </inactive>
        <disabled>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>244</red>
            <green>244</green>
            <blue>244</blue>
@@ -106,22 +100,20 @@
        </disabled>
       </palette>
      </property>
-     <property name="readOnly" >
+     <property name="readOnly">
       <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="2" column="2" >
-    <widget class="QPushButton" name="pushButton_grabKey" >
-     <property name="text" >
+   <item row="2" column="2">
+    <widget class="QPushButton" name="pushButton_key_grabKey">
+     <property name="text">
       <string>Grab New Key</string>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../mudlet_alpha.qrc" />
- </resources>
+ <resources/>
  <connections/>
 </ui>

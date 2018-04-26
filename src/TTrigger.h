@@ -50,6 +50,7 @@ class TMatchState;
 #define REGEX_LUA_CODE 4
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
+#define REGEX_PROMPT 7
 
 #define OVECCOUNT 30 // should be a multiple of 3
 
@@ -74,7 +75,7 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host* pHost); //throws exeption ExObjNoCreate
+    TTrigger(const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
     QString getCommand() { return mCommand; }
     void compileAll();
     void setCommand(const QString& b) { mCommand = b; }
@@ -116,6 +117,7 @@ public:
     bool match_lua_code(int);
     bool match_line_spacer(int regexNumber);
     bool match_color_pattern(int, int);
+    bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
     int getConditionLineDelta() { return mConditionLineDelta; }
     bool registerTrigger();
@@ -143,6 +145,9 @@ public:
     QStringList mRegexCodeList;
     bool exportItem;
     bool mModuleMasterFolder;
+    // specifies whenever the payload is Lua code as a string
+    // or a function
+    bool mRegisteredAnonymousLuaFunction;
 
 private:
     TTrigger() {}
@@ -153,6 +158,7 @@ private:
     QList<int> mRegexCodePropertyList;
     QMap<int, QSharedPointer<pcre>> mRegexMap;
 
+    // Lua code as a string to run
     QString mScript;
 
     bool mNeedsToBeCompiled;

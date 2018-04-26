@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>packageDialog</class>
- <widget class="QDialog" name="packageDialog">
+ <class>package_manager</class>
+ <widget class="QDialog" name="package_manager">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -9,9 +9,6 @@
     <width>652</width>
     <height>490</height>
    </rect>
-  </property>
-  <property name="windowTitle">
-   <string>Dialog</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
@@ -84,7 +81,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>packageDialog</receiver>
+   <receiver>package_manager</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -100,7 +97,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>packageDialog</receiver>
+   <receiver>package_manager</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

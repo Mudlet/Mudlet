@@ -125,11 +125,9 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
-        if (pChild) {
-            pChild->setParent(pNewParent);
-        }
+        pChild->setParent(pNewParent);
     } else {
-        pChild->Tree<TTrigger>::setParent(0);
+        pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
     }
 }
@@ -154,7 +152,7 @@ TTrigger* TriggerUnit::getTrigger(int id)
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -163,7 +161,7 @@ TTrigger* TriggerUnit::getTriggerPrivate(int id)
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -224,7 +222,7 @@ void TriggerUnit::removeTrigger(TTrigger* pT)
     mTriggerMap.remove(pT->getID());
 }
 
-// trigger matching order is permantent trigger objects first, temporary objects second
+// trigger matching order is permanent trigger objects first, temporary objects second
 // after package import or module sync this order needs to be reset
 void TriggerUnit::reorderTriggersAfterPackageImport()
 {
@@ -249,10 +247,14 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (data.size() > 0) {
-        char* subject = (char*)malloc(strlen(data.toLocal8Bit().data()) + 1);
-        strcpy(subject, data.toLocal8Bit().data());
-
+    if (!data.isEmpty()) {
+#if defined(Q_OS_WIN32)
+        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+        char* subject = (char*)malloc(strlen(data.toUtf8().data()) + 1);
+        strcpy(subject, data.toUtf8().data());
+#else
+        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
         for (auto trigger : mTriggerRootNodeList) {
             trigger->match(subject, data, line);
         }
@@ -291,19 +293,19 @@ void TriggerUnit::reenableAllTriggers()
 
 TTrigger* TriggerUnit::findTrigger(const QString& name)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         return pT;
     }
-    return 0;
+    return nullptr;
 }
 
 bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->setIsActive(true);
         ++it;
@@ -315,8 +317,8 @@ bool TriggerUnit::enableTrigger(const QString& name)
 bool TriggerUnit::disableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->setIsActive(false);
         ++it;
@@ -327,8 +329,8 @@ bool TriggerUnit::disableTrigger(const QString& name)
 
 void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->mKeepFiring = lines;
         ++it;
@@ -337,8 +339,8 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 
 bool TriggerUnit::killTrigger(const QString& name)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         if (pT->isTemporary()) //this function is only defined for tempTriggers, permanent objects cannot be removed
         {

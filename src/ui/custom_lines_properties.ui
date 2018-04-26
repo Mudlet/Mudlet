@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <author>Stephen Lyons</author>
- <class>roomExitProperties</class>
- <widget class="QDialog" name="roomExitProperties">
+ <class>custom_line_properties</class>
+ <widget class="QDialog" name="custom_line_properties">
   <property name="windowModality">
    <enum>Qt::WindowModal</enum>
   </property>
@@ -27,7 +27,7 @@
    <string>Custom Line Properties [*]</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet_alpha.qrc">
+   <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_custom_exit_properties.png</normaloff>:/icons/mudlet_custom_exit_properties.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
@@ -271,13 +271,13 @@
   </layout>
  </widget>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>roomExitProperties</receiver>
+   <receiver>custom_line_properties</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -293,7 +293,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>roomExitProperties</receiver>
+   <receiver>custom_line_properties</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

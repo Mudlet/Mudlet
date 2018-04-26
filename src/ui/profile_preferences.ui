@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>685</height>
+    <width>744</width>
+    <height>668</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,12 +20,12 @@
    <string>Profile preferences</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet_alpha.qrc">
+   <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <widget class="QTabWidget" name="tabWidgeta">
+    <widget class="QTabWidget" name="tabWidget">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -44,7 +44,7 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="General">
+     <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -55,21 +55,8 @@
        <string>General</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_19">
-       <item row="5" column="0">
-        <spacer name="verticalSpacer_8">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_11">
+        <widget class="QGroupBox" name="groupBox_iconsAndToolbars">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -79,15 +66,15 @@
          <property name="title">
           <string>Icon sizes</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_34">
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mainIconSize">
             <property name="text">
              <string>Icon size toolbars:</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="0" column="1" alignment="Qt::AlignLeft">
            <widget class="QSpinBox" name="MainIconSize">
             <property name="specialValueText">
              <string/>
@@ -103,14 +90,14 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="0" column="2" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_33">
             <property name="text">
              <string>Icon size in tree views:</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="0" column="3" alignment="Qt::AlignLeft">
            <widget class="QSpinBox" name="TEFolderIconSize">
             <property name="minimum">
              <number>1</number>
@@ -123,24 +110,62 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="showMenuBar">
-            <property name="toolTip">
-             <string>Enables the typical menu bar with drop-down menus in the main window. Requires restart to take effect</string>
-            </property>
+          <item row="1" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_menuBarVisiblity">
             <property name="text">
-             <string>Show menu bar</string>
+             <string>Show menu bar:</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="showToolbar">
-            <property name="toolTip">
-             <string>Enables the default button bar in the main window. Requires restart to take effect</string>
+          <item row="1" column="1" alignment="Qt::AlignLeft">
+           <widget class="QComboBox" name="comboBox_menuBarVisibility">
+            <property name="currentIndex">
+             <number>0</number>
             </property>
+            <item>
+             <property name="text">
+              <string>Never</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Until a profile is loaded</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Always</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="2" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_toolBarVisibility">
             <property name="text">
              <string>Show main toolbar</string>
             </property>
+           </widget>
+          </item>
+          <item row="1" column="3" alignment="Qt::AlignLeft">
+           <widget class="QComboBox" name="comboBox_toolBarVisibility">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <item>
+             <property name="text">
+              <string>Never</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Until a profile is loaded</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Always</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
@@ -169,7 +194,7 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_2">
+        <widget class="QGroupBox" name="groupBox_miscellaneous">
          <property name="title">
           <string>Misc</string>
          </property>
@@ -216,7 +241,7 @@
         </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QGroupBox" name="groupBox_13">
+        <widget class="QGroupBox" name="groupBox_protocols">
          <property name="title">
           <string>Game protocols</string>
          </property>
@@ -228,6 +253,16 @@
             </property>
             <property name="text">
              <string>Enable GMCP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="mEnableMSDP">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MSDP</string>
             </property>
            </widget>
           </item>
@@ -255,22 +290,25 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="mEnableMSDP">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enable MSDP</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
+       <item row="4" column="0">
+        <spacer name="verticalSpacer_general">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="input_line_tab">
+     <widget class="QWidget" name="tab_inputLine">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -282,7 +320,7 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_11">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_4">
+        <widget class="QGroupBox" name="groupBox_input">
          <property name="enabled">
           <bool>true</bool>
          </property>
@@ -347,6 +385,9 @@
             <property name="enabled">
              <bool>true</bool>
             </property>
+            <property name="placeholderText">
+             <string>Enter text to separate commands with or leave blank to disable</string>
+            </property>
            </widget>
           </item>
           <item row="4" column="0">
@@ -373,7 +414,7 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_15">
+        <widget class="QGroupBox" name="groupBox_spellCheck">
          <property name="title">
           <string>Spell check</string>
          </property>
@@ -402,7 +443,7 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <spacer name="verticalSpacer_2">
+        <spacer name="verticalSpacer_inputLine">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -416,7 +457,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab">
+     <widget class="QWidget" name="tab_display">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -427,50 +468,8 @@
        <string>Main display</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_17">
-       <item row="3" column="0">
-        <widget class="QGroupBox" name="doubleclick_groupbox">
-         <property name="title">
-          <string>Double-click</string>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_6">
-          <item>
-           <widget class="QLabel" name="doubleclick_ignore_label">
-            <property name="text">
-             <string>Stop selecting a word on these characters:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="doubleclick_ignore_lineedit">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the characters you'd like double-clicking to stop selecting text on here. If you don't enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>'&quot;</string>
-            </property>
-            <property name="placeholderText">
-             <string>&lt;characters to ignore in selection, for example ' or &quot;&gt;</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_6">
+        <widget class="QGroupBox" name="groupBox_font">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -485,26 +484,6 @@
            <widget class="QLabel" name="label_30">
             <property name="text">
              <string>Font:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="4">
-           <widget class="QComboBox" name="fontSize"/>
-          </item>
-          <item row="0" column="3">
-           <widget class="QLabel" name="label_35">
-            <property name="text">
-             <string>Size:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QCheckBox" name="mNoAntiAlias">
-            <property name="toolTip">
-             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
-            </property>
-            <property name="text">
-             <string>Enable anti-aliasing</string>
             </property>
            </widget>
           </item>
@@ -524,11 +503,31 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="3">
+           <widget class="QLabel" name="label_35">
+            <property name="text">
+             <string>Size:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QComboBox" name="fontSize"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="mNoAntiAlias">
+            <property name="toolTip">
+             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
+            </property>
+            <property name="text">
+             <string>Enable anti-aliasing</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_9">
+        <widget class="QGroupBox" name="groupBox_borders">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -715,107 +714,11 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButtonBorderColor">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Pick border color</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2" colspan="2">
-           <widget class="QPushButton" name="pushButtonBorderImage">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Border background image</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QGroupBox" name="groupBox_displayOptions">
-         <property name="title">
-          <string>Display options</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_10">
-          <item row="1" column="2">
-           <widget class="QComboBox" name="comboBox_statusBarSetting">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;For some actions - particularly those involving a &lt;i&gt;context menu&lt;/i&gt; (mouse &amp;quot;right-click&amp;quot; action) Mudlet can put up hints about the currently selected action before it is activated on a status bar at the bottom of the screen. By default this is &lt;i&gt;off&lt;/i&gt; (never shown), even when there is soemthing to display. For use on &amp;quot;full-size&amp;quot; Computers you may wish to change this setting to (always) &lt;i&gt;on&lt;/i&gt; but for those with limited space on their screen they will probably want to keep it turned off perminently or only have it set to &lt;i&gt;auto&lt;/i&gt; so it only pop-ups when there is something to show.&lt;/p&gt;&lt;p&gt;This setting controls that feature, the choice made will be remembered between sessions, and it applies to all profiles.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some MUDs (notably all IRE ones) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Fix unnecessary linebreaks on GA servers</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Show Spaces/Tabs</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_statusBarSetting">
-            <property name="text">
-             <string>Status Bar:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_statusBarSetting</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Use Mudlet on a netbook with a small screen</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Show Line/Paragraphs</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_echoLuaErrors">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Echo Lua errors to the main console</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_10">
+        <widget class="QGroupBox" name="groupBox_wrapping">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -928,20 +831,121 @@
          </layout>
         </widget>
        </item>
+       <item row="3" column="0">
+        <widget class="QGroupBox" name="groupBox_doubleClick">
+         <property name="title">
+          <string>Double-click</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QLabel" name="doubleclick_ignore_label">
+            <property name="text">
+             <string>Stop selecting a word on these characters:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="doubleclick_ignore_lineedit">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the characters you'd like double-clicking to stop selecting text on here. If you don't enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>'&quot;</string>
+            </property>
+            <property name="placeholderText">
+             <string>&lt;characters to ignore in selection, for example ' or &quot;&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QGroupBox" name="groupBox_displayOptions">
+         <property name="title">
+          <string>Display options</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_10">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some MUDs (notably all IRE ones) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Fix unnecessary linebreaks on GA servers</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show Spaces/Tabs</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use Mudlet on a netbook with a small screen</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show Line/Paragraphs</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_echoLuaErrors">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Echo Lua errors to the main console</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <spacer name="verticalSpacer_mainDisplay">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="code_editor_tab">
+     <widget class="QWidget" name="tab_codeEditor">
       <attribute name="title">
        <string>Editor</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_26">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="code_editor_theme_selection_groupbox">
+        <widget class="QGroupBox" name="groupbox_codeEditorThemeSelection">
          <property name="title">
           <string>Theme</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_25">
-          <item row="0" column="0">
+         <layout class="QGridLayout" name="gridLayout_25" columnstretch="2,1">
+          <item row="0" column="0" colspan="2">
            <widget class="QFrame" name="frame_3">
             <property name="minimumSize">
              <size>
@@ -984,24 +988,20 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="2,1">
-            <item>
-             <widget class="QComboBox" name="code_editor_theme_selection_combobox">
-              <property name="editable">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="script_preview_combobox">
-              <property name="editable">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <widget class="QComboBox" name="code_editor_theme_selection_combobox">
+            <property name="editable">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
-          <item row="2" column="0">
+          <item row="1" column="1">
+           <widget class="QComboBox" name="script_preview_combobox">
+            <property name="editable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
            <widget class="QLabel" name="theme_download_label">
             <property name="font">
              <font>
@@ -1017,7 +1017,7 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <spacer name="verticalSpacer_5">
+        <spacer name="verticalSpacer_codeEditor">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -1031,24 +1031,17 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="color_view_tab">
+     <widget class="QWidget" name="tab_displayColors">
       <attribute name="title">
        <string>Color view</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="groupBox_displayColors">
          <property name="title">
           <string>Select your color preferences</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_21">
-          <item row="1" column="2">
-           <widget class="QLabel" name="label_59">
-            <property name="text">
-             <string>Command line background:</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_22">
             <property name="text">
@@ -1100,6 +1093,13 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_59">
+            <property name="text">
+             <string>Command line background:</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="3">
            <widget class="QPushButton" name="pushButton_command_line_background_color">
             <property name="text">
@@ -1141,299 +1141,6 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="2">
-           <layout class="QGridLayout" name="gridLayout_4">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label">
-              <property name="text">
-               <string>Black:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_2">
-              <property name="text">
-               <string>Red:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_3">
-              <property name="text">
-               <string>Green:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_5">
-              <property name="text">
-               <string>Blue:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_6">
-              <property name="text">
-               <string>Magenta:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="label_7">
-              <property name="text">
-               <string>Cyan:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_8">
-              <property name="text">
-               <string>White:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="pushButton_black">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QPushButton" name="pushButton_red">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QPushButton" name="pushButton_green">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QPushButton" name="pushButton_yellow">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QPushButton" name="pushButton_blue">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QPushButton" name="pushButton_magenta">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QPushButton" name="pushButton_cyan">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QPushButton" name="pushButton_white">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="text">
-               <string>Yellow:</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="4" column="2" colspan="2">
-           <layout class="QGridLayout" name="gridLayout_20">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_68">
-              <property name="text">
-               <string>Light black:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_69">
-              <property name="text">
-               <string>Light red:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_70">
-              <property name="text">
-               <string>Light green:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_71">
-              <property name="text">
-               <string>Light yellow:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_72">
-              <property name="text">
-               <string>Light blue:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_73">
-              <property name="text">
-               <string>Light magenta:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="label_74">
-              <property name="text">
-               <string>Light cyan:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_75">
-              <property name="text">
-               <string>Light white:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="pushButton_Lblack">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QPushButton" name="pushButton_Lred">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QPushButton" name="pushButton_Lgreen">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QPushButton" name="pushButton_Lyellow">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QPushButton" name="pushButton_Lblue">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QPushButton" name="pushButton_Lmagenta">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QPushButton" name="pushButton_Lcyan">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QPushButton" name="pushButton_Lwhite">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="6" column="0" colspan="4">
-           <spacer name="verticalSpacer_3">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>678</width>
-              <height>58</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
           <item row="3" column="0" colspan="4">
            <widget class="QLabel" name="label_19">
             <property name="sizePolicy">
@@ -1443,14 +1150,286 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>These preferences set how do you want a particular color to be represented visually in the main display</string>
+             <string>These preferences set how you want a particular color to be represented visually in the main display:</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item row="5" column="2" colspan="2">
+          <item row="4" column="0">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Black:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QPushButton" name="pushButton_black">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="label_68">
+            <property name="text">
+             <string>Light black:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QPushButton" name="pushButton_Lblack">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Red:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QPushButton" name="pushButton_red">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="2">
+           <widget class="QLabel" name="label_69">
+            <property name="text">
+             <string>Light red:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="3">
+           <widget class="QPushButton" name="pushButton_Lred">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Green:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QPushButton" name="pushButton_green">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="2">
+           <widget class="QLabel" name="label_70">
+            <property name="text">
+             <string>Light green:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="3">
+           <widget class="QPushButton" name="pushButton_Lgreen">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Yellow:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QPushButton" name="pushButton_yellow">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
+           <widget class="QLabel" name="label_71">
+            <property name="text">
+             <string>Light yellow:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QPushButton" name="pushButton_Lyellow">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Blue:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QPushButton" name="pushButton_blue">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="2">
+           <widget class="QLabel" name="label_72">
+            <property name="text">
+             <string>Light blue:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="3">
+           <widget class="QPushButton" name="pushButton_Lblue">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>Magenta:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QPushButton" name="pushButton_magenta">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="2">
+           <widget class="QLabel" name="label_73">
+            <property name="text">
+             <string>Light magenta:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="3">
+           <widget class="QPushButton" name="pushButton_Lmagenta">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>Cyan:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1">
+           <widget class="QPushButton" name="pushButton_cyan">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="2">
+           <widget class="QLabel" name="label_74">
+            <property name="text">
+             <string>Light cyan:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="3">
+           <widget class="QPushButton" name="pushButton_Lcyan">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>White:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="1">
+           <widget class="QPushButton" name="pushButton_white">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="2">
+           <widget class="QLabel" name="label_75">
+            <property name="text">
+             <string>Light white:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="3">
+           <widget class="QPushButton" name="pushButton_Lwhite">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="2" colspan="2">
            <widget class="QPushButton" name="reset_colors_button">
             <property name="text">
              <string>Reset all colors to default</string>
@@ -1460,144 +1439,90 @@
          </layout>
         </widget>
        </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="mapper_tab">
-      <attribute name="title">
-       <string>Mapper</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_24">
        <item row="1" column="0">
-        <widget class="QGroupBox" name="downloadMapOptions">
-         <property name="title">
-          <string>Map download</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_23">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_11">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Download latest map provided by your MUD:</string>
-            </property>
-            <property name="buddy">
-             <cstring>buttonDownloadMap</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="buttonDownloadMap">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Download</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_12">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="title">
-          <string>Map backups</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_13">
-            <property name="text">
-             <string>Delete map backups older than:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="comboBox">
-            <property name="frame">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_14">
-            <property name="text">
-             <string>days since today, keeping newer and monthly backups</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox</cstring>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QGroupBox" name="groupBox_5">
-         <property name="title">
-          <string>Map view</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_22">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="mMapperUseAntiAlias">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Use high quality graphics in 2D view</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_showDefaultArea">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Show the default area in map area selection</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <spacer name="mapper_tab_bottom_spacer">
+        <spacer name="verticalSpacer_displayColors">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>40</height>
+           <width>678</width>
+           <height>58</height>
           </size>
          </property>
         </spacer>
        </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_mapper">
+      <attribute name="title">
+       <string>Mapper</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_24">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_mapFiles">
          <property name="title">
           <string>Map files</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="4" column="0" colspan="3">
-           <widget class="QLabel" name="label_mapFileActionResult">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_saveMap">
+            <property name="text">
+             <string>Save your current map:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_saveMap</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_saveMap">
+            <property name="text">
+             <string>Press to choose location and save</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_loadMap">
+            <property name="text">
+             <string>Load another map file in:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_loadMap</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButton_loadMap">
+            <property name="text">
+             <string>Press to choose file and load</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>An action above happened</string>
+             <string>Report map issues on screen</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">
+           <widget class="Line" name="line_aboveCopyMap">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_copyMap">
+            <property name="text">
+             <string>Copy map to other profile(s):</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_chooseProfiles</cstring>
             </property>
            </widget>
           </item>
@@ -1627,64 +1552,15 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_saveMap">
-            <property name="text">
-             <string>Press to choose location and save</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_loadMap">
-            <property name="text">
-             <string>Load another map file in:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_loadMap</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_saveMap">
-            <property name="text">
-             <string>Save your current map:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_saveMap</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButton_loadMap">
-            <property name="text">
-             <string>Press to choose file and load</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_copyMap">
-            <property name="text">
-             <string>Copy map to other profile(s):</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_chooseProfiles</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1" colspan="2">
-           <widget class="Line" name="line_aboveCopyMap">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <item row="4" column="0" colspan="3">
+           <widget class="QLabel" name="label_mapFileActionResult">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
             </property>
             <property name="text">
-             <string>Report map issues on screen</string>
+             <string>An action above happened</string>
             </property>
            </widget>
           </item>
@@ -1728,50 +1604,167 @@
          </layout>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_downloadMapOptions">
+         <property name="title">
+          <string>Map download</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_23">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_11">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Download latest map provided by your MUD:</string>
+            </property>
+            <property name="buddy">
+             <cstring>buttonDownloadMap</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="buttonDownloadMap">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Download</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QGroupBox" name="groupBox_mapBackups">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="title">
+          <string>Map backups</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_8">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>Delete map backups older than:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox">
+            <property name="frame">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_14">
+            <property name="text">
+             <string>days since today, keeping newer and monthly backups</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox</cstring>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QGroupBox" name="groupBox_mapOptions">
+         <property name="title">
+          <string>Map view</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_22">
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mapSymbolsFont">
+            <property name="text">
+             <string>2D Map Room Symbol Font</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="mMapperUseAntiAlias">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use high quality graphics in 2D view</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" alignment="Qt::AlignLeft">
+           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkBox_showDefaultArea">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show the default area in map area selection</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
+            <property name="text">
+             <string>Only use symbols (glyphs) from chosen font</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="pushButton_showGlyphUsage">
+            <property name="text">
+             <string>Show symbol usage...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <spacer name="verticalSpacer_mapper">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_4">
+     <widget class="QWidget" name="tab_mapperColors">
       <attribute name="title">
        <string>Mapper colors</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_18">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_14">
+        <widget class="QGroupBox" name="groupBox_mapperColors">
          <property name="title">
           <string>Select your color preferences for the map display</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_14">
-          <item row="7" column="0" colspan="2">
-           <spacer name="verticalSpacer_4">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButton_background_color_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
+          <item row="0" column="0" colspan="2">
            <widget class="QLabel" name="label_39">
             <property name="text">
              <string>Link color</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="0" column="2" colspan="2">
            <widget class="QPushButton" name="pushButton_foreground_color_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1784,294 +1777,296 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_40">
             <property name="text">
              <string>Background color:</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="2" colspan="2">
+           <widget class="QPushButton" name="pushButton_background_color_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_17">
+            <property name="text">
+             <string>Black:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_black_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QLabel" name="label_49">
+            <property name="text">
+             <string>Light black:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="pushButton_Lblack_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_42">
+            <property name="text">
+             <string>Red:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="pushButton_red_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLabel" name="label_50">
+            <property name="text">
+             <string>Light red:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QPushButton" name="pushButton_Lred_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
           <item row="4" column="0">
-           <layout class="QGridLayout" name="gridLayout_15">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_17">
-              <property name="text">
-               <string>Black:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_42">
-              <property name="text">
-               <string>Red:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_43">
-              <property name="text">
-               <string>Green:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_44">
-              <property name="text">
-               <string>Blue:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_45">
-              <property name="text">
-               <string>Magenta:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="label_46">
-              <property name="text">
-               <string>Cyan:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_47">
-              <property name="text">
-               <string>White:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="pushButton_black_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QPushButton" name="pushButton_red_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QPushButton" name="pushButton_green_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QPushButton" name="pushButton_yellow_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QPushButton" name="pushButton_blue_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QPushButton" name="pushButton_magenta_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QPushButton" name="pushButton_cyan_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QPushButton" name="pushButton_white_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_48">
-              <property name="text">
-               <string>Yellow:</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <widget class="QLabel" name="label_43">
+            <property name="text">
+             <string>Green:</string>
+            </property>
+           </widget>
           </item>
           <item row="4" column="1">
-           <layout class="QGridLayout" name="gridLayout_16">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_49">
-              <property name="text">
-               <string>Light black:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_50">
-              <property name="text">
-               <string>Light red:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_51">
-              <property name="text">
-               <string>Light green:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_52">
-              <property name="text">
-               <string>Light yellow:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_53">
-              <property name="text">
-               <string>Light blue:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_54">
-              <property name="text">
-               <string>Light magenta:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="label_55">
-              <property name="text">
-               <string>Light cyan:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_56">
-              <property name="text">
-               <string>Light white:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="pushButton_Lblack_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QPushButton" name="pushButton_Lred_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QPushButton" name="pushButton_Lgreen_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QPushButton" name="pushButton_Lyellow_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QPushButton" name="pushButton_Lblue_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QPushButton" name="pushButton_Lmagenta_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QPushButton" name="pushButton_Lcyan_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QPushButton" name="pushButton_Lwhite_2">
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <widget class="QPushButton" name="pushButton_green_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="label_51">
+            <property name="text">
+             <string>Light green:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QPushButton" name="pushButton_Lgreen_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_48">
+            <property name="text">
+             <string>Yellow:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QPushButton" name="pushButton_yellow_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="2">
+           <widget class="QLabel" name="label_52">
+            <property name="text">
+             <string>Light yellow:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="3">
+           <widget class="QPushButton" name="pushButton_Lyellow_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_44">
+            <property name="text">
+             <string>Blue:</string>
+            </property>
+           </widget>
           </item>
           <item row="6" column="1">
+           <widget class="QPushButton" name="pushButton_blue_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="2">
+           <widget class="QLabel" name="label_53">
+            <property name="text">
+             <string>Light blue:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="3">
+           <widget class="QPushButton" name="pushButton_Lblue_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_45">
+            <property name="text">
+             <string>Magenta:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QPushButton" name="pushButton_magenta_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
+           <widget class="QLabel" name="label_54">
+            <property name="text">
+             <string>Light magenta:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QPushButton" name="pushButton_Lmagenta_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_46">
+            <property name="text">
+             <string>Cyan:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QPushButton" name="pushButton_cyan_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="2">
+           <widget class="QLabel" name="label_55">
+            <property name="text">
+             <string>Light cyan:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="3">
+           <widget class="QPushButton" name="pushButton_Lcyan_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="label_47">
+            <property name="text">
+             <string>White:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QPushButton" name="pushButton_white_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="2">
+           <widget class="QLabel" name="label_56">
+            <property name="text">
+             <string>Light white:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="3">
+           <widget class="QPushButton" name="pushButton_Lwhite_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="2" colspan="2">
            <widget class="QPushButton" name="reset_colors_button_2">
             <property name="text">
              <string>Reset all colors to default</string>
@@ -2081,15 +2076,28 @@
          </layout>
         </widget>
        </item>
+       <item row="1" column="0">
+        <spacer name="verticalSpacer_mapperColors">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_3">
+     <widget class="QWidget" name="tab_specialOptions">
       <attribute name="title">
        <string>Special Options</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_7">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_7">
+        <widget class="QGroupBox" name="groupBox_specialOptions">
          <property name="title">
           <string>Special options needed for some older MUD drivers (needs client restart to take effect)</string>
          </property>
@@ -2154,174 +2162,90 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QGroupBox" name="groupIrcConfig">
+        <widget class="QGroupBox" name="groupBox_ircOptions">
          <property name="title">
-          <string>IRC Client Options</string>
+          <string>IRC client options</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <property name="leftMargin">
-           <number>2</number>
-          </property>
-          <property name="topMargin">
-           <number>2</number>
-          </property>
-          <property name="rightMargin">
-           <number>2</number>
-          </property>
-          <property name="bottomMargin">
-           <number>2</number>
-          </property>
-          <item>
-           <widget class="QWidget" name="ircHostNameWidget" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_13">
-             <property name="spacing">
-              <number>1</number>
-             </property>
-             <property name="leftMargin">
-              <number>1</number>
-             </property>
-             <property name="topMargin">
-              <number>1</number>
-             </property>
-             <property name="rightMargin">
-              <number>1</number>
-             </property>
-             <property name="bottomMargin">
-              <number>1</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="lblIrcHostName">
-               <property name="text">
-                <string>Host Name: </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircHostName">
-               <property name="inputMethodHints">
-                <set>Qt::ImhUrlCharactersOnly</set>
-               </property>
-               <property name="placeholderText">
-                <string>irc.example.net</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+         <layout class="QGridLayout" name="gridLayout_28" rowstretch="0,0">
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="ircHostName">
+            <property name="inputMethodHints">
+             <set>Qt::ImhUrlCharactersOnly</set>
+            </property>
+            <property name="placeholderText">
+             <string>irc.example.net</string>
+            </property>
            </widget>
           </item>
-          <item>
-           <widget class="QWidget" name="ircHostPortWidget" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_14">
-             <property name="spacing">
-              <number>1</number>
-             </property>
-             <property name="leftMargin">
-              <number>1</number>
-             </property>
-             <property name="topMargin">
-              <number>1</number>
-             </property>
-             <property name="rightMargin">
-              <number>1</number>
-             </property>
-             <property name="bottomMargin">
-              <number>1</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="lblIrcHostPort">
-               <property name="text">
-                <string>Host Port: </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircHostPort">
-               <property name="inputMethodHints">
-                <set>Qt::ImhDigitsOnly</set>
-               </property>
-               <property name="placeholderText">
-                <string>6667</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+          <item row="0" column="2">
+           <widget class="QLabel" name="lblIrcHostPort">
+            <property name="text">
+             <string>Port:</string>
+            </property>
            </widget>
           </item>
-          <item>
-           <widget class="QWidget" name="ircNickWidget" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_15">
-             <property name="spacing">
-              <number>1</number>
-             </property>
-             <property name="leftMargin">
-              <number>1</number>
-             </property>
-             <property name="topMargin">
-              <number>1</number>
-             </property>
-             <property name="rightMargin">
-              <number>1</number>
-             </property>
-             <property name="bottomMargin">
-              <number>1</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="lblIrcNick">
-               <property name="text">
-                <string>Nick Name:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircNick">
-               <property name="placeholderText">
-                <string>Mudlet</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+          <item row="1" column="3">
+           <widget class="QLineEdit" name="ircChannels">
+            <property name="placeholderText">
+             <string>#channel1 #channel2 #etc...</string>
+            </property>
            </widget>
           </item>
-          <item>
-           <widget class="QWidget" name="ircChannelsWidget" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_16">
-             <property name="spacing">
-              <number>1</number>
-             </property>
-             <property name="leftMargin">
-              <number>1</number>
-             </property>
-             <property name="topMargin">
-              <number>1</number>
-             </property>
-             <property name="rightMargin">
-              <number>1</number>
-             </property>
-             <property name="bottomMargin">
-              <number>1</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="lblIrcChannels">
-               <property name="text">
-                <string>Auto-Join Channels: </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircChannels">
-               <property name="placeholderText">
-                <string>#ex1 #ex2 #etc ...</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="ircNick">
+            <property name="placeholderText">
+             <string>MudletUser123</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblIrcHostName">
+            <property name="text">
+             <string>Server address:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="lblIrcChannels">
+            <property name="text">
+             <string>Auto-join channels: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblIrcNick">
+            <property name="text">
+             <string>Nickname:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLineEdit" name="ircHostPort">
+            <property name="inputMethodHints">
+             <set>Qt::ImhDigitsOnly</set>
+            </property>
+            <property name="placeholderText">
+             <string>6667</string>
+            </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_Debug">
+       <item row="3" column="0">
+        <widget class="QGroupBox" name="groupbox_searchEngineSelection">
+         <property name="title">
+          <string>Search Engine</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QComboBox" name="search_engine_combobox"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QGroupBox" name="groupBox_debug">
          <property name="title">
           <string>Other Special options</string>
          </property>
@@ -2332,8 +2256,8 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
-        <spacer name="verticalSpacer_6">
+       <item row="6" column="0">
+        <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -2345,12 +2269,28 @@
          </property>
         </spacer>
        </item>
+       <item row="4" column="0">
+        <widget class="QGroupBox" name="groupBox_updates">
+         <property name="title">
+          <string>Mudlet updates</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_29">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkbox_noAutomaticUpdates">
+            <property name="text">
+             <string>Disable automatic updates</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_bottom" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -2359,7 +2299,7 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <spacer name="horizontalSpacer">
+       <spacer name="horizontalSpacer_bottom">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -2406,7 +2346,7 @@
   <tabstop>command_separator_lineedit</tabstop>
  </tabstops>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -44,7 +44,7 @@ TTreeWidget::TTreeWidget(QWidget* pW) : QTreeWidget(pW), mChildID()
     viewport()->setAcceptDrops(true);
     setDragDropMode(QAbstractItemView::InternalMove);
     mIsDropAction = false;
-    mpHost = 0;
+    mpHost = nullptr;
     mOldParentID = 0;
 
     mIsTriggerTree = false;

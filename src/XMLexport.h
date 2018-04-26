@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +25,9 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
+#include <QBuffer>
+#include <QClipboard>
 #include <QPointer>
 #include <QXmlStreamWriter>
 #include "post_guard.h"
@@ -61,7 +65,6 @@ public:
     bool writeKey(TKey*);
     bool writeVariable(TVar*, LuaInterface*, VarUnit*);
     bool writeModuleXML(QIODevice* device, QString moduleName);
-    bool exportHost(Host*);
 
     bool exportHost(QIODevice*);
     bool exportGenericPackage(QIODevice* device);
@@ -73,14 +76,14 @@ public:
     bool exportScript(QIODevice*);
     bool exportKey(QIODevice*);
 
-    bool exportTrigger(TTrigger*);
-    bool exportTimer(TTimer*);
-    bool exportAlias(TAlias*);
-    bool exportAction(TAction*);
-    bool exportScript(TScript*);
-    bool exportKey(TKey*);
+    bool exportToClipboard(TTrigger*);
+    bool exportToClipboard(TTimer*);
+    bool exportToClipboard(TAlias*);
+    bool exportToClipboard(TAction*);
+    bool exportToClipboard(TScript*);
+    bool exportToClipboard(TKey*);
 
-    bool writeScriptElement(const QString &);
+    bool writeScriptElement(const QString&);
 
 private:
     QPointer<Host> mpHost;

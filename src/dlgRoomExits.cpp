@@ -44,7 +44,7 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgRoomExits::dlgRoomExits(Host* pH, QWidget* pW) : QDialog(pW), mpHost(pH), mpEditItem(0), pR(), mRoomID(), mEditColumn()
+dlgRoomExits::dlgRoomExits(Host* pH, QWidget* pW) : QDialog(pW), mpHost(pH), mpEditItem(nullptr), pR(), mRoomID(), mEditColumn()
 {
     setupUi(this);
 }
@@ -55,9 +55,9 @@ void dlgRoomExits::slot_endEditSpecialExits()
     if (!button_addSpecialExit->isEnabled()) {
         button_addSpecialExit->setEnabled(true);
     }
-    if (mpEditItem != 0 && mEditColumn >= 0) {
+    if (mpEditItem != nullptr && mEditColumn >= 0) {
         specialExits->closePersistentEditor(mpEditItem, mEditColumn);
-        mpEditItem = 0;
+        mpEditItem = nullptr;
         mEditColumn = -1;
     }
     specialExits->clearSelection();
@@ -83,7 +83,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
         button_addSpecialExit->setEnabled(false);
     }
 
-    if (mpEditItem != 0 && (pI != mpEditItem || mEditColumn != column)) {
+    if (mpEditItem != nullptr && (pI != mpEditItem || mEditColumn != column)) {
         // Thing that was clicked on is not the same as last thing that was clicked on
         // ... so clean up the old column
         TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(mpEditItem->text(0).toInt());
@@ -145,14 +145,14 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
                                        QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                                .arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
                                                     tr("<b>Room</b> Weight of destination: %1.",
-                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                             .arg(pExitToRoom->getWeight())));
             } else {
                 mpEditItem->setToolTip(0,
                                        QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                                .arg(tr("Exit to unnamed room is valid"),
                                                     tr("<b>Room</b> Weight of destination: %1.",
-                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                             .arg(pExitToRoom->getWeight())));
             }
         } else {
@@ -163,12 +163,12 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
                                                    "a valid number; if left like this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked.")));
         }
 
-        mpEditItem = 0; //This will cause a new PE to be opened, it will also be zeroed on the first time this funciton is called
+        mpEditItem = nullptr; //This will cause a new PE to be opened, it will also be zeroed on the first time this funciton is called
         mEditColumn = -1;
     }
 
     // Now process the new column that was selected:
-    if (mpEditItem == 0) {
+    if (mpEditItem == nullptr) {
         if (column == 0 || column == 2 || column == 7) {
             //            qDebug()<<"Opened PE on item:"<<pI->text(7)<<"column:"<<column;
             specialExits->openPersistentEditor(pI, column);
@@ -284,7 +284,7 @@ void dlgRoomExits::save()
             door = 0;
         }
         QString value = pI->text(7);
-        if (value != tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (3 of 5)") && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) != 0) {
+        if (value != tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (3 of 5)") && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) != nullptr) {
             originalExitCmds.remove(value);
             if (pI->checkState(1) == Qt::Unchecked) {
                 value = value.prepend(QStringLiteral("0"));
@@ -312,7 +312,7 @@ void dlgRoomExits::save()
         pR->setSpecialExit(-1, value);
     }
 
-    if (nw->isEnabled() && nw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != 0) {
+    if (nw->isEnabled() && !nw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
         // There IS a valid exit on the dialogue in this direction
         if (originalExits.value(DIR_NORTHWEST)->destination != nw->text().toInt()) {
             pR->setExit(nw->text().toInt(), DIR_NORTHWEST); // Destination is different - so store it
@@ -340,7 +340,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NW")); // And remove any custom line stuff, which uses opposite case keys - *sigh*
     }
 
-    if (n->isEnabled() && n->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != 0) {
+    if (n->isEnabled() && !n->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_NORTH)->destination != n->text().toInt()) {
             pR->setExit(n->text().toInt(), DIR_NORTH);
         }
@@ -366,7 +366,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("N"));
     }
 
-    if (ne->isEnabled() && ne->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != 0) {
+    if (ne->isEnabled() && !ne->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_NORTHEAST)->destination != ne->text().toInt()) {
             pR->setExit(ne->text().toInt(), DIR_NORTHEAST);
         }
@@ -392,7 +392,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NE"));
     }
 
-    if (up->isEnabled() && up->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != 0) {
+    if (up->isEnabled() && !up->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_UP)->destination != up->text().toInt()) {
             pR->setExit(up->text().toInt(), DIR_UP);
         }
@@ -418,7 +418,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("UP"));
     }
 
-    if (w->isEnabled() && w->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != 0) {
+    if (w->isEnabled() && !w->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_WEST)->destination != w->text().toInt()) {
             pR->setExit(w->text().toInt(), DIR_WEST);
         }
@@ -444,7 +444,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("W"));
     }
 
-    if (e->isEnabled() && e->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != 0) {
+    if (e->isEnabled() && !e->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_EAST)->destination != e->text().toInt()) {
             pR->setExit(e->text().toInt(), DIR_EAST);
         }
@@ -470,7 +470,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("E"));
     }
 
-    if (down->isEnabled() && down->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != 0) {
+    if (down->isEnabled() && !down->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_DOWN)->destination != down->text().toInt()) {
             pR->setExit(down->text().toInt(), DIR_DOWN);
         }
@@ -496,7 +496,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("DOWN"));
     }
 
-    if (sw->isEnabled() && sw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != 0) {
+    if (sw->isEnabled() && !sw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_SOUTHWEST)->destination != sw->text().toInt()) {
             pR->setExit(sw->text().toInt(), DIR_SOUTHWEST);
         }
@@ -522,7 +522,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SW"));
     }
 
-    if (s->isEnabled() && s->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != 0) {
+    if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_SOUTH)->destination != s->text().toInt()) {
             pR->setExit(s->text().toInt(), DIR_SOUTH);
         }
@@ -548,7 +548,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("S"));
     }
 
-    if (se->isEnabled() && se->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != 0) {
+    if (se->isEnabled() && !se->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_SOUTHEAST)->destination != se->text().toInt()) {
             pR->setExit(se->text().toInt(), DIR_SOUTHEAST);
         }
@@ -574,7 +574,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SE"));
     }
 
-    if (in->isEnabled() && in->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != 0) {
+    if (in->isEnabled() && !in->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_IN)->destination != in->text().toInt()) {
             pR->setExit(in->text().toInt(), DIR_IN);
         }
@@ -600,7 +600,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("IN"));
     }
 
-    if (out->isEnabled() && out->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != 0) {
+    if (out->isEnabled() && !out->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_OUT)->destination != out->text().toInt()) {
             pR->setExit(out->text().toInt(), DIR_OUT);
         }
@@ -706,7 +706,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         // Valid exit roomID in place
         nw->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_nw->setChecked(false);
@@ -721,16 +721,16 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
             nw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             nw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
-    } else if (text.size() > 0) {
+    } else if (!text.isEmpty()) {
         // Something is entered but it does not yield a valid exit roomID
         // Enable stub exit control
         nw->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
@@ -762,7 +762,7 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         n->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         ;
         stub_n->setChecked(false);
@@ -777,13 +777,13 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
             n->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             n->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -815,7 +815,7 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         ne->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_ne->setChecked(false);
         stub_ne->setEnabled(false);
@@ -829,13 +829,13 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
             ne->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             ne->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -867,7 +867,7 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         up->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_up->setChecked(false);
         stub_up->setEnabled(false);
@@ -881,13 +881,13 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
             up->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             up->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -919,7 +919,7 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         w->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_w->setChecked(false);
         stub_w->setEnabled(false);
@@ -933,13 +933,13 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
             w->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             w->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -971,7 +971,7 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         e->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_e->setChecked(false);
         stub_e->setEnabled(false);
@@ -985,13 +985,13 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
             e->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             e->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1023,7 +1023,7 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         down->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_down->setChecked(false);
         stub_down->setEnabled(false);
@@ -1037,13 +1037,13 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
             down->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                      .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                           tr("<b>Room</b> Weight of destination: %1.",
-                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                   .arg(exitToRoom->getWeight())));
         } else {
             down->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                      .arg(tr("Exit to unnamed room is valid"),
                                           tr("<b>Room</b> Weight of destination: %1.",
-                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                             "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                   .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1075,7 +1075,7 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         sw->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_sw->setChecked(false);
         stub_sw->setEnabled(false);
@@ -1089,13 +1089,13 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
             sw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             sw->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1127,7 +1127,7 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         s->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_s->setChecked(false);
         stub_s->setEnabled(false);
@@ -1141,13 +1141,13 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
             s->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         } else {
             s->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                   .arg(tr("Exit to unnamed room is valid"),
                                        tr("<b>Room</b> Weight of destination: %1.",
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1179,7 +1179,7 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         se->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_se->setChecked(false);
         stub_se->setEnabled(false);
@@ -1193,13 +1193,13 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
             se->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             se->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1231,7 +1231,7 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         in->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_in->setChecked(false);
         stub_in->setEnabled(false);
@@ -1245,13 +1245,13 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
             in->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         } else {
             in->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                    .arg(tr("Exit to unnamed room is valid"),
                                         tr("<b>Room</b> Weight of destination: %1.",
-                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1283,7 +1283,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != 0) {
+    if (exitToRoom) {
         out->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_out->setChecked(false);
         stub_out->setEnabled(false);
@@ -1297,13 +1297,13 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
             out->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                     .arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
                                          tr("<b>Room</b> Weight of destination: %1.",
-                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                  .arg(exitToRoom->getWeight())));
         } else {
             out->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                     .arg(tr("Exit to unnamed room is valid"),
                                          tr("<b>Room</b> Weight of destination: %1.",
-                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                  .arg(exitToRoom->getWeight())));
         }
     } else if (text.size() > 0) {
@@ -1335,7 +1335,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
             nw->setText(QString());
             nw->setStyleSheet(QString());
             weight_nw->setValue(0);        // Can't have a weight for a stub exit
@@ -1369,7 +1369,7 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 void dlgRoomExits::slot_stub_n_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
             n->setText(QString());
             n->setStyleSheet(QString());
             weight_n->setValue(0);
@@ -1400,7 +1400,7 @@ void dlgRoomExits::slot_stub_n_stateChanged(int state)
 void dlgRoomExits::slot_stub_ne_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
             ne->setText(QString());
             ne->setStyleSheet(QString());
             weight_ne->setValue(0);
@@ -1431,7 +1431,7 @@ void dlgRoomExits::slot_stub_ne_stateChanged(int state)
 void dlgRoomExits::slot_stub_up_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
             up->setText(QString());
             up->setStyleSheet(QString());
             weight_up->setValue(0);
@@ -1462,7 +1462,7 @@ void dlgRoomExits::slot_stub_up_stateChanged(int state)
 void dlgRoomExits::slot_stub_w_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
             w->setText(QString());
             w->setStyleSheet(QString());
             weight_w->setValue(0);
@@ -1493,7 +1493,7 @@ void dlgRoomExits::slot_stub_w_stateChanged(int state)
 void dlgRoomExits::slot_stub_e_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
             e->setText(QString());
             e->setStyleSheet(QString());
             weight_e->setValue(0);
@@ -1524,7 +1524,7 @@ void dlgRoomExits::slot_stub_e_stateChanged(int state)
 void dlgRoomExits::slot_stub_down_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
             down->setText(QString());
             down->setStyleSheet(QString());
             weight_down->setValue(0);
@@ -1555,7 +1555,7 @@ void dlgRoomExits::slot_stub_down_stateChanged(int state)
 void dlgRoomExits::slot_stub_sw_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
             sw->setText(QString());
             sw->setStyleSheet(QString());
             weight_sw->setValue(0);
@@ -1586,7 +1586,7 @@ void dlgRoomExits::slot_stub_sw_stateChanged(int state)
 void dlgRoomExits::slot_stub_s_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
             s->setText(QString());
             s->setStyleSheet(QString());
             weight_s->setValue(0);
@@ -1617,7 +1617,7 @@ void dlgRoomExits::slot_stub_s_stateChanged(int state)
 void dlgRoomExits::slot_stub_se_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
             se->setText(QString());
             se->setStyleSheet(QString());
             weight_se->setValue(0);
@@ -1648,7 +1648,7 @@ void dlgRoomExits::slot_stub_se_stateChanged(int state)
 void dlgRoomExits::slot_stub_in_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
             in->setText(QString());
             in->setStyleSheet(QString());
             weight_in->setValue(0);
@@ -1679,7 +1679,7 @@ void dlgRoomExits::slot_stub_in_stateChanged(int state)
 void dlgRoomExits::slot_stub_out_stateChanged(int state)
 {
     if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != 0) {
+        if (mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
             out->setText(QString());
             out->setStyleSheet(QString());
             weight_out->setValue(0);
@@ -1774,13 +1774,13 @@ void dlgRoomExits::initExit(int roomId,
             exitLineEdit->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                              .arg(tr(R"(Exit to "%1".)").arg(pExitR->name),
                                                   tr("<b>Room</b> Weight of destination: %1.",
-                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                           .arg(pExitR->getWeight())));
         } else {
             exitLineEdit->setToolTip(QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                              .arg(tr("Exit to unnamed room is valid"),
                                                   tr("<b>Room</b> Weight of destination: %1.",
-                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                                     "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                           .arg(pExitR->getWeight())));
         }
         noRoute->setEnabled(true); //Enable speedwalk lock control
@@ -1892,14 +1892,14 @@ void dlgRoomExits::init(int id)
                                QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                        .arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
                                             tr("<b>Room</b> Weight of destination: %1.",
-                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                     .arg(pExitToRoom->getWeight())));
             } else {
                 pI->setToolTip(0,
                                QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
                                        .arg(tr("Exit to unnamed room is valid"),
                                             tr("<b>Room</b> Weight of destination: %1.",
-                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
+                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                                     .arg(pExitToRoom->getWeight())));
             }
         } else {
@@ -1973,7 +1973,7 @@ void dlgRoomExits::init(int id)
 
         //7 is new, but holds the script that was in 2
         pI->setText(7, dir);
-        // Not relevent for special exits but better initialise it
+        // Not relevant for special exits but better initialise it
         auto exit = originalSpecialExits.value(dir);
         if (exit) {
             exit->hasStub = false;
@@ -2052,6 +2052,7 @@ void dlgRoomExits::init(int id)
     connect( doortype_se,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
     connect( doortype_in,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
     connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_out,         SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
 }
 
 TExit* dlgRoomExits::makeExitFromControls(int direction)

@@ -32,6 +32,7 @@
 #include "TScript.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
+#include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -50,14 +51,8 @@
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this)
-, mpConsole(0)
+, mpConsole(nullptr)
 , mLuaInterpreter(this, id)
-, mTriggerUnit(this)
-, mTimerUnit(this)
-, mScriptUnit(this)
-, mAliasUnit(this)
-, mActionUnit(this)
-, mKeyUnit(this)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -68,44 +63,39 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderLeftWidth(0)
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
-, mCodeCompletion(true)
 , mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QString(";"))
-, mDisableAutoCompletion(false)
+, mCommandSeparator(QLatin1String(";"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
-, mHostID(id)
-, mHostName(hostname)
 , mInsertedMissingLF(false)
 , mIsGoingDown(false)
+, mIsProfileLoadingSequence(false)
 , mLF_ON_GA(true)
-, mLogin(login)
-, mMainIconSize(3)
 , mNoAntiAlias(false)
-, mPass(pass)
-, mpEditorDialog(0)
+, mpEditorDialog(nullptr)
 , mpMap(new TMap(this))
-, mpNotePad(0)
-, mPort(port)
+, mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsCurrentLogFileInHtmlFormat(false)
+, mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
 , mResetProfile(false)
-, mRetries(5)
-, mSaveProfileOnExit(false)
 , mScreenHeight(25)
 , mScreenWidth(90)
-, mTEFolderIconSize(3)
 , mTimeout(60)
 , mUSE_FORCE_LF_AFTER_PROMPT(false)
 , mUSE_IRE_DRIVER_BUGFIX(true)
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mEditorTheme(QLatin1String("Mudlet"))
+, mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
+, mThemePreviewItemID(-1)
+, mThemePreviewType(QString())
 , mBlack(Qt::black)
 , mLightBlack(Qt::darkGray)
 , mRed(Qt::darkRed)
@@ -144,34 +134,47 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWhite_2(Qt::lightGray)
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
-, mSpellDic("en_US")
+, mMapStrongHighlight(false)
+, mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
-, mModuleSaveBlock(false)
 , mLineSize(10.0)
 , mRoomSize(0.5)
+, mShowInfo(true)
 , mBubbleMode(false)
 , mShowRoomID(false)
-, mMapperUseAntiAlias(true)
+, mShowPanel(true)
 , mServerGUI_Package_version(-1)
-, mServerGUI_Package_name("nothing")
+, mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
+, mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
+, mTriggerUnit(this)
+, mTimerUnit(this)
+, mScriptUnit(this)
+, mAliasUnit(this)
+, mActionUnit(this)
+, mKeyUnit(this)
+, mCodeCompletion(true)
+, mDisableAutoCompletion(false)
+, mHostID(id)
+, mHostName(hostname)
+, mIsClosingDown(false)
+, mLogin(login)
+, mPass(pass)
+, mPort(port)
+, mRetries(5)
+, mSaveProfileOnExit(false)
+, mModuleSaveBlock(false)
 , mHaveMapperScript(false)
-, mEditorTheme("Mudlet")
-, mEditorThemeFile("Mudlet.tmTheme")
-, mThemePreviewItemID(-1)
-, mThemePreviewType(QString())
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
-    QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/";
-    directoryLogFile.append(mHostName);
-    directoryLogFile.append("/log");
-    QString logFileName = directoryLogFile + "/errors.txt";
+    QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("log"));
+    QString logFileName = QStringLiteral("%1/errors.txt").arg(directoryLogFile);
     QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
         dirLogFile.mkpath(directoryLogFile);
@@ -183,15 +186,29 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogStream.setDevice(&mErrorLogFile);
 
     QTimer::singleShot(0, [this]() {
+        qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
         if (mpMap->restore(QString(), false)) {
             mpMap->audit();
+            if (mpMap->mpMapper) {
+                mpMap->mpMapper->mp2dMap->init();
+                mpMap->mpMapper->updateAreaComboBox();
+                mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMap->mpMapper->show();
+            }
         }
     });
 
-    mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
+
+    // search engine load entries
+    mSearchEngineData = QMap<QString, QString>(
+    {
+                    {"Bing",       "https://www.bing.com/search?q="},
+                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
+                    {"Google",     "https://www.google.com/search?q="}
+    });
 }
 
 Host::~Host()
@@ -214,7 +231,7 @@ void Host::saveModules(int sync)
     }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
-    QString dirName = QDir::homePath() + "/.config/mudlet/moduleBackups/";
+    QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
     QDir savePath = QDir(dirName);
     if (!savePath.exists()) {
         savePath.mkpath(dirName);
@@ -223,21 +240,21 @@ void Host::saveModules(int sync)
         it.next();
         QStringList entry = it.value();
         QString filename_xml = entry[0];
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (1 of 6)
         QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         QString moduleName = it.key();
-        QString tempDir;
         QString zipName;
-        zip* zipFile = 0;
+        zip* zipFile = nullptr;
         // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-            tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mHostName + "/" + moduleName;
-            filename_xml = tempDir + "/" + moduleName + ".xml";
+            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
             zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
             zipName = filename_xml;
-            QDir packageDir = QDir(tempDir);
+            QDir packageDir = QDir(packagePathName);
             if (!packageDir.exists()) {
-                packageDir.mkpath(tempDir);
+                packageDir.mkpath(packagePathName);
             }
         } else {
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
@@ -344,6 +361,7 @@ void Host::resetProfile()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
+    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
 
@@ -372,12 +390,13 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
 {
     QString directory_xml;
     if (saveLocation.isEmpty()) {
-        directory_xml = QStringLiteral("%1/.config/mudlet/profiles/%2/current").arg(QDir::homePath(), getName());
+        directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
     } else {
         directory_xml = saveLocation;
     }
 
-    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+    // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
+    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     QDir dir_xml;
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
@@ -443,11 +462,6 @@ void Host::adjustNAWS()
     mTelnet.setDisplayDimensions();
 }
 
-void Host::setReplacementCommand(const QString& s)
-{
-    mReplacementCommand = s;
-}
-
 void Host::stopAllTriggers()
 {
     mTriggerUnit.stopAllTriggers();
@@ -460,6 +474,14 @@ void Host::reenableAllTriggers()
     mTriggerUnit.reenableAllTriggers();
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
+}
+
+QPair<QString, QString> Host::getSearchEngine()
+{
+    if(mSearchEngineData.contains(mSearchEngineName))
+        return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
+    else
+        return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
 }
 
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
@@ -475,10 +497,18 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
         mpConsole->update();
     }
-    QStringList commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+    QStringList commandList;
+    if (!mCommandSeparator.isEmpty()) {
+        commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+    } else {
+        // don't split command if the command separator is blank
+        commandList << cmd;
+    }
+
     if (!dontExpandAliases) {
+        // allow sending blank commands
         if (commandList.size() == 0) {
-            sendRaw("\n"); //NOTE: damit leerprompt moeglich sind
+            sendRaw("\n");
             return;
         }
     }
@@ -488,17 +518,13 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
         QString command = commandList[i];
         command.remove(QChar::LineFeed);
-        mReplacementCommand = "";
         if (dontExpandAliases) {
             mTelnet.sendData(command);
             continue;
         }
+
         if (!mAliasUnit.processDataStream(command)) {
-            if (mReplacementCommand.size() > 0) {
-                mTelnet.sendData(mReplacementCommand);
-            } else {
-                mTelnet.sendData(command);
-            }
+            mTelnet.sendData(command);
         }
     }
 }
@@ -736,9 +762,11 @@ bool Host::installPackage(const QString& fileName, int module)
     }
     QFile file2;
     if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
-        QString _home = QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), getName());
-        QString _dest = QStringLiteral("%1/%2/").arg(_home, packageName);
-        QDir _tmpDir(_home); // home directory for the PROFILE
+        QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
+        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+        // home directory for the PROFILE
+        QDir _tmpDir(_home);
+        // directory to store the expanded archive file contents
         _tmpDir.mkpath(_dest);
 
         // TODO: report failure to create destination folder for package/module in profile
@@ -746,7 +774,7 @@ bool Host::installPackage(const QString& fileName, int module)
         QUiLoader loader(this);
         QFile uiFile(QStringLiteral(":/ui/package_manager_unpack.ui"));
         uiFile.open(QFile::ReadOnly);
-        pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, 0));
+        pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
         uiFile.close();
         if (!pUnzipDialog) {
             return false;
@@ -1020,11 +1048,8 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     getActionUnit()->updateToolbar();
 
-    QString _home = QDir::homePath();
-    _home.append("/.config/mudlet/profiles/");
-    _home.append(getName());
-    QString _dest = QString("%1/%2/").arg(_home, packageName);
-    removeDir(_dest, _dest);
+    QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+    removeDir(dest, dest);
     saveProfile();
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && module == 3) {
@@ -1047,7 +1072,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
 
-    int error = luaL_loadstring(L, strings.join("\n").toLatin1().data());
+    int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
     if (!error) {
         error = lua_pcall(L, 0, 0, 0);
@@ -1103,7 +1128,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), getName(), item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;
@@ -1120,7 +1145,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), getName(), item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
     bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {

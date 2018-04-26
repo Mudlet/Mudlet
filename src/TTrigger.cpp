@@ -31,7 +31,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QRegExp>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -72,11 +72,12 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
 TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host* pHost)
-: Tree<TTrigger>(0)
+: Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex( false )
 , mPerlSlashGOption( false )
 , mFilterTrigger( false )
@@ -106,6 +107,7 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -158,28 +160,30 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     bool state = true;
 
     for (int i = 0; i < regexList.size(); i++) {
-        if (regexList[i].size() < 1) {
+        if (regexList.at(i).isEmpty() && propertyList.at(i) != REGEX_PROMPT) {
             continue;
         }
 
-        mRegexCodeList.append(regexList[i]);
-        mRegexCodePropertyList.append(propertyList[i]);
+        mRegexCodeList.append(regexList.at(i));
+        mRegexCodePropertyList.append(propertyList.at(i));
 
-        if (propertyList[i] == REGEX_PERL) {
+        if (propertyList.at(i) == REGEX_PERL) {
             const char* error;
-            const QByteArray& local8Bit = regexList[i].toLocal8Bit();
+            const QByteArray& regexp = regexList.at(i).toUtf8();
 
             int erroffset;
 
-            QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, 0), pcre_deleter);
+            // PCRE_UTF8 needed to run compile in UTF-8 mode
+            // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
+            QSharedPointer<pcre> re(pcre_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
 
             if (!re) {
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
-                    TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << local8Bit.constData() << "\"\n" >> 0;
+                    TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp.constData() << "\"\n" >> 0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i), local8Bit.constData(), error)));
+                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i), regexp.constData(), error)));
                 state = false;
             } else {
                 if (mudlet::debugMode) {
@@ -211,23 +215,27 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
         }
 
         if (propertyList[i] == REGEX_COLOR_PATTERN) {
-            QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
-            int _pos = regex.indexIn(regexList[i]);
+            QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
+            QRegularExpressionMatch match = regex.match(regexList[i]);
+
+            int _pos = match.capturedStart();
+
             if (_pos == -1) {
-                mColorPatternList.push_back(0);
+                mColorPatternList.push_back(nullptr);
                 state = false;
                 continue;
             }
-            int ansiFg = regex.cap(1).toInt();
-            int ansiBg = regex.cap(2).toInt();
+
+            int ansiFg = match.captured(1).toInt();
+            int ansiBg = match.captured(2).toInt();
 
             if (!setupColorTrigger(ansiFg, ansiBg)) {
-                mColorPatternList.push_back(0);
+                mColorPatternList.push_back(nullptr);
                 state = false;
                 continue;
             }
         } else {
-            mColorPatternList.push_back(0);
+            mColorPatternList.push_back(nullptr);
         }
     }
     if (!state) {
@@ -265,19 +273,16 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     std::list<int> posList;
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
 
-    rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
+    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
 
     if (rc < 0) {
         return false;
-    }
-    if (rc > 0) {
+    } else if (rc == 0) {
+        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+    } else {
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::blue), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
         }
-    }
-
-    if (rc == 0) {
-        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
     }
 
     for (i = 0; i < rc; i++) {
@@ -298,15 +303,15 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
         }
     }
-    pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMECOUNT, &namecount);
+    pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
     if (namecount <= 0) {
-        ;
+        ;// Do something?
     } else {
         unsigned char* tabptr;
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMETABLE, &name_table);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
 
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
 
         tabptr = name_table;
         for (i = 0; i < namecount; i++) {
@@ -328,7 +333,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), NULL, subject, subject_length, start_offset, options, ovector, 30);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
 
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
@@ -336,15 +341,12 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             }
             ovector[1] = start_offset + 1;
             continue;
-        }
-
-        if (rc < 0) {
+        } else if (rc < 0) {
             goto END;
-        }
-
-        if (rc == 0) {
+        } else if (rc == 0) {
             qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
         }
+
         for (i = 0; i < rc; i++) {
             char* substring_start = subject + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
@@ -439,7 +441,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
     if (toMatch.startsWith(regex)) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(regex.toLatin1().data());
+        captureList.emplace_back(regex.toUtf8().constData());
         posList.push_back(0 + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -539,11 +541,11 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
     if (where != -1) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(regex.toLatin1().data());
+        captureList.emplace_back(regex.toUtf8().constData());
         posList.push_back(where + posOffset);
         if (mPerlSlashGOption) {
             while ((where = toMatch.indexOf(regex, where + 1)) != -1) {
-                captureList.push_back(regex.toLatin1().data());
+                captureList.emplace_back(regex.toUtf8().constData());
                 posList.push_back(where + posOffset);
             }
         }
@@ -634,9 +636,9 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             if (matchBegin > -1) {
                 std::string got;
                 if (matching) {
-                    got = lineBuffer.mid(matchBegin, pos - matchBegin + 1).toLatin1().data();
+                    got = lineBuffer.mid(matchBegin, pos - matchBegin + 1).toUtf8().constData();
                 } else {
-                    got = lineBuffer.mid(matchBegin, pos - matchBegin).toLatin1().data();
+                    got = lineBuffer.mid(matchBegin, pos - matchBegin).toUtf8().constData();
                 }
                 captureList.push_back(got);
                 posList.push_back(matchBegin);
@@ -660,10 +662,8 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
-                std::string& s = *its;
-                cout << "CTgot<" << s << "> bis:" << s.size() << endl;
-
-                int length = s.size();
+                qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
+                int length = (*its).size();
                 pC->selectSection(begin, length);
                 pC->setBgColor(r1, g1, b1);
                 pC->setFgColor(r2, g2, b2);
@@ -744,6 +744,24 @@ bool TTrigger::match_lua_code(int regexNumber)
     return false;
 }
 
+bool TTrigger::match_prompt(int patternNumber)
+{
+    if (mpHost->mpConsole->mIsPromptLine) {
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::yellow), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> 0;
+        }
+        if (mIsMultiline) {
+            std::list<std::string> captureList;
+            std::list<int> posList;
+            updateMultistates(patternNumber, captureList, posList);
+            return true;
+        }
+        execute();
+        return true;
+    }
+    return false;
+}
+
 bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, int regexNumber, int posOffset)
 {
     QString text = toMatch;
@@ -753,7 +771,7 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
     if (text == line) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.push_back(line.toLatin1().data());
+        captureList.emplace_back(line.toUtf8().constData());
         posList.push_back(0 + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::yellow), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -831,38 +849,42 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         }
 
         int size = mRegexCodePropertyList.size();
-        for (int i = 0;; i++) {
-            if (i >= size) {
+        for (int patternNumber = 0;; patternNumber++) {
+            if (patternNumber >= size) {
                 break;
             }
             ret = false;
-            switch (mRegexCodePropertyList.value(i)) {
+            switch (mRegexCodePropertyList.value(patternNumber)) {
             case REGEX_SUBSTRING:
-                ret = match_substring(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_substring(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_PERL:
-                ret = match_perl(subject, toMatch, i, posOffset);
+                ret = match_perl(subject, toMatch, patternNumber, posOffset);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                ret = match_begin_of_line_substring(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_begin_of_line_substring(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_EXACT_MATCH:
-                ret = match_exact_match(toMatch, mRegexCodeList[i], i, posOffset);
+                ret = match_exact_match(toMatch, mRegexCodeList[patternNumber], patternNumber, posOffset);
                 break;
 
             case REGEX_LUA_CODE:
-                ret = match_lua_code(i);
+                ret = match_lua_code(patternNumber);
                 break;
 
             case REGEX_LINE_SPACER:
-                ret = match_line_spacer(i);
+                ret = match_line_spacer(patternNumber);
                 break;
 
             case REGEX_COLOR_PATTERN:
-                ret = match_color_pattern(line, i);
+                ret = match_color_pattern(line, patternNumber);
+                break;
+
+            case REGEX_PROMPT:
+                ret = match_prompt(patternNumber);
                 break;
             }
             // policy: one match is enough to fire on OR-trigger, but in the case of
@@ -874,7 +896,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                     break;
                 }
             } else {
-                if ((!ret) && (i >= highestCondition)) {
+                if ((!ret) && (patternNumber >= highestCondition)) {
                     break;
                 }
             }
@@ -1171,12 +1193,12 @@ TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
     }
 
     if (invalidColorCode) {
-        return 0;
+        return nullptr;
     }
 
     auto pCT = new TColorTable;
     if (!pCT) {
-        return 0;
+        return nullptr;
     }
 
     pCT->ansiBg = ansiBg;
@@ -1265,8 +1287,13 @@ void TTrigger::compile()
 bool TTrigger::setScript(const QString& script)
 {
     mScript = script;
-    mNeedsToBeCompiled = true;
-    mOK_code = compileScript();
+    if (script.isEmpty()) {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+    } else {
+        mNeedsToBeCompiled = true;
+        mOK_code = compileScript();
+    }
     return mOK_code;
 }
 
@@ -1299,6 +1326,16 @@ void TTrigger::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpLua->call_luafunction(this);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     if (mIsMultiline) {
         mpLua->callMulti(mFuncName, mName);
     } else {
@@ -1334,5 +1371,5 @@ TTrigger* TTrigger::killTrigger(const QString& name)
     for (auto trigger : *mpMyChildrenList) {
         trigger->killTrigger(name);
     }
-    return 0;
+    return nullptr;
 }

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -35,7 +35,6 @@
 #include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
-
 
 using namespace std;
 
@@ -355,6 +354,8 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mEditorThemeFile", pHost->mEditorThemeFile);
     writeAttribute("mThemePreviewItemID", QString::number(pHost->mThemePreviewItemID));
     writeAttribute("mThemePreviewType", pHost->mThemePreviewType);
+    writeAttribute("mSearchEngineName", pHost->mSearchEngineName);
+
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
@@ -747,6 +748,47 @@ bool XMLexport::exportTrigger(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
+bool XMLexport::exportToClipboard(TTrigger* pT)
+{
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpTrigger) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
+
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
+    xmlBuffer.open(QIODevice::WriteOnly);
+
+    writeStartDocument();
+    if (hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    writeDTD("<!DOCTYPE MudletPackage>");
+
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+
+    writeStartElement("TriggerPackage");
+    bool isOk = writeTrigger(mpTrigger);
+    writeEndElement(); //TriggerPackage
+
+    writeEndElement(); //MudletPackage
+    writeEndDocument();
+
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
+}
 
 bool XMLexport::writeTrigger(TTrigger* pT)
 {
@@ -820,7 +862,6 @@ bool XMLexport::writeTrigger(TTrigger* pT)
     return (isOk && (!hasError()));
 }
 
-
 bool XMLexport::exportAlias(QIODevice* device)
 {
     setDevice(device);
@@ -843,6 +884,50 @@ bool XMLexport::exportAlias(QIODevice* device)
     writeEndDocument();
 
     return (isOk && (!hasError()));
+}
+
+bool XMLexport::exportToClipboard(TAlias* pT)
+{
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpAlias) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
+
+    // autoFormatting is set to true in constructor
+
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
+    xmlBuffer.open(QIODevice::WriteOnly);
+
+    writeStartDocument();
+    if (hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    writeDTD("<!DOCTYPE MudletPackage>");
+
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+
+    writeStartElement("AliasPackage");
+    bool isOk = writeAlias(mpAlias);
+    writeEndElement(); // </AliasPackage>
+
+    writeEndElement(); // </MudletPackage>
+    writeEndDocument();
+
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeAlias(TAlias* pT)
@@ -900,6 +985,50 @@ bool XMLexport::exportAction(QIODevice* device)
     writeEndDocument();
 
     return (isOk && (!hasError()));
+}
+
+bool XMLexport::exportToClipboard(TAction* pT)
+{
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpAction) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
+
+    // autoFormatting is set to true in constructor
+
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
+    xmlBuffer.open(QIODevice::WriteOnly);
+
+    writeStartDocument();
+    if (hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    writeDTD("<!DOCTYPE MudletPackage>");
+
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+
+    writeStartElement("ActionPackage");
+    bool isOk = writeAction(mpAction);
+    writeEndElement(); // </ActionPackage>
+
+    writeEndElement(); // </MudletPackage>
+    writeEndDocument();
+
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeAction(TAction* pT)
@@ -976,6 +1105,50 @@ bool XMLexport::exportTimer(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
+bool XMLexport::exportToClipboard(TTimer* pT)
+{
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpTimer) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
+
+    // autoFormatting is set to true in constructor
+
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
+    xmlBuffer.open(QIODevice::WriteOnly);
+
+    writeStartDocument();
+    if (hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    writeDTD("<!DOCTYPE MudletPackage>");
+
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+
+    writeStartElement("TimerPackage");
+    bool isOk = writeTimer(mpTimer);
+    writeEndElement(); // </TimerPackage>
+
+    writeEndElement(); // </MudletPackage>
+    writeEndDocument();
+
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
+}
+
 bool XMLexport::writeTimer(TTimer* pT)
 {
     bool isOk = true;
@@ -1011,7 +1184,6 @@ bool XMLexport::writeTimer(TTimer* pT)
     return (isOk && (!hasError()));
 }
 
-
 bool XMLexport::exportScript(QIODevice* device)
 {
     setDevice(device);
@@ -1034,6 +1206,50 @@ bool XMLexport::exportScript(QIODevice* device)
     writeEndDocument();
 
     return (isOk && (!hasError()));
+}
+
+bool XMLexport::exportToClipboard(TScript* pT)
+{
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpScript) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
+
+    // autoFormatting is set to true in constructor
+
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
+    xmlBuffer.open(QIODevice::WriteOnly);
+
+    writeStartDocument();
+    if (hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    writeDTD("<!DOCTYPE MudletPackage>");
+
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+
+    writeStartElement("ScriptPackage");
+    bool isOk = writeScript(mpScript);
+    writeEndElement(); // </ScriptPackage>
+
+    writeEndElement(); // </MudletPackage>
+    writeEndDocument();
+
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeScript(TScript* pT)
@@ -1073,7 +1289,6 @@ bool XMLexport::writeScript(TScript* pT)
     return (isOk && (!hasError()));
 }
 
-
 bool XMLexport::exportKey(QIODevice* device)
 {
     setDevice(device);
@@ -1096,6 +1311,50 @@ bool XMLexport::exportKey(QIODevice* device)
     writeEndDocument();
 
     return (isOk && (!hasError()));
+}
+
+bool XMLexport::exportToClipboard(TKey* pT)
+{
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpKey) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
+
+    // autoFormatting is set to true in constructor
+
+    QBuffer xmlBuffer;
+    // set the device explicitly so QXmlStreamWriter knows where to write to
+    setDevice(&xmlBuffer);
+    xmlBuffer.open(QIODevice::WriteOnly);
+
+    writeStartDocument();
+    if (hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    writeDTD("<!DOCTYPE MudletPackage>");
+
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+
+    writeStartElement("KeyPackage");
+    bool isOk = writeKey(mpKey);
+    writeEndElement(); // </KeyPackage>
+
+    writeEndElement(); // </MudletPackage>
+    writeEndDocument();
+
+    if (!isOk || hasError()) {
+        xmlBuffer.close();
+        return false;
+    }
+
+    QClipboard* cb = QApplication::clipboard();
+    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+
+    xmlBuffer.close();
+    return true;
 }
 
 bool XMLexport::writeKey(TKey* pT)

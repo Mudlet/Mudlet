@@ -55,9 +55,8 @@ class TConsole : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TConsole)
-
 public:
+    Q_DISABLE_COPY(TConsole)
     TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
     void reset();
     void resetMainConsole();
@@ -92,7 +91,6 @@ public:
 
     int getColumnNumber();
     void createMapper(int, int, int, int);
-    void loadRawFile(std::string);
 
     void setWrapAt(int pos)
     {
@@ -114,6 +112,7 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setBgColor(int, int, int);
+    void setScrollBarVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
@@ -141,7 +140,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(std::string&, int);
+    bool setMiniConsoleFontSize(int);
     void setBold(bool);
     void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
     void setItalics(bool);
@@ -197,7 +196,6 @@ public:
 
     int mIndentCount;
     bool mIsDebugConsole;
-    bool mIsHighColorMode;
     bool mIsSubConsole;
     std::map<std::string, TLabel*> mLabelMap;
     QFile mLogFile;
@@ -214,9 +212,6 @@ public:
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
-    bool mHighColorModeBackground;
-    bool mHighColorModeForeground;
-
 
     QWidget* mpBaseVFrame;
     QWidget* mpTopToolBar;
@@ -245,7 +240,6 @@ public:
     bool mTriggerEngineMode;
     bool mUserConsole;
     QPoint mUserCursor;
-    bool mWaitingForHighColorCode;
     bool mWindowIsHidden;
     int mWrapAt;
     QLineEdit* networkLatency;
@@ -263,8 +257,13 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     bool mSaveLayoutRequested;
+    QWidget* mpButtonMainLayer;
 
 signals:
+    // Raised when new data is incoming to trigger Alert handling in mudlet
+    // class, second argument is true for a lower priority indication when
+    // locally produced information is painted into main console
+    void signal_newDataAlert(const QString&, const bool isLowerPriorityChange = false);
 
 
 public slots:

@@ -42,13 +42,12 @@
 
 class Host;
 
-class dlgIRC : public QMainWindow, public Ui::irc_dlg
+class dlgIRC : public QMainWindow, public Ui::irc
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgIRC)
-
 public:
+    Q_DISABLE_COPY(dlgIRC)
     dlgIRC(Host*);
     ~dlgIRC();
 

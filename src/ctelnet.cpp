@@ -1,8 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017 by Stephen Lyons                        *
- *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2014, 2017-2018 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
@@ -62,14 +62,20 @@
 
 using namespace std;
 
+char loadBuffer[100001];
+int loadedBytes;
+QDataStream replayStream;
+QFile replayFile;
+
 
 cTelnet::cTelnet(Host* pH)
 : mResponseProcessed(true)
 , mAlertOnNewData(true)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
-, mpComposer(0)
+, mpComposer(nullptr)
 , mpHost(pH)
+, mEncoding()
 , mpPostingTimer(new QTimer(this))
 , mUSE_IRE_DRIVER_BUGFIX(false)
 , mLF_ON_GA(false)
@@ -89,13 +95,15 @@ cTelnet::cTelnet(Host* pH)
 , mZstream()
 , recvdGA()
 , lastTimeOffset()
+, mIsReplayRunFromLua(false)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
 
-    // initialize default encoding
-    mEncoding = "UTF-8";
-    encodingChanged(mEncoding);
+    // initialize encoding to a sensible default - needs to be a different value
+    // than that in the initialisation list so that it is processed as a change
+    // to set up the initial encoder
+    encodingChanged(QLatin1String("UTF-8"));
     termType = QString("Mudlet %1").arg(APP_VERSION);
     if (QByteArray(APP_BUILD).trimmed().length()) {
         termType.append(QString(APP_BUILD));
@@ -109,12 +117,16 @@ cTelnet::cTelnet(Host* pH)
 
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << QLatin1String("UTF-8");
+        mAcceptableEncodings << QLatin1String("GBK");
+        mAcceptableEncodings << QLatin1String("GB18030");
         mAcceptableEncodings << QLatin1String("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
 
     if (mFriendlyEncodings.isEmpty()) {
         mFriendlyEncodings << QLatin1String("UTF-8");
+        mFriendlyEncodings << QLatin1String("GBK");
+        mFriendlyEncodings << QLatin1String("GB18030");
         mFriendlyEncodings << QLatin1String("ISO 8859-1");
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
@@ -160,6 +172,16 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+    if (loadingReplay) {
+        // If we are doing a replay we had better abort it so that if we are
+        // NOT the "last profile standing" the replay system gets reset for
+        // another profile to use:
+        loadingReplay = false;
+        replayFile.close();
+        qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";
+        mudlet::self()->replayOver();
+    }
+
     if (messageStack.size()) {
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
         foreach (QString message, messageStack) {
@@ -172,22 +194,27 @@ cTelnet::~cTelnet()
 
 void cTelnet::encodingChanged(const QString& encoding)
 {
-    mEncoding = encoding;
-
     // unicode carries information in form of single byte characters
     // and multiple byte character sequences.
     // the encoder and the decoder maintain translation state, i.e. they need to know the preceding
     // chars to make the correct decisions when translating into unicode and vice versa
 
-    // Not currently used as we do it by hand as we have to extract the data
-    // from the telnet protocol and all the out-of-band stuff.  It might be
-    // possible to use this in the future for non-UTF-8 traffic thought.
-    incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
-    incomingDataDecoder = incomingDataCodec->makeDecoder();
+    if (mEncoding != encoding) {
+        mEncoding = encoding;
+        // Not currently used as we do it by hand as we have to extract the data
+        // from the telnet protocol and all the out-of-band stuff.  It might be
+        // possible to use this in the future for non-UTF-8 traffic though.
+//    incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+//    incomingDataDecoder = incomingDataCodec->makeDecoder();
 
-    outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
-    outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
-    // Do NOT create BOMs!
+        outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+        // Do NOT create BOM on out-going text data stream!
+        outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+
+        // No need to tell the TBuffer instance of the main TConsole for this
+        // profile to change its QTextCodec to match as it now checks for
+        // changes here on each incoming packet
+    }
 }
 
 // returns the computer encoding name ("ISO 8859-5") given a human-friendly one ("ISO 8859-5 (Cyrillic)")
@@ -359,9 +386,18 @@ bool cTelnet::sendData(QString& data)
     if (mpHost->mAllowToSendCommand) {
         string outData;
         if (!mEncoding.isEmpty()) {
+            if (! outgoingDataCodec->canEncode(data)) {
+                QString errorMsg = tr("[ WARN ] - Invalid characters in outgoing data, one or more characters cannot\n"
+                                      "be encoded into the range that is acceptable for the character\n"
+                                      "encoding that is currently set {\"%1\"} for the MUD Server."
+                                      "It may not understand what is sent to it.").arg(mEncoding);
+                postMessage(errorMsg);
+            }
+            // Even if there are bad characters - try to send it anyway...
             outData = outgoingDataEncoder->fromUnicode(data).constData();
         } else {
             // Plain, raw ASCII, we hope!
+            // TODO: Moan if the user is trying to send non-ASCII characters out!
             outData = data.toStdString();
         }
 
@@ -555,7 +591,7 @@ void cTelnet::processTelnetCommand(const string& command)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         option = command[2];
-        int idxOption = static_cast<int>(option);
+        const auto idxOption = static_cast<int>(option);
 
         if (option == static_cast<char>(25)) //EOR support (END OF RECORD=TN_GA
         {
@@ -890,7 +926,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 return;
             }
             _m = _m.mid(3, command.size() - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.toLocal8Bit().data(), _m.length());
+            mpHost->mLuaInterpreter.msdp2Lua(_m.toUtf8().data(), _m.length());
             return;
         }
         // ATCP
@@ -949,10 +985,8 @@ void cTelnet::processTelnetCommand(const string& command)
                     mpHost->mpConsole->print("<package is already installed>\n");
                     return;
                 }
-                QString _home = QDir::homePath();
-                _home.append("/.config/mudlet/profiles/");
-                _home.append(mpHost->getName());
-                mServerPackage = QString("%1/%2").arg(_home, fileName);
+
+                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
@@ -967,12 +1001,13 @@ void cTelnet::processTelnetCommand(const string& command)
 
         // GMCP
         if (option == static_cast<char>(201)) {
-            QString _m = command.c_str();
+            QString rawPayload = command.c_str();
             if (command.size() < 6) {
                 return;
             }
-            _m = _m.mid(3, command.size() - 5);
-            setGMCPVariables(_m);
+            // strip first 3 characters to get rid of <IAC><SB><201>
+            // and strip the last 2 characters to get rid of <IAC><TN_SE>
+            setGMCPVariables(rawPayload.mid(3, rawPayload.size() - 5));
             return;
         }
 
@@ -1170,10 +1205,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
             mpHost->mpConsole->print("<package is already installed>\n");
             return;
         }
-        QString _home = QDir::homePath();
-        _home.append("/.config/mudlet/profiles/");
-        _home.append(mpHost->getName());
-        mServerPackage = QString("%1/%2").arg(_home, fileName);
+
+        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
@@ -1206,7 +1239,7 @@ void cTelnet::atcpComposerCancel()
         return;
     }
     mpComposer->close();
-    mpComposer = 0;
+    mpComposer = nullptr;
     string msg = "*q\nno\n";
     socketOutRaw(msg);
 }
@@ -1250,7 +1283,7 @@ void cTelnet::atcpComposerSave(QString txt)
         return;
     }
     mpComposer->close();
-    mpComposer = 0;
+    mpComposer = nullptr;
 }
 
 // Revamped to take additional [ WARN ], [ ALERT ] and [ INFO ] prefixes and to indent
@@ -1538,32 +1571,52 @@ void cTelnet::recordReplay()
     timeOffset.start();
 }
 
-char loadBuffer[100001];
-int loadedBytes;
-QDataStream replayStream;
-QFile replayFile;
-
-void cTelnet::loadReplay(QString& name)
+bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
 {
     replayFile.setFileName(name);
     if (replayFile.open(QIODevice::ReadOnly)) {
-        QString msg = tr("[ INFO ]  - Loading replay file:\n"
-                         "\"%1\".")
-                              .arg(name);
-        postMessage(msg);
+        if (!pErrMsg) {
+            // Only post an information menu if initiated from GUI controls
+            postMessage(tr("[ INFO ]  - Loading replay file:\n"
+                           "\"%1\".")
+                        .arg(name));
+            mIsReplayRunFromLua = true;
+        } else {
+            mIsReplayRunFromLua = false;
+        }
         replayStream.setDevice(&replayFile);
         loadingReplay = true;
-        mudlet::self()->replayStart();
-        _loadReplay();
+        if (mudlet::self()->replayStart()) {
+            // TODO: consider moving to a QTimeLine based system...?
+            // This initiates the replay chunk reading/processing cycle:
+            loadReplayChunk();
+        } else {
+            loadingReplay = false;
+            if (pErrMsg) {
+                *pErrMsg = QStringLiteral("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
+            } else {
+                postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
+                               "try again when it has finished."));
+            }
+            return false;
+        }
     } else {
-        QString msg = tr("[ ERROR ]  - Unable to open replay file:\n"
-                         "\"%1\".")
-                              .arg(name);
-        postMessage(msg);
+        if (pErrMsg) {
+            // Call from lua case:
+            *pErrMsg = QStringLiteral("cannot read file \"%1\", error message was: \"%2\".")
+                    .arg(name, replayFile.errorString());
+        } else {
+            postMessage(tr("[ ERROR ] - Cannot read file \"%1\",\n"
+                           "error message was: \"%2\".")
+                        .arg(name, replayFile.errorString()));
+        }
+        return false;
     }
+
+    return true;
 }
 
-void cTelnet::_loadReplay()
+void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
         int offset;
@@ -1571,38 +1624,31 @@ void cTelnet::_loadReplay()
         replayStream >> offset;
         replayStream >> amount;
 
-        char* pB = &loadBuffer[0];
-        loadedBytes = replayStream.readRawData(pB, amount);
-        qDebug("_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f seconds.)",
-               loadedBytes,
-               amount,
-               offset / 1000.0,
-               offset / (1000.0 * mudlet::self()->mReplaySpeed));
-        loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
+        loadedBytes = replayStream.readRawData(loadBuffer, amount);
+        // Previous use of loadedBytes + 1 caused a spurious character at end of
+        // string display by a qDebug of the loadBuffer contents
+        loadBuffer[loadedBytes] = '\0';
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
+        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(slot_processReplayChunk()));
     } else {
         loadingReplay = false;
         replayFile.close();
-        QString msg = tr("[  OK  ]  - The replay has ended.");
-        postMessage(msg);
+        if (!mIsReplayRunFromLua) {
+            postMessage(tr("[  OK  ]  - The replay has ended."));
+        }
         mudlet::self()->replayOver();
     }
 }
 
 
-void cTelnet::readPipe()
+void cTelnet::slot_processReplayChunk()
 {
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
-    qDebug(R"(Replay data: "%s")", loadBuffer);
     for (int i = 0; i < datalen; i++) {
         char ch = loadBuffer[i];
         if (iac || iac2 || insb || (ch == TN_IAC)) {
-#ifdef DEBUG
-            qDebug() << " SERVER sends telnet command " << (quint8)ch;
-#endif
             if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
                 iac = true;
                 command += ch;
@@ -1685,7 +1731,7 @@ void cTelnet::readPipe()
 
     mpHost->mpConsole->finalize();
     if (loadingReplay) {
-        _loadReplay();
+        loadReplayChunk();
     }
 }
 

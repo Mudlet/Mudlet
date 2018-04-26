@@ -1,0 +1,146 @@
+<section><date> 1. June 2000 </date>
+<h2> ZIP Access </h2>    Accessing Zip Archives with ZLib Decompression
+
+<!--border--> 
+
+<section>
+<h3> The Library </h3>
+
+<P>
+ The <a href="zziplib.html">zziplib library</a> offers users the
+ ability to easily extract data from files archived in a single
+ zip file. This way, programs that use many "read-only" files from
+ a program specific source directory can have a single zip
+ archive
+</P>
+<P>
+ This library offers only a (free) subset of compression methods
+ provided in a full implementation but that is well enough. The
+ idea here is that <tt>zip/unzip</tt> utilities can be used
+ to create archives that will later be read by using this library.
+ Yet those programmes (or a library with their functionality)
+ is not needed in that final operation.
+</P>
+
+</section><section>
+<h3> Using A Zip-File </h3>
+
+<P>
+ Before a file in the zip-archive is accessed, the application
+ must first get a handle to the central directory contained in the
+ zip-file. This is achived by calling 
+ <a href="zziplib.html#zzip_dir_open"> zzip_dir_open </a>
+ or 
+ <a href="zziplib.html#zzip_dir_fdopen"> zzip_dir_fdopen </a>.
+ The directory entries in the zip-archives can be obtained
+ with
+ <a href="zziplib.html#zzip_dir_read"> zzip_dir_read </a>.
+ After being done, the zip-dir handle should be closed with
+ <a href="zziplib.html#zzip_dir_close"> zzip_dir_close </a>.
+</P>
+<p><pre> ZZIP_DIR* dir = zzip_dir_open("test.zip",0);
+ if (dir) {
+   ZZIP_DIRENT dirent;
+   if (zzip_dir_read(dir,&amp;dirent) {
+     /* show info for first file */
+     print("%s %i/%i", dirent.d_name, dirent.d_csize, dirent.st_size);
+   }
+   zzip_dir_close(dir);
+ }
+</pre></p>
+<P>
+ From the zip-dir handle a compressed file can be opened
+ for reading. This is achieved by using 
+ <a href="zziplib.html#zzip_file_open"> zzip_file_open </a>
+ and providing it with the dir-handle and a name of the file.
+ The function
+ <a href="zziplib.html#zzip_file_read"> zzip_file_read </a>
+ is used to get pieces of uncompressed data from the file, and
+ the file-handle should be closed with
+ <a href="zziplib.html#zzip_file_close"> zzip_file_close </a>
+</P>
+<p><pre> ZZIP_FILE* fp = zzip_file_open(dir,"README",0);
+ if (fp) {
+   char buf[10];
+   zzip_ssize_t len = zzip_file_read(fp, buf, 10);
+   if (len) {
+     /* show head of README */
+     write(1, buf, len); 
+   }
+   zzip_file_close(fp);
+ } 
+</pre></p>
+
+</section><section>
+<h3> Magic Zipped Files </h3>
+
+<P>
+ There is actually no need to directly use the zip-centric functions
+ as described above. Instead there are magic replacements for the
+ posix calls <code>open/read/close</code> and 
+ <code>opendir/readdir/closedir</code>. The prototypes of these
+ functions had been the guideline for the design of their magic
+ counterparts of the
+ <a href="zziplib.html">zziplib library</a>.
+</P>
+<P>
+ The magic functions are described in a seperated document on
+ <a href="zzip-file.html"> Using Zipped Files </a>. In general,
+ the functions have a prefix <tt>zzip_</tt> and their argument
+ types have a prefix <tt>ZZIP_</tt> where appropriate. Calls
+ to the magic functions and the direct functions above can
+ be mixed as long as the magic functions have not been opening
+ a real file.
+</P>
+<P>
+ To detect a real file (or directory), the info functions
+ <a href="zziplib.html#zzip_file_real"> zzip_file_real </a>
+ and
+ <a href="zziplib.html#zzip_dir_real"> zzip_dir_real </a>
+ can be used.
+ If these return a true value, the standard posix functions
+ are more apropriate. The posix handles can be obtained with
+ a call to
+ <a href="zziplib.html#zzip_realdir"> zzip_realdir </a> and
+ <a href="zziplib.html#zzip_realfd"> zzip_realfd </a> respectivly.
+</P>
+
+</section><section>
+<h3> Errors &amp; Infos </h3>
+
+<P>
+ There are a set of error and info functions available. To handle
+ error conditions specific to the
+ <a href="zziplib.html">zziplib library</a>
+ there are these functions:
+ <a href="zziplib.html#zzip_error"> zzip_error </a>,
+ <a href="zziplib.html#zzip_seterror"> zzip_seterror </a>
+ and their string representations with
+ <a href="zziplib.html#zzip_strerror"> zzip_strerror </a>,
+ <a href="zziplib.html#zzip_strerror_of"> zzip_strerror_of </a>.
+ The magic functions will map any of these specific library
+ error conditions to the more generic system <code>errno</code>
+ codes with
+ <a href="zziplib.html#zzip_errno"> zzip_errno </a>.
+</P>
+<P>
+ More information on stream can be obtained with
+ <a href="zziplib.html#zzip_dir_stat"> zzip_dir_stat </a> and
+ <a href="zziplib.html#zzip_dirhandle"> zzip_dirhandle. </a>
+ The latter is used to obtain the dir-handle that every zipped file 
+ handle has even if not explicitly opened.
+</P>
+<P>
+ The usage of many functions are shown in the example programs
+ that come along with the
+ <a href="zziplib.html">zziplib library</a>. See the files
+ <a href="zzcat.c"> zzcat.c </a> and
+ <a href="zzdir.c"> zzdir.c </a>. The 
+ <a href="zziptest.c"> zziptest.c </a> program needs the
+ private header file 
+ <a href="zzip.h"> zzip.h </a> whereas the library installer
+ will only copy the public include file 
+ <a href="zziplib.h"> zziplib.h </a> to your system's
+ <tt>include</tt> directory.
+</P>
+</section></section>

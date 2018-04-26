@@ -26,18 +26,16 @@
 #include "ui_connection_profiles.h"
 #include "post_guard.h"
 
-class dlgConnectionProfiles : public QDialog, public Ui::profile_dialog
+class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgConnectionProfiles)
-
 public:
+    Q_DISABLE_COPY(dlgConnectionProfiles)
     dlgConnectionProfiles(QWidget* parent = 0);
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(QString, QString);
-    QStringList readProfileHistory(QString, QString);
     void accept() override;
 
 signals:

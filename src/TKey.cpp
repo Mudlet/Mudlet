@@ -42,7 +42,7 @@ TKey::TKey(TKey* parent, Host* pHost)
 }
 
 TKey::TKey(QString name, Host* pHost)
-: Tree<TKey>( 0 )
+: Tree<TKey>( nullptr )
 , exportItem( true )
 , mModuleMasterFolder( false )
 , mName( name )
@@ -71,6 +71,7 @@ void TKey::setName(const QString& name)
     mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
 }
 
+// This method is potentially flawed in that only the first child match is ever executed...!
 bool TKey::match(int key, int modifier)
 {
     if (isActive()) {

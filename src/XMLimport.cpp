@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,6 +22,8 @@
 
 #include "XMLimport.h"
 
+
+#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -39,6 +41,7 @@
 #include "pre_guard.h"
 #include <QtMath>
 #include <QDebug>
+#include <QBuffer>
 #include <QStringList>
 #include "post_guard.h"
 
@@ -74,7 +77,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
     module = moduleFlag;
 
     if (!packName.isEmpty()) {
-        mpKey = new TKey(0, mpHost);
+        mpKey = new TKey(nullptr, mpHost);
         if (module) {
             mpKey->mModuleMasterFolder = true;
             mpKey->mModuleMember = true;
@@ -84,7 +87,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpKey->setName(mPackageName);
         mpKey->setIsFolder(true);
 
-        mpTrigger = new TTrigger(0, mpHost);
+        mpTrigger = new TTrigger(nullptr, mpHost);
         if (module) {
             mpTrigger->mModuleMasterFolder = true;
             mpTrigger->mModuleMember = true;
@@ -94,7 +97,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpTrigger->setName(mPackageName);
         mpTrigger->setIsFolder(true);
 
-        mpTimer = new TTimer(0, mpHost);
+        mpTimer = new TTimer(nullptr, mpHost);
         if (module) {
             mpTimer->mModuleMasterFolder = true;
             mpTimer->mModuleMember = true;
@@ -104,7 +107,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpTimer->setName(mPackageName);
         mpTimer->setIsFolder(true);
 
-        mpAlias = new TAlias(0, mpHost);
+        mpAlias = new TAlias(nullptr, mpHost);
         if (module) {
             mpAlias->mModuleMasterFolder = true;
             mpAlias->mModuleMember = true;
@@ -116,7 +119,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpAlias->setRegexCode(QString());
         mpAlias->setIsFolder(true);
 
-        mpAction = new TAction(0, mpHost);
+        mpAction = new TAction(nullptr, mpHost);
         if (module) {
             mpAction->mModuleMasterFolder = true;
             mpAction->mModuleMember = true;
@@ -126,7 +129,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpAction->setName(mPackageName);
         mpAction->setIsFolder(true);
 
-        mpScript = new TScript(0, mpHost);
+        mpScript = new TScript(nullptr, mpHost);
         if (module) {
             mpScript->mModuleMasterFolder = true;
             mpScript->mModuleMember = true;
@@ -230,6 +233,38 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
     }
 
     return !error();
+}
+
+// returns the type of item and ID of the first (root) element
+pair<int, int> XMLimport::importFromClipboard()
+{
+    QString xml;
+    QClipboard* clipboard = QApplication::clipboard();
+
+    int packageType = 0;
+    pair<int, int> result;
+
+    xml = clipboard->text(QClipboard::Clipboard);
+
+    QByteArray ba = xml.toUtf8();
+    QBuffer xmlBuffer(&ba);
+
+    setDevice(&xmlBuffer);
+    xmlBuffer.open(QIODevice::ReadOnly);
+
+    while (!atEnd()) {
+        readNext();
+
+        if (isStartElement()) {
+            if (name() == "MudletPackage") {
+                result = readPackage();
+            } else {
+                qDebug() << "ERROR:name=" << name().toString() << "text:" << text().toString();
+            }
+        }
+    }
+
+    return result;
 }
 
 void XMLimport::readVariableGroup(TVar* pParent)
@@ -514,8 +549,11 @@ void XMLimport::readUnknownMapElement()
     }
 }
 
-void XMLimport::readPackage()
+// returns the type of item and ID of the first (root) element
+pair<int, int> XMLimport::readPackage()
 {
+    int objectType = 0;
+    int rootItemID = -1;
     while (!atEnd()) {
         readNext();
 
@@ -525,26 +563,34 @@ void XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                readTriggerPackage();
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTriggerView);
+                rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                readTimerPackage();
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTimerView);
+                rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
-                readAliasPackage();
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmAliasView);
+                rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
-                readActionPackage();
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmActionView);
+                rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
-                readScriptPackage();
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmScriptView);
+                rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
-                readKeyPackage();
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmKeysView);
+                rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmVarsView);
                 readVariablePackage();
             } else {
                 readUnknownPackage();
             }
         }
     }
+    return make_pair(objectType, rootItemID);
 }
 
 void XMLimport::readHelpPackage()
@@ -576,7 +622,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            readPackage();
+            auto result = readPackage();
         }
     }
 }
@@ -759,6 +805,16 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("mThemePreviewType"))) {
         pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     }
+
+    if(attributes().hasAttribute(QLatin1String("mSearchEngineName")))
+    {
+        pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
+    }
+    else
+    {
+        pHost->mSearchEngineName = QString("Google");
+    }
+
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
@@ -939,8 +995,11 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 }
 
-void XMLimport::readTriggerPackage()
+// returns the ID of the root imported trigger/group
+int XMLimport::readTriggerPackage()
 {
+    int parentItemID = -1;
+
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -950,15 +1009,19 @@ void XMLimport::readTriggerPackage()
         if (isStartElement()) {
             if (name() == "TriggerGroup" || name() == "Trigger") {
                 gotTrigger = true;
-                readTriggerGroup(mPackageName.isEmpty() ? 0 : mpTrigger);
+                parentItemID = readTriggerGroup(mPackageName.isEmpty() ? nullptr : mpTrigger);
             } else {
                 readUnknownTriggerElement();
             }
         }
     }
+
+    return parentItemID;
 }
 
-void XMLimport::readTriggerGroup(TTrigger* pParent)
+// imports a trigger and returns its ID - in case of a group, returns the ID
+// of the top-level trigger group.
+int XMLimport::readTriggerGroup(TTrigger *pParent)
 {
     auto pT = new TTrigger(pParent, mpHost);
 
@@ -979,6 +1042,7 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
     pT->mColorTrigger = (attributes().value("isColorTrigger") == "yes");
     pT->mColorTriggerBg = (attributes().value("isColorTriggerBg") == "yes");
     pT->mColorTriggerFg = (attributes().value("isColorTriggerFg") == "yes");
+
 
     while (!atEnd()) {
         readNext();
@@ -1041,10 +1105,14 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
                               "initialize pattern list for trigger: "
                            << pT->getName();
     }
+
+    return pT->getID();
 }
 
-void XMLimport::readTimerPackage()
+int XMLimport::readTimerPackage()
 {
+    int lastImportedTimerID = -1;
+
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1052,15 +1120,17 @@ void XMLimport::readTimerPackage()
         } else if (isStartElement()) {
             if (name() == "TimerGroup" || name() == "Timer") {
                 gotTimer = true;
-                readTimerGroup(mPackageName.isEmpty() ? 0 : mpTimer);
+                lastImportedTimerID = readTimerGroup(mPackageName.isEmpty() ? nullptr : mpTimer);
             } else {
                 readUnknownTimerElement();
             }
         }
     }
+
+    return lastImportedTimerID;
 }
 
-void XMLimport::readTimerGroup(TTimer* pParent)
+int XMLimport::readTimerGroup(TTimer* pParent)
 {
     auto pT = new TTimer(pParent, mpHost);
 
@@ -1106,10 +1176,14 @@ void XMLimport::readTimerGroup(TTimer* pParent)
         pT->setIsActive(true);
         pT->enableTimer(pT->getID());
     }
+
+    return pT->getID();
 }
 
-void XMLimport::readAliasPackage()
+int XMLimport::readAliasPackage()
 {
+    int lastImportedAliasID = -1;
+
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1117,15 +1191,17 @@ void XMLimport::readAliasPackage()
         } else if (isStartElement()) {
             if (name() == "AliasGroup" || name() == "Alias") {
                 gotAlias = true;
-                readAliasGroup(mPackageName.isEmpty() ? 0 : mpAlias);
+                lastImportedAliasID = readAliasGroup(mPackageName.isEmpty() ? nullptr : mpAlias);
             } else {
                 readUnknownAliasElement();
             }
         }
     }
+
+    return lastImportedAliasID;
 }
 
-void XMLimport::readAliasGroup(TAlias* pParent)
+int XMLimport::readAliasGroup(TAlias* pParent)
 {
     auto pT = new TAlias(pParent, mpHost);
 
@@ -1162,10 +1238,14 @@ void XMLimport::readAliasGroup(TAlias* pParent)
             }
         }
     }
+
+    return pT->getID();
 }
 
-void XMLimport::readActionPackage()
+int XMLimport::readActionPackage()
 {
+    int lastImportedActionID = -1;
+
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1173,15 +1253,17 @@ void XMLimport::readActionPackage()
         } else if (isStartElement()) {
             if (name() == "ActionGroup" || name() == "Action") {
                 gotAction = true;
-                readActionGroup(mPackageName.isEmpty() ? 0 : mpAction);
+                lastImportedActionID = readActionGroup(mPackageName.isEmpty() ? nullptr : mpAction);
             } else {
                 readUnknownActionElement();
             }
         }
     }
+
+    return lastImportedActionID;
 }
 
-void XMLimport::readActionGroup(TAction* pParent)
+int XMLimport::readActionGroup(TAction* pParent)
 {
     auto pT = new TAction(pParent, mpHost);
 
@@ -1247,10 +1329,14 @@ void XMLimport::readActionGroup(TAction* pParent)
             }
         }
     }
+
+    return pT->getID();
 }
 
-void XMLimport::readScriptPackage()
+int XMLimport::readScriptPackage()
 {
+    int lastImportedScriptID = -1;
+
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1258,15 +1344,17 @@ void XMLimport::readScriptPackage()
         } else if (isStartElement()) {
             if (name() == "ScriptGroup" || name() == "Script") {
                 gotScript = true;
-                readScriptGroup(mPackageName.isEmpty() ? 0 : mpScript);
+                lastImportedScriptID = readScriptGroup(mPackageName.isEmpty() ? nullptr : mpScript);
             } else {
                 readUnknownScriptElement();
             }
         }
     }
+
+    return lastImportedScriptID;
 }
 
-void XMLimport::readScriptGroup(TScript* pParent)
+int XMLimport::readScriptGroup(TScript* pParent)
 {
     auto pT = new TScript(pParent, mpHost);
 
@@ -1302,10 +1390,14 @@ void XMLimport::readScriptGroup(TScript* pParent)
             }
         }
     }
+
+    return pT->getID();
 }
 
-void XMLimport::readKeyPackage()
+int XMLimport::readKeyPackage()
 {
+    int lastImportedKeyID = -1;
+
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1313,15 +1405,17 @@ void XMLimport::readKeyPackage()
         } else if (isStartElement()) {
             if (name() == "KeyGroup" || name() == "Key") {
                 gotKey = true;
-                readKeyGroup(mPackageName.isEmpty() ? 0 : mpKey);
+                lastImportedKeyID = readKeyGroup(mPackageName.isEmpty() ? nullptr : mpKey);
             } else {
                 readUnknownKeyElement();
             }
         }
     }
+
+    return lastImportedKeyID;
 }
 
-void XMLimport::readKeyGroup(TKey* pParent)
+int XMLimport::readKeyGroup(TKey* pParent)
 {
     auto pT = new TKey(pParent, mpHost);
 
@@ -1360,6 +1454,8 @@ void XMLimport::readKeyGroup(TKey* pParent)
             }
         }
     }
+
+    return pT->getID();
 }
 
 void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)

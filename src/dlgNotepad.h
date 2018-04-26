@@ -30,13 +30,12 @@
 class Host;
 
 
-class dlgNotepad : public QMainWindow, public Ui::NotesEditor
+class dlgNotepad : public QMainWindow, public Ui::notes_editor
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgNotepad)
-
 public:
+    Q_DISABLE_COPY(dlgNotepad)
     dlgNotepad(Host*);
     void save();
     void restore();

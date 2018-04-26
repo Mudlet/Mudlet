@@ -40,10 +40,8 @@
 
 bool HostManager::deleteHost(QString hostname)
 {
-    qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") INFO: trying to delete host from host pool, getting write lock...";
     mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
 
-    qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") INFO: ...got write lock...";
     // make sure this is really a new host
     if (!mHostPool.contains(hostname)) {
         mPoolReadWriteLock.unlock();
@@ -52,8 +50,7 @@ bool HostManager::deleteHost(QString hostname)
     } else {
         int ret = mHostPool.remove(hostname);
         mPoolReadWriteLock.unlock();
-        qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") INFO: found" << ret << "times in host pool and all of them were removed... releasing lock and returning true!";
-        return true;
+        return ret;
     }
 }
 
@@ -69,13 +66,9 @@ bool HostManager::addHost(QString hostname, QString port, QString login, QString
         portnumber = port.toInt();
     }
 
-    qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") INFO: trying to add host to host pool, getting write lock...";
     mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
-
-    qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") INFO: ...got write lock...";
     // make sure this is really a new host
     if (mHostPool.contains(hostname)) {
-        qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: is already a member of host pool... releasing lock and aborting, returning false!";
         mPoolReadWriteLock.unlock();
         return false;
     }
@@ -95,13 +88,11 @@ bool HostManager::addHost(QString hostname, QString port, QString login, QString
 
     mHostPool.insert(hostname, pNewHost);
     mPoolReadWriteLock.unlock();
-    qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") INFO: new Host created and added to host pool... releasing lock and returning true!";
     return true;
 }
 
 QStringList HostManager::getHostList()
 {
-    qDebug() << "HostManager::getHostList() INFO: trying to read host pool, getting shared read access...";
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
 
     QStringList strlist;
@@ -111,18 +102,25 @@ QStringList HostManager::getHostList()
         strlist << hostList;
     }
 
-    qDebug() << "HostManager::getHostList() INFO: ...got read access, and returning" << hostList.count() << "Host name(s).";
     return strlist;
+}
+
+int HostManager::getHostCount()
+{
+    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
+    // This assumes that there will not be nullptr values for destroyed Host
+    // instances:
+    const unsigned int total = mHostPool.count();
+    mPoolReadWriteLock.unlock();
+    return total;
 }
 
 void HostManager::postIrcMessage(QString a, QString b, QString c)
 {
-    qDebug() << "HostManager::postIrcMessage(...) INFO: trying to read host pool, getting shared read access...";
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
 
     const QList<QSharedPointer<Host>> hostList = mHostPool.values();
     mPoolReadWriteLock.unlock();
-    qDebug() << "HostManager::postIrcMessage(...) INFO: ...got read access and sending IRC message to" << hostList.count() << "Hosts.";
     for (const auto& i : hostList) {
         if (i) {
             i->postIrcMessage(a, b, c);
@@ -131,7 +129,7 @@ void HostManager::postIrcMessage(QString a, QString b, QString c)
 }
 
 // The slightly convoluted way we step through the list of hosts is so that we
-// send out the events to the other hosts in a predictable and consistant order
+// send out the events to the other hosts in a predictable and consistent order
 // and so that no one host gets an unfair advantage when emitting events. The
 // sending profile host does NOT get the event!
 void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
@@ -140,11 +138,9 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
         return;
     }
 
-    qDebug() << "HostManager::postInterHostEvent(...) INFO: trying to read host pool, getting shared read access...";
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     const QList<QSharedPointer<Host>> hostList = mHostPool.values();
     mPoolReadWriteLock.unlock();
-    qDebug() << "HostManager::postInterHostEvent(...) INFO: ...got read access and sending Event to" << hostList.count() - 1 << "Hosts.";
 
     int i = 0;
     QList<int> beforeSendingHost;
@@ -178,15 +174,9 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
 
 Host* HostManager::getHost(QString hostname)
 {
-    qDebug() << "HostManager::getHost(" << hostname.toUtf8().constData() << ") INFO: trying to read host pool, getting shared read access...";
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     Host* pHost = mHostPool.value(hostname).data();
     mPoolReadWriteLock.unlock();
-    if (pHost) {
-        qDebug() << "HostManager::getHost(" << hostname.toUtf8().constData() << ") INFO: ...got read access and found this name in host pool, returning Host pointer.";
-    } else {
-        qDebug() << "HostManager::getHost(" << hostname.toUtf8().constData() << ") INFO: ...got read access and but did not find this name in host pool, returning Null pointer.";
-    }
 
     return pHost;
 }

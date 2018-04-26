@@ -27,13 +27,12 @@
 #include "post_guard.h"
 
 
-class dlgSystemMessageArea : public QWidget, public Ui::systemMessageArea
+class dlgSystemMessageArea : public QWidget, public Ui::system_message_area
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgSystemMessageArea)
-
 public:
+    Q_DISABLE_COPY(dlgSystemMessageArea)
     dlgSystemMessageArea(QWidget*);
 };
 

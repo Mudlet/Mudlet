@@ -25,6 +25,7 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TSplitter.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "mudlet.h"
 
@@ -32,6 +33,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QMenu>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 
@@ -49,21 +51,34 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mpHunspellSuggestionList()
 {
     QString path;
-#ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
-        path = "/usr/share/hunspell/";
+    // This is duplicated (and should be the same as) the code in:
+    // (void) dlgProfilePreferences::initWithHost(Host*)
+#if defined(Q_OS_MACOS)
+    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_FREEBSD)
+    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/local/share/hunspell/");
+    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
     } else {
-        path = "./";
+        path = QLatin1String("./");
     }
-#elif defined(Q_OS_MAC)
-    path = QCoreApplication::applicationDirPath() + "/../Resources/";
+#elif defined(Q_OS_LINUX)
+    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
+    } else {
+        path = QLatin1String("./");
+    }
 #else
+    // Probably Windows!
     path = "./";
 #endif
 
-    QString spell_aff = path + pHost->mSpellDic + ".aff";
-    QString spell_dic = path + pHost->mSpellDic + ".dic";
-    mpHunspell = Hunspell_create(spell_aff.toLatin1().data(), spell_dic.toLatin1().data());
+    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, pHost->mSpellDic);
+    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, pHost->mSpellDic);
+    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
+    // use on Windows platforms which can have non ASCII characters...
+    mpHunspell = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -535,7 +550,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), "\n");
     buffer.replace(QChar('\n'), " ");
 
-    QStringList wordList = buffer.split(QRegExp(R"(\b)"), QString::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)")), QString::SkipEmptyParts);
     if (direction) {
         mTabCompletionCount++;
     } else {
@@ -546,14 +561,17 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegExp reg = QRegExp(R"(\b(\w+)$)");
-        int typePosition = reg.indexIn(mTabCompletionTyped);
+        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"));
+        QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
+        int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
-            lastWord = reg.cap(1);
+            lastWord = match.captured(1);
         } else {
             lastWord = "";
         }
-        QStringList filterList = wordList.filter(QRegExp("^" + lastWord + R"(\w+)", Qt::CaseInsensitive));
+
+        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral("^") + lastWord + QStringLiteral(R"(\w+)"),
+                                                                    QRegularExpression::CaseInsensitiveOption));
         if (filterList.size() < 1) {
             return;
         }

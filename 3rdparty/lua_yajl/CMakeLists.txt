@@ -1,13 +1,13 @@
-PROJECT(lua_yajl LANGUAGES C)
+project(lua_yajl LANGUAGES C)
 
-FIND_PACKAGE(Lua51 REQUIRED)
-FIND_PACKAGE(YAJL REQUIRED)
+find_package(Lua51 REQUIRED)
+find_package(YAJL REQUIRED)
 
-ADD_LIBRARY(lua_yajl STATIC lua_yajl.c)
+add_library(lua_yajl STATIC lua_yajl.c)
 
-TARGET_LINK_LIBRARIES(lua_yajl ${LUA_LIBRARIES} ${YAJL_LIBRARIES})
+target_link_libraries(lua_yajl ${LUA_LIBRARIES} ${YAJL_LIBRARIES})
 
-TARGET_INCLUDE_DIRECTORIES(lua_yajl PRIVATE
+target_include_directories(lua_yajl PRIVATE
   ${LUA_INCLUDE_DIR}
   ${YAJL_INCLUDE_DIR}
 )
