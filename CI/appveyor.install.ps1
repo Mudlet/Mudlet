@@ -289,7 +289,7 @@ function InstallLibzip() {
 }
 
 function InstallZziplib() {
-  DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.69.tar.gz" "zziplib-0.13.69.tar.gz"
+  DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-0.13.69.tar.gz"
   ExtractTar "zziplib-0.13.69.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-0.13.69
 
