@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
+    <width>753</width>
     <height>611</height>
    </rect>
   </property>
@@ -2121,7 +2121,7 @@
              <string>Log format:</string>
             </property>
             <property name="buddy">
-              <cstring>comboBox_logFileNameFormat</cstring>
+             <cstring>comboBox_logFileNameFormat</cstring>
             </property>
            </widget>
           </item>
@@ -2139,8 +2139,7 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEdit_logFileName">
-           </widget>
+           <widget class="QLineEdit" name="lineEdit_logFileName"/>
           </item>
          </layout>
         </widget>

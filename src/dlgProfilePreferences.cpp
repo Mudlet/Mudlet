@@ -232,6 +232,14 @@ void dlgProfilePreferences::disableHostDetails()
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(false);
 
+    // on tab_logging:
+    pushButton_whereToLog->setEnabled(false);
+    pushButton_resetLogDir->setEnabled(false);
+    comboBox_logFileNameFormat->setEnabled(false);
+    lineEdit_logFileName->setEnabled(false);
+    mIsToLogInHtml->setEnabled(false);
+    mIsLoggingTimestamps->setEnabled(false);
+
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
     // it is possible to connect using the IRC client off of the
@@ -282,6 +290,14 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(true);
+
+    // on tab_logging:
+    pushButton_whereToLog->setEnabled(true);
+    pushButton_resetLogDir->setEnabled(true);
+    comboBox_logFileNameFormat->setEnabled(true);
+    lineEdit_logFileName->setEnabled(true);
+    mIsToLogInHtml->setEnabled(true);
+    mIsLoggingTimestamps->setEnabled(true);
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(true);
@@ -1732,7 +1748,7 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
     if (!pHost)
         return;
 
-    lineEdit_logFileName->setEnabled(pHost->mLogFileNameFormat.isEmpty());
+    lineEdit_logFileName->setEnabled(comboBox_logFileNameFormat->currentData().toString().isEmpty());
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
