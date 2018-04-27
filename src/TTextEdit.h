@@ -76,7 +76,6 @@ public:
     int imageTopLine();
     int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
-    bool isTailMode();
     void copySelectionToClipboard();
     void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
@@ -93,6 +92,14 @@ public:
     int mFontAscent;
     int mFontDescent;
     bool mIsCommandPopup;
+    // If this flag is set it means that this instance is currently set to
+    // display the last lines in the mpBuffer associated with the mpConsole;
+    // this setting is always true for the "lower" pane and is set/reset as
+    // needed in the upper onw. Its name seems to come from the *nix tail
+    // utility which returns the end of file(s), and, if invoked with either of
+    // the -f or -F "follow" arguments continues to show new lines as they are
+    // subsequently appended to the file with old lines scrolling up the screen
+    // which is precisely what is supposed to happen when this flag is true:
     bool mIsTailMode;
     QMap<QString, QString> mPopupCommands;
     int mScrollVector;
@@ -125,7 +132,11 @@ private:
     bool mInversOn;
     bool mIsDebugConsole;
     bool mIsMiniConsole;
-    bool mIsLowerPane;
+    // Each TConsole instance uses two instances of this class, one above the
+    // other but they need to behave differently in some ways; this, now const,
+    // flag is set on creation and is used to adjust the behaviour depending on
+    // which one this instance is:
+    const bool mIsLowerPane;
     int mLastRenderBottom;
     int mLeftMargin;
     bool mMouseTracking;

@@ -1182,11 +1182,11 @@ void TConsole::finalize()
 void TConsole::scrollDown(int lines)
 {
     mUpperPane->scrollDown(lines);
-    if (mUpperPane->isTailMode()) {
-        mLowerPane->mCursorY = buffer.lineBuffer.size(); //getLastLineNumber();
+    if (mUpperPane->mIsTailMode) {
+        mLowerPane->mCursorY = buffer.lineBuffer.size();
         mLowerPane->hide();
-        mUpperPane->mCursorY = buffer.lineBuffer.size(); //getLastLineNumber();
-        mUpperPane->mIsTailMode = true;
+
+        mUpperPane->mCursorY = buffer.lineBuffer.size();
         mUpperPane->updateScreenView();
         mUpperPane->forceUpdate();
     }
@@ -1194,11 +1194,11 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
-    mLowerPane->mIsTailMode = true;
-    mLowerPane->mCursorY = buffer.size(); //getLastLineNumber();
+    mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
+
     mUpperPane->scrollUp(lines);
 }
 
@@ -2428,7 +2428,6 @@ void TConsole::printSystemMessage(const QString& msg)
         bgColor = mpHost->mBgColor;
     }
 
-    //int lineBeforeNewContent = buffer.getLastLineNumber();
     QString txt = QString("System Message: ") + msg;
     buffer.append(txt,
                   0,
