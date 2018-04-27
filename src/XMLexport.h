@@ -30,6 +30,8 @@
 #include <QClipboard>
 #include <QPointer>
 #include <QXmlStreamWriter>
+#include "../3rdparty/pugixml/src/pugiconfig.hpp"
+#include "../3rdparty/pugixml/src/pugixml.hpp"
 #include "post_guard.h"
 
 class Host;
@@ -93,6 +95,10 @@ private:
     TAction* mpAction;
     TScript* mpScript;
     TKey* mpKey;
+
+    pugi::xml_document mExportDoc;
+    pugi::xml_node mpCurrentNode;
+    void showXmlDebug();
 };
 
 #endif // MUDLET_XMLEXPORT_H

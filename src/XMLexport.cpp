@@ -298,10 +298,15 @@ bool XMLexport::exportHost(QIODevice* device)
 
     writeDTD("<!DOCTYPE MudletPackage>");
 
+    auto node = mExportDoc.append_child("MudletPackage");
+    node.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toLocal8Bit().data();
+
     writeStartElement("MudletPackage");
     writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
+    mpCurrentNode = node.append_child("HostPackage");
     writeStartElement("HostPackage");
+
     if (!writeHost(mpHost)) {
         isOk = false;
     }
@@ -310,12 +315,22 @@ bool XMLexport::exportHost(QIODevice* device)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
+    showXmlDebug();
+
     return (isOk && (!hasError()));
+}
+
+void XMLexport::showXmlDebug()
+{
+    std::cout << "Document:\n";
+    mExportDoc.save(std::cout);
+    std::cout << endl;
 }
 
 bool XMLexport::writeHost(Host* pHost)
 {
     bool isOk = true;
+    auto hostNode = mpCurrentNode.append_child("Host");
     writeStartElement("Host");
 
     writeAttribute("autoClearCommandLineAfterSend", pHost->mAutoClearCommandLineAfterSend ? "yes" : "no");
