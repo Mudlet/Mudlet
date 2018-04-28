@@ -92,14 +92,11 @@ public:
     int mFontAscent;
     int mFontDescent;
     bool mIsCommandPopup;
-    // If this flag is set it means that this instance is currently set to
-    // display the last lines in the mpBuffer associated with the mpConsole;
-    // this setting is always true for the "lower" pane and is set/reset as
-    // needed in the upper onw. Its name seems to come from the *nix tail
-    // utility which returns the end of file(s), and, if invoked with either of
-    // the -f or -F "follow" arguments continues to show new lines as they are
-    // subsequently appended to the file with old lines scrolling up the screen
-    // which is precisely what is supposed to happen when this flag is true:
+    // If true, this TTextEdit is to display the last lines in
+    // mpConsole.mpBuffer. This is always true for the lower main window panel
+    // but it is RESET when the upper one is scrolled upwards. The name appears
+    // to be related to the file monitoring feature in the *nix tail command.
+    // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
     QMap<QString, QString> mPopupCommands;
     int mScrollVector;
@@ -133,8 +130,8 @@ private:
     bool mIsDebugConsole;
     bool mIsMiniConsole;
     // Each TConsole instance uses two instances of this class, one above the
-    // other but they need to behave differently in some ways; this, now const,
-    // flag is set on creation and is used to adjust the behaviour depending on
+    // other but they need to behave differently in some ways; this flag is set
+    // or reset on creation and is used to adjust the behaviour depending on
     // which one this instance is:
     const bool mIsLowerPane;
     int mLastRenderBottom;
