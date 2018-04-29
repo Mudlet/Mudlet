@@ -288,36 +288,19 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
 
 bool XMLexport::exportHost(QIODevice* device, const QString& filename_pugi_xml)
 {
-    bool isOk = true;
-    setDevice(device);
-
-    writeStartDocument();
-    if (hasError()) {
-        return false;
-    }
-
-    writeDTD("<!DOCTYPE MudletPackage>");
+    Q_UNUSED(device)
 
     mMudletPackageNode = mExportDoc.append_child("MudletPackage");
     mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toLocal8Bit().data();
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
-
     mpCurrentNode = mMudletPackageNode.append_child("HostPackage");
-    writeStartElement("HostPackage");
 
-    if (!writeHost(mpHost)) {
-        isOk = false;
+    if (writeHost(mpHost)) {
+        mExportDoc.save_file(filename_pugi_xml.toLocal8Bit().data());
+        return true;
     }
-    writeEndElement(); // </HostPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
-
-    mExportDoc.save_file(filename_pugi_xml.toLocal8Bit().data());
-
-    return (isOk && (!hasError()));
+    return false;
 }
 
 void XMLexport::showXmlDebug()
@@ -331,45 +314,6 @@ bool XMLexport::writeHost(Host* pHost)
 {
     bool isOk = true;
     auto hostNode = mpCurrentNode.append_child("Host");
-    writeStartElement("Host");
-
-    writeAttribute("autoClearCommandLineAfterSend", pHost->mAutoClearCommandLineAfterSend ? "yes" : "no");
-    writeAttribute("disableAutoCompletion", pHost->mDisableAutoCompletion ? "yes" : "no");
-    writeAttribute("printCommand", pHost->mPrintCommand ? "yes" : "no");
-    writeAttribute("USE_IRE_DRIVER_BUGFIX", pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no");
-    writeAttribute("mUSE_FORCE_LF_AFTER_PROMPT", pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no");
-    writeAttribute("mUSE_UNIX_EOL", pHost->mUSE_UNIX_EOL ? "yes" : "no");
-    writeAttribute("mNoAntiAlias", pHost->mNoAntiAlias ? "yes" : "no");
-    writeAttribute("mEchoLuaErrors", pHost->mEchoLuaErrors ? "yes" : "no");
-    // FIXME: Change to a string or integer property when possible to support more
-    // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
-    // future - phpBB code might be useful if it can be done.
-    writeAttribute("mRawStreamDump", pHost->mIsNextLogFileInHtmlFormat ? "yes" : "no");
-    writeAttribute("mIsLoggingTimestamps", pHost->mIsLoggingTimestamps ? "yes" : "no");
-    writeAttribute("mAlertOnNewData", pHost->mAlertOnNewData ? "yes" : "no");
-    writeAttribute("mFORCE_NO_COMPRESSION", pHost->mFORCE_NO_COMPRESSION ? "yes" : "no");
-    writeAttribute("mFORCE_GA_OFF", pHost->mFORCE_GA_OFF ? "yes" : "no");
-    writeAttribute("mFORCE_SAVE_ON_EXIT", pHost->mFORCE_SAVE_ON_EXIT ? "yes" : "no");
-    writeAttribute("mEnableGMCP", pHost->mEnableGMCP ? "yes" : "no");
-    writeAttribute("mEnableMSDP", pHost->mEnableMSDP ? "yes" : "no");
-    writeAttribute("mMapStrongHighlight", pHost->mMapStrongHighlight ? "yes" : "no");
-    writeAttribute("mLogStatus", pHost->mLogStatus ? "yes" : "no");
-    writeAttribute("mEnableSpellCheck", pHost->mEnableSpellCheck ? "yes" : "no");
-    writeAttribute("mShowInfo", pHost->mShowInfo ? "yes" : "no");
-    writeAttribute("mAcceptServerGUI", pHost->mAcceptServerGUI ? "yes" : "no");
-    writeAttribute("mMapperUseAntiAlias", pHost->mMapperUseAntiAlias ? "yes" : "no");
-    writeAttribute("mFORCE_MXP_NEGOTIATION_OFF", pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no");
-    writeAttribute("mRoomSize", QString::number(pHost->mRoomSize, 'f', 1));
-    writeAttribute("mLineSize", QString::number(pHost->mLineSize, 'f', 1));
-    writeAttribute("mBubbleMode", pHost->mBubbleMode ? "yes" : "no");
-    writeAttribute("mShowRoomIDs", pHost->mShowRoomID ? "yes" : "no");
-    writeAttribute("mShowPanel", pHost->mShowPanel ? "yes" : "no");
-    writeAttribute("mHaveMapperScript", pHost->mHaveMapperScript ? "yes" : "no");
-    writeAttribute("mEditorTheme", pHost->mEditorTheme);
-    writeAttribute("mEditorThemeFile", pHost->mEditorThemeFile);
-    writeAttribute("mThemePreviewItemID", QString::number(pHost->mThemePreviewItemID));
-    writeAttribute("mThemePreviewType", pHost->mThemePreviewType);
-    writeAttribute("mSearchEngineName", pHost->mSearchEngineName);
 
     hostNode.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
     hostNode.append_attribute("disableAutoCompletion") = pHost->mDisableAutoCompletion ? "yes" : "no";
@@ -414,114 +358,35 @@ bool XMLexport::writeHost(Host* pHost)
     while (it.hasNext()) {
         ignore = ignore.append(it.next());
     }
-    writeAttribute("mDoubleClickIgnore", ignore);
     hostNode.append_attribute("mDoubleClickIgnore") = ignore.toLocal8Bit().data();
 
     { // Blocked so that indentation reflects that of the XML file
-        writeTextElement("name", pHost->mHostName);
         hostNode.append_child("name").append_child(pugi::node_pcdata).set_value(pHost->mHostName.toLocal8Bit().data());
 
-        writeStartElement("mInstalledPackages");
         auto mInstalledPackages = hostNode.append_child("mInstalledPackages");
 
         for (int i = 0; i < pHost->mInstalledPackages.size(); ++i) {
-            writeTextElement("string", pHost->mInstalledPackages.at(i));
             mInstalledPackages.append_child("string").append_child(pugi::node_pcdata).set_value(pHost->mInstalledPackages.at(i).toLocal8Bit().data());
         }
-        writeEndElement(); // </mInstalledPackages>
 
         if (pHost->mInstalledModules.size()) {
-            writeStartElement("mInstalledModules");
             auto mInstalledModules = hostNode.append_child("mInstalledModules");
             QMapIterator<QString, QStringList> it(pHost->mInstalledModules);
             pHost->modulesToWrite.clear();
             while (it.hasNext()) {
                 it.next();
-                writeTextElement("key", it.key());
                 mInstalledModules.append_child("key").append_child(pugi::node_pcdata).set_value(it.key().toLocal8Bit().data());
                 QStringList entry = it.value();
-                writeTextElement("filepath", entry.at(0));
                 mInstalledModules.append_child("filepath").append_child(pugi::node_pcdata).set_value(entry.at(0).toLocal8Bit().data());
-                writeTextElement("globalSave", entry.at(1));
                 mInstalledModules.append_child("globalSave").append_child(pugi::node_pcdata).set_value(entry.at(1).toLocal8Bit().data());
                 if (entry.at(1).toInt()) {
                     pHost->modulesToWrite.insert(it.key(), entry);
                 }
-                writeTextElement("priority", QString::number(pHost->mModulePriorities.value(it.key())));
                 mInstalledModules.append_child("priority").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mModulePriorities.value(it.key())).toLocal8Bit().data());
             }
-            writeEndElement(); // </mInstalledModules>
         }
-// CHECK: Do we need:
-//        else {
-//            writeEmptyElement( "mInstalledModules" ); // i.e. <mInstalledModules />
-//        }
 
-        writeTextElement("url", pHost->mUrl);
         hostNode.append_child("url").append_child(pugi::node_pcdata).set_value(pHost->mUrl.toLocal8Bit().data());
-        writeTextElement("serverPackageName", pHost->mServerGUI_Package_name);
-        writeTextElement("serverPackageVersion", QString::number(pHost->mServerGUI_Package_version));
-        writeTextElement("port", QString::number(pHost->mPort));
-        writeTextElement("borderTopHeight", QString::number(pHost->mBorderTopHeight));
-        writeTextElement("borderBottomHeight", QString::number(pHost->mBorderBottomHeight));
-        writeTextElement("borderLeftWidth", QString::number(pHost->mBorderLeftWidth));
-        writeTextElement("borderRightWidth", QString::number(pHost->mBorderRightWidth));
-        writeTextElement("wrapAt", QString::number(pHost->mWrapAt));
-        writeTextElement("wrapIndentCount", QString::number(pHost->mWrapIndentCount));
-        writeTextElement("mFgColor", pHost->mFgColor.name());
-        writeTextElement("mBgColor", pHost->mBgColor.name());
-        writeTextElement("mCommandFgColor", pHost->mCommandFgColor.name());
-        writeTextElement("mCommandBgColor", pHost->mCommandBgColor.name());
-        writeTextElement("mCommandLineFgColor", pHost->mCommandLineFgColor.name());
-        writeTextElement("mCommandLineBgColor", pHost->mCommandLineBgColor.name());
-        writeTextElement("mBlack", pHost->mBlack.name());
-        writeTextElement("mLightBlack", pHost->mLightBlack.name());
-        writeTextElement("mRed", pHost->mRed.name());
-        writeTextElement("mLightRed", pHost->mLightRed.name());
-        writeTextElement("mBlue", pHost->mBlue.name());
-        writeTextElement("mLightBlue", pHost->mLightBlue.name());
-        writeTextElement("mGreen", pHost->mGreen.name());
-        writeTextElement("mLightGreen", pHost->mLightGreen.name());
-        writeTextElement("mYellow", pHost->mYellow.name());
-        writeTextElement("mLightYellow", pHost->mLightYellow.name());
-        writeTextElement("mCyan", pHost->mCyan.name());
-        writeTextElement("mLightCyan", pHost->mLightCyan.name());
-        writeTextElement("mMagenta", pHost->mMagenta.name());
-        writeTextElement("mLightMagenta", pHost->mLightMagenta.name());
-        writeTextElement("mWhite", pHost->mWhite.name());
-        writeTextElement("mLightWhite", pHost->mLightWhite.name());
-        writeTextElement("mDisplayFont", pHost->mDisplayFont.toString());
-        writeTextElement("mCommandLineFont", pHost->mCommandLineFont.toString());
-        // There was a mis-spelt duplicate commandSeperator above but it is now gone
-        writeTextElement("mCommandSeparator", pHost->mCommandSeparator);
-        writeTextElement("commandLineMinimumHeight", QString::number(pHost->commandLineMinimumHeight));
-
-        writeTextElement("mFgColor2", pHost->mFgColor_2.name());
-        writeTextElement("mBgColor2", pHost->mBgColor_2.name());
-        writeTextElement("mBlack2", pHost->mBlack_2.name());
-        writeTextElement("mLightBlack2", pHost->mLightBlack_2.name());
-        writeTextElement("mRed2", pHost->mRed_2.name());
-        writeTextElement("mLightRed2", pHost->mLightRed_2.name());
-        writeTextElement("mBlue2", pHost->mBlue_2.name());
-        writeTextElement("mLightBlue2", pHost->mLightBlue_2.name());
-        writeTextElement("mGreen2", pHost->mGreen_2.name());
-        writeTextElement("mLightGreen2", pHost->mLightGreen_2.name());
-        writeTextElement("mYellow2", pHost->mYellow_2.name());
-        writeTextElement("mLightYellow2", pHost->mLightYellow_2.name());
-        writeTextElement("mCyan2", pHost->mCyan_2.name());
-        writeTextElement("mLightCyan2", pHost->mLightCyan_2.name());
-        writeTextElement("mMagenta2", pHost->mMagenta_2.name());
-        writeTextElement("mLightMagenta2", pHost->mLightMagenta_2.name());
-        writeTextElement("mWhite2", pHost->mWhite_2.name());
-        writeTextElement("mLightWhite2", pHost->mLightWhite_2.name());
-        writeTextElement("mSpellDic", pHost->mSpellDic);
-        // TODO: Consider removing these sub-elements that duplicate the same
-        // attributes - which WERE bugged - when we update the XML format, must leave
-        // them in place for now even though we no longer use them for compatibility
-        // with older version of Mudlet
-        writeTextElement("mLineSize", QString::number(pHost->mLineSize, 'f', 1));
-        writeTextElement("mRoomSize", QString::number(pHost->mRoomSize, 'f', 1));
-
         hostNode.append_child("serverPackageName").append_child(pugi::node_pcdata).set_value(pHost->mServerGUI_Package_name.toLocal8Bit().data());
         hostNode.append_child("serverPackageVersion").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mServerGUI_Package_version).toLocal8Bit().data());
         hostNode.append_child("port").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mPort).toLocal8Bit().data());
@@ -584,21 +449,12 @@ bool XMLexport::writeHost(Host* pHost)
         // with older version of Mudlet
         hostNode.append_child("mLineSize").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mLineSize, 'f', 1).toLocal8Bit().data());
         hostNode.append_child("mRoomSize").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mRoomSize, 'f', 1).toLocal8Bit().data());
-
-        writeEndElement(); // </Host>
-    }
-
-    writeEndElement(); // </HostPackage>
-
-    if (hasError()) {
-        isOk = false;
     }
 
     // Use if() to block each XXXXPackage element to limit scope of iterator so
     // we can use more of the same code in each block - and to escape quicker on
     // error...
     if (isOk) {
-        writeStartElement("TriggerPackage");
         auto triggerPackageNode = mMudletPackageNode.append_child("TriggerPackage");
         for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); isOk && it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mModuleMember) {
@@ -611,11 +467,9 @@ bool XMLexport::writeHost(Host* pHost)
                 }
             }
         }
-        writeEndElement(); // </TriggerPackage>
     }
 
     if (isOk) {
-        writeStartElement("TimerPackage");
         auto timerPackageNode = mMudletPackageNode.append_child("TimerPackage");
         for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); isOk && it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mModuleMember) {
@@ -628,11 +482,9 @@ bool XMLexport::writeHost(Host* pHost)
                 }
             }
         }
-        writeEndElement(); // </TimerPackage>
     }
 
     if (isOk) {
-        writeStartElement("AliasPackage");
         auto aliasPackageNode = mMudletPackageNode.append_child("AliasPackage");
         for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); isOk && it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mModuleMember) {
@@ -645,11 +497,9 @@ bool XMLexport::writeHost(Host* pHost)
                 }
             }
         }
-        writeEndElement(); // </AliasPackage>
     }
 
     if (isOk) {
-        writeStartElement("ActionPackage");
         auto actionPackageNode = mMudletPackageNode.append_child("ActionPackage");
         for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); isOk && it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mModuleMember) {
@@ -660,11 +510,9 @@ bool XMLexport::writeHost(Host* pHost)
                 isOk = false;
             }
         }
-        writeEndElement(); // </ActionPackage>
     }
 
     if (isOk) {
-        writeStartElement("ScriptPackage");
         auto scriptPackageNode = mMudletPackageNode.append_child("ScriptPackage");
         for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); isOk && it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mModuleMember) {
@@ -675,11 +523,9 @@ bool XMLexport::writeHost(Host* pHost)
                 isOk = false;
             }
         }
-        writeEndElement(); // </ScriptPackage>
     }
 
     if (isOk) {
-        writeStartElement("KeyPackage");
         auto keyPackageNode = mMudletPackageNode.append_child("KeyPackage");
         for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
             if( ! (*it) || (*it)->isTemporary() || (*it)->mModuleMember) {
@@ -690,25 +536,20 @@ bool XMLexport::writeHost(Host* pHost)
                 isOk = false;
             }
         }
-        writeEndElement(); // </KeyPackage>
     }
 
     if (isOk) {
-        writeStartElement("VariablePackage");
         auto variablePackageNode = mMudletPackageNode.append_child("VariablePackage");
         LuaInterface* lI = pHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         //do hidden variables first
         { // Blocked so that indentation reflects that of the XML file
-            writeStartElement("HiddenVariables");
             auto hiddenVariablesNode = variablePackageNode.append_child("HiddenVariables");
             QSetIterator<QString> itHiddenVariableName(vu->hiddenByUser);
             while (itHiddenVariableName.hasNext()) {
                 auto variableName = itHiddenVariableName.next();
-                writeTextElement("name", variableName);
                 hiddenVariablesNode.append_child("name").append_child(pugi::node_pcdata).set_value(variableName.toLocal8Bit().data());
             }
-            writeEndElement(); // </HiddenVariables>
         }
 
         TVar* base = vu->getBase();
@@ -726,7 +567,6 @@ bool XMLexport::writeHost(Host* pHost)
                 }
             }
         }
-        writeEndElement(); // </VariablePackage>
     }
 
     return (isOk && (!hasError()));
@@ -737,13 +577,7 @@ bool XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
     bool isOk = true;
     if (pVariableUnit->isSaved(pVar)) {
         if (pVar->getValueType() == LUA_TTABLE) {
-            writeStartElement("VariableGroup");
             auto variableGroupNode = mpCurrentNode.append_child("VariableGroup");
-
-            writeTextElement("name", pVar->getName());
-            writeTextElement("keyType", QString::number(pVar->getKeyType()));
-            writeTextElement("value", pLuaInterface->getValue(pVar));
-            writeTextElement("valueType", QString::number(pVar->getValueType()));
 
             variableGroupNode.append_child("name").append_child(pugi::node_pcdata).set_value(pVar->getName().toLocal8Bit().data());
             variableGroupNode.append_child("keyType").append_child(pugi::node_pcdata).set_value(QString::number(pVar->getKeyType()).toLocal8Bit().data());
@@ -756,22 +590,13 @@ bool XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
                     isOk = false;
                 }
             }
-            writeEndElement(); // </VariableGroup>
         } else {
-            writeStartElement("Variable");
             auto variableNode = mpCurrentNode.append_child("Variable");
-
-            writeTextElement("name", pVar->getName());
-            writeTextElement("keyType", QString::number(pVar->getKeyType()));
-            writeTextElement("value", pLuaInterface->getValue(pVar));
-            writeTextElement("valueType", QString::number(pVar->getValueType()));
 
             variableNode.append_child("name").append_child(pugi::node_pcdata).set_value(pVar->getName().toLocal8Bit().data());
             variableNode.append_child("keyType").append_child(pugi::node_pcdata).set_value(QString::number(pVar->getKeyType()).toLocal8Bit().data());
             variableNode.append_child("value").append_child(pugi::node_pcdata).set_value(pLuaInterface->getValue(pVar).toLocal8Bit().data());
             variableNode.append_child("valueType").append_child(pugi::node_pcdata).set_value(QString::number(pVar->getValueType()).toLocal8Bit().data());
-
-            writeEndElement(); // </Variable>
         }
     }
 
@@ -956,19 +781,6 @@ bool XMLexport::writeTrigger(TTrigger* pT)
     auto oldCurrentNode = mpCurrentNode;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto triggerContents = mpCurrentNode.append_child(pT->isFolder() ? "TriggerGroup" : "Trigger");
-        writeStartElement(pT->isFolder() ? "TriggerGroup" : "Trigger");
-
-        writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
-        writeAttribute("isTempTrigger", pT->isTemporary() ? "yes" : "no");
-        writeAttribute("isMultiline", pT->mIsMultiline ? "yes" : "no");
-        writeAttribute("isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no");
-        writeAttribute("isColorizerTrigger", pT->mIsColorizerTrigger ? "yes" : "no");
-        writeAttribute("isFilterTrigger", pT->mFilterTrigger ? "yes" : "no");
-        writeAttribute("isSoundTrigger", pT->mSoundTrigger ? "yes" : "no");
-        writeAttribute("isColorTrigger", pT->mColorTrigger ? "yes" : "no");
-        writeAttribute("isColorTriggerFg", pT->mColorTriggerFg ? "yes" : "no");
-        writeAttribute("isColorTriggerBg", pT->mColorTriggerBg ? "yes" : "no");
 
         triggerContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         triggerContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
@@ -984,21 +796,9 @@ bool XMLexport::writeTrigger(TTrigger* pT)
 
         { // Blocked so that indentation reflects that of the XML file
 
-            writeTextElement("name", pT->mName);            
             triggerContents.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
             mpCurrentNode = triggerContents;
             writeScriptElement(pT->mScript);
-
-            writeTextElement("triggerType", QString::number(pT->mTriggerType));
-            writeTextElement("conditonLineDelta", QString::number(pT->mConditionLineDelta));
-            writeTextElement("mStayOpen", QString::number(pT->mStayOpen));
-            writeTextElement("mCommand", pT->mCommand);
-            writeTextElement("packageName", pT->mPackageName);
-            writeTextElement("mFgColor", pT->mFgColor.name());
-            writeTextElement("mBgColor", pT->mBgColor.name());
-            writeTextElement("mSoundFile", pT->mSoundFile);
-            writeTextElement("colorTriggerFgColor", pT->mColorTriggerFgColor.name());
-            writeTextElement("colorTriggerBgColor", pT->mColorTriggerBgColor.name());
 
             triggerContents.append_child("triggerType").append_child(pugi::node_pcdata).set_value(QString::number(pT->mTriggerType).toLocal8Bit().data());
             triggerContents.append_child("conditonLineDelta").append_child(pugi::node_pcdata).set_value(QString::number(pT->mConditionLineDelta).toLocal8Bit().data());
@@ -1011,32 +811,15 @@ bool XMLexport::writeTrigger(TTrigger* pT)
             triggerContents.append_child("colorTriggerFgColor").append_child(pugi::node_pcdata).set_value(pT->mColorTriggerFgColor.name().toLocal8Bit().data());
             triggerContents.append_child("colorTriggerBgColor").append_child(pugi::node_pcdata).set_value(pT->mColorTriggerBgColor.name().toLocal8Bit().data());
 
-            // TODO: The next bit could be revised for a new - not BACKWARD COMPATIBLE form:
-            // int elementCount = qMin( pTt->mRegexCodeList.size(), pT->mRegexCodePropertyList.size() ):
-            // writeStartElement( "RegexList" );
-            // writeAttribute( "size", QString::number( elementCount ) );
-            // for( int i = 0; i < elementCount; ++i ) {
-            //     writeEmptyElement( "RegexCode" );
-            //     writeAttribute( "name", pT->mRegexCodeList.at(i) );
-            //     writeAttribute( "type", pT->mRegexCodePropertyList.at(i) );
-            // }
-            // writeEndElement(); // </RegexList>
-
-            writeStartElement("regexCodeList");
             auto regexCodeList = mpCurrentNode.append_child("regexCodeList");
             for (int i = 0; i < pT->mRegexCodeList.size(); ++i) {
-                writeTextElement("string", pT->mRegexCodeList.at(i));
                 regexCodeList.append_child("string").append_child(pugi::node_pcdata).set_value(pT->mRegexCodeList.at(i).toLocal8Bit().data());
             }
-            writeEndElement(); // </regexCodeList>
 
-            writeStartElement("regexCodePropertyList");
             auto regexCodePropertyList = mpCurrentNode.append_child("regexCodePropertyList");
             for (int i : pT->mRegexCodePropertyList) {
-                writeTextElement("integer", QString::number(i));
                 regexCodePropertyList.append_child("integer").append_child(pugi::node_pcdata).set_value(QString::number(i).toLocal8Bit().data());
             }
-            writeEndElement(); // </regexCodePropertyList>
         }
 
         isOk = !hasError();
@@ -1046,10 +829,6 @@ bool XMLexport::writeTrigger(TTrigger* pT)
         if (!writeTrigger(*it)) {
             isOk = false;
         }
-    }
-
-    if (pT->exportItem) {  // CHECK: doesn't it also need a "&& (! pT->mModuleMasterFolder)"
-        writeEndElement(); // </TriggerGroup> or </Trigger>
     }
 
     mpCurrentNode = oldCurrentNode;
@@ -1129,24 +908,15 @@ bool XMLexport::writeAlias(TAlias* pT)
     bool isOk = true;
     auto oldCurrentNode = mpCurrentNode;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->isFolder() ? "AliasGroup" : "Alias");
         auto aliasContentsNode = mpCurrentNode.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
-
-        writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         aliasContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         aliasContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            writeTextElement("name", pT->mName);
             aliasContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
             mpCurrentNode = aliasContentsNode;
             writeScriptElement(pT->mScript);
-
-            writeTextElement("command", pT->mCommand);
-            writeTextElement("packageName", pT->mPackageName);
-            writeTextElement("regex", pT->mRegexCode);
 
             aliasContentsNode.append_child("command").append_child(pugi::node_pcdata).set_value(pT->mCommand.toLocal8Bit().data());
             aliasContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
@@ -1160,10 +930,6 @@ bool XMLexport::writeAlias(TAlias* pT)
         if (!writeAlias(*it)) {
             isOk = false;
         }
-    }
-
-    if (pT->exportItem) {  // CHECK: doesn't it also need a (! pT->mModuleMasterFolder)
-        writeEndElement(); // </AliasGroup> or </Alias>
     }
 
     mpCurrentNode = oldCurrentNode;
@@ -1243,14 +1009,7 @@ bool XMLexport::writeAction(TAction* pT)
     bool isOk = true;    
     auto oldCurrentNode = mpCurrentNode;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->isFolder() ? "ActionGroup" : "Action");
         auto actionContentsNode = mpCurrentNode.append_child(pT->isFolder() ? "ActionGroup" : "Action");
-
-        writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
-        writeAttribute("isPushButton", pT->mIsPushDownButton ? "yes" : "no");
-        writeAttribute("isFlatButton", pT->mButtonFlat ? "yes" : "no");
-        writeAttribute("useCustomLayout", pT->mUseCustomLayout ? "yes" : "no");
 
         actionContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         actionContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
@@ -1259,29 +1018,10 @@ bool XMLexport::writeAction(TAction* pT)
         actionContentsNode.append_attribute("useCustomLayout") = pT->mUseCustomLayout ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            writeTextElement("name", pT->mName);
-            writeTextElement("packageName", pT->mPackageName);
             actionContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
             actionContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
             mpCurrentNode = actionContentsNode;
             writeScriptElement(pT->mScript);
-
-            writeTextElement("css", pT->css);
-            writeTextElement("commandButtonUp", pT->mCommandButtonUp);
-            writeTextElement("commandButtonDown", pT->mCommandButtonDown);
-            writeTextElement("icon", pT->mIcon);
-            writeTextElement("orientation", QString::number(pT->mOrientation));
-            writeTextElement("location", QString::number(pT->mLocation));
-            writeTextElement("posX", QString::number(pT->mPosX));
-            writeTextElement("posY", QString::number(pT->mPosY));
-            // We now use a boolean but file must use original "1" (false)
-            // or "2" (true) for backward compatibility
-            writeTextElement("mButtonState", QString::number(pT->mButtonState ? 2 : 1));
-            writeTextElement("sizeX", QString::number(pT->mSizeX));
-            writeTextElement("sizeY", QString::number(pT->mSizeY));
-            writeTextElement("buttonColumn", QString::number(pT->mButtonColumns));
-            writeTextElement("buttonRotation", QString::number(pT->mButtonRotation));
-            writeTextElement("buttonColor", pT->mButtonColor.name());
 
             actionContentsNode.append_child("css").append_child(pugi::node_pcdata).set_value(pT->css.toLocal8Bit().data());
             actionContentsNode.append_child("commandButtonUp").append_child(pugi::node_pcdata).set_value(pT->mCommandButtonUp.toLocal8Bit().data());
@@ -1308,10 +1048,6 @@ bool XMLexport::writeAction(TAction* pT)
         if (!writeAction(*it)) {
             isOk = false;
         }
-    }
-
-    if (pT->exportItem) {  // CHECK: doesn't it also need a "&& (! pT->mModuleMasterFolder)"
-        writeEndElement(); // </ActionGroup> or </Action>
     }
 
     mpCurrentNode = oldCurrentNode;
@@ -1391,13 +1127,7 @@ bool XMLexport::writeTimer(TTimer* pT)
     bool isOk = true;
     auto oldCurrentNode = mpCurrentNode;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->isFolder() ? "TimerGroup" : "Timer");
         auto timerContentsNode = mpCurrentNode.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
-
-        writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
-        writeAttribute("isTempTimer", pT->isTemporary() ? "yes" : "no");
-        writeAttribute("isOffsetTimer", pT->isOffsetTimer() ? "yes" : "no");        
 
         timerContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         timerContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
@@ -1405,14 +1135,10 @@ bool XMLexport::writeTimer(TTimer* pT)
         timerContentsNode.append_attribute("isOffsetTimer") = pT->isOffsetTimer() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            writeTextElement("name", pT->mName);
             timerContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
 
             mpCurrentNode = timerContentsNode;
             writeScriptElement(pT->mScript);
-            writeTextElement("command", pT->mCommand);
-            writeTextElement("packageName", pT->mPackageName);
-            writeTextElement("time", pT->mTime.toString("hh:mm:ss.zzz"));
 
             timerContentsNode.append_child("command").append_child(pugi::node_pcdata).set_value(pT->mCommand.toLocal8Bit().data());
             timerContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
@@ -1426,10 +1152,6 @@ bool XMLexport::writeTimer(TTimer* pT)
         if (!writeTimer(*it)) {
             isOk = false;
         }
-    }
-
-    if (pT->exportItem) {  // CHECK: doesn't it also need a "&& (! pT->mModuleMasterFolder)"
-        writeEndElement(); // </TimerGroup> or </Timer>
     }
 
     mpCurrentNode = oldCurrentNode;
@@ -1509,30 +1231,21 @@ bool XMLexport::writeScript(TScript* pT)
     bool isOk = true;    
     auto oldCurrentNode = mpCurrentNode;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->isFolder() ? "ScriptGroup" : "Script");
         auto scriptContentsNode = mpCurrentNode.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
-
-        writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         scriptContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         scriptContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            writeTextElement("name", pT->mName);
-            writeTextElement("packageName", pT->mPackageName);
             scriptContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
             scriptContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
             mpCurrentNode = scriptContentsNode;
             writeScriptElement(pT->mScript);
 
-            writeStartElement("eventHandlerList");
             auto eventHandlerList = mpCurrentNode.append_child("eventHandlerList");
             for (int i = 0; i < pT->mEventHandlerList.size(); ++i) {
-                writeTextElement("string", pT->mEventHandlerList.at(i));
                 eventHandlerList.append_child("string").append_child(pugi::node_pcdata).set_value(pT->mEventHandlerList.at(i).toLocal8Bit().data());
             }
-            writeEndElement(); // </eventHandlerList>
         }
 
         isOk = !hasError();
@@ -1542,10 +1255,6 @@ bool XMLexport::writeScript(TScript* pT)
         if (!writeScript(*it)) {
             isOk = false;
         }
-    }
-
-    if (pT->exportItem) {  // CHECK: doesn't it also need a "&& (! pT->mModuleMasterFolder)"
-        writeEndElement(); // </ScriptGroup> or </Script>
     }
 
     mpCurrentNode = oldCurrentNode;
@@ -1625,25 +1334,16 @@ bool XMLexport::writeKey(TKey* pT)
     bool isOk = true;
     auto oldCurrentNode = mpCurrentNode;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->isFolder() ? "KeyGroup" : "Key");
         auto keyContentsNode = mpCurrentNode.append_child(pT->isFolder() ? "KeyGroup" : "Key");
-
-        writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         keyContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         keyContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            writeTextElement("name", pT->mName);
-            writeTextElement("packageName", pT->mPackageName);            
             keyContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
             keyContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
             mpCurrentNode = keyContentsNode;
             writeScriptElement(pT->mScript);
-            writeTextElement("command", pT->mCommand);
-            writeTextElement("keyCode", QString::number(pT->mKeyCode));
-            writeTextElement("keyModifier", QString::number(pT->mKeyModifier));
 
             keyContentsNode.append_child("command").append_child(pugi::node_pcdata).set_value(pT->mCommand.toLocal8Bit().data());
             keyContentsNode.append_child("keyCode").append_child(pugi::node_pcdata).set_value(QString::number(pT->mKeyCode).toLocal8Bit().data());
@@ -1657,10 +1357,6 @@ bool XMLexport::writeKey(TKey* pT)
         if (!writeKey(*it)) {
             isOk = false;
         }
-    }
-
-    if (pT->exportItem) {  // CHECK: doesn't it also need a "&& (! pT->mModuleMasterFolder)"
-        writeEndElement(); // </KeyGroup> or </Key>
     }
 
     mpCurrentNode = oldCurrentNode;
@@ -1699,7 +1395,6 @@ bool XMLexport::writeScriptElement(const QString& script)
     localScript.replace(QChar('\x1E'), QStringLiteral("\xFFFC\x241E")); // RS
     localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
     localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
-    writeTextElement(QLatin1String("script"), localScript);
     mpCurrentNode.append_child("script").append_child(pugi::node_pcdata).set_value(localScript.toLocal8Bit().data());
 
     return (!hasError());
