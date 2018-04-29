@@ -280,7 +280,7 @@ unix:!macx {
         -L"C:\\mingw32\\lib" \
         -llua51 \
         -lpcre-1 \
-        -llibhunspell-1.4 \
+        -llibhunspell-1.6 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lyajl \
