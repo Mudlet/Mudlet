@@ -57,15 +57,15 @@ public:
     XMLexport(TScript*);
     XMLexport(TKey*);
 
-    bool writeHost(Host*);
+    bool writeHost(Host *, pugi::xml_node hostPackage);
 
-    bool writeTrigger(TTrigger*);
-    bool writeTimer(TTimer*);
-    bool writeAlias(TAlias*);
-    bool writeAction(TAction*);
-    bool writeScript(TScript*);
-    bool writeKey(TKey*);
-    bool writeVariable(TVar*, LuaInterface*, VarUnit*);
+    bool writeTrigger(TTrigger *, pugi::xml_node xmlParent);
+    bool writeTimer(TTimer *, pugi::xml_node xmlParent);
+    bool writeAlias(TAlias *, pugi::xml_node xmlParent);
+    bool writeAction(TAction *, pugi::xml_node xmlParent);
+    bool writeScript(TScript *, pugi::xml_node xmlParent);
+    bool writeKey(TKey *, pugi::xml_node xmlParent);
+    bool writeVariable(TVar *, LuaInterface *, VarUnit *, pugi::xml_node xmlParent);
     bool writeModuleXML(QIODevice* device, QString moduleName);
 
     bool exportHost(QIODevice*, const QString &filename_pugi_xml);
@@ -85,7 +85,7 @@ public:
     bool exportToClipboard(TScript*);
     bool exportToClipboard(TKey*);
 
-    bool writeScriptElement(const QString&);
+    bool writeScriptElement(const QString &, pugi::xml_node xmlElement);
 
 private:
     QPointer<Host> mpHost;
@@ -97,8 +97,6 @@ private:
     TKey* mpKey;
 
     pugi::xml_document mExportDoc;
-    pugi::xml_node mpCurrentNode;
-    pugi::xml_node mMudletPackageNode;
     void showXmlDebug();
 };
 
