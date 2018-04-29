@@ -1075,10 +1075,10 @@ void dlgProfilePreferences::setDisplayFont()
             mudlet::self()->mConsoleMap[pHost]->changeColors();
 
             // update the display properly when font or size selections change.
-            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
         }
         auto config = edbeePreviewWidget->config();
