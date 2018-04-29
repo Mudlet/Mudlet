@@ -68,7 +68,7 @@ public:
     bool writeVariable(TVar*, LuaInterface*, VarUnit*);
     bool writeModuleXML(QIODevice* device, QString moduleName);
 
-    bool exportHost(QIODevice*);
+    bool exportHost(QIODevice*, const QString &filename_pugi_xml);
     bool exportGenericPackage(QIODevice* device);
     bool writeGenericPackage(Host*);
     bool exportTrigger(QIODevice*);
@@ -98,6 +98,7 @@ private:
 
     pugi::xml_document mExportDoc;
     pugi::xml_node mpCurrentNode;
+    pugi::xml_node mMudletPackageNode;
     void showXmlDebug();
 };
 
