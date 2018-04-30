@@ -519,7 +519,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    wcwidth.cpp
 
 
 HEADERS += \

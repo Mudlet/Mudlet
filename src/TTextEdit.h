@@ -24,7 +24,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "pre_guard.h"
 #include <QMap>
 #include <QPointer>
@@ -37,6 +36,7 @@
 class Host;
 class TBuffer;
 class TConsole;
+class TChar;
 
 class QScrollBar;
 class QString;
@@ -55,6 +55,8 @@ public:
     void drawFrame(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&);
     void updateLastLine();
+    void drawLine(QPainter &painter, int lineNumber, int rowOfScreen);
+    int drawCharacter(QPainter &painter, const QPoint &cursor, QChar c, TChar &style);
     void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
     void showNewLines();
     void forceUpdate();
