@@ -95,6 +95,7 @@ set(mudlet_SRCS
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp
+    wcwidth.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -203,6 +204,7 @@ set(mudlet_HDRS
     VarUnit.h
     XMLexport.h
     XMLimport.h
+    wcwidth.h
 )
 
 if(USE_UPDATER)
