@@ -361,12 +361,12 @@ bool XMLexport::writeHost(Host *pHost, pugi::xml_node mMudletPackageNode)
     host.append_attribute("mDoubleClickIgnore") = ignore.toLocal8Bit().data();
 
     { // Blocked so that indentation reflects that of the XML file
-        host.append_child("name").append_child(pugi::node_pcdata).set_value(pHost->mHostName.toLocal8Bit().data());
+        host.append_child("name").text().set(pHost->mHostName.toLocal8Bit().data());
 
         auto mInstalledPackages = host.append_child("mInstalledPackages");
 
         for (int i = 0; i < pHost->mInstalledPackages.size(); ++i) {
-            mInstalledPackages.append_child("string").append_child(pugi::node_pcdata).set_value(pHost->mInstalledPackages.at(i).toLocal8Bit().data());
+            mInstalledPackages.append_child("string").text().set(pHost->mInstalledPackages.at(i).toLocal8Bit().data());
         }
 
         if (pHost->mInstalledModules.size()) {
@@ -375,80 +375,80 @@ bool XMLexport::writeHost(Host *pHost, pugi::xml_node mMudletPackageNode)
             pHost->modulesToWrite.clear();
             while (it.hasNext()) {
                 it.next();
-                mInstalledModules.append_child("key").append_child(pugi::node_pcdata).set_value(it.key().toLocal8Bit().data());
+                mInstalledModules.append_child("key").text().set(it.key().toLocal8Bit().data());
                 QStringList entry = it.value();
-                mInstalledModules.append_child("filepath").append_child(pugi::node_pcdata).set_value(entry.at(0).toLocal8Bit().data());
-                mInstalledModules.append_child("globalSave").append_child(pugi::node_pcdata).set_value(entry.at(1).toLocal8Bit().data());
+                mInstalledModules.append_child("filepath").text().set(entry.at(0).toLocal8Bit().data());
+                mInstalledModules.append_child("globalSave").text().set(entry.at(1).toLocal8Bit().data());
                 if (entry.at(1).toInt()) {
                     pHost->modulesToWrite.insert(it.key(), entry);
                 }
-                mInstalledModules.append_child("priority").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mModulePriorities.value(it.key())).toLocal8Bit().data());
+                mInstalledModules.append_child("priority").text().set(QString::number(pHost->mModulePriorities.value(it.key())).toLocal8Bit().data());
             }
         }
 
-        host.append_child("url").append_child(pugi::node_pcdata).set_value(pHost->mUrl.toLocal8Bit().data());
-        host.append_child("serverPackageName").append_child(pugi::node_pcdata).set_value(pHost->mServerGUI_Package_name.toLocal8Bit().data());
-        host.append_child("serverPackageVersion").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mServerGUI_Package_version).toLocal8Bit().data());
-        host.append_child("port").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mPort).toLocal8Bit().data());
-        host.append_child("borderTopHeight").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mBorderTopHeight).toLocal8Bit().data());
-        host.append_child("borderBottomHeight").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mBorderBottomHeight).toLocal8Bit().data());
-        host.append_child("borderLeftWidth").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mBorderLeftWidth).toLocal8Bit().data());
-        host.append_child("borderRightWidth").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mBorderRightWidth).toLocal8Bit().data());
-        host.append_child("wrapAt").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mWrapAt).toLocal8Bit().data());
-        host.append_child("wrapIndentCount").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mWrapIndentCount).toLocal8Bit().data());
-        host.append_child("mFgColor").append_child(pugi::node_pcdata).set_value(pHost->mFgColor.name().toLocal8Bit().data());
-        host.append_child("mBgColor").append_child(pugi::node_pcdata).set_value(pHost->mBgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandFgColor").append_child(pugi::node_pcdata).set_value(pHost->mCommandFgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandBgColor").append_child(pugi::node_pcdata).set_value(pHost->mCommandBgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandLineFgColor").append_child(pugi::node_pcdata).set_value(pHost->mCommandLineFgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandLineBgColor").append_child(pugi::node_pcdata).set_value(pHost->mCommandLineBgColor.name().toLocal8Bit().data());
-        host.append_child("mBlack").append_child(pugi::node_pcdata).set_value(pHost->mBlack.name().toLocal8Bit().data());
-        host.append_child("mLightBlack").append_child(pugi::node_pcdata).set_value(pHost->mLightBlack.name().toLocal8Bit().data());
-        host.append_child("mRed").append_child(pugi::node_pcdata).set_value(pHost->mRed.name().toLocal8Bit().data());
-        host.append_child("mLightRed").append_child(pugi::node_pcdata).set_value(pHost->mLightRed.name().toLocal8Bit().data());
-        host.append_child("mBlue").append_child(pugi::node_pcdata).set_value(pHost->mBlue.name().toLocal8Bit().data());
-        host.append_child("mLightBlue").append_child(pugi::node_pcdata).set_value(pHost->mLightBlue.name().toLocal8Bit().data());
-        host.append_child("mGreen").append_child(pugi::node_pcdata).set_value(pHost->mGreen.name().toLocal8Bit().data());
-        host.append_child("mLightGreen").append_child(pugi::node_pcdata).set_value(pHost->mLightGreen.name().toLocal8Bit().data());
-        host.append_child("mYellow").append_child(pugi::node_pcdata).set_value(pHost->mYellow.name().toLocal8Bit().data());
-        host.append_child("mLightYellow").append_child(pugi::node_pcdata).set_value(pHost->mLightYellow.name().toLocal8Bit().data());
-        host.append_child("mCyan").append_child(pugi::node_pcdata).set_value(pHost->mCyan.name().toLocal8Bit().data());
-        host.append_child("mLightCyan").append_child(pugi::node_pcdata).set_value(pHost->mLightCyan.name().toLocal8Bit().data());
-        host.append_child("mMagenta").append_child(pugi::node_pcdata).set_value(pHost->mMagenta.name().toLocal8Bit().data());
-        host.append_child("mLightMagenta").append_child(pugi::node_pcdata).set_value(pHost->mLightMagenta.name().toLocal8Bit().data());
-        host.append_child("mWhite").append_child(pugi::node_pcdata).set_value(pHost->mWhite.name().toLocal8Bit().data());
-        host.append_child("mLightWhite").append_child(pugi::node_pcdata).set_value(pHost->mLightWhite.name().toLocal8Bit().data());
-        host.append_child("mDisplayFont").append_child(pugi::node_pcdata).set_value(pHost->mDisplayFont.toString().toLocal8Bit().data());
-        host.append_child("mCommandLineFont").append_child(pugi::node_pcdata).set_value(pHost->mCommandLineFont.toString().toLocal8Bit().data());
+        host.append_child("url").text().set(pHost->mUrl.toLocal8Bit().data());
+        host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toLocal8Bit().data());
+        host.append_child("serverPackageVersion").text().set(QString::number(pHost->mServerGUI_Package_version).toLocal8Bit().data());
+        host.append_child("port").text().set(QString::number(pHost->mPort).toLocal8Bit().data());
+        host.append_child("borderTopHeight").text().set(QString::number(pHost->mBorderTopHeight).toLocal8Bit().data());
+        host.append_child("borderBottomHeight").text().set(QString::number(pHost->mBorderBottomHeight).toLocal8Bit().data());
+        host.append_child("borderLeftWidth").text().set(QString::number(pHost->mBorderLeftWidth).toLocal8Bit().data());
+        host.append_child("borderRightWidth").text().set(QString::number(pHost->mBorderRightWidth).toLocal8Bit().data());
+        host.append_child("wrapAt").text().set(QString::number(pHost->mWrapAt).toLocal8Bit().data());
+        host.append_child("wrapIndentCount").text().set(QString::number(pHost->mWrapIndentCount).toLocal8Bit().data());
+        host.append_child("mFgColor").text().set(pHost->mFgColor.name().toLocal8Bit().data());
+        host.append_child("mBgColor").text().set(pHost->mBgColor.name().toLocal8Bit().data());
+        host.append_child("mCommandFgColor").text().set(pHost->mCommandFgColor.name().toLocal8Bit().data());
+        host.append_child("mCommandBgColor").text().set(pHost->mCommandBgColor.name().toLocal8Bit().data());
+        host.append_child("mCommandLineFgColor").text().set(pHost->mCommandLineFgColor.name().toLocal8Bit().data());
+        host.append_child("mCommandLineBgColor").text().set(pHost->mCommandLineBgColor.name().toLocal8Bit().data());
+        host.append_child("mBlack").text().set(pHost->mBlack.name().toLocal8Bit().data());
+        host.append_child("mLightBlack").text().set(pHost->mLightBlack.name().toLocal8Bit().data());
+        host.append_child("mRed").text().set(pHost->mRed.name().toLocal8Bit().data());
+        host.append_child("mLightRed").text().set(pHost->mLightRed.name().toLocal8Bit().data());
+        host.append_child("mBlue").text().set(pHost->mBlue.name().toLocal8Bit().data());
+        host.append_child("mLightBlue").text().set(pHost->mLightBlue.name().toLocal8Bit().data());
+        host.append_child("mGreen").text().set(pHost->mGreen.name().toLocal8Bit().data());
+        host.append_child("mLightGreen").text().set(pHost->mLightGreen.name().toLocal8Bit().data());
+        host.append_child("mYellow").text().set(pHost->mYellow.name().toLocal8Bit().data());
+        host.append_child("mLightYellow").text().set(pHost->mLightYellow.name().toLocal8Bit().data());
+        host.append_child("mCyan").text().set(pHost->mCyan.name().toLocal8Bit().data());
+        host.append_child("mLightCyan").text().set(pHost->mLightCyan.name().toLocal8Bit().data());
+        host.append_child("mMagenta").text().set(pHost->mMagenta.name().toLocal8Bit().data());
+        host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toLocal8Bit().data());
+        host.append_child("mWhite").text().set(pHost->mWhite.name().toLocal8Bit().data());
+        host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toLocal8Bit().data());
+        host.append_child("mDisplayFont").text().set(pHost->mDisplayFont.toString().toLocal8Bit().data());
+        host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toLocal8Bit().data());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
-        host.append_child("mCommandSeparator").append_child(pugi::node_pcdata).set_value(pHost->mCommandSeparator.toLocal8Bit().data());
-        host.append_child("commandLineMinimumHeight").append_child(pugi::node_pcdata).set_value(QString::number(pHost->commandLineMinimumHeight).toLocal8Bit().data());
+        host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toLocal8Bit().data());
+        host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toLocal8Bit().data());
 
-        host.append_child("mFgColor2").append_child(pugi::node_pcdata).set_value(pHost->mFgColor_2.name().toLocal8Bit().data());
-        host.append_child("mBgColor2").append_child(pugi::node_pcdata).set_value(pHost->mBgColor_2.name().toLocal8Bit().data());
-        host.append_child("mBlack2").append_child(pugi::node_pcdata).set_value(pHost->mBlack_2.name().toLocal8Bit().data());
-        host.append_child("mLightBlack2").append_child(pugi::node_pcdata).set_value(pHost->mLightBlack_2.name().toLocal8Bit().data());
-        host.append_child("mRed2").append_child(pugi::node_pcdata).set_value(pHost->mRed_2.name().toLocal8Bit().data());
-        host.append_child("mLightRed2").append_child(pugi::node_pcdata).set_value(pHost->mLightRed_2.name().toLocal8Bit().data());
-        host.append_child("mBlue2").append_child(pugi::node_pcdata).set_value(pHost->mBlue_2.name().toLocal8Bit().data());
-        host.append_child("mLightBlue2").append_child(pugi::node_pcdata).set_value(pHost->mLightBlue_2.name().toLocal8Bit().data());
-        host.append_child("mGreen2").append_child(pugi::node_pcdata).set_value(pHost->mGreen_2.name().toLocal8Bit().data());
-        host.append_child("mLightGreen2").append_child(pugi::node_pcdata).set_value(pHost->mLightGreen_2.name().toLocal8Bit().data());
-        host.append_child("mYellow2").append_child(pugi::node_pcdata).set_value(pHost->mYellow_2.name().toLocal8Bit().data());
-        host.append_child("mLightYellow2").append_child(pugi::node_pcdata).set_value(pHost->mLightYellow_2.name().toLocal8Bit().data());
-        host.append_child("mCyan2").append_child(pugi::node_pcdata).set_value(pHost->mCyan_2.name().toLocal8Bit().data());
-        host.append_child("mLightCyan2").append_child(pugi::node_pcdata).set_value(pHost->mLightCyan_2.name().toLocal8Bit().data());
-        host.append_child("mMagenta2").append_child(pugi::node_pcdata).set_value(pHost->mMagenta_2.name().toLocal8Bit().data());
-        host.append_child("mLightMagenta2").append_child(pugi::node_pcdata).set_value(pHost->mLightMagenta_2.name().toLocal8Bit().data());
-        host.append_child("mWhite2").append_child(pugi::node_pcdata).set_value(pHost->mWhite_2.name().toLocal8Bit().data());
-        host.append_child("mLightWhite2").append_child(pugi::node_pcdata).set_value(pHost->mLightWhite_2.name().toLocal8Bit().data());
-        host.append_child("mSpellDic").append_child(pugi::node_pcdata).set_value(pHost->mSpellDic.toLocal8Bit().data());
+        host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toLocal8Bit().data());
+        host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toLocal8Bit().data());
+        host.append_child("mBlack2").text().set(pHost->mBlack_2.name().toLocal8Bit().data());
+        host.append_child("mLightBlack2").text().set(pHost->mLightBlack_2.name().toLocal8Bit().data());
+        host.append_child("mRed2").text().set(pHost->mRed_2.name().toLocal8Bit().data());
+        host.append_child("mLightRed2").text().set(pHost->mLightRed_2.name().toLocal8Bit().data());
+        host.append_child("mBlue2").text().set(pHost->mBlue_2.name().toLocal8Bit().data());
+        host.append_child("mLightBlue2").text().set(pHost->mLightBlue_2.name().toLocal8Bit().data());
+        host.append_child("mGreen2").text().set(pHost->mGreen_2.name().toLocal8Bit().data());
+        host.append_child("mLightGreen2").text().set(pHost->mLightGreen_2.name().toLocal8Bit().data());
+        host.append_child("mYellow2").text().set(pHost->mYellow_2.name().toLocal8Bit().data());
+        host.append_child("mLightYellow2").text().set(pHost->mLightYellow_2.name().toLocal8Bit().data());
+        host.append_child("mCyan2").text().set(pHost->mCyan_2.name().toLocal8Bit().data());
+        host.append_child("mLightCyan2").text().set(pHost->mLightCyan_2.name().toLocal8Bit().data());
+        host.append_child("mMagenta2").text().set(pHost->mMagenta_2.name().toLocal8Bit().data());
+        host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toLocal8Bit().data());
+        host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toLocal8Bit().data());
+        host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toLocal8Bit().data());
+        host.append_child("mSpellDic").text().set(pHost->mSpellDic.toLocal8Bit().data());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave
         // them in place for now even though we no longer use them for compatibility
         // with older version of Mudlet
-        host.append_child("mLineSize").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mLineSize, 'f', 1).toLocal8Bit().data());
-        host.append_child("mRoomSize").append_child(pugi::node_pcdata).set_value(QString::number(pHost->mRoomSize, 'f', 1).toLocal8Bit().data());
+        host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toLocal8Bit().data());
+        host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toLocal8Bit().data());
     }
 
     // Use if() to block each XXXXPackage element to limit scope of iterator so
@@ -542,7 +542,7 @@ bool XMLexport::writeHost(Host *pHost, pugi::xml_node mMudletPackageNode)
             QSetIterator<QString> itHiddenVariableName(vu->hiddenByUser);
             while (itHiddenVariableName.hasNext()) {
                 auto variableName = itHiddenVariableName.next();
-                hiddenVariablesNode.append_child("name").append_child(pugi::node_pcdata).set_value(variableName.toLocal8Bit().data());
+                hiddenVariablesNode.append_child("name").text().set(variableName.toLocal8Bit().data());
             }
         }
 
@@ -572,10 +572,10 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
         if (pVar->getValueType() == LUA_TTABLE) {
             auto variableGroupNode = xmlParent.append_child("VariableGroup");
 
-            variableGroupNode.append_child("name").append_child(pugi::node_pcdata).set_value(pVar->getName().toLocal8Bit().data());
-            variableGroupNode.append_child("keyType").append_child(pugi::node_pcdata).set_value(QString::number(pVar->getKeyType()).toLocal8Bit().data());
-            variableGroupNode.append_child("value").append_child(pugi::node_pcdata).set_value(pLuaInterface->getValue(pVar).toLocal8Bit().data());
-            variableGroupNode.append_child("valueType").append_child(pugi::node_pcdata).set_value(QString::number(pVar->getValueType()).toLocal8Bit().data());
+            variableGroupNode.append_child("name").text().set(pVar->getName().toLocal8Bit().data());
+            variableGroupNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toLocal8Bit().data());
+            variableGroupNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toLocal8Bit().data());
+            variableGroupNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toLocal8Bit().data());
 
             QListIterator<TVar*> itNestedVariable(pVar->getChildren(false));
             while (isOk && itNestedVariable.hasNext()) {
@@ -586,10 +586,10 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
         } else {
             auto variableNode = xmlParent.append_child("Variable");
 
-            variableNode.append_child("name").append_child(pugi::node_pcdata).set_value(pVar->getName().toLocal8Bit().data());
-            variableNode.append_child("keyType").append_child(pugi::node_pcdata).set_value(QString::number(pVar->getKeyType()).toLocal8Bit().data());
-            variableNode.append_child("value").append_child(pugi::node_pcdata).set_value(pLuaInterface->getValue(pVar).toLocal8Bit().data());
-            variableNode.append_child("valueType").append_child(pugi::node_pcdata).set_value(QString::number(pVar->getValueType()).toLocal8Bit().data());
+            variableNode.append_child("name").text().set(pVar->getName().toLocal8Bit().data());
+            variableNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toLocal8Bit().data());
+            variableNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toLocal8Bit().data());
+            variableNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toLocal8Bit().data());
         }
     }
 
@@ -791,28 +791,28 @@ bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
 
         { // Blocked so that indentation reflects that of the XML file
 
-            trigger.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
+            trigger.append_child("name").text().set(pT->mName.toLocal8Bit().data());
             writeScriptElement(pT->mScript, trigger);
 
-            trigger.append_child("triggerType").append_child(pugi::node_pcdata).set_value(QString::number(pT->mTriggerType).toLocal8Bit().data());
-            trigger.append_child("conditonLineDelta").append_child(pugi::node_pcdata).set_value(QString::number(pT->mConditionLineDelta).toLocal8Bit().data());
-            trigger.append_child("mStayOpen").append_child(pugi::node_pcdata).set_value(QString::number(pT->mStayOpen).toLocal8Bit().data());
-            trigger.append_child("mCommand").append_child(pugi::node_pcdata).set_value(pT->mCommand.toLocal8Bit().data());
-            trigger.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
-            trigger.append_child("mFgColor").append_child(pugi::node_pcdata).set_value(pT->mFgColor.name().toLocal8Bit().data());
-            trigger.append_child("mBgColor").append_child(pugi::node_pcdata).set_value(pT->mBgColor.name().toLocal8Bit().data());
-            trigger.append_child("mSoundFile").append_child(pugi::node_pcdata).set_value(pT->mSoundFile.toLocal8Bit().data());
-            trigger.append_child("colorTriggerFgColor").append_child(pugi::node_pcdata).set_value(pT->mColorTriggerFgColor.name().toLocal8Bit().data());
-            trigger.append_child("colorTriggerBgColor").append_child(pugi::node_pcdata).set_value(pT->mColorTriggerBgColor.name().toLocal8Bit().data());
+            trigger.append_child("triggerType").text().set(QString::number(pT->mTriggerType).toLocal8Bit().data());
+            trigger.append_child("conditonLineDelta").text().set(QString::number(pT->mConditionLineDelta).toLocal8Bit().data());
+            trigger.append_child("mStayOpen").text().set(QString::number(pT->mStayOpen).toLocal8Bit().data());
+            trigger.append_child("mCommand").text().set(pT->mCommand.toLocal8Bit().data());
+            trigger.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
+            trigger.append_child("mFgColor").text().set(pT->mFgColor.name().toLocal8Bit().data());
+            trigger.append_child("mBgColor").text().set(pT->mBgColor.name().toLocal8Bit().data());
+            trigger.append_child("mSoundFile").text().set(pT->mSoundFile.toLocal8Bit().data());
+            trigger.append_child("colorTriggerFgColor").text().set(pT->mColorTriggerFgColor.name().toLocal8Bit().data());
+            trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toLocal8Bit().data());
 
             auto regexCodeList = trigger.append_child("regexCodeList");
             for (int i = 0; i < pT->mRegexCodeList.size(); ++i) {
-                regexCodeList.append_child("string").append_child(pugi::node_pcdata).set_value(pT->mRegexCodeList.at(i).toLocal8Bit().data());
+                regexCodeList.append_child("string").text().set(pT->mRegexCodeList.at(i).toLocal8Bit().data());
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
             for (int i : pT->mRegexCodePropertyList) {
-                regexCodePropertyList.append_child("integer").append_child(pugi::node_pcdata).set_value(QString::number(i).toLocal8Bit().data());
+                regexCodePropertyList.append_child("integer").text().set(QString::number(i).toLocal8Bit().data());
             }
         }
 
@@ -909,12 +909,12 @@ bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
         aliasContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            aliasContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
+            aliasContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
             writeScriptElement(pT->mScript, aliasContentsNode);
 
-            aliasContentsNode.append_child("command").append_child(pugi::node_pcdata).set_value(pT->mCommand.toLocal8Bit().data());
-            aliasContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
-            aliasContentsNode.append_child("regex").append_child(pugi::node_pcdata).set_value(pT->mRegexCode.toLocal8Bit().data());
+            aliasContentsNode.append_child("command").text().set(pT->mCommand.toLocal8Bit().data());
+            aliasContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
+            aliasContentsNode.append_child("regex").text().set(pT->mRegexCode.toLocal8Bit().data());
         }
 
         isOk = !hasError();
@@ -1013,26 +1013,26 @@ bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
         actionContentsNode.append_attribute("useCustomLayout") = pT->mUseCustomLayout ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            actionContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
-            actionContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
+            actionContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
+            actionContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
             writeScriptElement(pT->mScript, actionContentsNode);
 
-            actionContentsNode.append_child("css").append_child(pugi::node_pcdata).set_value(pT->css.toLocal8Bit().data());
-            actionContentsNode.append_child("commandButtonUp").append_child(pugi::node_pcdata).set_value(pT->mCommandButtonUp.toLocal8Bit().data());
-            actionContentsNode.append_child("commandButtonDown").append_child(pugi::node_pcdata).set_value(pT->mCommandButtonDown.toLocal8Bit().data());
-            actionContentsNode.append_child("icon").append_child(pugi::node_pcdata).set_value(pT->mIcon.toLocal8Bit().data());
-            actionContentsNode.append_child("orientation").append_child(pugi::node_pcdata).set_value(QString::number(pT->mOrientation).toLocal8Bit().data());
-            actionContentsNode.append_child("location").append_child(pugi::node_pcdata).set_value(QString::number(pT->mLocation).toLocal8Bit().data());
-            actionContentsNode.append_child("posX").append_child(pugi::node_pcdata).set_value(QString::number(pT->mPosX).toLocal8Bit().data());
-            actionContentsNode.append_child("posY").append_child(pugi::node_pcdata).set_value(QString::number(pT->mPosY).toLocal8Bit().data());
+            actionContentsNode.append_child("css").text().set(pT->css.toLocal8Bit().data());
+            actionContentsNode.append_child("commandButtonUp").text().set(pT->mCommandButtonUp.toLocal8Bit().data());
+            actionContentsNode.append_child("commandButtonDown").text().set(pT->mCommandButtonDown.toLocal8Bit().data());
+            actionContentsNode.append_child("icon").text().set(pT->mIcon.toLocal8Bit().data());
+            actionContentsNode.append_child("orientation").text().set(QString::number(pT->mOrientation).toLocal8Bit().data());
+            actionContentsNode.append_child("location").text().set(QString::number(pT->mLocation).toLocal8Bit().data());
+            actionContentsNode.append_child("posX").text().set(QString::number(pT->mPosX).toLocal8Bit().data());
+            actionContentsNode.append_child("posY").text().set(QString::number(pT->mPosY).toLocal8Bit().data());
             // We now use a boolean but file must use original "1" (false)
             // or "2" (true) for backward compatibility
-            actionContentsNode.append_child("mButtonState").append_child(pugi::node_pcdata).set_value(QString::number(pT->mButtonState ? 2 : 1).toLocal8Bit().data());
-            actionContentsNode.append_child("sizeX").append_child(pugi::node_pcdata).set_value(QString::number(pT->mSizeX).toLocal8Bit().data());
-            actionContentsNode.append_child("sizeY").append_child(pugi::node_pcdata).set_value(QString::number(pT->mSizeY).toLocal8Bit().data());
-            actionContentsNode.append_child("buttonColumn").append_child(pugi::node_pcdata).set_value(QString::number(pT->mButtonColumns).toLocal8Bit().data());
-            actionContentsNode.append_child("buttonRotation").append_child(pugi::node_pcdata).set_value(QString::number(pT->mButtonRotation).toLocal8Bit().data());
-            actionContentsNode.append_child("buttonColor").append_child(pugi::node_pcdata).set_value(pT->mButtonColor.name().toLocal8Bit().data());
+            actionContentsNode.append_child("mButtonState").text().set(QString::number(pT->mButtonState ? 2 : 1).toLocal8Bit().data());
+            actionContentsNode.append_child("sizeX").text().set(QString::number(pT->mSizeX).toLocal8Bit().data());
+            actionContentsNode.append_child("sizeY").text().set(QString::number(pT->mSizeY).toLocal8Bit().data());
+            actionContentsNode.append_child("buttonColumn").text().set(QString::number(pT->mButtonColumns).toLocal8Bit().data());
+            actionContentsNode.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toLocal8Bit().data());
+            actionContentsNode.append_child("buttonColor").text().set(pT->mButtonColor.name().toLocal8Bit().data());
         }
 
         isOk = !hasError();
@@ -1130,13 +1130,13 @@ bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
         timerContentsNode.append_attribute("isOffsetTimer") = pT->isOffsetTimer() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            timerContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
+            timerContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
 
             writeScriptElement(pT->mScript, timerContentsNode);
 
-            timerContentsNode.append_child("command").append_child(pugi::node_pcdata).set_value(pT->mCommand.toLocal8Bit().data());
-            timerContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
-            timerContentsNode.append_child("time").append_child(pugi::node_pcdata).set_value(pT->mTime.toString("hh:mm:ss.zzz").toLocal8Bit().data());
+            timerContentsNode.append_child("command").text().set(pT->mCommand.toLocal8Bit().data());
+            timerContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
+            timerContentsNode.append_child("time").text().set(pT->mTime.toString("hh:mm:ss.zzz").toLocal8Bit().data());
         }
 
         isOk = !hasError();
@@ -1232,13 +1232,13 @@ bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
         scriptContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            scriptContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
-            scriptContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
+            scriptContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
+            scriptContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
             writeScriptElement(pT->mScript, scriptContentsNode);
 
             auto eventHandlerList = scriptContentsNode.append_child("eventHandlerList");
             for (int i = 0; i < pT->mEventHandlerList.size(); ++i) {
-                eventHandlerList.append_child("string").append_child(pugi::node_pcdata).set_value(pT->mEventHandlerList.at(i).toLocal8Bit().data());
+                eventHandlerList.append_child("string").text().set(pT->mEventHandlerList.at(i).toLocal8Bit().data());
             }
         }
 
@@ -1335,13 +1335,13 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
         keyContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            keyContentsNode.append_child("name").append_child(pugi::node_pcdata).set_value(pT->mName.toLocal8Bit().data());
-            keyContentsNode.append_child("packageName").append_child(pugi::node_pcdata).set_value(pT->mPackageName.toLocal8Bit().data());
+            keyContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
+            keyContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
             writeScriptElement(pT->mScript, keyContentsNode);
 
-            keyContentsNode.append_child("command").append_child(pugi::node_pcdata).set_value(pT->mCommand.toLocal8Bit().data());
-            keyContentsNode.append_child("keyCode").append_child(pugi::node_pcdata).set_value(QString::number(pT->mKeyCode).toLocal8Bit().data());
-            keyContentsNode.append_child("keyModifier").append_child(pugi::node_pcdata).set_value(QString::number(pT->mKeyModifier).toLocal8Bit().data());
+            keyContentsNode.append_child("command").text().set(pT->mCommand.toLocal8Bit().data());
+            keyContentsNode.append_child("keyCode").text().set(QString::number(pT->mKeyCode).toLocal8Bit().data());
+            keyContentsNode.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toLocal8Bit().data());
         }
 
         isOk = !hasError();
@@ -1388,7 +1388,7 @@ bool XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElem
     localScript.replace(QChar('\x1E'), QStringLiteral("\xFFFC\x241E")); // RS
     localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
     localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
-    xmlElement.append_child("script").append_child(pugi::node_pcdata).set_value(localScript.toLocal8Bit().data());
+    xmlElement.append_child("script").text().set(localScript.toLocal8Bit().data());
 
     return (!hasError());
 }
