@@ -168,6 +168,8 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
+    QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
+
 
 public:
     cTelnet mTelnet;

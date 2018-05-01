@@ -98,7 +98,7 @@ private:
     void readModulesDetailsMap(QMap<QString, QStringList>&);
     void getVersionString(QString&);
     QString readScriptElement();
-
+    void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
     QPointer<Host> mpHost;
     QString mPackageName;

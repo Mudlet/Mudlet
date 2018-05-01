@@ -86,6 +86,8 @@ public:
     bool writeScriptElement(const QString&);
 
 private:
+    QStringList remapAnsiToColorNumber(const QStringList&, const QList<int>&);
+
     QPointer<Host> mpHost;
     TTrigger* mpTrigger;
     TTimer* mpTimer;

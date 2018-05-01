@@ -5751,7 +5751,8 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
 }
 
 // This is documented as using a simple color table - but the numbers do not
-// match ANSI numbering and fixing that would break existing scripts.
+// match ANSI numbering and fixing that would break existing scripts so it has
+// to be tweaked here (and in the Mudlet XML save file format!)
 int TLuaInterpreter::tempColorTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5762,12 +5763,13 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
         return lua_error(L);
     }
 
+
+    // See TColorTable* TTrigger::createColorPattern(int, int) :
+    int foregroundColor = TTrigger::scmIgnored;
     int value = lua_tointeger(L, 1);
-    int foregroundColor = -1;
-    // See TColorTable* TTrigger::createColorPattern(int, int)
     // clang-format off
     switch (value) {
-    case 0:     foregroundColor =     -1;   break; // Default foreground colour
+    case 0:     foregroundColor = TTrigger::scmDefault;  break; // Default foreground colour
     case 1:     foregroundColor =      8;   break; // light black (dark gray)
     case 2:     foregroundColor =      0;   break; // black
     case 3:     foregroundColor =      9;   break; // light red
@@ -5785,19 +5787,24 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     case 15:    foregroundColor =     15;   break; // light white
     case 16:    foregroundColor =      7;   break; // white (light gray)
     default:    foregroundColor =  value;   break; // other colours in ANSI 256 colours handled but not mentioned in Wiki
-    // clang-format off
+    // The default includes case -1:    foregroundColor = TTrigger::scmIgnored
+    // which means only consider the background color now (and that cannot be
+    // set to this value) - NOTE: TTrigger::scmIgnored has been set to BE -1
+    // when it was added after Mudlet 3.7.1 but if that is subsequently changed
+    // it will break the API for this lua function
+    // clang-format on
     }
 
     if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "tempColorTrigger: bad argument #2 type (background color as number expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "tempColorTrigger: bad argument #2 type (background color as number is expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
     value = lua_tointeger(L, 2);
-    int backgroundColor = -1;
+    int backgroundColor = TTrigger::scmIgnored;
     // clang-format off
     switch (value) {
-    case 0:     backgroundColor =     -1;   break; // Default background colour
+    case 0:     backgroundColor = TTrigger::scmDefault;  break; // Default background colour
     case 1:     backgroundColor =      8;   break; // light black (dark gray)
     case 2:     backgroundColor =      0;   break; // black
     case 3:     backgroundColor =      9;   break; // light red
@@ -5814,8 +5821,15 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     case 14:    backgroundColor =      6;   break; // cyan
     case 15:    backgroundColor =     15;   break; // light white
     case 16:    backgroundColor =      7;   break; // white (light gray)
-    default:    backgroundColor =  value;   break; // other colours in ANSI 256 colours handled but not mentioned in Wiki
-    // clang-format off
+    // The default includes case -1:    backgroundColor = TTrigger::scmIgnored
+    // but this cannot be used for the foreground case at the same time:
+    default:    backgroundColor =  value;   break;
+    // clang-format on
+    }
+
+    if (foregroundColor == TTrigger::scmIgnored && backgroundColor == TTrigger::scmIgnored) {
+        lua_pushnil(L);
+        lua_pushstring(L, "only one of foreground and background colors can be -1 (ignored)");
     }
 
     int triggerID;
@@ -5839,19 +5853,18 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 }
 
 // This is the replacement for tempColorTrigger() which uses the right numbers
-// for ANSI colours in the range 0 to 255 or-1 for default colour; it is
-// anticipated that additional special values less than zero may be added to
-// detect other types of text (or for a 16M colour value where the components
-// have to be given)
+// for ANSI colours in the range 0 to 255 or TTrigger::scmDefault for default
+// colour or TTrigger::scmIgnored ignore; it is anticipated that additional
+// special values less than zero may be added to detect other types of text (or
+// for a 16M colour value where the components have to be given)
 int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     QString code;
-    // Values corresponding to "default" Ansi color for TChar::ansi[BF]gColor
-    qint16 ansiFgColor = -1;
-    qint16 ansiBgColor = -1;
+    int ansiFgColor = TTrigger::scmIgnored;
+    int ansiBgColor = TTrigger::scmIgnored;
     if (lua_isstring(L, 1)) {
         code = QString::fromUtf8(lua_tostring(L, 1));
     } else if (lua_isfunction(L, 1)) {
@@ -5862,29 +5875,42 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     }
 
     if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #2 type (foreground color as ANSI Color number {-1 = default colour, 0 to 255 ANSI colour} expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #2 type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
+                        TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, 2));
         return lua_error(L);
     } else {
         int value = lua_tointeger(L, 2);
-        // At present we limit the range to -1 (default color) and 0-255 ANSI
-        // colors - in the future we could extend it to other "coded" values for
-        // locally generated textual content
-        if (value < -1 || value > 255) {
+        // At present we limit the range to (Trigger::scmIgnored),
+        // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
+        // extend it to other "coded" values for locally generated textual
+        // content
+        if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, currently only -1 (default foregroud colour) or 0 to 255 recognised", value);
+            lua_pushfstring(L, "invalid ANSI color number %d, currently only %d (ignore foreground color), %d (default foreground color) or 0 to 255 recognised",
+                            value, TTrigger::scmIgnored, TTrigger::scmDefault);
+        } else if (value == TTrigger::scmIgnored && lua_gettop(L) < 2) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid ANSI color number %d, it cannot be used (to ignore the foreground color) if the background color is ommitted",
+                            value);
         } else {
             ansiFgColor = value;
         }
     }
 
     if (lua_gettop(L) > 2 && !lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #3 type (background color as ANSI Color number {-1 = default colour, assumed if omitted, 0 to 255 ANSI colour} is optional, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #3 type (background color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
+                        TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, 3));
         return lua_error(L);
     } else {
         int value = lua_tointeger(L, 2);
-        if (value < -1 || value > 255) {
+        if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, currently only -1 (default foregroud colour) or 0 to 255 recognised", value);
+            lua_pushfstring(L, "invalid ANSI color number %d, currently only %d (ignore background color), %d (default background color) or 0 to 255 recognised",
+                            value);
+        } else if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid ANSI color number %d, it cannot be used for the background color (to ignore that) if the foreground is also set to that value to also be ignored",
+                            value);
         } else {
             ansiBgColor = value;
         }
@@ -6050,8 +6076,8 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     }
     pT->setIsColorizerTrigger(highlight); //highlight
     if (highlight) {
-        pT->setFgColor(hlFgColor);
-        pT->setBgColor(hlBgColor);
+        pT->setColorizerFgColor(hlFgColor);
+        pT->setColorizerBgColor(hlBgColor);
     }
 
     if (lua_isstring(L, 3)) {

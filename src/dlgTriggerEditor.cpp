@@ -602,7 +602,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         QComboBox* pBox = pItem->comboBox_patternType;
         pBox->addItems(_patternList);
         pBox->setItemData(0, QVariant(i));
-        connect(pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
+        connect(pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_setupPatternControls(int)));
         connect(pItem->pushButton_fgColor, SIGNAL(pressed()), this, SLOT(slot_color_trigger_fg()));
         connect(pItem->pushButton_bgColor, SIGNAL(pressed()), this, SLOT(slot_color_trigger_bg()));
         HpatternList->layout()->addWidget(pItem);
@@ -694,13 +694,6 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
     treeWidget_keys->setIconSize(newSize);
     treeWidget_actions->setIconSize(newSize);
     treeWidget_variables->setIconSize(newSize);
-}
-
-void dlgTriggerEditor::slot_choseButtonColor()
-{
-    auto color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor(QPalette::Button, color);
 }
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
@@ -3887,8 +3880,8 @@ void dlgTriggerEditor::selectKeyByID(int id)
 
 void dlgTriggerEditor::saveTrigger()
 {
-    QTime t;
-    t.start();
+
+
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
     if (!pItem) {
         return;
@@ -3957,15 +3950,16 @@ void dlgTriggerEditor::saveTrigger()
         pT->mStayOpen = mpTriggersMainArea->spinBox_stayOpen->value();
         pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
         pT->setSound(mpTriggersMainArea->lineEdit_soundFile->text());
-
-        QPalette FgColorPalette;
-        QPalette BgColorPalette;
-        FgColorPalette = mpTriggersMainArea->pushButtonFgColor->palette();
-        BgColorPalette = mpTriggersMainArea->pushButtonBgColor->palette();
-        QColor fgColor = FgColorPalette.color(QPalette::Button);
-        QColor bgColor = BgColorPalette.color(QPalette::Button);
-        pT->setFgColor(fgColor);
-        pT->setBgColor(bgColor);
+        QColor fgColor;
+        if (!mpTriggersMainArea->pushButtonFgColor->styleSheet().isEmpty()) {
+            fgColor = parseButtonStyleSheetColors(mpTriggersMainArea->pushButtonFgColor->styleSheet());
+        }
+        pT->setColorizerFgColor(fgColor);
+        QColor bgColor;
+        if (!mpTriggersMainArea->pushButtonBgColor->styleSheet().isEmpty()) {
+            bgColor = parseButtonStyleSheetColors(mpTriggersMainArea->pushButtonBgColor->styleSheet());
+        }
+        pT->setColorizerBgColor(bgColor);
         pT->setIsColorizerTrigger(mpTriggersMainArea->colorizerTrigger->isChecked());
         QIcon icon;
         if (pT->isFilterChain()) {
@@ -4762,70 +4756,63 @@ void dlgTriggerEditor::saveKey()
     }
 }
 
-void dlgTriggerEditor::slot_set_pattern_type_color(int type)
+QColor dlgTriggerEditor::itemTypeColor(const int type)
 {
-    QComboBox* pBox = (QComboBox*)sender();
-    if (!pBox) {
-        return;
-    }
-    int row = pBox->itemData(0).toInt();
-    if (row < 0 || row >= 50) {
-        return;
-    }
-    dlgTriggerPatternEdit* pItem = mTriggerPatternEdit[row];
-    QPalette palette;
     switch (type) {
-    case 0:
-        palette.setColor(QPalette::Text, QColor(Qt::black));
+    case REGEX_PERL:        return QColor(0, 0, 195); // Was: Qt::blue;
+    case REGEX_BEGIN_OF_LINE_SUBSTRING: return QColor(195, 0, 0);
+    case REGEX_EXACT_MATCH: return QColor(0, 195, 0);
+    case REGEX_LUA_CODE:    return QColor(0, 155, 155);
+    case REGEX_LINE_SPACER: return QColor(155, 0, 155); // Was QColor(137, 0, 205);
+    case REGEX_COLOR_PATTERN: return Qt::darkGray; // Not normally seen as the text entry is hidden for this type
+    case REGEX_PROMPT:      return QColor(155, 155, 0); // Was black, but that is the same as substring
+    default:
+        // Includes case REGEX_SUBSTRING
+        return Qt::black;
+    }
+}
+
+void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdit* pItem)
+{
+    switch (type) {
+    case REGEX_SUBSTRING:
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
         break;
-    case 1:
-        palette.setColor(QPalette::Text, QColor(Qt::blue));
+    case REGEX_PERL:
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
         break;
-    case 2:
-        palette.setColor(QPalette::Text, QColor(195, 0, 0));
+    case REGEX_BEGIN_OF_LINE_SUBSTRING:
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
         break;
-    case 3:
-        palette.setColor(QPalette::Text, QColor(0, 195, 0));
+    case REGEX_EXACT_MATCH:
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
         break;
-    case 4:
-        palette.setColor(QPalette::Text, QColor(0, 155, 155));
+    case REGEX_LUA_CODE:
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
         break;
-    case 5:
-        palette.setColor(QPalette::Text, QColor(137, 0, 205));
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
-    case 6:
-        palette.setColor(QPalette::Text, QColor(100, 100, 100));
+    case REGEX_COLOR_PATTERN:
+        // CHECK: Do we need to regenerate (hidden patter text) and button texts/colors?
         pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->show();
         pItem->pushButton_bgColor->show();
         pItem->pushButton_prompt->hide();
         break;
-    case 7:
-        palette.setColor(QPalette::Text, QColor(Qt::black));
+    case REGEX_PROMPT:
         pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
@@ -4839,7 +4826,81 @@ void dlgTriggerEditor::slot_set_pattern_type_color(int type)
         pItem->pushButton_prompt->show();
         break;
     }
-    pItem->lineEdit_pattern->setPalette(palette);
+}
+
+// This can get called after the lineEdit contents has changed and it is now a
+// color pattern - ought to update coloration if it has been edited by hand
+// but need to source the colors
+void dlgTriggerEditor::slot_setupPatternControls(int type)
+{
+    QComboBox* pBox = (QComboBox*)sender();
+    if (!pBox) {
+        return;
+    }
+
+    int row = pBox->itemData(0).toInt();
+    if (row < 0 || row >= 50) {
+        return;
+    }
+
+    // This is the collection of widgets that make up one of the 50 patterns
+    // in the dlgTriggerMainArea:
+    dlgTriggerPatternEdit* pItem = mTriggerPatternEdit[row];
+    setupPatternControls(type, pItem);
+    if (type == REGEX_COLOR_PATTERN) {
+        if (pItem->lineEdit_pattern->text().isEmpty()) {
+            // This COLOR trigger is a new one in that there is NO text
+            // So set it to the default (ignore both) - which will generate an
+            // error if saved without setting a color for at least one element:
+
+            pItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(TTrigger::scmIgnored, TTrigger::scmIgnored));
+        }
+
+        // Only process the text if it looks like it should:
+        if ((pItem->lineEdit_pattern->text().startsWith(QLatin1String("ANSI_COLORS_F{"))
+              && pItem->lineEdit_pattern->text().contains(QLatin1String("}_B{"))
+              && pItem->lineEdit_pattern->text().endsWith(QLatin1String("}")))) {
+
+            // It looks as though there IS a valid color pattern string in the
+            // lineEdit, so, in case it has been edited by hand, regenerate the
+            // colors that are used:
+            int textAnsiFg = TTrigger::scmIgnored;
+            int textAnsiBg = TTrigger::scmIgnored;
+            TTrigger::decodeColorPatternText(pItem->lineEdit_pattern->text(), textAnsiFg, textAnsiBg);
+
+            if (textAnsiFg == TTrigger::scmIgnored) {
+                pItem->pushButton_fgColor->setStyleSheet(QString());
+                pItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
+            } else if (textAnsiFg == TTrigger::scmDefault) {
+                pItem->pushButton_fgColor->setStyleSheet(QString());
+                pItem->pushButton_fgColor->setText(tr("Default foreground color"));
+            } else {
+                pItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiFg, false)));
+                pItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(textAnsiFg)));
+            }
+
+            if (textAnsiBg == TTrigger::scmIgnored) {
+                pItem->pushButton_bgColor->setStyleSheet(QString());
+                pItem->pushButton_bgColor->setText(tr("Background color ignored"));
+            } else if (textAnsiBg == TTrigger::scmDefault) {
+                pItem->pushButton_bgColor->setStyleSheet(QString());
+                pItem->pushButton_bgColor->setText(tr("Default background color"));
+            } else {
+                pItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiBg, true)));
+                pItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(textAnsiBg)));
+            }
+
+        } else {
+            qDebug() << "dlgTriggerEditor::slot_setupPatternControls(...) ERROR: Pattern listed as item:"
+                     << row + 1
+                     << "is supposed to be a color pattern trigger but the stored text that contains the color codes:"
+                     << pItem->lineEdit_pattern->text()
+                     << "does not fit the pattern!";
+        }
+
+    } // end of if a color pattern type
+
+    pItem->lineEdit_pattern->setStyleSheet(QStringLiteral("QLineEdit { color: %1; }").arg(itemTypeColor(type).name()));
 }
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
@@ -4881,116 +4942,54 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             if (i >= pT->mColorPatternList.size()) {
                 break;
             }
-            dlgTriggerPatternEdit* pItem = mTriggerPatternEdit[i];
-            QComboBox* pBox = pItem->comboBox_patternType;
-            QPalette palette;
-            switch (propertyList[i]) {
-            case REGEX_SUBSTRING:
-                palette.setColor(QPalette::Text, QColor(Qt::black));
-                pBox->setCurrentIndex(0);
-                pItem->pushButton_fgColor->hide();
-                pItem->pushButton_bgColor->hide();
-                pItem->pushButton_prompt->hide();
-                pItem->lineEdit_pattern->setText(patternList.at(i));
-                pItem->lineEdit_pattern->show();
-                break;
-            case REGEX_PERL:
-                palette.setColor(QPalette::Text, QColor(Qt::blue));
-                pBox->setCurrentIndex(1);
-                pItem->pushButton_fgColor->hide();
-                pItem->pushButton_bgColor->hide();
-                pItem->pushButton_prompt->hide();
-                pItem->lineEdit_pattern->setText(patternList.at(i));
-                pItem->lineEdit_pattern->show();
-                break;
-            case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                palette.setColor(QPalette::Text, QColor(195, 0, 0));
-                pBox->setCurrentIndex(2);
-                pItem->pushButton_fgColor->hide();
-                pItem->pushButton_bgColor->hide();
-                pItem->pushButton_prompt->hide();
-                pItem->lineEdit_pattern->setText(patternList.at(i));
-                pItem->lineEdit_pattern->show();
-                break;
-            case REGEX_EXACT_MATCH:
-                palette.setColor(QPalette::Text, QColor(0, 195, 0));
-                pBox->setCurrentIndex(3);
-                pItem->pushButton_fgColor->hide();
-                pItem->pushButton_bgColor->hide();
-                pItem->pushButton_prompt->hide();
-                pItem->lineEdit_pattern->setText(patternList.at(i));
-                pItem->lineEdit_pattern->show();
-                break;
-            case REGEX_LUA_CODE:
-                palette.setColor(QPalette::Text, QColor(0, 155, 155));
-                pBox->setCurrentIndex(4);
-                pItem->pushButton_fgColor->hide();
-                pItem->pushButton_bgColor->hide();
-                pItem->pushButton_prompt->hide();
-                pItem->lineEdit_pattern->setText(patternList.at(i));
-                pItem->lineEdit_pattern->show();
-                break;
-            case REGEX_LINE_SPACER:
-                palette.setColor(QPalette::Text, QColor(137, 0, 205));
-                pBox->setCurrentIndex(5);
-                pItem->pushButton_fgColor->hide();
-                pItem->pushButton_bgColor->hide();
-                pItem->pushButton_prompt->hide();
-                pItem->lineEdit_pattern->setText(patternList.at(i));
-                pItem->lineEdit_pattern->show();
-                break;
-            case REGEX_COLOR_PATTERN:
-                palette.setColor(QPalette::Text, QColor(100, 100, 100));
-                pBox->setCurrentIndex(6);
-                pItem->pushButton_fgColor->show();
-                pItem->pushButton_bgColor->show();
-                pItem->pushButton_prompt->hide();
-                // Although not shown it holds the data about the colours selected:
-                pItem->lineEdit_pattern->setText(patternList.at(i));
-                pItem->lineEdit_pattern->hide();
-                if (!pT->mColorPatternList[i]) {
-                    break;
-                }
-                if (pT->mColorPatternList.at(i)->mFgColor.isValid()) {
-                    pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{color:%1 ; background-color: %2;}")
-                                                             .arg((pT->mColorPatternList.at(i)->mFgColor.lightness() > 127
-                                                                   ? QLatin1String("black") : QLatin1String("white")),
-                                                                  pT->mColorPatternList.at(i)->mFgColor.name()));
-                    pItem->pushButton_fgColor->setText(QString::number(pT->mColorPatternList.at(i)->ansiFg));
-                } else {
-                    pItem->pushButton_fgColor->setStyleSheet(QString());
-                    pItem->pushButton_fgColor->setText(tr("default"));
-                }
-                if (pT->mColorPatternList.at(i)->mBgColor.isValid()) {
-                    pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{color:%1 ; background-color: %2;}")
-                                                             .arg((pT->mColorPatternList.at(i)->mBgColor.lightness() > 127
-                                                                   ? QLatin1String("black") : QLatin1String("white")),
-                                                                  pT->mColorPatternList.at(i)->mBgColor.name()));
-                    pItem->pushButton_fgColor->setText(QString::number(pT->mColorPatternList.at(i)->ansiBg));
-                } else {
-                    pItem->pushButton_fgColor->setStyleSheet(QString());
-                    pItem->pushButton_fgColor->setText(tr("default"));
-                }
-                break;
-            case REGEX_PROMPT:
-                palette.setColor(QPalette::Text, QColor(Qt::black));
-                pBox->setCurrentIndex(7);
-                pItem->pushButton_fgColor->hide();
-                pItem->pushButton_bgColor->hide();
-                    if (mpHost->mTelnet.mGA_Driver) {
-                        pItem->pushButton_prompt->setText(tr("match on the prompt line"));
-                        pItem->pushButton_prompt->setToolTip(QString());
-                    } else {
-                        pItem->pushButton_prompt->setText(tr("match on the prompt line (disabled)"));
-                        pItem->pushButton_prompt->setToolTip(tr("A Go-Ahead (GA) signal from the game is required to make this feature work"));
-                    }
-                    pItem->pushButton_prompt->show();
-                pItem->lineEdit_pattern->hide();
-                break;
-            }
+            // Use operator[] so we have write access to the array/list member:
+            dlgTriggerPatternEdit* pPatternItem = mTriggerPatternEdit[i];
+            pPatternItem->comboBox_patternType->setCurrentIndex(propertyList.at(i));
+            setupPatternControls(propertyList.at(i), pPatternItem);
+            if (propertyList.at(i) == REGEX_PROMPT ) {
+                pPatternItem->lineEdit_pattern->clear();
 
-            pItem->lineEdit_pattern->setPalette(palette);
+            } else if (propertyList.at(i) == REGEX_COLOR_PATTERN) {
+                pPatternItem->lineEdit_pattern->setText(patternList.at(i));
+                if (pT->mColorPatternList.at(i)) {
+                    if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
+                        pPatternItem->pushButton_fgColor->setStyleSheet(QString());
+                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
+                    } else if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmDefault) {
+                        pPatternItem->pushButton_fgColor->setStyleSheet(QString());
+                        pPatternItem->pushButton_fgColor->setText(tr("Default foreground color"));
+                    } else {
+                        pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mFgColor));
+                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color ANSI %1").arg(QString::number(pT->mColorPatternList.at(i)->ansiFg)));
+                    }
+
+                    if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmIgnored) {
+                        pPatternItem->pushButton_bgColor->setStyleSheet(QString());
+                        pPatternItem->pushButton_bgColor->setText(tr("Background color ignored"));
+                    } else if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmDefault) {
+                        pPatternItem->pushButton_bgColor->setStyleSheet(QString());
+                        pPatternItem->pushButton_bgColor->setText(tr("Default background color"));
+                    } else {
+                        pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mBgColor));
+                        pPatternItem->pushButton_bgColor->setText(tr("Background color ANSI %1").arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
+                    }
+                } else {
+                    qWarning() << "dlgTriggerEditor::slot_trigger_selected(...) ERROR: TTrigger instance has an mColorPattern of size:"
+                               << pT->mColorPatternList.size()
+                               << "but array element:"
+                               << i
+                               << "is a nullptr";
+                    pPatternItem->pushButton_fgColor->setStyleSheet(QString());
+                    pPatternItem->pushButton_fgColor->setText(tr("fault"));
+                    pPatternItem->pushButton_bgColor->setStyleSheet(QString());
+                    pPatternItem->pushButton_fgColor->setText(tr("fault"));
+                }
+
+            } else {
+                pPatternItem->lineEdit_pattern->setText(patternList.at(i));
+            }
         }
+
         // reset the rest of the patterns that don't have any data
         for (int i = patternList.size(); i < 50; i++) {
             mTriggerPatternEdit[i]->lineEdit_pattern->clear();
@@ -5014,8 +5013,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->spinBox_stayOpen->setValue(pT->mStayOpen);
         mpTriggersMainArea->soundTrigger->setChecked(pT->mSoundTrigger);
         mpTriggersMainArea->lineEdit_soundFile->setText(pT->mSoundFile);
-        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pT->getFgColor().name()));
-        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pT->getBgColor().name()));
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(pT->getFgColor()));
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(pT->getBgColor()));
         mpTriggersMainArea->colorizerTrigger->setChecked(pT->isColorizerTrigger());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
@@ -7801,6 +7800,7 @@ void dlgTriggerEditor::slot_toggle_isPushDownButton(const int state)
     }
 }
 
+// Set the foreground color that will be applied to text that matches the trigger pattern(s)
 void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
 {
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
@@ -7811,16 +7811,15 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
         return;
     }
 
-    auto color = QColorDialog::getColor(mpTriggersMainArea->pushButtonFgColor->palette().color(QPalette::Button), this);
+    auto color = QColorDialog::getColor(parseButtonStyleSheetColors(mpTriggersMainArea->pushButtonFgColor->styleSheet()),
+                                        this,
+                                        tr("Select foreground color to apply to matches"));
     if (color.isValid()) {
-        QPalette palette;
-        palette.setColor(QPalette::Button, color);
-        QString styleSheet = QString("QPushButton{background-color: ") + color.name() + QString(";}");
-        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(styleSheet);
-        mpTriggersMainArea->pushButtonFgColor->setPalette(palette);
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
     }
 }
 
+// Set the background color that will be applied to text that matches the trigger pattern(s)
 void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
 {
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
@@ -7831,13 +7830,11 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
         return;
     }
 
-    auto color = QColorDialog::getColor(mpTriggersMainArea->pushButtonBgColor->palette().color(QPalette::Button), this);
+    auto color = QColorDialog::getColor(parseButtonStyleSheetColors(mpTriggersMainArea->pushButtonBgColor->styleSheet()),
+                                        this,
+                                        tr("Select background color to apply to matches"));
     if (color.isValid()) {
-        QPalette palette;
-        palette.setColor(QPalette::Button, color);
-        QString styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
-        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(styleSheet);
-        mpTriggersMainArea->pushButtonBgColor->setPalette(palette);
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
     }
 }
 
@@ -7847,6 +7844,8 @@ void dlgTriggerEditor::slot_soundTrigger()
     mpTriggersMainArea->lineEdit_soundFile->setText(fileName);
 }
 
+// Get the color from the user to use as that to look for as the foreground in
+// a color trigger:
 void dlgTriggerEditor::slot_color_trigger_fg()
 {
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
@@ -7869,39 +7868,44 @@ void dlgTriggerEditor::slot_color_trigger_fg()
         return;
     }
 
-    QString pattern = pI->lineEdit_pattern->text();
-    QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
-    QRegularExpressionMatch match = regex.match(pattern);
-    int _pos = match.capturedStart();
-    int ansiFg, ansiBg;
-    if (_pos == -1) {
-        //setup default colors
-        ansiFg = 0;
-        ansiBg = 0;
-    } else {
-        // use user defined colors
-        ansiFg = match.captured(1).toInt();
-        ansiBg = match.captured(2).toInt();
-    }
-    pT->mColorTriggerFgAnsi = ansiFg;
-    pT->mColorTriggerBgAnsi = ansiBg;
+    // This method parses the pattern text and extracts the ansi color values
+    // from it - including the special values of DEFAULT (-1) and IGNORE (-2)
+    // and assigns the values to the other arguments:
+    TTrigger::decodeColorPatternText(pI->lineEdit_pattern->text(), pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi);
 
-    auto pD = new dlgColorTrigger(this, pT, 0);
+    // The following method wants to know BOTH existing fore and backgrounds
+    // it will select the appropriate as a result of the third argument and it
+    // uses both to determine whether the result to return is valid considering
+    // the other, non used (background in this method) part:
+    auto pD = new dlgColorTrigger(this, pT, false, tr("Select foreground trigger color for item %1").arg(QString::number(row+1)));
     pD->setModal(true);
+    // This sounds a bit iffy - freeze the whole application whilst we get a
+    // colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
-    QPalette palette;
+
     QColor color = pT->mColorTriggerFgColor;
-    palette.setColor(QPalette::Button, color);
-    QString styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
-
-
-    row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
-    pI = mTriggerPatternEdit[row];
-    pI->lineEdit_pattern->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)));
+    // The above will be an invalid colour if the colour has been reset/ignored
+    // The dialogue should have changed pT->mColorTriggerFgAnsi
+    QString styleSheet;
+    if (color.isValid()) {
+        styleSheet = generateButtonStyleSheet(color);
+    }
     pB->setStyleSheet(styleSheet);
+
+    pI->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+
+    if (pT->mColorTriggerFgAnsi == TTrigger::scmDefault) {
+        pB->setText(tr("Default foreground color"));
+    } else if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
+        pB->setText(tr("Foreground color ignored"));
+    } else {
+        pB->setText(tr("Foreground color ANSI %1").arg(QString::number(pT->mColorTriggerFgAnsi)));
+    }
 }
 
+// Get the color from the user to use as that to look for as the background in
+// a color trigger:
 void dlgTriggerEditor::slot_color_trigger_bg()
 {
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
@@ -7924,40 +7928,36 @@ void dlgTriggerEditor::slot_color_trigger_bg()
         return;
     }
 
-    QString pattern = pI->lineEdit_pattern->text();
-    QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
-    QRegularExpressionMatch match = regex.match(pattern);
-    int _pos = match.capturedStart();
-    int ansiFg, ansiBg;
-    if (_pos == -1) {
-        //setup default colors
-        ansiFg = 0;
-        ansiBg = 0;
-    } else {
-        // use user defined colors
-        ansiFg = match.captured(1).toInt();
-        ansiBg = match.captured(2).toInt();
-    }
+    TTrigger::decodeColorPatternText(pI->lineEdit_pattern->text(), pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi);
 
-    pT->mColorTriggerFgAnsi = ansiFg;
-    pT->mColorTriggerBgAnsi = ansiBg;
-
-    auto pD = new dlgColorTrigger(this, pT, 1);
+    // The following method wants to know BOTH existing fore and backgrounds
+    // it will select the appropriate as a result of the third argument and it
+    // uses both to determine whether the result to return is valid considering
+    // the other, non used (background in this method) part:
+    auto pD = new dlgColorTrigger(this, pT, true, tr("Select background trigger color for item %1").arg(QString::number(row+1)));
     pD->setModal(true);
+    // This sounds a bit iffy - freeze the whole application whilst we get a
+    // colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
-    QPalette palette;
-    QColor color = pT->mColorTriggerBgColor;
-    palette.setColor(QPalette::Button, color);
-    QString styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
 
-    row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
-    pI = mTriggerPatternEdit[row];
-    if (!pI) {
-        return;
+    QColor color = pT->mColorTriggerBgColor;
+    // The above will be an invalid colour if the colour has been reset/ignored
+    QString styleSheet;
+    if (color.isValid()) {
+        styleSheet = generateButtonStyleSheet(color);
     }
-    pI->lineEdit_pattern->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)));
     pB->setStyleSheet(styleSheet);
+
+    pI->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
+
+    if (pT->mColorTriggerBgAnsi == TTrigger::scmDefault) {
+        pB->setText(tr("Default background color"));
+    } else if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
+        pB->setText(tr("Background color ignored"));
+    } else {
+        pB->setText(tr("Background color ANSI %1").arg(QString::number(pT->mColorTriggerBgAnsi)));
+    }
 }
 
 void dlgTriggerEditor::slot_updateStatusBar(QString statusText)
@@ -8122,4 +8122,103 @@ void dlgTriggerEditor::slot_editorContextMenu()
     menu->exec(QCursor::pos());
 
     delete menu;
+}
+
+QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color)
+{
+    if (color.isValid()) {
+        return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
+                     color.name());
+    } else {
+        return QString();
+    }
+}
+
+// Retrive the background-color or color setting from the previous method, the
+// colors used can theoretically be:
+// * any strings of those from http://www.w3.org/TR/SVG/types.html#ColorKeywords
+// * #RGB (each of R, G, and B is a single hex digit) 3 Digits
+// * #RRGGBB 6 Digits
+// * #AARRGGBB (Since 5.2) 8 Digits
+// * #RRRGGGBBB 9 Digits
+// * #RRRRGGGGBBBB 12 Digits
+// * "transparent"
+QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetText, const bool isToGetForeground)
+{
+    if (styleSheetText.isEmpty()) {
+        return QColor();
+    }
+
+    QRegularExpression hexColorRegex;
+    QRegularExpression namedColorRegex;
+    if (isToGetForeground) {
+        hexColorRegex.setPattern(QLatin1String("(?:[{ ])color:\\s*(?:#)([[:xdigit:]]{3,12})\\s*;")); // Capture group 1 is a foreground color made of hex digits
+        QRegularExpressionMatch match = hexColorRegex.match(styleSheetText);
+        if (match.hasMatch()) {
+            switch (match.capturedLength(1)) {
+            case 3: // RGB
+                [[clang::fallthrough]];
+            case 6: // RRGGBB
+                [[clang::fallthrough]];
+            case 9: // RRRGGGBBB
+                [[clang::fallthrough]];
+            case 12: // RRRRGGGGBBBB
+                return QColor(match.captured(1));
+
+            default:
+            // case 8: // AARRGGBB - Invalid here
+                qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid hex string as foreground color!";
+                return QColor();
+            }
+        } else {
+            namedColorRegex.setPattern(QLatin1String("(?:[{ ])color:\\s*(\\w{3,})\\s*;")); // Capture group 1 is a word for a foreground color
+            match = namedColorRegex.match(styleSheetText);
+            if (match.hasMatch()) {
+                if (QColor::isValidColor(match.captured(1))) {
+                    return QColor(match.captured(1));
+                } else {
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
+                    return QColor();
+                }
+            } else {
+                qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - No string as name of foreground color found!";
+                return QColor();
+            }
+        }
+    } else {
+        hexColorRegex.setPattern(QLatin1String("(?:[{ ])background-color:\\s*(?:#)([[:xdigit:]]{3,12})\\s*;")); // Capture group 1 is a background color made of hex digits
+        QRegularExpressionMatch match = hexColorRegex.match(styleSheetText);
+        if (match.hasMatch()) {
+            switch (match.capturedLength(1)) {
+            case 3: // RGB
+                [[clang::fallthrough]];
+            case 6: // RRGGBB
+                [[clang::fallthrough]];
+            case 9: // RRRGGGBBB
+                [[clang::fallthrough]];
+            case 12: // RRRRGGGGBBBB
+                return QColor(match.captured(1));
+
+            default:
+            // case 8: // AARRGGBB - Invalid here
+                qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid hex string as background color!";
+                return QColor();
+            }
+        } else {
+            namedColorRegex.setPattern(QLatin1String("(?:[{ ])background-color:\\s*(\\w{3,})\\s*;")); // Capture group 1 is a word for a background color
+            match = namedColorRegex.match(styleSheetText);
+            if (match.hasMatch()) {
+                if (QColor::isValidColor(match.captured(1))) {
+                    return QColor(match.captured(1));
+                } else {
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of background color!";
+                    return QColor();
+                }
+            } else {
+                qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - No string as name of background color found!";
+                return QColor();
+            }
+        }
+    }
 }
