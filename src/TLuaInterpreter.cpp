@@ -2425,10 +2425,10 @@ int TLuaInterpreter::setFontSize(lua_State* L)
             font.setPointSize(size);
             pHost->mDisplayFont = font;
             // apply changes to main console and its while-scrolling component too.
-            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
             lua_pushboolean(L, true);
         } else {
@@ -2712,7 +2712,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     if (!lua_isstring(L, 1)) {
         Host& host = getHostFromLua(L);
         host.mpConsole->buffer.clear();
-        host.mpConsole->console->forceUpdate();
+        host.mpConsole->mUpperPane->forceUpdate();
         return 0;
     } else {
         luaSendText = lua_tostring(L, 1);
@@ -12485,7 +12485,7 @@ void TLuaInterpreter::initIndenterGlobals()
     int error = luaL_dostring(pIndenterState, R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
-      get_formatted_code = request('!.formats.lua.save')
+      get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
         string e = "no error message available from Lua";
@@ -12993,7 +12993,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     Host* pHost = &getHostFromLua(L);
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        columns = pHost->mpConsole->console->getColumnCount();
+        columns = pHost->mpConsole->mUpperPane->getColumnCount();
     } else {
         columns = mudlet::self()->getColumnCount(pHost, windowName);
     }
@@ -13026,7 +13026,7 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     Host* pHost = &getHostFromLua(L);
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        rows = pHost->mpConsole->console->getRowCount();
+        rows = pHost->mpConsole->mUpperPane->getRowCount();
     } else {
         rows = mudlet::self()->getRowCount(pHost, windowName);
     }
