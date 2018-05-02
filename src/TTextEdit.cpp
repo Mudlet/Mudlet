@@ -919,7 +919,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
                 if (y == y1) {
                     x = qBound(0, PC.x(), (static_cast<int>(mpBuffer->buffer.at(y).size()) - 1));
                 }
-                for (;; --x) {
+                for (; x >= 0; --x) {
                     if ((y == mPA.y()) && (x < mPA.x())) {
                         break;
                     }
