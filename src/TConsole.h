@@ -281,7 +281,9 @@ public slots:
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
 
+private:
     void refreshMiniConsole() const;
+
 };
 
 #endif // MUDLET_TCONSOLE_H

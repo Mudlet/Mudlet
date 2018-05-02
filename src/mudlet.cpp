@@ -1355,7 +1355,25 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
-bool mudlet::setFontSize(Host* pHost, const QString& name, int size)
+bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& font)
+{
+    if (!pHost) {
+        return false;
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(window)) {
+        TConsole* pC = dockWindowConsoleMap.value(window);
+        pC->setMiniConsoleFont(font);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::setWindowFontSize(Host *pHost, const QString &name, int size)
 {
     if (!pHost) {
         return false;
@@ -1416,7 +1434,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
 
-        setFontSize(pHost, name, 10);
+        setWindowFontSize(pHost, name, 10);
 
         if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();

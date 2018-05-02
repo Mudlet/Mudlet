@@ -66,7 +66,9 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
 , mConsoleName("main")
-, mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal)) //mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
+, mDisplayFontName("Bitstream Vera Sans Mono")
+, mDisplayFontSize(10)
+, mDisplayFont(QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal))
 , mFgColor(Qt::black)
 , mIndentCount(0)
 , mIsDebugConsole(isDebugConsole)
@@ -86,9 +88,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpMapper(nullptr)
-, mpButtonMainLayer(nullptr)
 , mpScrollBar(new QScrollBar)
-
+, mpButtonMainLayer(nullptr)
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -1814,12 +1815,27 @@ void TConsole::_luaWrapLine(int line)
 
 bool TConsole::setMiniConsoleFontSize(int size)
 {
-    mUpperPane->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    mDisplayFontSize = size;
+
+    refreshMiniConsole();
+    return true;
+}
+
+void TConsole::refreshMiniConsole() const
+{
+    mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     mUpperPane->updateScreenView();
     mUpperPane->forceUpdate();
-    mLowerPane->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+    mLowerPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
+}
+
+bool TConsole::setMiniConsoleFont(const QString& font)
+{
+    mDisplayFontName = font;
+
+    refreshMiniConsole();
     return true;
 }
 
