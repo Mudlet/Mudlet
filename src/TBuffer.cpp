@@ -834,8 +834,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
-    mLinkID++;
-    if (mLinkID > 1000) {
+    if (++mLinkID > 1000) {
         mLinkID = 1;
     }
     mLinkStore[mLinkID] = command;
@@ -1033,20 +1032,18 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     ++localBufferPosition;
                     continue;
                 } else if (ch2 == ';') {
-                    codeRet++;
-                    mCode[codeRet] = code.toInt();
+                    mCode[++codeRet] = code.toInt();
                     code.clear();
                     ++localBufferPosition;
                     continue;
                 } else if (ch2 == 'm') {
-                    codeRet++;
-                    mCode[codeRet] = code.toInt();
+                    mCode[++codeRet] = code.toInt();
                     code.clear();
                     gotHeader = false;
                     ++localBufferPosition;
 
                     numCodes += codeRet;
-                    for (int i = 1; i < codeRet + 1; i++) {
+                    for (int i = 1, total = codeRet + 1; i < total; ++i) {
                         // Parse the groups of numeric SGR codes
                         int tag = mCode[i];
                         if (mWaitingForHighColorCode) {
@@ -1283,14 +1280,16 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             if (mIsHighOrMillionsColorModeForeground) {
                                 if (i + 2 <= codeRet) {
                                     // Have enough for all three suboptions
-                                    mForeGroundColor = QColor(qBound(0, mCode[i++], 255), qBound(0, mCode[i++], 255), qBound(0, mCode[i++], 255));
+                                    mForeGroundColor = QColor(qBound(0, mCode[i], 255), qBound(0, mCode[i + 1], 255), qBound(0, mCode[i + 2], 255));
                                     mForeGroundColorLight = mForeGroundColor;
                                     mIsDefaultColor = false;
+                                    i += 3;
                                 } else if (i + 1 <= codeRet) {
                                     // Have enough for two suboptions, but third, blue component is zero
-                                    mForeGroundColor = QColor(qBound(0, mCode[i++], 255), qBound(0, mCode[i++], 255), 0);
+                                    mForeGroundColor = QColor(qBound(0, mCode[i], 255), qBound(0, mCode[i + 1], 255), 0);
                                     mForeGroundColorLight = mForeGroundColor;
                                     mIsDefaultColor = false;
+                                    i += 2;
                                 } else if (i <= codeRet) {
                                     // Have enough for one suboption, but second and third, green and blue component are zero
                                     mForeGroundColor = QColor(qBound(0, mCode[i++], 255), 0, 0);
@@ -1310,12 +1309,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             } else if (mIsHighOrMillionsColorModeBackground) {
                                 if (i + 2 <= codeRet) {
                                     // Have enough for all three suboptions
-                                    mBackGroundColor = QColor(qBound(0, mCode[i++], 255), qBound(0, mCode[i++], 255), qBound(0, mCode[i++], 255));
+                                    mBackGroundColor = QColor(qBound(0, mCode[i], 255), qBound(0, mCode[i + 1], 255), qBound(0, mCode[i + 2], 255));
                                     mIsDefaultColor = false;
+                                    i += 3;
                                 } else if (i + 1 <= codeRet) {
                                     // Have enough for two suboptions, but third, blue component is zero
-                                    mBackGroundColor = QColor(qBound(0, mCode[i++], 255), qBound(0, mCode[i++], 255), 0);
+                                    mBackGroundColor = QColor(qBound(0, mCode[i], 255), qBound(0, mCode[i + 1], 255), 0);
                                     mIsDefaultColor = false;
+                                    i += 2;
                                 } else if (i <= codeRet) {
                                     // Have enough for one suboption, but second and third, green and blue component are zero
                                     mBackGroundColor = QColor(qBound(0, mCode[i++], 255), 0, 0);
@@ -1606,7 +1607,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (ch == '<') {
                 if (!mParsingVar) {
-                    openT++;
+                    ++openT;
                     if (currentToken.size() > 0) {
                         currentToken += ch;
                     }
@@ -1618,7 +1619,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (ch == '>') {
                 if (!mParsingVar) {
-                    closeT++;
+                    ++closeT;
                 }
 
                 // sanity check
@@ -1822,7 +1823,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         }
 
                         if ((_rl1.size() == _rl2.size()) && (_rl1.size() > 0)) {
-                            for (int i = 0; i < _rl1.size(); i++) {
+                            for (int i = 0, total = _rl1.size(); i < total; ++i) {
                                 QString _var = _rl1[i];
                                 _var.prepend('&');
                                 if (_userTag || _t2.indexOf(_var) != -1) {
@@ -1850,12 +1851,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (_t2.size() < 1 || _t2.contains("&text;")) {
                             mMXP_SEND_NO_REF_MODE = true;
                         }
-                        mLinkID++;
-                        if (mLinkID > 1000) {
+                        if (++mLinkID > 1000) {
                             mLinkID = 1;
                         }
                         QStringList _tl = _t2.split('|');
-                        for (int i = 0; i < _tl.size(); i++) {
+                        for (int i = 0, total = _tl.size(); i < total; ++i) {
                             _tl[i].replace("|", "");
                             if (!_send_to_command_line) {
                                 _tl[i] = "send([[" + _tl[i] + "]])";
@@ -2143,7 +2143,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const TCha
         sub_end = text.size() - 1;
     }
 
-    for (int i = sub_start; i < length; i++) { //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+    for (int i = sub_start; i < length; ++i) { //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
         if (text.at(i) == '\n') {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
@@ -2152,8 +2152,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const TCha
             timeBuffer << QStringLiteral("-------------");
             promptBuffer << false;
             dirty << true;
-            mLastLine++;
-            newLines++;
+            ++mLastLine;
+            ++newLines;
             firstChar = true;
             continue;
         }
@@ -2187,8 +2187,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const TCha
                     timeBuffer << QStringLiteral("-------------");
                     promptBuffer << false;
                     dirty << true;
-                    mLastLine++;
-                    newLines++;
+                    ++mLastLine;
+                    ++newLines;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
                     // long lines of user input and some other console displayed
@@ -2241,7 +2241,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         sub_end = text.size() - 1;
     }
 
-    for (int i = sub_start; i < length; i++) { //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+    for (int i = sub_start; i < length; ++i) { //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
         if (text.at(i) == '\n') {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
@@ -2250,8 +2250,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             timeBuffer << QStringLiteral("-------------");
             promptBuffer << false;
             dirty << true;
-            mLastLine++;
-            newLines++;
+            ++mLastLine;
+            ++newLines;
             firstChar = true;
             continue;
         }
@@ -2339,7 +2339,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         lineEndPos = text.size() - 1;
     }
 
-    for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
+    for (int i = sub_start, total = (sub_start + lineEndPos); i <= total; ++i) {
         lineBuffer.back().append(text.at(i));
         TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
@@ -2367,7 +2367,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
             TChar c;
             expandLine(y, x - buffer.at(y).size(), c);
         }
-        for (int i = 0; i < text.size(); i++) {
+        for (int i = 0, total = text.size(); i < total; ++i) {
             lineBuffer[y].insert(x + i, text.at(i));
             TChar c = format;
             auto it = buffer[y].begin();
@@ -2427,9 +2427,9 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
     if (y < 0 || y > getLastLineNumber()) {
         y = getLastLineNumber();
     }
-    // FIXME: RISK OF EXECEPTION getLastLineNumber() returns zero (not -1) if
+    // FIXME: RISK OF EXCEPTION getLastLineNumber() returns zero (not -1) if
     // the buffer is empty, so y can never be less than zero here - however that
-    // will cause an exeption with std::deque::at(size_t) - previously
+    // will cause an exception with std::deque::at(size_t) - previously
     // std::deque::operator[size_t] was used and that exhibits UNDEFINED
     // BEHAVIOUR in the same situation:
     if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
@@ -2517,14 +2517,14 @@ inline int TBuffer::wrap(int startLine)
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
-    for (int i = startLine; i < static_cast<int>(buffer.size()); i++) {
+    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
         QString lineText = "";
         QString time = timeBuffer[i];
         int indent = 0;
         if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
-            for (int i3 = 0; i3 < mWrapIndent; i3++) {
+            for (int i3 = 0; i3 < mWrapIndent; ++i3) {
                 TChar pSpace;
                 newLine.push_back(pSpace);
                 lineText.append(" ");
@@ -2548,7 +2548,7 @@ inline int TBuffer::wrap(int startLine)
                 lastSpace = 0;
             }
             int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
-            for (int i3 = 0; i3 < wrapPosition; i3++) {
+            for (int i3 = 0; i3 < wrapPosition; ++i3) {
                 if (lastSpace > 0) {
                     if (i2 > lastSpace) {
                         break;
@@ -2558,12 +2558,11 @@ inline int TBuffer::wrap(int startLine)
                     break;
                 }
                 if (lineBuffer[i].at(i2) == '\n') {
-                    i2++;
+                    ++i2;
                     break;
                 }
                 newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
-                i2++;
+                lineText.append(lineBuffer[i].at(i2++));
             }
             if (newLine.size() == 0) {
                 tempList.append(QString());
@@ -2582,9 +2581,9 @@ inline int TBuffer::wrap(int startLine)
             indent = 0;
             i2 += skipSpacesAtBeginOfLine(i, i2);
         }
-        lineCount++;
+        ++lineCount;
     }
-    for (int i = 0; i < lineCount; i++) {
+    for (int i = 0; i < lineCount; ++i) {
         buffer.pop_back();
         lineBuffer.pop_back();
         timeBuffer.pop_back();
@@ -2599,7 +2598,7 @@ inline int TBuffer::wrap(int startLine)
         buffer.push_back(queue.front());
         queue.pop();
     }
-    for (int i = 0; i < tempList.size(); i++) {
+    for (int i = 0, total = tempList.size(); i < total; ++i) {
         if (tempList[i].size() < 1) {
             lineBuffer.append(QString());
             timeBuffer.append(QString());
@@ -2641,7 +2640,7 @@ void TBuffer::log(int fromLine, int toLine)
     }
 
     QString toLog;
-    for (int i = fromLine; i <= toLine; i++) {
+    for (int i = fromLine; i <= toLine; ++i) {
         QString lineToLog;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             lineToLog = bufferToHtml(mpHost->mIsLoggingTimestamps, i);
@@ -2682,7 +2681,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     QStringList tempList;
     int lineCount = 0;
 
-    for (int i = startLine; i < static_cast<int>(buffer.size()); i++) {
+    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         if (i > startLine) {
             break; //only wrap one line of text
         }
@@ -2691,7 +2690,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
 
         int indent = 0;
         if (static_cast<int>(buffer[i].size()) >= screenWidth) {
-            for (int i3 = 0; i3 < indentSize; i3++) {
+            for (int i3 = 0; i3 < indentSize; ++i3) {
                 TChar pSpace = format;
                 newLine.push_back(pSpace);
                 lineText.append(" ");
@@ -2709,18 +2708,17 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
             } else {
                 lastSpace = -1;
             }
-            for (int i3 = 0; i3 < screenWidth - indent; i3++) {
+            for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
                 if (lastSpace > 0) {
                     if (i2 >= lastSpace) {
-                        i2++;
+                        ++i2;
                         break;
                     }
                 }
                 if (i2 >= static_cast<int>(buffer[i].size())) {
                     break;
                 }
-                if (lineBuffer[i][i2] == QChar('\n')) {
-                    i2++;
+                if (lineBuffer.at(i).at(i2++) == QChar('\n')) {
 
                     if (newLine.size() == 0) {
                         tempList.append(QString());
@@ -2733,8 +2731,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
                     goto OPT_OUT_CLEAN;
                 }
                 newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
-                i2++;
+                lineText.append(lineBuffer[i].at(i2++));
             }
             queue.push(newLine);
             tempList.append(lineText);
@@ -2744,7 +2741,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
             lineText.clear();
             indent = 0;
         }
-        lineCount++;
+        ++lineCount;
     }
 
     if (lineCount < 1) {
@@ -2763,12 +2760,11 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     int insertedLines = queue.size() - 1;
     int i = 0;
     while (!queue.empty()) {
-        buffer.insert(buffer.begin() + startLine + i, queue.front());
+        buffer.insert(buffer.begin() + startLine + i++, queue.front());
         queue.pop();
-        i++;
     }
 
-    for (int i = 0; i < tempList.size(); i++) {
+    for (int i = 0, total = tempList.size(); i < total; ++i) {
         lineBuffer.insert(startLine + i, tempList[i]);
         timeBuffer.insert(startLine + i, time);
         promptBuffer.insert(startLine + i, isPrompt);
@@ -2845,7 +2841,7 @@ QStringList TBuffer::split(int line, QRegularExpression splitter)
 void TBuffer::expandLine(int y, int count, TChar& pC)
 {
     int size = buffer[y].size() - 1;
-    for (int i = size; i < size + count; i++) {
+    for (int i = size, total = size + count; i < total; ++i) {
         buffer[y].push_back(pC);
         lineBuffer[y].append(" ");
     }
@@ -2880,7 +2876,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         xe = x1;
     }
 
-    for (int y = yb; y <= ye; y++) {
+    for (int y = yb; y <= ye; ++y) {
         int x = 0;
         if (y == yb) {
             x = xb;
@@ -2922,7 +2918,7 @@ bool TBuffer::deleteLine(int y)
 
 void TBuffer::shrinkBuffer()
 {
-    for (int i = 0; i < mBatchDeleteSize; i++) {
+    for (int i = 0; i < mBatchDeleteSize; ++i) {
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
@@ -2937,7 +2933,7 @@ bool TBuffer::deleteLines(int from, int to)
     if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
         int delta = to - from + 1;
 
-        for (int i = from; i < from + delta; i++) {
+        for (int i = from, total = from + delta; i < total; ++i) {
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
             promptBuffer.removeAt(i);
@@ -2986,8 +2982,7 @@ bool TBuffer::applyLink(QPoint& P_begin, QPoint& P_end, QStringList& linkFunctio
                 }
                 if (!incLinkID) {
                     incLinkID = true;
-                    mLinkID++;
-                    linkID = mLinkID;
+                    linkID = ++mLinkID;
                     if (mLinkID > 1000) {
                         mLinkID = 1;
                     }
@@ -3038,7 +3033,8 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x++).mFlags &~(attributes)) | (state ? attributes : TChar::None);
+                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags &~(attributes)) | (state ? attributes : TChar::None);
+                ++x;
             }
         }
         return true;
@@ -3134,7 +3130,7 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
 QStringList TBuffer::getEndLines(int n)
 {
     QStringList linesList;
-    for (int i = getLastLineNumber() - n; i < getLastLineNumber(); i++) {
+    for (int i = getLastLineNumber() - n, total = getLastLineNumber(); i < total; ++i) {
         linesList << line(i);
     }
     return linesList;
@@ -3188,12 +3184,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp, const int row, const int
     if (spacePadding > 0) {
         // used for "copy HTML", this is the first line of selection (because of
         // the padding needed)
-        if (firstSpan) {
-            // Must skip the close of the preceding span as there isn't one
-            firstSpan = false;
-        } else {
-            s.append(QLatin1String("</span>"));
-        }
+        // Must skip the close of the preceding span as there isn't one
+        firstSpan = false;
 
         s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
         // Pad out with spaces to the right so a partial first line lines up

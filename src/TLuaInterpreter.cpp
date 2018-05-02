@@ -5088,8 +5088,7 @@ int TLuaInterpreter::setBold(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5098,18 +5097,25 @@ int TLuaInterpreter::setBold(lua_State* L)
     bool isAttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setBold: bad argument #%d type (enable bold attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAttributeEnabled = lua_toboolean(L, s);
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setDisplayAttributes(TChar::Bold, isAttributeEnabled);
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Bold, isAttributeEnabled);
+        if (mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Bold, isAttributeEnabled)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 int TLuaInterpreter::setItalics(lua_State* L)
@@ -5125,8 +5131,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5135,18 +5140,25 @@ int TLuaInterpreter::setItalics(lua_State* L)
     bool isAttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setItalics: bad argument #%d type (enable italic attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAttributeEnabled = lua_toboolean(L, s);
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setDisplayAttributes(TChar::Italic, isAttributeEnabled);
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Italic, isAttributeEnabled);
+        if (mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Bold, isAttributeEnabled)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 int TLuaInterpreter::setOverline(lua_State* L)
@@ -5162,8 +5174,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5172,18 +5183,25 @@ int TLuaInterpreter::setOverline(lua_State* L)
     bool isAttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setOverline: bad argument #%d type (enable underline attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAttributeEnabled = lua_toboolean(L, s);
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setDisplayAttributes(TChar::Overline, isAttributeEnabled);
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Overline, isAttributeEnabled);
+        if (mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Bold, isAttributeEnabled)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 int TLuaInterpreter::setReverse(lua_State* L)
@@ -5199,8 +5217,7 @@ int TLuaInterpreter::setReverse(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5208,19 +5225,26 @@ int TLuaInterpreter::setReverse(lua_State* L)
 
     bool isAttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
-        lua_pushfstring(L, "setReverse: bad argument #%d type (enable underline attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setReverse: bad argument #%d type (enable reverse attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     } else {
         isAttributeEnabled = lua_toboolean(L, s);
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setDisplayAttributes(TChar::Reverse, isAttributeEnabled);
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Reverse, isAttributeEnabled);
+        if (mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Bold, isAttributeEnabled)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 int TLuaInterpreter::setStrikeOut(lua_State* L)
@@ -5236,8 +5260,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
                             "window name, as string expected {omission selects \"main\" console window}, got %s!)",
                             s,
                             luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -5246,18 +5269,25 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     bool isAttributeEnabled;
     if (!lua_isboolean(L, ++s)) {
         lua_pushfstring(L, "setStrikeOut: bad argument #%d type (enable strikeout attribute as boolean expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         isAttributeEnabled = lua_toboolean(L, s);
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        host.mpConsole->setDisplayAttributes(TChar::StrikeOut, isAttributeEnabled);
+        host.mpConsole->setDisplayAttributes(TChar::Reverse, isAttributeEnabled);
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->setDisplayAttributes(&host, windowName, TChar::StrikeOut, isAttributeEnabled);
+        if (mudlet::self()->setDisplayAttributes(&host, windowName, TChar::StrikeOut, isAttributeEnabled)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 int TLuaInterpreter::setUnderline(lua_State* L)
@@ -5291,10 +5321,18 @@ int TLuaInterpreter::setUnderline(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setDisplayAttributes(TChar::Underline, isAttributeEnabled);
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->setDisplayAttributes(&host, windowName, TChar::Underline, isAttributeEnabled);
+        if (mudlet::self()->setDisplayAttributes(&host, windowName, TChar::StrikeOut, isAttributeEnabled)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 int TLuaInterpreter::setBlink(lua_State* L)
@@ -5335,6 +5373,7 @@ int TLuaInterpreter::setBlink(lua_State* L)
             // Invalid
             lua_pushnil(L);
             lua_pushfstring(L, "blink rate as a number %d is out of range {use 0 = off, 1 = slow, 2 = rapid}", lua_tonumber(L, s));
+            return 2;
         }
     } else if (lua_toboolean(L, s)) {
         isBlinkEnabled = lua_toboolean(L, s);
@@ -5342,10 +5381,19 @@ int TLuaInterpreter::setBlink(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->setDisplayAttributes(isFastRate ? TChar::FastBlink : TChar::SlowBlink, isBlinkEnabled);
+        // The above always suceeds
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->setDisplayAttributes(&host, windowName, isFastRate ? TChar::FastBlink : TChar::SlowBlink, isBlinkEnabled);
+        if (mudlet::self()->setDisplayAttributes(&host, windowName, isFastRate ? TChar::FastBlink : TChar::SlowBlink, isBlinkEnabled)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 int TLuaInterpreter::debug(lua_State* L)

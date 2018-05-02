@@ -3609,7 +3609,8 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 void mudlet::slot_updateBlinkPhase()
 {
     if (mIsBlinkingEnabled) {
-        mMasterBlinkPhase = (++mMasterBlinkPhase) % 4;
+        ++mMasterBlinkPhase;
+        mMasterBlinkPhase %= 4;
         emit signal_blinkingRedraw(mMasterBlinkPhase);
     }
 }

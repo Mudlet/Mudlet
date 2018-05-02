@@ -96,7 +96,7 @@ public:
     }
     // Only considers the following flags: Bold, Italic, Overline, Reverse,
     // Strikeout, Underline, SlowBlink, FastBlink, does not consider Echo:
-    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
+    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }
     void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes) {
@@ -220,9 +220,6 @@ public:
     int mUntriggered;
     int mWrapAt;
     int mWrapIndent;
-    int speedTP;
-    int speedSequencer;
-    int speedAppend;
 
     int mCursorY;
     bool mMXP;
