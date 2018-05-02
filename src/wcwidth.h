@@ -1,6 +1,9 @@
 #ifndef WCWIDTH_H
 #define WCWIDTH_H
 
-int mk_wcwidth_cjk(wchar_t ucs);
+#include <QtGlobal>
+
+int mk_wcwidth_cjk(uint ucs);
+int mk_wcwidth(uint ucs);
 
 #endif // WCWIDTH_H

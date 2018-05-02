@@ -55,8 +55,9 @@ public:
     void drawFrame(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&);
     void updateLastLine();
+    int getNextGraphemeSize(const QString& str, int startOffset, uint *character);
     void drawLine(QPainter &painter, int lineNumber, int rowOfScreen);
-    int drawCharacter(QPainter &painter, const QPoint &cursor, QChar c, TChar &style);
+    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, uint unicode, TChar &style);
     void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
     void showNewLines();
     void forceUpdate();
