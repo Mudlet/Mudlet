@@ -91,7 +91,6 @@ public:
 
     int getColumnNumber();
     void createMapper(int, int, int, int);
-    void loadRawFile(std::string);
 
     void setWrapAt(int pos)
     {
@@ -197,7 +196,6 @@ public:
 
     int mIndentCount;
     bool mIsDebugConsole;
-    bool mIsHighColorMode;
     bool mIsSubConsole;
     std::map<std::string, TLabel*> mLabelMap;
     QFile mLogFile;
@@ -214,9 +212,6 @@ public:
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
-    bool mHighColorModeBackground;
-    bool mHighColorModeForeground;
-
 
     QWidget* mpBaseVFrame;
     QWidget* mpTopToolBar;
@@ -245,7 +240,6 @@ public:
     bool mTriggerEngineMode;
     bool mUserConsole;
     QPoint mUserCursor;
-    bool mWaitingForHighColorCode;
     bool mWindowIsHidden;
     int mWrapAt;
     QLineEdit* networkLatency;
@@ -266,6 +260,10 @@ public:
     QWidget* mpButtonMainLayer;
 
 signals:
+    // Raised when new data is incoming to trigger Alert handling in mudlet
+    // class, second argument is true for a lower priority indication when
+    // locally produced information is painted into main console
+    void signal_newDataAlert(const QString&, const bool isLowerPriorityChange = false);
 
 
 public slots:

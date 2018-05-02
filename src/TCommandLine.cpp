@@ -25,6 +25,7 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TSplitter.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "mudlet.h"
 
@@ -50,21 +51,34 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mpHunspellSuggestionList()
 {
     QString path;
-#ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
-        path = "/usr/share/hunspell/";
+    // This is duplicated (and should be the same as) the code in:
+    // (void) dlgProfilePreferences::initWithHost(Host*)
+#if defined(Q_OS_MACOS)
+    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_FREEBSD)
+    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/local/share/hunspell/");
+    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
     } else {
-        path = "./";
+        path = QLatin1String("./");
     }
-#elif defined(Q_OS_MAC)
-    path = QCoreApplication::applicationDirPath() + "/../Resources/";
+#elif defined(Q_OS_LINUX)
+    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
+    } else {
+        path = QLatin1String("./");
+    }
 #else
+    // Probably Windows!
     path = "./";
 #endif
 
-    QString spell_aff = path + pHost->mSpellDic + ".aff";
-    QString spell_dic = path + pHost->mSpellDic + ".dic";
-    mpHunspell = Hunspell_create(spell_aff.toLatin1().data(), spell_dic.toLatin1().data());
+    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, pHost->mSpellDic);
+    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, pHost->mSpellDic);
+    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
+    // use on Windows platforms which can have non ASCII characters...
+    mpHunspell = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);

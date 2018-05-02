@@ -18,6 +18,19 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
+############################################################################
+#                                                                          #
+#    NOTICE: FreeBSD is not an officially supported platform as such;      #
+#    the work on getting it working has been done by myself, and other     #
+#    developers, unless they have explicitly said so, are not able to      #
+#    address issues relating specifically to that Operating System.        #
+#    Nevertheless users of FreeBSD are equally welcome to contribute       #
+#    to the development of Mudlet - bugfixes and enhancements are          #
+#    welcome from all!                                                     #
+#                                           Stephen Lyons, February 2018   #
+#                                                                          #
+############################################################################
+
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.1)
 
@@ -59,7 +72,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.7.1)
+set(APP_VERSION 3.8.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2017 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -47,8 +47,10 @@
 #include <QPalette>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QTableWidget>
 #include <QTextOption>
 #include <QToolBar>
+#include <QUiLoader>
 #include <QVariant>
 #include "post_guard.h"
 
@@ -62,8 +64,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // init generated dialog
     setupUi(this);
 
-    // These are currently empty so can be hidden until needed, but provides
-    // locations on the first (General) and last (Special Options) tabs where
+    // This is currently empty so can be hidden until needed, but provides a
+    // location on the last (Special Options) tab where
     // temporary/development/testing controls can be placed if needed...
     groupBox_debug->hide();
 
@@ -80,11 +82,26 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
     TEFolderIconSize->setValue(mudlet::self()->mEditorTreeWidgetIconSize);
-    showMenuBar->setChecked(mudlet::self()->mShowMenuBar);
-    if (!showMenuBar->isChecked()) {
-        showToolbar->setChecked(true);
-    } else {
-        showToolbar->setChecked(mudlet::self()->mShowToolbar);
+    switch (mudlet::self()->menuBarVisibility()) {
+    case mudlet::visibleNever:
+        comboBox_menuBarVisibility->setCurrentIndex(0);
+        break;
+    case mudlet::visibleOnlyWithoutLoadedProfile:
+        comboBox_menuBarVisibility->setCurrentIndex(1);
+        break;
+    default:
+        comboBox_menuBarVisibility->setCurrentIndex(2);
+    }
+
+    switch (mudlet::self()->toolBarVisibility()) {
+    case mudlet::visibleNever:
+        comboBox_toolBarVisibility->setCurrentIndex(0);
+        break;
+    case mudlet::visibleOnlyWithoutLoadedProfile:
+        comboBox_toolBarVisibility->setCurrentIndex(1);
+        break;
+    default:
+        comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
     if (pHost) {
@@ -113,11 +130,32 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // on top! 8-)
     tabWidget->setCurrentIndex(0);
 
+    // To be moved to a slot that is used on GUI language change when that gets
+    // implimented:
+    pushButton_showGlyphUsage->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg("<p>This will bring up a display showing all the symbols used in the current "
+                                               "map and whether they can be drawn using just the specifed font, any other "
+                                               "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                               "that make up that symbol, so that they can be identified even if they "
+                                               "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                               "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+    fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                             "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg("<p>Using a single font is likely to produce a more consistent style but may "
+                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
     connect(mudlet::self(), SIGNAL(signal_hostCreated(Host*,quint8)), this, SLOT(slot_handleHostAddition(Host*,quint8)));
     connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*,quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
+    connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
+    connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -165,6 +203,10 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
+    label_mapSymbolsFont->setEnabled(false);
+    fontComboBox_mapSymbols->setEnabled(false);
+    checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
+    pushButton_showGlyphUsage->setEnabled(false);
 
     groupBox_downloadMapOptions->setEnabled(false);
     // The above is actually normally hidden:
@@ -260,15 +302,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
 
     QString path;
-#ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
-        path = "/usr/share/hunspell/";
+    // This is duplicated (and should be the same as) the code in:
+    // TCommandLine::TCommandLine(Host*, TConsole*, QWidget*)
+#if defined(Q_OS_MACOS)
+    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_FREEBSD)
+    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/local/share/hunspell/");
+    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
     } else {
-        path = "./";
+        path = QLatin1String("./");
     }
-#elif defined(Q_OS_MAC)
-    path = QCoreApplication::applicationDirPath() + "/../Resources/";
+#elif defined(Q_OS_LINUX)
+    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+        path = QLatin1String("/usr/share/hunspell/");
+    } else {
+        path = QLatin1String("./");
+    }
 #else
+    // Probably Windows!
     path = "./";
 #endif
 
@@ -277,7 +330,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
     entries = entries.filter(rex);
     for (int i = 0; i < entries.size(); i++) {
-        QString n = entries[i].replace(QStringLiteral(".dic"), "");
+        // This is a file name and to support macOs platforms should not be case sensitive:
+        entries[i].remove(QLatin1String(".dic"), Qt::CaseInsensitive);
         auto item = new QListWidgetItem(entries[i]);
         dictList->addItem(item);
         if (entries[i] == pHost->mSpellDic) {
@@ -426,10 +480,40 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
     if (pHost->mpMap->mpMapper) {
+        QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_debug);
+        mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_debug);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
+        mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
+        mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
+        mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
+        QFormLayout* pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
+        if (pdebugLayout) {
+            pdebugLayout->addRow(pLabel_mapSymbolFontFudge, mpDoubleSpinBox_mapSymbolFontFudge);
+            groupBox_debug->show();
+        } else {
+            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QFormLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
+        }
+
+        label_mapSymbolsFont->setEnabled(true);
+        fontComboBox_mapSymbols->setEnabled(true);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(true);
+
         checkBox_showDefaultArea->show();
         checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
         checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
+
+        pushButton_showGlyphUsage->setEnabled(true);
+        fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
+        connect(pushButton_showGlyphUsage, SIGNAL(clicked(bool)), this, SLOT(slot_showMapGlyphUsage()), Qt::UniqueConnection);
+        connect(fontComboBox_mapSymbols, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(slot_setMapSymbolFont(const QFont&)), Qt::UniqueConnection);
+        connect(checkBox_isOnlyMapSymbolFontToBeUsed, SIGNAL(clicked(bool)), this, SLOT(slot_setMapSymbolFontStrategy(bool)), Qt::UniqueConnection);
     } else {
+        label_mapSymbolsFont->setEnabled(false);
+        fontComboBox_mapSymbols->setEnabled(false);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
+        pushButton_showGlyphUsage->setEnabled(false);
+
         checkBox_showDefaultArea->hide();
     }
 
@@ -1599,6 +1683,11 @@ void dlgProfilePreferences::copyMap()
 
 void dlgProfilePreferences::slot_save_and_exit()
 {
+    if (mpDialogMapGlyphUsage) {
+        mpDialogMapGlyphUsage->close();
+        mpDialogMapGlyphUsage = nullptr;
+    }
+
     Host* pHost = mpHost;
     if (pHost) {
         if (dictList->currentItem()) {
@@ -1634,6 +1723,12 @@ void dlgProfilePreferences::slot_save_and_exit()
                 // Corner case fixup:
                 pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
             }
+
+            // If a map was loaded
+            if (mpDoubleSpinBox_mapSymbolFontFudge) {
+                pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+            }
+
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
         }
@@ -1763,8 +1858,26 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     mudlet::self()->setToolBarIconSize(MainIconSize->value());
     mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
-    mudlet::self()->setMenuBarVisible(showMenuBar->isChecked());
-    mudlet::self()->setToolBarVisible(showToolbar->isChecked());
+    switch (comboBox_menuBarVisibility->currentIndex()) {
+    case 0:
+        mudlet::self()->setMenuBarVisibility(mudlet::visibleNever);
+        break;
+    case 1:
+        mudlet::self()->setMenuBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        break;
+    default:
+        mudlet::self()->setMenuBarVisibility(mudlet::visibleAlways);
+    }
+    switch (comboBox_toolBarVisibility->currentIndex()) {
+    case 0:
+        mudlet::self()->setToolBarVisibility(mudlet::visibleNever);
+        break;
+    case 1:
+        mudlet::self()->setToolBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        break;
+    default:
+        mudlet::self()->setToolBarVisibility(mudlet::visibleAlways);
+    }
 
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (checkBox_USE_SMALL_SCREEN->isChecked()) {
@@ -2259,5 +2372,259 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         clearHostDetails();
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
+    }
+}
+
+void dlgProfilePreferences::generateMapGlyphDisplay()
+{
+    QHash<QString, QSet<int>> roomSymbolsHash(mpHost->mpMap->roomSymbolsHash());
+    QPointer<QTableWidget> pTableWidget = mpDialogMapGlyphUsage->findChild<QTableWidget*>(QLatin1String("tableWidget"));
+    if (!pTableWidget) {
+        return;
+    }
+
+    // Must turn off sorting at least whilst inserting items...
+    pTableWidget->setSortingEnabled(false);
+    pTableWidget->setColumnCount(6);
+    // This clears any previous contents:
+    pTableWidget->setRowCount(0);
+    pTableWidget->setRowCount(roomSymbolsHash.count());
+
+
+    QFont selectedFont = mpHost->mpMap->mMapSymbolFont;
+    selectedFont.setPointSize(16);
+    selectedFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+    QFont anyFont = mpHost->mpMap->mMapSymbolFont;
+    anyFont.setPointSize(16);
+    anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
+
+    int row = -1;
+    QHashIterator<QString, QSet<int>> itUsedSymbol(roomSymbolsHash);
+    while (itUsedSymbol.hasNext()) {
+        itUsedSymbol.next();
+        QString symbol = itUsedSymbol.key();
+        QList<int> roomsWithSymbol = itUsedSymbol.value().toList();
+        if (roomsWithSymbol.count() > 1) {
+            std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
+        }
+        QTableWidgetItem* pSymbolInFont = new QTableWidgetItem();
+        pSymbolInFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.</p>")));
+        pSymbolInFont->setFont(selectedFont);
+
+        QTableWidgetItem* pSymbolAnyFont = new QTableWidgetItem();
+        pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolAnyFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>The room symbol will appear like this if symbols (glyphs) from any font can be used.</p>")));
+        pSymbolAnyFont->setFont(anyFont);
+
+        QFontMetrics SymbolInFontMetrics(selectedFont);
+        QFontMetrics SymbolAnyFontMetrics(anyFont);
+
+        // pCodePoints is the sequence of UTF-32 codepoints in the symbol and
+        // this ought to be what is needed to check that a font or set of fonts
+        // can render the codepoints:
+        QVector<quint32> pCodePoints = symbol.toUcs4();
+        // These can be used to flag symbols that cannot be reproduced
+        bool isSingleFontUsable=true;
+        bool isAllFontUsable=true;
+        QStringList codePointsString;
+        for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
+            codePointsString << QStringLiteral("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
+            if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
+                isAllFontUsable=false;
+                // By definition if all the fonts together cannot render the
+                // glyph then the specified one cannot either
+                isSingleFontUsable=false;
+            } else if (!SymbolInFontMetrics.inFontUcs4(pCodePoints.at(i))) {
+                isSingleFontUsable=false;
+            }
+        }
+
+        QTableWidgetItem* pCodePointDisplay = new QTableWidgetItem(codePointsString.join(QStringLiteral(", ")));
+        pCodePointDisplay->setTextAlignment(Qt::AlignCenter);
+        pCodePointDisplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                      .arg(tr("<p>These are the sequence of hexadecimal numbers that are used by the Unicode consortium "
+                                              "to identify the graphemes needed to create the symbol.  These numbers can be utilised "
+                                              "to determine precisely what is to be drawn even if some fonts have glyphs that are the "
+                                              "same for different codepoints or combination of codepoints.</p>"
+                                              "<p>Character entry utilities such as <i>charmap.exe</i> on <i>Windows</i> or <i>gucharmap</i> "
+                                              "on many Unix type operating systems will also use these numbers which cover "
+                                              "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use "
+                                              "Plane 16</i> via most of the written marks that humanity has ever made.</p>")));
+
+        // Need to pad the numbers with spaces so that sorting works correctly:
+        QTableWidgetItem* pUsageCount = new QTableWidgetItem(QStringLiteral("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
+        pUsageCount->setTextAlignment(Qt::AlignCenter);
+        pUsageCount->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>How many rooms in the whole map have this symbol.")));
+
+        QStringList roomNumberStringList;
+        QListIterator<int> itRoom(roomsWithSymbol);
+        // Only show the first, say 32, rooms otherwise the whole dialog could
+        // be filled completely for a symbol that is used extensively e.g. on
+        // a wilderness type map:
+        int roomCount = 0;
+        while (itRoom.hasNext()) {
+            roomNumberStringList << QString::number(itRoom.next());
+            if (++roomCount == 32 && itRoom.hasNext()) {
+                // There is still rooms not listed
+                roomNumberStringList << tr("more - not shown...");
+                // Escape from loop to truncate the listing:
+                break;
+            }
+        }
+        QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(QStringLiteral(", ")));
+        pRoomNumbers->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>The rooms with this symbol, up to a maximum of thirty-two, if there are more "
+                                         "than this, it is indicated but they are not shown.</p>")));
+
+        QToolButton * pDummyButton = new QToolButton();
+        if (isSingleFontUsable) {
+            pSymbolInFont->setText(symbol);
+            pSymbolAnyFont->setText(symbol);
+            pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
+            pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>The symbol can be made entirely from glyphs in the specified font.</p>")));
+        } else {
+            // Need to switch to a different font as it is possible that the
+            // single font may not have the replacement glyph either...!
+            pSymbolInFont->setFont(anyFont);
+            pSymbolInFont->setText(QString(QChar::ReplacementCharacter));
+            if (isAllFontUsable) {
+                pSymbolAnyFont->setText(symbol);
+                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-warning.png")));
+                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>The symbol cannot be made entirely from glyphs in the specified font, but, "
+                                                 "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
+                                                 "(glyphs) from chosen font</i> option or try and choose another font that does "
+                                                 "have the needed glyphs.</p><p><i>You need not close this table to try another font, "
+                                                 "changing it on the main preferences dialogue will update this table after a slight "
+                                                 "delay.</i></p>")));
+            } else {
+                pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
+                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-error.png")));
+                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>The symbol cannot be drawn using any of the fonts in the system, either an "
+                                                 "invalid string was entered as the symbol for the indicated rooms or the map was "
+                                                 "created on a different systems with a different set of fonts available to use. "
+                                                 "You may be able to correct this by installing an additional font using whatever "
+                                                 "method is appropriate for this system or by editing the map to use a different "
+                                                 "symbol. It may be possible to do the latter via a lua script using the "
+                                                 "<i>getRoomChar</i> and <i>setRoomChar</i> functions.</p>")));
+            }
+        }
+        pTableWidget->setCellWidget(++row, 0, pDummyButton);
+
+        pTableWidget->setItem(row, 1, pSymbolInFont);
+        pTableWidget->setItem(row, 2, pSymbolAnyFont);
+        pTableWidget->setItem(row, 3, pCodePointDisplay);
+        pTableWidget->setItem(row, 4, pUsageCount);
+        pTableWidget->setItem(row, 5, pRoomNumbers);
+    }
+    pTableWidget->sortItems(4, Qt::DescendingOrder);
+    pTableWidget->setSortingEnabled(true);
+    pTableWidget->resizeColumnsToContents();
+    // The room number column can contain a lot of rooms...
+    pTableWidget->resizeRowsToContents();
+    mpDialogMapGlyphUsage->show();
+    mpDialogMapGlyphUsage->raise();
+}
+
+void dlgProfilePreferences::slot_showMapGlyphUsage()
+{
+    if (!mpHost || !mpHost->mpMap) {
+        return;
+    }
+
+    if (mpDialogMapGlyphUsage) {
+        // Already in use so just refresh the contents instead:
+        generateMapGlyphDisplay();
+        return;
+    }
+
+    QUiLoader loader;
+    QFile file(QStringLiteral(":/ui/glyph_usage.ui"));
+    file.open(QFile::ReadOnly);
+    mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
+    file.close();
+    if (!mpDialogMapGlyphUsage) {
+        qWarning() << "dlgProfilePreferences::slot_showMapGlyphUsage() ERROR: failed to create the dialog!";
+        return;
+    }
+
+    mpDialogMapGlyphUsage->setWindowIcon(QIcon(QStringLiteral(":/icons/place_of_interest.png")));
+    mpDialogMapGlyphUsage->setWindowTitle(tr("Map symbol usage - %1").arg(mpHost->getName()));
+    mpDialogMapGlyphUsage->setAttribute(Qt::WA_DeleteOnClose);
+    generateMapGlyphDisplay();
+}
+
+void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUseSelectedFont)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    if (pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed != isToOnlyUseSelectedFont) {
+        pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed = isToOnlyUseSelectedFont;
+        if (isToOnlyUseSelectedFont) {
+            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+        } else {
+            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
+        }
+        // Clear the existing cache of room symbol pixmaps:
+        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
+
+        if (mpDialogMapGlyphUsage) {
+            generateMapGlyphDisplay();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
+    if (pHost->mpMap->mMapSymbolFont != font) {
+        pHost->mpMap->mMapSymbolFont = font;
+        pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
+        // Clear the existing cache of room symbol pixmaps:
+        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
+
+        if (mpDialogMapGlyphUsage) {
+            generateMapGlyphDisplay();
+        }
+    }
+}
+
+// These next two prevent BOTH controls being set to never to prevent the lose
+// of access to the setting/controls completely - once there is a profile loaded
+// access to the settings/controls can be overriden by a context menu action on
+// any TConsole instance:
+void dlgProfilePreferences::slot_changeShowMenuBar(const int newIndex)
+{
+    if (!newIndex && !comboBox_toolBarVisibility->currentIndex()) {
+        // This control has been set to the "Never" setting but so is the other
+        // control - so force it back to the "Only if no profile one
+        comboBox_menuBarVisibility->setCurrentIndex(1);
+    }
+}
+
+void dlgProfilePreferences::slot_changeShowToolBar(const int newIndex)
+{
+    if (!newIndex && !comboBox_menuBarVisibility->currentIndex()) {
+        // This control has been set to the "Never" setting but so is the other
+        // control - so force it back to the "Only if no profile one
+        comboBox_toolBarVisibility->setCurrentIndex(1);
     }
 }

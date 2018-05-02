@@ -134,8 +134,6 @@ public:
     void reloadModule(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
 
-    void setIsAutologin(bool b) { mIsAutologin = b; }
-    bool isAutologin() { return mIsAutologin; }
     void registerEventHandler(const QString&, TScript*);
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
@@ -162,15 +160,6 @@ public:
     }
 
     void adjustNAWS();
-
-    class Exception_NoLogin
-    {
-    };
-
-    class Exception_NoConnectionAvailable
-    {
-    };
-
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
@@ -350,27 +339,20 @@ private:
     int mHostID;
     QString mHostName;
 
-    bool mIsAutologin;
-
     bool mIsClosingDown;
 
     QString mLine;
     QMutex mLock;
     QString mLogin;
-    int mMainIconSize;
-    QString mMudOutputBuffer;
+
     int mMXPMode;
 
     QString mPass;
-    QStringList mParagraphList;
 
     int mPort;
 
     int mRetries;
     bool mSaveProfileOnExit;
-    bool mShowToolbar;
-    int mTEFolderIconSize;
-    QStringList mTextBufferList;
 
     QString mUserDefinedName;
 

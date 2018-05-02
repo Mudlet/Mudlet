@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -64,6 +65,7 @@
 
 class Host;
 
+class QTextCodec;
 
 class TChar
 {
@@ -137,7 +139,6 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
-    void resetFontSpecs();
     QPoint getEndPos();
     void translateToPlainText(std::string& s, const bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
@@ -149,10 +150,13 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
-    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); };
+    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
     void logRemainingOutput();
+    // It would have been nice to do this with Qt's signals and slots but that
+    // is apparently incompatible with using a default constructor - sigh!
+    void encodingChanged(const QString &);
 
 
     std::deque<TChar> bufferLine;
@@ -197,6 +201,8 @@ private:
     void shrinkBuffer();
     int calcWrapPos(int line, int begin, int end);
     void handleNewLine();
+    bool processUtf8Sequence(const std::string&, const bool, const size_t, size_t&, bool&);
+    bool processGBSequence(const std::string&, const bool, const bool, const size_t, size_t&, bool&);
 
 
     bool gotESC;
@@ -205,9 +211,10 @@ private:
     int codeRet;
     std::string tempLine;
     bool mWaitingForHighColorCode;
-    bool mHighColorModeForeground;
-    bool mHighColorModeBackground;
-    bool mIsHighColorMode;
+    bool mWaitingForMillionsColorCode;
+    bool mIsHighOrMillionsColorMode;
+    bool mIsHighOrMillionsColorModeForeground;
+    bool mIsHighOrMillionsColorModeBackground;
     bool mIsDefaultColor;
     bool isUserScrollBack;
     int currentFgColorProperty;
@@ -314,13 +321,16 @@ private:
     int mCode[1024]; //FIXME: potential overflow bug
     // Used to hold the incomplete bytes (1-3) that could be left at the end of
     // a packet:
-    std::string mIncompleteUtf8SequenceBytes;
+    std::string mIncompleteSequenceBytes;
 
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
     int lastLoggedFromLine;
     int lastloggedToLine;
     QString lastTextToLog;
+
+    QString mEncoding;
+    QTextCodec* mMainIncomingCodec;
 };
 
 #endif // MUDLET_TBUFFER_H

@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -66,15 +66,15 @@
          <property name="title">
           <string>Icon sizes</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_34">
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mainIconSize">
             <property name="text">
              <string>Icon size toolbars:</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="0" column="1" alignment="Qt::AlignLeft">
            <widget class="QSpinBox" name="MainIconSize">
             <property name="specialValueText">
              <string/>
@@ -90,14 +90,14 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="0" column="2" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_33">
             <property name="text">
              <string>Icon size in tree views:</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="0" column="3" alignment="Qt::AlignLeft">
            <widget class="QSpinBox" name="TEFolderIconSize">
             <property name="minimum">
              <number>1</number>
@@ -110,24 +110,62 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="showMenuBar">
-            <property name="toolTip">
-             <string>Enables the typical menu bar with drop-down menus in the main window. Requires restart to take effect</string>
-            </property>
+          <item row="1" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_menuBarVisiblity">
             <property name="text">
-             <string>Show menu bar</string>
+             <string>Show menu bar:</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="showToolbar">
-            <property name="toolTip">
-             <string>Enables the default button bar in the main window. Requires restart to take effect</string>
+          <item row="1" column="1" alignment="Qt::AlignLeft">
+           <widget class="QComboBox" name="comboBox_menuBarVisibility">
+            <property name="currentIndex">
+             <number>0</number>
             </property>
+            <item>
+             <property name="text">
+              <string>Never</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Until a profile is loaded</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Always</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="2" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_toolBarVisibility">
             <property name="text">
              <string>Show main toolbar</string>
             </property>
+           </widget>
+          </item>
+          <item row="1" column="3" alignment="Qt::AlignLeft">
+           <widget class="QComboBox" name="comboBox_toolBarVisibility">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <item>
+             <property name="text">
+              <string>Never</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Until a profile is loaded</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Always</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
@@ -1427,15 +1465,64 @@
           <string>Map files</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="4" column="0" colspan="3">
-           <widget class="QLabel" name="label_mapFileActionResult">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_saveMap">
+            <property name="text">
+             <string>Save your current map:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_saveMap</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_saveMap">
+            <property name="text">
+             <string>Press to choose location and save</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_loadMap">
+            <property name="text">
+             <string>Load another map file in:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_loadMap</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButton_loadMap">
+            <property name="text">
+             <string>Press to choose file and load</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>An action above happened</string>
+             <string>Report map issues on screen</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">
+           <widget class="Line" name="line_aboveCopyMap">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_copyMap">
+            <property name="text">
+             <string>Copy map to other profile(s):</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_chooseProfiles</cstring>
             </property>
            </widget>
           </item>
@@ -1465,64 +1552,15 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_saveMap">
-            <property name="text">
-             <string>Press to choose location and save</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_loadMap">
-            <property name="text">
-             <string>Load another map file in:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_loadMap</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_saveMap">
-            <property name="text">
-             <string>Save your current map:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_saveMap</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButton_loadMap">
-            <property name="text">
-             <string>Press to choose file and load</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_copyMap">
-            <property name="text">
-             <string>Copy map to other profile(s):</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_chooseProfiles</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1" colspan="2">
-           <widget class="Line" name="line_aboveCopyMap">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <item row="4" column="0" colspan="3">
+           <widget class="QLabel" name="label_mapFileActionResult">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
             </property>
             <property name="text">
-             <string>Report map issues on screen</string>
+             <string>An action above happened</string>
             </property>
            </widget>
           </item>
@@ -1643,6 +1681,13 @@
           <string>Map view</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_22">
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mapSymbolsFont">
+            <property name="text">
+             <string>2D Map Room Symbol Font</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="mMapperUseAntiAlias">
             <property name="toolTip">
@@ -1653,7 +1698,10 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="1" alignment="Qt::AlignLeft">
+           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          </item>
+          <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1663,6 +1711,20 @@
             </property>
             <property name="checked">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
+            <property name="text">
+             <string>Only use symbols (glyphs) from chosen font</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="pushButton_showGlyphUsage">
+            <property name="text">
+             <string>Show symbol usage...</string>
             </property>
            </widget>
           </item>

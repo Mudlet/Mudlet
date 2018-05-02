@@ -74,7 +74,6 @@ set(mudlet_SRCS
     TEasyButtonBar.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
-    THighlighter.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
@@ -86,6 +85,7 @@ set(mudlet_SRCS
     TScript.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
+    TTabBar.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -155,7 +155,6 @@ set(mudlet_MOC_HDRS
     TConsole.h
     TEasyButtonBar.h
     TForkedProcess.h
-    THighlighter.h
     TLabel.h
     TLuaInterpreter.h
     TMap.h
@@ -197,6 +196,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TSplitterHandle.h
+    TTabBar.h
     TTimer.h
     TTrigger.h
     TVar.h
