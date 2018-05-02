@@ -26,6 +26,12 @@ function Geyser.MiniConsole:setBufferSize (linesLimit, sizeOfBatchDeletion)
   setConsoleBufferSize(self.name, linesLimit, sizeOfBatchDeletion)
 end
 
+--- Sets the new font to use.
+-- @param font Font family name to use.
+function Geyser.MiniConsole:setFont (font)
+  setConsoleBufferSize(self.name, font)
+end
+
 --- Sets the point at which text is wrapped in this miniconsole
 -- @param wrapAt The number of characters to start wrapping.
 function Geyser.MiniConsole:setWrap (wrapAt)
