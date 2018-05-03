@@ -73,7 +73,7 @@ before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then `luarocks path`; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then $(luarocks path); fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
@@ -86,7 +86,8 @@ script:
   - cd ../build
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
   - if [ "${CC}" = "clang" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${Q_OR_C_MAKE}" = "qmake" ] ; then SPEC="-spec linux-clang"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PROCS=$(sysctl -n hw.physicalcpu); else PROCS=`nproc`; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PROCS=$(sysctl -n hw.physicalcpu); else PROCS=$(nproc); fi
+  - echo "Compiling using ${PROCS} cores."
   - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ${SPEC} ../src/mudlet.pro && make -j ${PROCS}; else cmake --version; cmake .. && make -j ${PROCS} && make check; fi
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
