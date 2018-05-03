@@ -3190,6 +3190,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     else {
         lua_pushnil(L);
         lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
+        return 2;
     }
 
     if (lua_result) {
