@@ -2424,20 +2424,19 @@ int TLuaInterpreter::setFont(lua_State* L)
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
-            lua_pushboolean(L, true);
         } else {
             lua_pushnil(L);
             lua_pushstring(L, "could not find the main window");
             return 2;
         }
     } else {
-        if (mudlet::self()->setWindowFont(pHost, windowName, font)) {
-            lua_pushboolean(L, true);
-        } else {
+        if (!mudlet::self()->setWindowFont(pHost, windowName, font)) {
             lua_pushnil(L);
             lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+            return 2;
         }
     }
+    lua_pushboolean(L, true);
     return 1;
 }
 
