@@ -3,8 +3,7 @@
 set -e
 
 # we deploy only qmake and clang combination for macOS
-# unless they're broken so we have a workaround
-if [ "${Q_OR_C_MAKE}" = "cmake" ] && [ "${CC}" = "clang" ]; then
+if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
