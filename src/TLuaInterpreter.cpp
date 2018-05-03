@@ -2441,6 +2441,38 @@ int TLuaInterpreter::setFont(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::getFont(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName = QStringLiteral("main");
+    QString font;
+    if (lua_gettop(L) == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getFont: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+
+            if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+                font = pHost->mDisplayFont.family();
+            } else {
+                font = mudlet::self()->getWindowFont(pHost, windowName);
+            }
+
+            if (font.isEmpty()) {
+                lua_pushnil(L);
+                lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+                return 2;
+            }
+        }
+    } else {
+        font = pHost->mDisplayFont.family();
+    }
+
+    lua_pushstring(L, font.toUtf8().constData());
+    return 1;
+}
 
 int TLuaInterpreter::setFontSize(lua_State* L)
 {
@@ -2499,6 +2531,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
         } else {
             lua_pushnil(L);
             lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+            return 2;
         }
     }
     return 1;
@@ -12052,6 +12085,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout);
     lua_register(pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout);
     lua_register(pGlobalLua, "setFont", TLuaInterpreter::setFont);
+    lua_register(pGlobalLua, "getFont", TLuaInterpreter::getFont);
     lua_register(pGlobalLua, "setFontSize", TLuaInterpreter::setFontSize);
     lua_register(pGlobalLua, "getFontSize", TLuaInterpreter::getFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);

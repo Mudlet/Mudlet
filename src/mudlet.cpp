@@ -1373,6 +1373,21 @@ bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& fo
     }
 }
 
+QString mudlet::getWindowFont(Host* pHost, const QString& name)
+{
+    if (!pHost) {
+        return QString();
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(name)) {
+        return dockWindowConsoleMap.value(name)->mUpperPane->mDisplayFont.family();
+    } else {
+        return QString();
+    }
+}
+
 bool mudlet::setWindowFontSize(Host *pHost, const QString &name, int size)
 {
     if (!pHost) {

@@ -105,6 +105,7 @@ public:
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
     bool setWindowFont(Host*, const QString&, const QString&);
+    QString getWindowFont(Host*, const QString&);
     bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
