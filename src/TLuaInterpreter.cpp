@@ -12325,6 +12325,10 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #endif
+#ifdef Q_OS_WIN32
+    //Windows Qt Creator builds with our SDK install the library into a well known directory
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+#endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
@@ -12475,6 +12479,12 @@ void TLuaInterpreter::initIndenterGlobals()
     luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
+#elif defined(Q_OS_WIN32)
+    // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
+    luaL_dostring(pIndenterState,
+                  QStringLiteral("package.path = [[%1\\?.lua;%2\\..\\3rdparty\\?.lua;%2\\..\\..\\3rdparty\\?.lua;]] .. package.path")
+                          .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
+                          .toUtf8().constData());
 #endif
 
     int error = luaL_dostring(pIndenterState, R"(
