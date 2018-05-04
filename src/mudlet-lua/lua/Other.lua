@@ -892,3 +892,10 @@ function killtimeframe(vname)
     timeframetable[vname] = nil
   end
 end
+
+-- replace line from MUD with colour-tagged string
+creplaceLine = function(str)
+	selectString(line,1)
+	replace("")
+	cinsertText(str)
+end

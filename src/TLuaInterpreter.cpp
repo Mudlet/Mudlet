@@ -2425,10 +2425,10 @@ int TLuaInterpreter::setFontSize(lua_State* L)
             font.setPointSize(size);
             pHost->mDisplayFont = font;
             // apply changes to main console and its while-scrolling component too.
-            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
             lua_pushboolean(L, true);
         } else {
@@ -2712,7 +2712,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     if (!lua_isstring(L, 1)) {
         Host& host = getHostFromLua(L);
         host.mpConsole->buffer.clear();
-        host.mpConsole->console->forceUpdate();
+        host.mpConsole->mUpperPane->forceUpdate();
         return 0;
     } else {
         luaSendText = lua_tostring(L, 1);
@@ -3172,7 +3172,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     }
 
-    bool lua_result;
+    bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
         lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
@@ -3187,6 +3187,11 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
         lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event);
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
+        return 2;
+    }
 
     if (lua_result) {
         lua_pushboolean(L, true);
@@ -12330,6 +12335,10 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #endif
+#ifdef Q_OS_WIN32
+    //Windows Qt Creator builds with our SDK install the library into a well known directory
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+#endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
@@ -12480,12 +12489,18 @@ void TLuaInterpreter::initIndenterGlobals()
     luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
+#elif defined(Q_OS_WIN32)
+    // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
+    luaL_dostring(pIndenterState,
+                  QStringLiteral("package.path = [[%1\\?.lua;%2\\..\\3rdparty\\?.lua;%2\\..\\..\\3rdparty\\?.lua;]] .. package.path")
+                          .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
+                          .toUtf8().constData());
 #endif
 
     int error = luaL_dostring(pIndenterState, R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
-      get_formatted_code = request('!.formats.lua.save')
+      get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
         string e = "no error message available from Lua";
@@ -12993,7 +13008,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     Host* pHost = &getHostFromLua(L);
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        columns = pHost->mpConsole->console->getColumnCount();
+        columns = pHost->mpConsole->mUpperPane->getColumnCount();
     } else {
         columns = mudlet::self()->getColumnCount(pHost, windowName);
     }
@@ -13026,7 +13041,7 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     Host* pHost = &getHostFromLua(L);
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        rows = pHost->mpConsole->console->getRowCount();
+        rows = pHost->mpConsole->mUpperPane->getRowCount();
     } else {
         rows = mudlet::self()->getRowCount(pHost, windowName);
     }

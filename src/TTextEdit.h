@@ -48,7 +48,7 @@ class TTextEdit : public QWidget
 
 public:
     Q_DISABLE_COPY(TTextEdit)
-    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen);
+    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
@@ -76,7 +76,6 @@ public:
     int imageTopLine();
     int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
-    bool isTailMode();
     void copySelectionToClipboard();
     void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
@@ -93,6 +92,11 @@ public:
     int mFontAscent;
     int mFontDescent;
     bool mIsCommandPopup;
+    // If true, this TTextEdit is to display the last lines in
+    // mpConsole.mpBuffer. This is always true for the lower main window panel
+    // but it is RESET when the upper one is scrolled upwards. The name appears
+    // to be related to the file monitoring feature in the *nix tail command.
+    // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
     QMap<QString, QString> mPopupCommands;
     int mScrollVector;
@@ -125,7 +129,11 @@ private:
     bool mInversOn;
     bool mIsDebugConsole;
     bool mIsMiniConsole;
-    bool mIsSplitScreen;
+    // Each TConsole instance uses two instances of this class, one above the
+    // other but they need to behave differently in some ways; this flag is set
+    // or reset on creation and is used to adjust the behaviour depending on
+    // which one this instance is:
+    const bool mIsLowerPane;
     int mLastRenderBottom;
     int mLeftMargin;
     bool mMouseTracking;

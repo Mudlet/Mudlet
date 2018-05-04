@@ -48,7 +48,7 @@ public:
 private:
     dblsqd::Feed* feed;
     dblsqd::UpdateDialog* updateDialog;
-    QPushButton* installOrRestartButton;
+    QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
     QSettings* settings;
 
