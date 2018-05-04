@@ -85,7 +85,7 @@ matrix:
         build_command_prepend: |
           # source the set-build-info as it exports some variables for us!
           source CI/travis.set-build-info.sh
-          mkdir build
+          mkdir -p build
         build_command: ./CI/travis.compile.sh
         branch_pattern: AddCoverityScans
 before_install:
@@ -100,7 +100,7 @@ install: ./CI/travis.install.sh
 before_script: |
   # source the set-build-info as it exports some variables for us!
   source CI/travis.set-build-info.sh
-  mkdir build
+  mkdir -p build
 script: ./CI/travis.compile.sh
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
