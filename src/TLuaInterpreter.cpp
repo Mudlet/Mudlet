@@ -10151,10 +10151,7 @@ int TLuaInterpreter::getTime(lua_State* L)
 // returns: seconds since unix epoch with milliseconds (e.g. 1523555867.191)
 int TLuaInterpreter::getEpoch(lua_State *L)
 {
-    QDateTime time = QDateTime::currentDateTime();
-
-    lua_pushnumber(L, double(time.toMSecsSinceEpoch()) / 1000.0);
-
+    lua_pushnumber(L, static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0));
     return 1;
 }
 
