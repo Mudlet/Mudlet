@@ -1,4 +1,10 @@
 #!/bin/bash
+if [ "${COVERITY_SCAN_BRANCH}" = 1 ]; then
+  echo "Already built and uploaded to coverity. Skipping build..."
+  exit 0
+fi
+
+cd build
 if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
   # need to set additional compile flags on osx
   export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"
