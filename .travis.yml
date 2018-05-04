@@ -33,9 +33,7 @@ addons:
     - lua-filesystem
     - lua-zip
     - lua-sql-sqlite3
-compiler:
-  - gcc
-  - clang
+compiler: clang
 env:
   matrix:
   - Q_OR_C_MAKE=cmake
@@ -61,9 +59,6 @@ env:
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
 matrix:
-  exclude:
-  - os: osx
-    compiler: gcc
   include:
   - os: linux
     compiler: gcc
@@ -72,11 +67,16 @@ matrix:
     - QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
   - os: linux
     compiler: gcc
+    env: 
+    - Q_OR_C_MAKE=cmake
+    - QT_VERSION=59 # actually Qt 5.9
+  - os: linux
+    compiler: gcc
     env:
     - Q_OR_C_MAKE=qmake
     - QT_VERSION=59
     addons:
-      - *apt-addon
+      - apt: *apt-addon
       - coverity_scan:
         project:
           name: "Mudlet/Mudlet"
@@ -89,7 +89,7 @@ matrix:
         build_command: ./CI/travis.compile.sh
         branch_pattern: AddCoverityScans
 before_install:
-  - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
