@@ -3172,7 +3172,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     }
 
-    bool lua_result;
+    bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
         lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
@@ -3187,6 +3187,11 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
         lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event);
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
+        return 2;
+    }
 
     if (lua_result) {
         lua_pushboolean(L, true);
