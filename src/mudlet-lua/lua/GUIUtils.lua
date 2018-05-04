@@ -595,16 +595,16 @@ end
 ---   replaceAll("you", "you and me")
 ---   </pre>
 function replaceAll(word, what)
+  local getCurrentLine, selectSection, replace = getCurrentLine, selectSection, replace
   local startp, endp = 1, 1
-  local found = 0
   while true do
-    startp, endp = getCurrentLine():find(word, (found*(endp + (#what - #word) + 1)))
+    startp, endp = getCurrentLine():find(word, endp)
     if not startp then
       break
     end
-    found = 1
     selectSection(startp - 1, endp - startp + 1)
     replace(what)
+    endp = endp + (#what - #word) + 1 -- recalculate the new word ending to start search from there
   end
 end
 
