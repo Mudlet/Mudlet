@@ -101,7 +101,12 @@ before_script: |
   # source the set-build-info as it exports some variables for us!
   source CI/travis.set-build-info.sh
   mkdir -p build
-script: ./CI/travis.compile.sh
+script: |
+  if [ "${COVERITY_SCAN_BRANCH}" = 1 ]; then
+    echo "Already built and uploaded to coverity. Skipping build..."
+    exit 0
+  fi
+  ./CI/travis.compile.sh
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
   - bash CI/travis.after_success.sh
