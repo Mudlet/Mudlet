@@ -53,9 +53,6 @@
 #include "edbee/models/textgrammar.h"
 #include "edbee/texteditorwidget.h"
 #include "edbee/views/texttheme.h"
-#if defined(INCLUDE_UPDATER)
-#include "updater.h"
-#endif
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -145,6 +142,7 @@ mudlet::mudlet()
 , mReplaySpeed(1)
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
 , mpCurrentActiveHost(nullptr)
+, mIsBlinkingEnabled(false)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
@@ -167,7 +165,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-
+, mMasterBlinkPhase(0)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -463,6 +461,13 @@ mudlet::mudlet()
     readSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
+
+    mpBlinkTimer = new QTimer(this);
+    connect(mpBlinkTimer, SIGNAL(timeout()), this, SLOT(slot_updateBlinkPhase()));
+    mpBlinkTimer->setInterval(200);
+    if (mIsBlinkingEnabled) {
+        mpBlinkTimer->start();
+    }
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -1542,37 +1547,25 @@ bool mudlet::setBackgroundImage(Host* pHost, const QString& name, QString& path)
     }
 }
 
-bool mudlet::setTextFormat(Host* pHost, const QString& name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout)
+bool mudlet::setTextFormat(Host* pHost, const QString& name, const QColor& bgColor, const QColor& fgColor, const TChar::AttributeFlags attributes)
 {
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
     if (dockWindowConsoleMap.contains(name)) {
         TConsole* pC = dockWindowConsoleMap[name];
-        pC->mFormatCurrent.bgR = r1;
-        pC->mFormatCurrent.bgG = g1;
-        pC->mFormatCurrent.bgB = b1;
-        pC->mFormatCurrent.fgR = r2;
-        pC->mFormatCurrent.fgG = g2;
-        pC->mFormatCurrent.fgB = b2;
-        if (bold) {
-            pC->mFormatCurrent.flags |= TCHAR_BOLD;
-        } else {
-            pC->mFormatCurrent.flags &= ~(TCHAR_BOLD);
-        }
-        if (underline) {
-            pC->mFormatCurrent.flags |= TCHAR_UNDERLINE;
-        } else {
-            pC->mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
-        }
-        if (italics) {
-            pC->mFormatCurrent.flags |= TCHAR_ITALICS;
-        } else {
-            pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
-        }
-        if (strikeout) {
-            pC->mFormatCurrent.flags |= TCHAR_STRIKEOUT;
-        } else {
-            pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
-        }
+        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, attributes);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if (dockWindowConsoleMap.contains(name)) {
+        TConsole* pC = dockWindowConsoleMap[name];
+        // Set or reset all the specified attributes (but leave others unchanged)
+        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() &~(attributes)) | (state ? attributes : TChar::None));
         return true;
     } else {
         return false;
@@ -1965,48 +1958,12 @@ void mudlet::replace(Host* pHost, const QString& name, const QString& text)
     }
 }
 
-void mudlet::setLink(Host* pHost, const QString& name, const QString& linkText, QStringList& linkFunction, QStringList& linkHint)
+void mudlet::setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList& linkHint)
 {
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
     if (dockWindowConsoleMap.contains(name)) {
         TConsole* pC = dockWindowConsoleMap[name];
-        pC->setLink(linkText, linkFunction, linkHint);
-    }
-}
-
-void mudlet::setBold(Host* pHost, const QString& name, bool b)
-{
-    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
-        TConsole* pC = dockWindowConsoleMap[name];
-        pC->setBold(b);
-    }
-}
-
-void mudlet::setItalics(Host* pHost, const QString& name, bool b)
-{
-    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
-        TConsole* pC = dockWindowConsoleMap[name];
-        pC->setItalics(b);
-    }
-}
-
-void mudlet::setUnderline(Host* pHost, const QString& name, bool b)
-{
-    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
-        TConsole* pC = dockWindowConsoleMap[name];
-        pC->setUnderline(b);
-    }
-}
-
-void mudlet::setStrikeOut(Host* pHost, const QString& name, bool b)
-{
-    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
-        TConsole* pC = dockWindowConsoleMap[name];
-        pC->setStrikeOut(b);
+        pC->setLink(linkFunction, linkHint);
     }
 }
 
@@ -2092,7 +2049,9 @@ bool mudlet::echoWindow(Host* pHost, const QString& name, const QString& text)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString t = text;
     if (dockWindowConsoleMap.contains(name)) {
-        dockWindowConsoleMap[name]->echoUserWindow(t);
+        // This was a call to echoUserWindow() but that was just a wrapper
+        // around print()
+        dockWindowConsoleMap[name]->print(t);
         return true;
     }
     QMap<QString, TLabel*>& labelMap = mHostLabelMap[pHost];
@@ -2273,6 +2232,7 @@ void mudlet::readSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+    mIsBlinkingEnabled = settings.value("allowBlinkingText", QVariant(false)).toBool();
     resize(size);
     move(pos);
     if (settings.value("maximized", false).toBool()) {
@@ -2400,6 +2360,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
+    settings.setValue("allowBlinkingText", mIsBlinkingEnabled);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -3641,6 +3602,35 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
                 mpTabBar->setTabItalic(hostName, true);
                 mpTabBar->update();
             }
+        }
+    }
+}
+
+void mudlet::slot_updateBlinkPhase()
+{
+    if (mIsBlinkingEnabled) {
+        ++mMasterBlinkPhase;
+        mMasterBlinkPhase %= 4;
+        emit signal_blinkingRedraw(mMasterBlinkPhase);
+    }
+}
+
+// state is true to disable blinking:
+void mudlet::slot_disableBlinkingText(const bool state)
+{
+    if (state) {
+        if (mIsBlinkingEnabled) {
+            mpBlinkTimer->stop();
+            mIsBlinkingEnabled = false;
+            // Emit a signal emulating a phase change which will be so that both
+            // blink modes leave their text showing (0):
+            mMasterBlinkPhase = 0;
+            emit signal_blinkingRedraw(mMasterBlinkPhase);
+        }
+    } else {
+        if (!mIsBlinkingEnabled) {
+            mIsBlinkingEnabled = true;
+            mpBlinkTimer->start();
         }
     }
 }

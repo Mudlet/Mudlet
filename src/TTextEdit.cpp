@@ -66,6 +66,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mpConsole(pC)
 , mpHost(pH)
 , mpScrollBar(nullptr)
+, mIsBlinking(false)
+, mBlinkingPhase(0) // This phase of the four has both fast and slow blinking text showing (drawn foreground and background are different colors)
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -130,6 +132,13 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
+
+    if (mudlet::self()) {
+        // I think mudlet::self() will be a mullptr when setting up the central
+        // debug console which is attached to the "default_host"(?) so not
+        // having THAT one flash is probably okay:
+        connect(mudlet::self(), SIGNAL(signal_blinkingRedraw(const quint8)), this, SLOT(slot_blinkingUpdate(const quint8)), Qt::UniqueConnection);
+    }
 }
 
 void TTextEdit::forceUpdate()
@@ -400,140 +409,45 @@ inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, cons
     painter.fillRect(bR.x(), bR.y(), bR.width(), bR.height(), bgColor);
 }
 
-inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor)
+inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QString& text, const QColor& fgColor, const TChar::AttributeFlags flags)
 {
-    if ((painter.font().bold() != isBold) || (painter.font().underline() != isUnderline) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut)) {
+    if ( (painter.font().bold() != (flags & TChar::Bold))
+       ||(painter.font().underline() != (flags & TChar::Underline))
+       ||(painter.font().italic() != (flags & TChar::Italic))
+       ||(painter.font().strikeOut() != (flags & TChar::StrikeOut))
+       ||(painter.font().overline() != (flags & TChar::Overline))) {
+
         QFont font = painter.font();
-        font.setBold(isBold);
-        font.setUnderline(isUnderline);
-        font.setItalic(isItalics);
-        font.setStrikeOut(isStrikeOut);
+        font.setBold(flags & TChar::Bold);
+        font.setUnderline(flags & TChar::Underline);
+        font.setItalic(flags & TChar::Italic);
+        font.setStrikeOut(flags & TChar::StrikeOut);
+        font.setOverline(flags & TChar::Overline);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
 #endif
         painter.setFont(font);
     }
+
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
+
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     QPointF _p(rect.x(), rect.bottom() - mFontDescent);
     painter.drawText(_p, text);
 #else
+    // The second argument is the y-position and is the baseline of the text:
     painter.drawText(rect.x(), rect.bottom() - mFontDescent, text);
 #endif
 }
 
-
-void TTextEdit::drawFrame(QPainter& p, const QRect& rect)
-{
-    QPoint P_topLeft = rect.topLeft();
-    QPoint P_bottomRight = rect.bottomRight();
-    int x_topLeft = P_topLeft.x();
-    int x_bottomRight = P_bottomRight.x();
-
-    if (x_bottomRight > mScreenWidth * mFontWidth) {
-        x_bottomRight = mScreenWidth * mFontWidth;
-    }
-
-    int x1 = x_topLeft / mFontWidth;
-    int x2 = x_bottomRight / mFontWidth;
-
-    int lineOffset = imageTopLine();
-    bool invers = false;
-
-    if (mHighlight_on && mInversOn) {
-        invers = true;
-    }
-
-    int from = 0;
-    for (int i = from; i < mScreenHeight; i++) {
-        if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
-            break;
-        }
-        int timeOffset = 0;
-        if (mShowTimeStamps) {
-            if (mpBuffer->timeBuffer.size() > i + lineOffset) {
-                timeOffset = mpBuffer->timeBuffer[i + lineOffset].size() - 1;
-            }
-        }
-        int lineLength = mpBuffer->buffer[i + lineOffset].size() + timeOffset;
-        for (int i2 = x1; i2 < lineLength;) {
-            QString text;
-            if (i2 < timeOffset) {
-                text = mpBuffer->timeBuffer[i + lineOffset];
-                bool isBold = false;
-                bool isUnderline = false;
-                bool isItalics = false;
-                bool isStrikeOut = false;
-                QRect textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * timeOffset, mFontHeight);
-                auto bgTime = QColor(22, 22, 22);
-                auto fgTime = QColor(200, 150, 0);
-                drawBackground(p, textRect, bgTime);
-                drawCharacters(p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime);
-                i2 += timeOffset;
-            } else {
-                if (i2 >= x2) {
-                    break;
-                }
-                text = mpBuffer->lineBuffer[i + lineOffset].at(i2 - timeOffset);
-                TChar& f = mpBuffer->buffer[i + lineOffset][i2 - timeOffset];
-                int delta = 1;
-                auto fgColor = QColor(f.fgR, f.fgG, f.fgB);
-                auto bgColor = QColor(f.bgR, f.bgG, f.bgB);
-                while (i2 + delta + timeOffset < lineLength) {
-                    if (mpBuffer->buffer[i + lineOffset][i2 + delta - timeOffset] == f) {
-                        text.append(mpBuffer->lineBuffer[i + lineOffset].at(i2 + delta - timeOffset));
-                        delta++;
-                    } else {
-                        break;
-                    }
-                }
-                if (invers || (bgColor != mBgColor)) {
-                    QRect textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * delta, mFontHeight);
-                    if (invers) {
-                        drawBackground(p, textRect, fgColor);
-                    } else {
-                        drawBackground(p, textRect, bgColor);
-                    }
-                }
-                if ((p.font().bold() != static_cast<bool>(f.flags & TCHAR_BOLD)) || (p.font().underline() != static_cast<bool>(f.flags & TCHAR_UNDERLINE))
-                    || (p.font().italic() != static_cast<bool>(f.flags & TCHAR_ITALICS))
-                    || (p.font().strikeOut() != static_cast<bool>(f.flags & TCHAR_STRIKEOUT))) {
-                    QFont font = p.font();
-                    font.setBold(f.flags & TCHAR_BOLD);
-                    font.setUnderline(f.flags & TCHAR_UNDERLINE);
-                    font.setItalic(f.flags & TCHAR_ITALICS);
-                    font.setStrikeOut(f.flags & TCHAR_STRIKEOUT);
-                    font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
-                    p.setFont(font);
-                }
-                if ((p.pen().color() != fgColor) || (invers)) {
-                    if (invers) {
-                        p.setPen(bgColor);
-                    } else {
-                        p.setPen(fgColor);
-                    }
-                }
-                p.drawText(mFontWidth * i2, (mFontHeight * i) - mFontDescent, text);
-                i2 += delta;
-            }
-        }
-    }
-    mScrollVector = 0;
-}
-
-void TTextEdit::updateLastLine()
-{
-    qDebug() << "--->ACHTUNG: error: updateLastLine() called";
-    QRect r(0, (mScreenHeight - 1) * mFontHeight, mScreenWidth * mFontWidth, mScreenHeight * mFontHeight);
-    mForceUpdate = true;
-    update(r);
-}
-
-
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
+    // Set to true if we need to flash something and updates the member flag
+    // at the end of the process:
+    bool isStillBlinking = false;
+
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth, mScreenHeight * mFontHeight);
     pixmap.fill(palette().base().color());
@@ -583,6 +497,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
+
     if ((r.height() < rect().height()) && (lineOffset > 0)) {
         p.drawPixmap(0, 0, mScreenMap);
         if (!mForceUpdate && !mMouseTracking) {
@@ -596,78 +511,163 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mScrollVector = 0;
         }
     }
-    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
-        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
+
+    if ((!noScroll)
+         && (mScrollVector >= 0)
+         && (mScrollVector <= mScreenHeight)
+         && (!mForceUpdate)) {
+
+        if (mScrollVector * mFontHeight < mScreenMap.height()
+            && mScreenWidth * mFontWidth <= mScreenMap.width()
+            && (mScreenHeight - mScrollVector) * mFontHeight > 0
             && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
+
             screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
             p.drawPixmap(0, 0, screenPixmap);
             from = mScreenHeight - mScrollVector - 1;
         }
-    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
-        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
+
+    } else if ((!noScroll)
+               && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight))
+               && (!mForceUpdate)) {
+
+        if (abs(mScrollVector) * mFontHeight < mScreenMap.height()
+            && mScreenWidth * mFontWidth <= mScreenMap.width()
+            && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
             && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
+
             screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
             p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
             y2 = abs(mScrollVector);
         }
+
     }
+
     QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
     drawBackground(p, deleteRect, mBgColor);
-    for (int i = from; i <= y2; i++) {
+    for (int i = from; i <= y2; ++i) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
+
         mpBuffer->dirty[lineOffset + i] = false;
+
         int timeOffset = 0;
         if (mShowTimeStamps) {
             timeOffset = 13;
         }
-        int lineLength = mpBuffer->buffer[i + lineOffset].size() + timeOffset;
+
+        int lineLength = timeOffset + mpBuffer->buffer.at(i + lineOffset).size();
         for (int i2 = x1; i2 < lineLength;) {
             QString text;
             if (i2 < timeOffset) {
-                text = mpBuffer->timeBuffer[i + lineOffset];
-                bool isBold = false;
-                bool isUnderline = false;
-                bool isItalics = false;
-                bool isStrikeOut = false;
+                text = mpBuffer->timeBuffer.at(i + lineOffset);
                 QRect textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * timeOffset, mFontHeight);
                 auto bgTime = QColor(22, 22, 22);
                 auto fgTime = QColor(200, 150, 0);
                 drawBackground(p, textRect, bgTime);
-                drawCharacters(p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime);
+                drawCharacters(p, textRect, text, fgTime, TChar::None);
                 i2 += timeOffset;
             } else {
                 if (i2 >= x2) {
                     break;
                 }
-                text = mpBuffer->lineBuffer[i + lineOffset].at(i2 - timeOffset);
-                TChar& f = mpBuffer->buffer[i + lineOffset][i2 - timeOffset];
+
+                if (!mpBuffer->lineBuffer.at(i + lineOffset).isEmpty()) {
+                    // Blank lines do not contain any text so QString::at(0) will fail...
+                    text = mpBuffer->lineBuffer[i + lineOffset].at(i2 - timeOffset);
+                } else {
+                    text.clear();
+                }
+
+                TChar& f = mpBuffer->buffer.at(i + lineOffset).at(i2 - timeOffset);
+                TChar::AttributeFlags attributes = f.allDisplayAttributes();
                 int delta = 1;
                 QColor fgColor;
                 QColor bgColor;
-                if (f.flags & TCHAR_INVERSE) {
-                    bgColor = QColor(f.fgR, f.fgG, f.fgB);
-                    fgColor = QColor(f.bgR, f.bgG, f.bgB);
-                } else {
-                    fgColor = QColor(f.fgR, f.fgG, f.fgB);
-                    bgColor = QColor(f.bgR, f.bgG, f.bgB);
+                // Use a single switch to decode all:
+                // * whether to swap fg/bg - (by adding 8 because text is Selected EX-OR Has Reverse attribute)
+                // * whether the blinking effect is the fast one - (by adding 4)
+                // * whether to use same colour for foregrounds and background
+                // because the phase of the blinking says to hide text or not:
+
+                bool isThisBitBlinking = false;
+                if (attributes & (TChar::FastBlink|TChar::SlowBlink)) {
+                    isStillBlinking = true;
+                    isThisBitBlinking = true;
                 }
+
+                switch ((((attributes & TChar::Reverse) != f.isSelected()) ? 8 : 0)
+                        + ((attributes & TChar::FastBlink) ? 4 : 0)
+                        + (isThisBitBlinking ? mBlinkingPhase : 0)) {
+
+                case 2: // No Fg/Bg Swap - Slow Blink - phase 2, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 3: // No Fg/Bg Swap - Slow Blink - phase 3, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 5: // No Fg/Bg Swap - Fast Blink - phase 1, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 7: // No Fg/Bg Swap - Fast Blink - phase 3, Foreground is same as background
+                    fgColor = f.background();
+                    bgColor = f.background();
+                    break;
+
+                case 10: // Fg/Bg Swap - Slow Blink - phase 2, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 11: // Fg/Bg Swap - Slow Blink - phase 3, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 13: // Fg/Bg Swap - Fast Blink - phase 1, Foreground is same as background
+                    [[clang::fallthrough]];
+                case 15: // Fg/Bg Swap - Fast Blink - phase 3, Foreground is same as background
+                    fgColor = f.foreground();
+                    bgColor = f.foreground();
+                    break;
+
+                case 8: // Fg/Bg Swap - Slow Blink - phase 0, Foreground is different from background
+                    // Also NO BLINK - Fg/Bg Swap because either selected OR reversed
+                    [[clang::fallthrough]];
+                case 9: // Fg/Bg Swap - Slow Blink - phase 1, Foreground is different from background
+                    [[clang::fallthrough]];
+                case 12: // Fg/Bg Swap - Fast Blink - phase 0, Foreground is different from background
+                    [[clang::fallthrough]];
+                case 14: // Fg/Bg Swap - Fast Blink - phase 2, Foreground is different from background
+                    fgColor = f.background();
+                    bgColor = f.foreground();
+                    break;
+
+                default:
+                    // cases 0, 1: No Fg/Bg Swap - Slow Blink phase 0 & 1
+                    // cases 4, 6: No Fg/Bg Swap - Fast Blink phase 0 & 2,
+                    // Foreground is different from background
+                    // Also NO BLINK - no Fg/Bg Swap because neither or both selected AND reversed
+                    fgColor = f.foreground();
+                    bgColor = f.background();
+                }
+
                 while (i2 + delta + timeOffset < lineLength) {
-                    if (mpBuffer->buffer[i + lineOffset][i2 + delta - timeOffset] == f) {
-                        text.append(mpBuffer->lineBuffer[i + lineOffset].at(i2 + delta - timeOffset));
+                    if (mpBuffer->buffer.at(i + lineOffset).at(i2 + delta - timeOffset) == f) {
+                        // Is the format the same as the previous item - this
+                        // should handle the second QChar when it is a low
+                        // surrogate assuming the same format is allocated to
+                        // both, but maybe something that sets the format is
+                        // not doing so currently...
+                        text.append(mpBuffer->lineBuffer.at(i + lineOffset).at(i2 + delta - timeOffset));
                         delta++;
                     } else {
                         break;
                     }
                 }
-                QRect textRect;
-                textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * delta, mFontHeight);
-                if (f.flags & TCHAR_INVERSE || (bgColor != mBgColor)) {
+
+                QRect textRect(mFontWidth * i2, mFontHeight * i, mFontWidth * delta, mFontHeight);
+                if (((attributes & TChar::Reverse) != f.isSelected()) || (bgColor != mBgColor)) {
+                    // Either (the current attributes include Reverse Ex-or the text is selected)
+                    // Or the current background colour is not the default so draw in whatever we need
+                    // behind the text as background:
                     drawBackground(p, textRect, bgColor);
                 }
-                drawCharacters(p, textRect, text, f.flags & TCHAR_BOLD, f.flags & TCHAR_UNDERLINE, f.flags & TCHAR_ITALICS, f.flags & TCHAR_STRIKEOUT, fgColor, bgColor);
+                // Now draw the block of text in the current format in the suitable colour:
+                drawCharacters(p, textRect, text, fgColor, f.allDisplayAttributes());
                 i2 += delta;
             }
         }
@@ -682,6 +682,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // Only place this value is changed (apart from initialisation to 0):
     mLastRenderBottom = lineOffset;
     mForceUpdate = false;
+    // We still have some text that needs to blink - so update the member flag
+    // to keep/start the blinking redraws:
+    mIsBlinking = isStillBlinking;
 }
 
 
@@ -726,17 +729,13 @@ void TTextEdit::highlight()
 
         QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mFontWidth, mFontHeight);
         newRegion += rectLastLine;
-    }
-
-    if (lineDelta == 0) {
+    } else if (lineDelta == 0) {
         QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
         newRegion += rectFirstLine;
 
         QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mFontWidth, mFontHeight);
         newRegion += rectLastLine;
-    }
-
-    if (lineDelta < 0) {
+    } else {
         QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, (mPB.x() - mPA.x()) * mFontWidth, mFontHeight);
         newRegion += rectFirstLine;
     }
@@ -750,7 +749,7 @@ void TTextEdit::highlight()
     mSelectedRegion = mSelectedRegion.subtracted(newRegion);
 
     int y1 = mPA.y();
-    for (int y = y1; y <= mPB.y(); y++) {
+    for (int y = y1, total = mPB.y(); y <= total; ++y) {
         int x = 0;
         if (y == y1) {
             x = mPA.x();
@@ -760,13 +759,13 @@ void TTextEdit::highlight()
             break;
         }
 
-        for (;; x++) {
+        for (;; ++x) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
             if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
-                if (!(mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE)) {
-                    mpBuffer->buffer.at(y).at(x).flags |= TCHAR_INVERSE;
+                if (!(mpBuffer->buffer.at(y).at(x).isSelected())) {
+                    mpBuffer->buffer.at(y).at(x).select();
                     mpBuffer->dirty[y] = true;
                 }
             } else {
@@ -785,7 +784,8 @@ void TTextEdit::unHighlight()
     if (y1 < 0) {
         return;
     }
-    for (int y = y1; y <= mPB.y(); y++) {
+
+    for (int y = y1, total = mPB.y(); y <= total; ++y) {
         int x = 0;
         if (y == y1) {
             x = mPA.x();
@@ -795,13 +795,13 @@ void TTextEdit::unHighlight()
             break;
         }
 
-        for (;; x++) {
+        for (;; ++x) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
             if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
-                if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
-                    mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                if (mpBuffer->buffer.at(y).at(x).isSelected()) {
+                    mpBuffer->buffer.at(y).at(x).deselect();
                     mpBuffer->dirty[y] = true;
                 }
             } else {
@@ -838,9 +838,9 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
     if (y < static_cast<int>(mpBuffer->buffer.size())) {
         if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            if (mpBuffer->buffer[y][x].link > 0) {
+            if (mpBuffer->buffer.at(y).at(x).linkIndex() > 0) {
                 setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
+                QStringList tooltip = mpBuffer->mHintStore.value(mpBuffer->buffer.at(y).at(x).linkIndex());
                 QToolTip::showText(event->globalPos(), tooltip.join("\n"));
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -882,14 +882,14 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         if (oldAY < mPA.y()) {
             for (int y = oldAY; y < mPA.y(); y++) {
                 for (auto& x : mpBuffer->buffer[y]) {
-                    x.flags &= ~(TCHAR_INVERSE);
+                    x.deselect();
                 }
             }
         }
         if (oldBY > mPB.y()) {
             for (int y = mPB.y() + 1; y <= oldBY; y++) {
                 for (auto& x : mpBuffer->buffer[y]) {
-                    x.flags &= ~(TCHAR_INVERSE);
+                    x.deselect();
                 }
             }
         }
@@ -911,32 +911,26 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     if (p1.manhattanLength() < p2.manhattanLength()) {
         if (mPA.y() < PC.y() || ((mPA.x() < PC.x()) && (mPA.y() == PC.y()))) {
             int y1 = PC.y();
-            for (int y = y1; y >= mPA.y(); y--) {
+            for (int y = y1, total = mPA.y(); y >= total; --y) {
                 if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
                     break;
                 }
                 int x = mpBuffer->buffer.at(y).size() - 1;
                 if (y == y1) {
-                    x = PC.x();
-                    if (x >= static_cast<int>(mpBuffer->buffer.at(y).size())) {
-                        x = static_cast<int>(mpBuffer->buffer.at(y).size()) - 1;
-                    }
-                    if (x < 0) {
-                        x = 0;
-                    }
+                    x = qBound(0, PC.x(), (static_cast<int>(mpBuffer->buffer.at(y).size()) - 1));
                 }
-                for (;; x--) {
+                for (; x >= 0; --x) {
                     if ((y == mPA.y()) && (x < mPA.x())) {
                         break;
                     }
 
-                    if (x < static_cast<int>(mpBuffer->buffer[y].size()) && x >= 0) {
-                        if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
-                            mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                    if (x >= 0 && x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                        if (mpBuffer->buffer.at(y).at(x).isSelected()) {
+                            mpBuffer->buffer.at(y).at(x).deselect();
                             mpBuffer->dirty[y] = true;
+                        } else {
+                            break;
                         }
-                    } else {
-                        break;
                     }
                 }
             }
@@ -945,7 +939,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     } else {
         if (mPB.y() > PC.y() || (mPB.x() > PC.x() && mPB.y() == PC.y())) {
             int y1 = PC.y();
-            for (int y = y1; y <= mPB.y(); y++) {
+            for (int y = y1, total = mPB.y(); y <= total; ++y) {
                 int x = 0;
                 if (y == y1) {
                     x = PC.x();
@@ -953,13 +947,13 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
                 if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
                     break;
                 }
-                for (;; x++) {
+                for (;; ++x) {
                     if ((y == mPB.y()) && (x > mPB.x())) {
                         break;
                     }
                     if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
-                        if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
-                            mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                        if (mpBuffer->buffer.at(y).at(x).isSelected()) {
+                            mpBuffer->buffer.at(y).at(x).deselect();
                             mpBuffer->dirty[y] = true;
                         }
                     } else {
@@ -1048,9 +1042,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             y = 0;
         }
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
-            if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                if (mpBuffer->buffer[y][x].link > 0) {
-                    QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
+            if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                if (mpBuffer->buffer.at(y).at(x).linkIndex() > 0) {
+                    QStringList command = mpBuffer->mLinkStore.value(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QString func;
                     if (command.size() > 0) {
                         func = command.at(0);
@@ -1142,9 +1136,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                if (mpBuffer->buffer[y][x].link > 0) {
-                    QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
-                    QStringList hint = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
+                if (mpBuffer->buffer.at(y).at(x).linkIndex() > 0) {
+                    QStringList command = mpBuffer->mLinkStore.value(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QStringList hint = mpBuffer->mHintStore.value(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
                         for (int i = 0; i < command.size(); i++) {
@@ -1346,15 +1340,12 @@ void TTextEdit::copySelectionToClipboardHTML()
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             return;
         }
-        int x = 0;
         if (y == mPA.y()) { // First line of selection
-            x = mPA.x();
-            text.append(mpBuffer->bufferToHtml(QPoint(x, y), QPoint(-1, y), mShowTimeStamps, x));
+            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, -1, mPA.x(), mPA.x()));
         } else if (y == mPB.y()) { // Last line of selection
-            x = mPB.x();
-            text.append(mpBuffer->bufferToHtml(QPoint(0, y), QPoint(x, y), mShowTimeStamps));
+            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, mPB.x()));
         } else { // inside lines of selection
-            text.append(mpBuffer->bufferToHtml(QPoint(0, y), QPoint(-1, y), mShowTimeStamps));
+            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y));
         }
     }
     text.append(QStringLiteral(" </div></body>\n"
@@ -1607,4 +1598,14 @@ int TTextEdit::getRowCount()
     }
 
     return height() / rowHeight;
+}
+
+void TTextEdit::slot_blinkingUpdate(const quint8 phase)
+{
+    if (mBlinkingPhase != phase) {
+        mBlinkingPhase = phase;
+        if (mIsBlinking) {
+            update();
+        }
+    }
 }

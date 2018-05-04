@@ -237,6 +237,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_disableBlinkingText">
+            <property name="text">
+             <string>Force text to NOT blink</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

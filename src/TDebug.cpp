@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,7 +35,7 @@ TDebug::TDebug(QColor c, QColor d)
 
 TDebug& TDebug::operator>>(const int code)
 {
-    mudlet::mpDebugConsole->printDebug(fgColor, bgColor, msg);
+    mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
     return *this;
 }
 

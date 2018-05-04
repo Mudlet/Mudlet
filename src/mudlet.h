@@ -30,9 +30,13 @@
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
+
+#include "TBuffer.h" // Needed for TChar details
+
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
+
 #include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
@@ -123,7 +127,8 @@ public:
     bool pasteWindow(Host* pHost, const QString& name);
     bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(Host*, const QString& name, QString& path);
-    bool setTextFormat(Host*, const QString& name, int, int, int, int, int, int, bool, bool, bool, bool);
+    bool setTextFormat(Host*, const QString& name, const QColor &bgColor, const QColor &fgColor, const TChar::AttributeFlags attributes = TChar::None);
+    bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
     bool setLabelClickCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelDoubleClickCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelReleaseCallback(Host*, const QString&, const QString&, const TEvent&);
@@ -137,11 +142,7 @@ public:
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
     int selectSection(Host*, const QString& name, int, int);
-    void setBold(Host*, const QString& name, bool);
-    void setLink(Host* pHost, const QString& name, const QString& linkText, QStringList& linkFunction, QStringList&);
-    void setItalics(Host*, const QString& name, bool);
-    void setUnderline(Host*, const QString& name, bool);
-    void setStrikeOut(Host*, const QString& name, bool);
+    void setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList&);
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
@@ -317,6 +318,9 @@ public:
     Updater* updater;
 #endif
 
+    bool mIsBlinkingEnabled;
+    const quint8& getMasterBlinkPhase() const { return mMasterBlinkPhase; }
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -361,6 +365,8 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
     void slot_newDataOnHost(const QString&, const bool isLowerPriorityChange = false);
+    void slot_updateBlinkPhase();
+    void slot_disableBlinkingText(const bool);
 
 
 protected:
@@ -373,6 +379,7 @@ signals:
     void signal_setTreeIconSize(const int);
     void signal_hostCreated(Host*, const quint8);
     void signal_hostDestroyed(Host*, const quint8);
+    void signal_blinkingRedraw(const quint8);
 
 private slots:
     void slot_close_profile();
@@ -455,6 +462,15 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+    QTimer* mpBlinkTimer;
+    // Updated every 200mS used for the state of slow and fast blinking text
+    // Relationship between phases and drawing state.
+    // Timing is based on a 2.5 Hz rate for the fast rate:
+    // Phase    |          0 |          1 |          2 |          3 |
+    // Time (ms)| 000 to 199 | 200 to 399 | 400 to 599 | 600 to 799 |
+    // Slow     | Foreground | Foreground | Background | Background |
+    // Fast     | Foreground | Background | Foreground | Background |
+    quint8 mMasterBlinkPhase;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -114,16 +114,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         // which has it's own title and icon set.
         mWrapAt = 50;
         mIsSubConsole = false;
-        mStandardFormat.bgR = mBgColor.red();
-        mStandardFormat.bgG = mBgColor.green();
-        mStandardFormat.bgB = mBgColor.blue();
-        mStandardFormat.fgR = mFgColor.red();
-        mStandardFormat.fgG = mFgColor.green();
-        mStandardFormat.fgB = mFgColor.blue();
-        mStandardFormat.flags &= ~(TCHAR_BOLD);
-        mStandardFormat.flags &= ~(TCHAR_ITALICS);
-        mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
-        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
+        mStandardFormat.setTextFormat(mFgColor, mBgColor, TChar::None);
     } else {
         setWindowTitle(tr("Non Debug Console"));
         if (parent) {
@@ -142,16 +133,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
             mCommandBgColor = mpHost->mCommandBgColor;
             mCommandFgColor = mpHost->mCommandFgColor;
         }
-        mStandardFormat.bgR = mpHost->mBgColor.red();
-        mStandardFormat.bgG = mpHost->mBgColor.green();
-        mStandardFormat.bgB = mpHost->mBgColor.blue();
-        mStandardFormat.fgR = mpHost->mFgColor.red();
-        mStandardFormat.fgG = mpHost->mFgColor.green();
-        mStandardFormat.fgB = mpHost->mFgColor.blue();
-        mStandardFormat.flags &= ~(TCHAR_BOLD);
-        mStandardFormat.flags &= ~(TCHAR_ITALICS);
-        mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
-        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
+        mStandardFormat.setTextFormat(mpHost->mFgColor, mpHost->mBgColor, TChar::None);
     }
     setContentsMargins(0, 0, 0, 0);
     if (mpHost) {
@@ -159,12 +141,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     } else {
         profile_name = "debug console";
     }
-    mFormatSystemMessage.bgR = mBgColor.red();
-    mFormatSystemMessage.bgG = mBgColor.green();
-    mFormatSystemMessage.bgB = mBgColor.blue();
-    mFormatSystemMessage.fgR = 255;
-    mFormatSystemMessage.fgG = 0;
-    mFormatSystemMessage.fgB = 0;
+    mFormatSystemMessage.setBackground(mBgColor);
+    mFormatSystemMessage.setForeground(Qt::red);
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
 
@@ -1041,12 +1019,7 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         mpCommandLine->setFont(mpHost->mDisplayFont);
-        mFormatCurrent.bgR = mpHost->mBgColor.red();
-        mFormatCurrent.bgG = mpHost->mBgColor.green();
-        mFormatCurrent.bgB = mpHost->mBgColor.blue();
-        mFormatCurrent.fgR = mpHost->mFgColor.red();
-        mFormatCurrent.fgG = mpHost->mFgColor.green();
-        mFormatCurrent.fgB = mpHost->mFgColor.blue();
+        mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     }
     QPalette palette;
     palette.setColor(QPalette::Button, QColor(Qt::blue));
@@ -1238,92 +1211,56 @@ void TConsole::hideEvent(QHideEvent* event)
 void TConsole::reset()
 {
     deselect();
-    mFormatCurrent.bgR = mStandardFormat.bgR;
-    mFormatCurrent.bgG = mStandardFormat.bgG;
-    mFormatCurrent.bgB = mStandardFormat.bgB;
-    mFormatCurrent.fgR = mStandardFormat.fgR;
-    mFormatCurrent.fgG = mStandardFormat.fgG;
-    mFormatCurrent.fgB = mStandardFormat.fgB;
-    mFormatCurrent.flags &= ~(TCHAR_BOLD);
-    mFormatCurrent.flags &= ~(TCHAR_ITALICS);
-    mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
-    mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
+    mFormatCurrent.setColors(mStandardFormat.foreground(), mStandardFormat.background());
+    mFormatCurrent.setAllDisplayAttributes(TChar::None);
 }
 
 void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat)
 {
     int x = P.x();
     int y = P.y();
-    int o = 0; //FIXME: das ist ein fehler bei mehrzeiliger selection
-    int r = text.size();
     QPoint P2 = P;
-    P2.setX(x + r);
+    P2.setX(x + text.size());
 
+    TChar standardLinkFormat = TChar(Qt::blue, mBgColor, TChar::Underline);
     if (mTriggerEngineMode) {
-        if (hasSelection()) {
-            if (r < o) {
-                int a = -1 * (o - r);
-                mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
-            }
-            if (r > o) {
-                int a = r - o;
-                mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
-            }
-        } else {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups(x, r);
-        }
+        mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
+
         if (y < mEngineCursor) {
             if (customFormat) {
                 buffer.insertInLine(P, text, mFormatCurrent);
             } else {
-                TChar _f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true, false);
-                buffer.insertInLine(P, text, _f);
+                buffer.insertInLine(P, text, standardLinkFormat);
             }
-            buffer.applyLink(P, P2, text, func, hint);
+            buffer.applyLink(P, P2, func, hint);
             mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
         } else if (y >= mEngineCursor) {
             if (customFormat) {
                 buffer.insertInLine(P, text, mFormatCurrent);
             } else {
-                TChar _f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true, false);
-                buffer.insertInLine(P, text, _f);
+                buffer.insertInLine(P, text, standardLinkFormat);
             }
-            buffer.applyLink(P, P2, text, func, hint);
+            buffer.applyLink(P, P2, func, hint);
         }
-        return;
+
     } else {
         if ((buffer.buffer.size() == 0 && buffer.buffer[0].size() == 0) || mUserCursor == buffer.getEndPos()) {
             if (customFormat) {
                 buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
             } else {
-                TChar _f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true, false);
-                buffer.addLink(mTriggerEngineMode, text, func, hint, _f);
+                buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat);
             }
 
-            /*buffer.append( text,
-                                       0,
-                                       text.size(),
-                                       mFormatCurrent.fgR,
-                                       mFormatCurrent.fgG,
-                                       mFormatCurrent.fgB,
-                                       mFormatCurrent.bgR,
-                                       mFormatCurrent.bgG,
-                                       mFormatCurrent.bgB,
-                                       mFormatCurrent.bold,
-                                       mFormatCurrent.italics,
-                                       mFormatCurrent.underline );*/
             mUpperPane->showNewLines();
             mLowerPane->showNewLines();
-
         } else {
             if (customFormat) {
                 buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             } else {
-                TChar _f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true, false);
-                buffer.insertInLine(mUserCursor, text, _f);
+                buffer.insertInLine(mUserCursor, text, standardLinkFormat);
             }
 
-            buffer.applyLink(P, P2, text, func, hint);
+            buffer.applyLink(P, P2, func, hint);
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
                 int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
@@ -1371,19 +1308,7 @@ void TConsole::insertText(const QString& text, QPoint P)
         return;
     } else {
         if ((buffer.buffer.size() == 0 && buffer.buffer[0].size() == 0) || mUserCursor == buffer.getEndPos()) {
-            buffer.append(text,
-                          0,
-                          text.size(),
-                          mFormatCurrent.fgR,
-                          mFormatCurrent.fgG,
-                          mFormatCurrent.fgB,
-                          mFormatCurrent.bgR,
-                          mFormatCurrent.bgG,
-                          mFormatCurrent.bgB,
-                          mFormatCurrent.flags & TCHAR_BOLD,
-                          mFormatCurrent.flags & TCHAR_ITALICS,
-                          mFormatCurrent.flags & TCHAR_UNDERLINE,
-                          mFormatCurrent.flags & TCHAR_STRIKEOUT);
+            buffer.append(text, 0, text.size(), mFormatCurrent);
             mUpperPane->showNewLines();
             mLowerPane->showNewLines();
         } else {
@@ -1719,10 +1644,11 @@ std::list<int> TConsole::_getFgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer[y].size()) - 1 >= x) {
-        result.push_back(buffer.buffer[y][x].fgR);
-        result.push_back(buffer.buffer[y][x].fgG);
-        result.push_back(buffer.buffer[y][x].fgB);
+    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
+        QColor color(buffer.buffer.at(y).at(x).foreground());
+        result.push_back(color.red());
+        result.push_back(color.green());
+        result.push_back(color.blue());
     }
     return result;
 }
@@ -1742,10 +1668,11 @@ std::list<int> TConsole::_getBgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer[y].size()) - 1 >= x) {
-        result.push_back(buffer.buffer[y][x].bgR);
-        result.push_back(buffer.buffer[y][x].bgG);
-        result.push_back(buffer.buffer[y][x].bgB);
+    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
+        QColor color(buffer.buffer.at(y).at(x).background());
+        result.push_back(color.red());
+        result.push_back(color.green());
+        result.push_back(color.blue());
     }
     return result;
 }
@@ -1954,65 +1881,52 @@ bool TConsole::selectSection(int from, int to)
     return true;
 }
 
-void TConsole::setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint)
+void TConsole::setLink(QStringList& linkFunction, QStringList& linkHint)
 {
-    buffer.applyLink(P_begin, P_end, linkText, linkFunction, linkHint);
+    buffer.applyLink(P_begin, P_end, linkFunction, linkHint);
 }
 
-void TConsole::setBold(bool b)
+// Set or Reset ALL the specified (but not others)
+void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)
 {
-    if (b) {
-        mFormatCurrent.flags |= TCHAR_BOLD;
-    } else {
-        mFormatCurrent.flags &= ~(TCHAR_BOLD);
+    // Need to handle blink ones correctly since they take two bit values and
+    // only one bit ought to be set at a time (the painting code in TTextEdit
+    // correctly prioritises the fast one if both are set but lets set it
+    // right here):
+    TChar::AttributeFlags andMask = ~(attributes);
+    if (attributes & TChar::BlinkingMask) {
+        // We are touching a blink attribute, so we must take BOTH of them out
+        // of the AND mask
+        andMask &= ~(TChar::BlinkingMask);
     }
-    buffer.applyBold(P_begin, P_end, b);
-}
-
-void TConsole::setItalics(bool b)
-{
-    if (b) {
-        mFormatCurrent.flags |= TCHAR_ITALICS;
-    } else {
-        mFormatCurrent.flags &= ~(TCHAR_ITALICS);
-    }
-    buffer.applyItalics(P_begin, P_end, b);
-}
-
-void TConsole::setUnderline(bool b)
-{
-    if (b) {
-        mFormatCurrent.flags |= TCHAR_UNDERLINE;
-    } else {
-        mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
-    }
-    buffer.applyUnderline(P_begin, P_end, b);
-}
-
-void TConsole::setStrikeOut(bool b)
-{
-    if (b) {
-        mFormatCurrent.flags |= TCHAR_STRIKEOUT;
-    } else {
-        mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
-    }
-    buffer.applyStrikeOut(P_begin, P_end, b);
+    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & andMask) | (b ? attributes : TChar::None));
+    buffer.applyAttribute(P_begin, P_end, attributes, b);
 }
 
 void TConsole::setFgColor(int r, int g, int b)
 {
-    mFormatCurrent.fgR = r;
-    mFormatCurrent.fgG = g;
-    mFormatCurrent.fgB = b;
-    buffer.applyFgColor(P_begin, P_end, r, g, b);
+    const QColor color(r, g, b);
+    mFormatCurrent.setForeground(color);
+    buffer.applyFgColor(P_begin, P_end, color);
 }
 
 void TConsole::setBgColor(int r, int g, int b)
 {
-    mFormatCurrent.bgR = r;
-    mFormatCurrent.bgG = g;
-    mFormatCurrent.bgB = b;
-    buffer.applyBgColor(P_begin, P_end, r, g, b);
+    const QColor color(r, g, b);
+    mFormatCurrent.setBackground(color);
+    buffer.applyBgColor(P_begin, P_end, color);
+}
+
+void TConsole::setBgColor(const QColor& newColor)
+{
+    mFormatCurrent.setBackground(newColor);
+    buffer.applyBgColor(P_begin, P_end, newColor);
+}
+
+void TConsole::setFgColor(const QColor& newColor)
+{
+    mFormatCurrent.setForeground(newColor);
+    buffer.applyFgColor(P_begin, P_end, newColor);
 }
 
 void TConsole::setScrollBarVisible(bool isVisible)
@@ -2035,19 +1949,7 @@ void TConsole::printCommand(QString& msg)
                 msg.prepend("\n");
             }
         }
-        buffer.appendLine(msg,
-                          0,
-                          msg.size() - 1,
-                          mCommandFgColor.red(),
-                          mCommandFgColor.green(),
-                          mCommandFgColor.blue(),
-                          mCommandBgColor.red(),
-                          mCommandBgColor.green(),
-                          mCommandBgColor.blue(),
-                          false,
-                          false,
-                          false,
-                          false);
+        buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
     } else {
         int lineBeforeNewContent = buffer.size() - 2;
         if (lineBeforeNewContent >= 0) {
@@ -2057,13 +1959,7 @@ void TConsole::printCommand(QString& msg)
             }
             if (buffer.promptBuffer[lineBeforeNewContent] == true) {
                 QPoint P(promptEnd, lineBeforeNewContent);
-                TChar format;
-                format.fgR = mCommandFgColor.red();
-                format.fgG = mCommandFgColor.green();
-                format.fgB = mCommandFgColor.blue();
-                format.bgR = mCommandBgColor.red();
-                format.bgG = mCommandBgColor.green();
-                format.bgB = mCommandBgColor.blue();
+                TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
                 int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
 
@@ -2083,63 +1979,9 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
     if (customFormat) {
         buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
     } else {
-        if (!mIsSubConsole && !mIsDebugConsole) {
-            TChar f = TChar(0, 0, 255, mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(), false, false, true, false);
-            buffer.addLink(mTriggerEngineMode, text, func, hint, f);
-        } else {
-            TChar f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true, false);
-            buffer.addLink(mTriggerEngineMode, text, func, hint, f);
-        }
+        TChar f = TChar(Qt::blue, ((!mIsSubConsole && !mIsDebugConsole) ? mpHost->mBgColor : mBgColor), TChar::Underline);
+        buffer.addLink(mTriggerEngineMode, text, func, hint, f);
     }
-}
-
-void TConsole::echo(const QString& msg)
-{
-    if (mTriggerEngineMode) {
-        buffer.appendLine(msg,
-                          0,
-                          msg.size() - 1,
-                          mFormatCurrent.fgR,
-                          mFormatCurrent.fgG,
-                          mFormatCurrent.fgB,
-                          mFormatCurrent.bgR,
-                          mFormatCurrent.bgG,
-                          mFormatCurrent.bgB,
-                          mFormatCurrent.flags & TCHAR_BOLD,
-                          mFormatCurrent.flags & TCHAR_ITALICS,
-                          mFormatCurrent.flags & TCHAR_UNDERLINE,
-                          mFormatCurrent.flags & TCHAR_STRIKEOUT);
-    } else {
-        print(msg);
-    }
-}
-
-void TConsole::print(const char* txt)
-{
-    QString msg = txt;
-    buffer.append(msg,
-                  0,
-                  msg.size(),
-                  mFormatCurrent.fgR,
-                  mFormatCurrent.fgG,
-                  mFormatCurrent.fgB,
-                  mFormatCurrent.bgR,
-                  mFormatCurrent.bgG,
-                  mFormatCurrent.bgB,
-                  mFormatCurrent.flags & TCHAR_BOLD,
-                  mFormatCurrent.flags & TCHAR_ITALICS,
-                  mFormatCurrent.flags & TCHAR_UNDERLINE,
-                  mFormatCurrent.flags & TCHAR_STRIKEOUT);
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
-}
-
-void TConsole::printDebug(QColor& c, QColor& d, const QString& msg)
-{
-    buffer.append(msg, 0, msg.size(), c.red(), c.green(), c.blue(), d.red(), d.green(), d.blue(), false, false, false, false);
-
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
 }
 
 TConsole* TConsole::createBuffer(const QString& name)
@@ -2387,68 +2229,44 @@ bool TConsole::printWindow(const QString& name, const QString& text)
     }
 }
 
+void TConsole::print(const char* txt)
+{
+    QString msg = txt;
+    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
+}
+
+// echoUserWindow(const QString& msg) was a redundent wrapper around this method:
 void TConsole::print(const QString& msg)
 {
-    buffer.append(msg,
-                  0,
-                  msg.size(),
-                  mFormatCurrent.fgR,
-                  mFormatCurrent.fgG,
-                  mFormatCurrent.fgB,
-                  mFormatCurrent.bgR,
-                  mFormatCurrent.bgG,
-                  mFormatCurrent.bgB,
-                  mFormatCurrent.flags & TCHAR_BOLD,
-                  mFormatCurrent.flags & TCHAR_ITALICS,
-                  mFormatCurrent.flags & TCHAR_UNDERLINE,
-                  mFormatCurrent.flags & TCHAR_STRIKEOUT);
+    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 }
 
+// printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
+// same as this method it was just that the arguments were in a different order
 void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor)
 {
-    buffer.append(msg, 0, msg.size(), fgColor.red(), fgColor.green(), fgColor.blue(), bgColor.red(), bgColor.green(), bgColor.blue(), false, false, false, false);
+    buffer.append(msg, 0, msg.size(), fgColor, bgColor);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 }
-
 
 void TConsole::printSystemMessage(const QString& msg)
 {
-    assert(mpHost);
-
-    QColor bgColor;
-    QColor fgColor;
-
-    if (mIsDebugConsole) {
-        bgColor = mBgColor;
-        fgColor = mFgColor;
-    } else {
-        bgColor = mpHost->mBgColor;
-    }
-
-    QString txt = QString("System Message: ") + msg;
-    buffer.append(txt,
-                  0,
-                  txt.size(),
-                  mSystemMessageFgColor.red(),
-                  mSystemMessageFgColor.green(),
-                  mSystemMessageFgColor.blue(),
-                  mSystemMessageBgColor.red(),
-                  mSystemMessageBgColor.green(),
-                  mSystemMessageBgColor.blue(),
-                  false,
-                  false,
-                  false,
-                  false);
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
+    QString txt = tr("System Message: %1").arg(msg);
+    print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
 }
 
-void TConsole::echoUserWindow(const QString& msg)
+void TConsole::echo(const QString& msg)
 {
-    print(msg);
+    if (mTriggerEngineMode) {
+        buffer.appendLine(msg, 0, msg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+    } else {
+        print(msg);
+    }
 }
 
 void TConsole::copy()

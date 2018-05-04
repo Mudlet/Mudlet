@@ -805,8 +805,8 @@ bool XMLexport::writeTrigger(TTrigger* pT)
         writeAttribute("isFilterTrigger", pT->mFilterTrigger ? "yes" : "no");
         writeAttribute("isSoundTrigger", pT->mSoundTrigger ? "yes" : "no");
         writeAttribute("isColorTrigger", pT->mColorTrigger ? "yes" : "no");
-        writeAttribute("isColorTriggerFg", pT->mColorTriggerFg ? "yes" : "no");
-        writeAttribute("isColorTriggerBg", pT->mColorTriggerBg ? "yes" : "no");
+        writeAttribute("isColorTriggerFg", (pT->mColorTriggerFgAnsi != TTrigger::scmIgnored) ? "yes" : "no");
+        writeAttribute("isColorTriggerBg", (pT->mColorTriggerBgAnsi != TTrigger::scmIgnored) ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
@@ -834,8 +834,12 @@ bool XMLexport::writeTrigger(TTrigger* pT)
             // writeEndElement(); // </RegexList>
 
             writeStartElement("regexCodeList");
-            for (int i = 0; i < pT->mRegexCodeList.size(); ++i) {
-                writeTextElement("string", pT->mRegexCodeList.at(i));
+            // Revert the first 16 ANSI colour codes back to the wrong values
+            // that are still used in the save files - can be left out once the
+            // above "improvement" is implimented:
+            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+            for (int i = 0; i < unfixedAnsiColourPatternList.size(); ++i) {
+                writeTextElement("string", unfixedAnsiColourPatternList.at(i));
             }
             writeEndElement(); // </regexCodeList>
 
@@ -1426,4 +1430,104 @@ bool XMLexport::writeScriptElement(const QString& script)
     writeTextElement(QLatin1String("script"), localScript);
 
     return (!hasError());
+}
+
+// Unlike the reverse operation in XMLimport we cannot modify the supplied patternlist
+QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, const QList<int> & typeList)
+{
+
+    QStringList results;
+    QRegularExpression regex = QRegularExpression(QStringLiteral("(^ANSI_COLORS_F{(\\d+|DEFAULT)}_B{(\\d+|DEFAULT)}$"));
+    QStringListIterator itPattern(patternList);
+    QListIterator<int> itType(typeList);
+    while (itPattern.hasNext() && itType.hasNext()) {
+        if (itType.next() == REGEX_COLOR_PATTERN) {
+            QRegularExpressionMatch match = regex.match(itPattern.next());
+            // Although we define two '('...')' capture groups the count/size is
+            // 3 (0 is the whole string)!
+            if (match.capturedTexts().size() == 3) {
+                bool isFgOk = false;
+                int fg = 0;
+                if (match.captured(1) == QLatin1String("DEFAULT")) {
+                    // Use the old value for default which is 0;
+                    isFgOk = true;
+                } else {
+                    fg = match.captured(1).toInt(&isFgOk);
+                    if (isFgOk) {
+                        // clang-format off
+                        switch (fg) {
+                        case 0:     fg = 2;     break; // black
+                        case 1:     fg = 4;     break; // red
+                        case 2:     fg = 6;     break; // green
+                        case 3:     fg = 8;     break; // yellow
+                        case 4:     fg = 10;    break; // blue
+                        case 5:     fg = 12;    break; // magenta
+                        case 6:     fg = 14;    break; // cyan
+                        case 7:     fg = 16;    break; // white (light gray)
+                        case 8:     fg = 1;     break; // black
+                        case 9:     fg = 3;     break; // red
+                        case 10:    fg = 5;     break; // green
+                        case 11:    fg = 7;     break; // yellow
+                        case 12:    fg = 9;     break; // blue
+                        case 13:    fg = 11;    break; // magenta
+                        case 14:    fg = 13;    break; // cyan
+                        case 15:    fg = 15;    break; // white (light gray)
+                        default:
+                               ; // No-op for other color codes
+                        }
+                        // clang-format on
+                    } else {
+                        // Oops failure
+                        if (!isFgOk) {
+                            qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
+                        }
+                    }
+                }
+                bool isBgOk = false;
+                int bg = 0;
+                if (match.captured(2) == QLatin1String("DEFAULT")) {
+                    // Use the old value for default which is 0;
+                    isBgOk = true;
+                } else {
+                    bg = match.captured(2).toInt(&isBgOk);
+                    if (isBgOk) {
+                        // clang-format off
+                        switch (bg) {
+                        case 0:     bg = 2;     break; // black
+                        case 1:     bg = 4;     break; // red
+                        case 2:     bg = 6;     break; // green
+                        case 3:     bg = 8;     break; // yellow
+                        case 4:     bg = 10;    break; // blue
+                        case 5:     bg = 12;    break; // magenta
+                        case 6:     bg = 14;    break; // cyan
+                        case 7:     bg = 16;    break; // white (light gray)
+                        case 8:     bg = 1;     break; // black
+                        case 9:     bg = 3;     break; // red
+                        case 10:    bg = 5;     break; // green
+                        case 11:    bg = 7;     break; // yellow
+                        case 12:    bg = 9;     break; // blue
+                        case 13:    bg = 11;    break; // magenta
+                        case 14:    bg = 13;    break; // cyan
+                        case 15:    bg = 15;    break; // white (light gray)
+                        default:
+                               ; // No-op for other color codes
+                        }
+                        // clang-format on
+                    } else {
+                        // Oops failure
+                        if (!isBgOk) {
+                            qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                        }
+                    }
+                }
+
+                results << QStringLiteral("FG%1BG%2").arg(QString::number(fg), QString::number(bg));
+            }
+        } else {
+            // Copy across the pattern interator if it isn't a colour pattern
+            results << itPattern.next();
+        }
+    }
+
+    return results;
 }
