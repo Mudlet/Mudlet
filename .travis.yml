@@ -76,8 +76,8 @@ matrix:
     - Q_OR_C_MAKE=qmake
     - QT_VERSION=59
     addons:
-      - apt: *apt-addon
-      - coverity_scan:
+      apt: *apt-addon
+      coverity_scan:
         project:
           name: "Mudlet/Mudlet"
           description: "<Your project description here>"
