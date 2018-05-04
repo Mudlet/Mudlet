@@ -879,25 +879,28 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         lua_pushnumber(L, -1);
         return 1;
     }
-    luaNumOfMatch--; //we want capture groups to start with 1 instead of 0
-    if (luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
+    // We want capture groups to start with 1 instead of 0 so predecrement
+    // luaNumOfMatch :
+    if (--luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
         TLuaInterpreter* pL = host.getLuaInterpreter();
         auto iti = pL->mCaptureGroupPosList.begin();
         auto its = pL->mCaptureGroupList.begin();
+        int begin = *iti;
+        std::string& s = *its;
 
         for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
+            begin = *iti;
             if (i >= luaNumOfMatch) {
                 break;
             }
         }
         for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
+            s = *its;
             if (i >= luaNumOfMatch) {
                 break;
             }
         }
 
-        int begin = *iti;
-        std::string& s = *its;
         int length = s.size();
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> 0;
@@ -3172,7 +3175,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     }
 
-    bool lua_result;
+    bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
         lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
@@ -3187,6 +3190,11 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
         lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event);
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
+        return 2;
+    }
 
     if (lua_result) {
         lua_pushboolean(L, true);
@@ -10147,6 +10155,15 @@ int TLuaInterpreter::getTime(lua_State* L)
 }
 
 
+// syntax: getEpoch()
+// returns: seconds since unix epoch with milliseconds (e.g. 1523555867.191)
+int TLuaInterpreter::getEpoch(lua_State *L)
+{
+    lua_pushnumber(L, static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0));
+    return 1;
+}
+
+
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
     string a1;
@@ -12115,6 +12132,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killAlias", TLuaInterpreter::killAlias);
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
+    lua_register(pGlobalLua, "getEpoch", TLuaInterpreter::getEpoch);
     lua_register(pGlobalLua, "invokeFileDialog", TLuaInterpreter::invokeFileDialog);
     lua_register(pGlobalLua, "getTimestamp", TLuaInterpreter::getTimestamp);
     lua_register(pGlobalLua, "setLink", TLuaInterpreter::setLink);
@@ -12320,6 +12338,10 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #endif
+#ifdef Q_OS_WIN32
+    //Windows Qt Creator builds with our SDK install the library into a well known directory
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+#endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
@@ -12470,6 +12492,12 @@ void TLuaInterpreter::initIndenterGlobals()
     luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
+#elif defined(Q_OS_WIN32)
+    // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
+    luaL_dostring(pIndenterState,
+                  QStringLiteral("package.path = [[%1\\?.lua;%2\\..\\3rdparty\\?.lua;%2\\..\\..\\3rdparty\\?.lua;]] .. package.path")
+                          .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
+                          .toUtf8().constData());
 #endif
 
     int error = luaL_dostring(pIndenterState, R"(
