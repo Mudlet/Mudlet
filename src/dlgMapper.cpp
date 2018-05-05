@@ -229,7 +229,7 @@ void dlgMapper::choseRoom(QListWidgetItem* pT)
             qDebug() << "found room id=" << i;
             mpMap->mTargetID = i;
             if (!mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mpHost->getName()), i)) {
-                QString msg = "Cannot find a path to this room.\n";
+                QString msg = QStringLiteral("Cannot find a path to this room.\n");
                 mpHost->mpConsole->printSystemMessage(msg);
             } else {
                 mpMap->mpHost->startSpeedWalk();

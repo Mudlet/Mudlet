@@ -70,6 +70,7 @@ QFile replayFile;
 
 cTelnet::cTelnet(Host* pH)
 : mResponseProcessed(true)
+, networkLatency()
 , mAlertOnNewData(true)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
@@ -82,11 +83,6 @@ cTelnet::cTelnet(Host* pH)
 , mCommands(0)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
-, enableATCP(false)
-, enableGMCP(false)
-, enableChannel102(false)
-, loadingReplay(false)
-, networkLatency()
 , mpProgressDialog()
 , hostPort()
 , networkLatencyMin()
@@ -95,6 +91,10 @@ cTelnet::cTelnet(Host* pH)
 , mZstream()
 , recvdGA()
 , lastTimeOffset()
+, enableATCP(false)
+, enableGMCP(false)
+, enableChannel102(false)
+, loadingReplay(false)
 , mIsReplayRunFromLua(false)
 {
     mIsTimerPosting = false;
@@ -103,10 +103,10 @@ cTelnet::cTelnet(Host* pH)
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
-    encodingChanged(QLatin1String("UTF-8"));
-    termType = QString("Mudlet %1").arg(APP_VERSION);
+    encodingChanged(QStringLiteral("UTF-8"));
+    termType = QStringLiteral("Mudlet %1").arg(QStringLiteral(APP_VERSION));
     if (QByteArray(APP_BUILD).trimmed().length()) {
-        termType.append(QString(APP_BUILD));
+        termType.append(QStringLiteral(APP_BUILD));
     }
 
     iac = iac2 = insb = false;
@@ -116,18 +116,18 @@ cTelnet::cTelnet(Host* pH)
     curY = 25;
 
     if (mAcceptableEncodings.isEmpty()) {
-        mAcceptableEncodings << QLatin1String("UTF-8");
-        mAcceptableEncodings << QLatin1String("GBK");
-        mAcceptableEncodings << QLatin1String("GB18030");
-        mAcceptableEncodings << QLatin1String("ISO 8859-1");
+        mAcceptableEncodings << QStringLiteral("UTF-8");
+        mAcceptableEncodings << QStringLiteral("GBK");
+        mAcceptableEncodings << QStringLiteral("GB18030");
+        mAcceptableEncodings << QStringLiteral("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
 
     if (mFriendlyEncodings.isEmpty()) {
-        mFriendlyEncodings << QLatin1String("UTF-8");
-        mFriendlyEncodings << QLatin1String("GBK");
-        mFriendlyEncodings << QLatin1String("GB18030");
-        mFriendlyEncodings << QLatin1String("ISO 8859-1");
+        mFriendlyEncodings << QStringLiteral("UTF-8");
+        mFriendlyEncodings << QStringLiteral("GBK");
+        mFriendlyEncodings << QStringLiteral("GB18030");
+        mFriendlyEncodings << QStringLiteral("ISO 8859-1");
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
 
@@ -240,14 +240,14 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
 {
     QString reportedEncoding = newEncoding;
     if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
-        reportedEncoding = QLatin1String("ASCII");
+        reportedEncoding = QStringLiteral("ASCII");
         if (!mEncoding.isEmpty()) {
             // This will disable trancoding on:
             // input in TBuffer::translateToPlainText(...)
             // output in cTelnet::sendData(...)
             mEncoding.clear();
             if (isToStore) {
-                mpHost->writeProfileData(QLatin1String("encoding"), reportedEncoding);
+                mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
     } else if (!mAcceptableEncodings.contains(newEncoding)) {
@@ -259,7 +259,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
         if (isToStore) {
-            mpHost->writeProfileData(QLatin1String("encoding"), mEncoding);
+            mpHost->writeProfileData(QStringLiteral("encoding"), mEncoding);
         }
     }
 
@@ -325,7 +325,7 @@ void cTelnet::handle_socket_signal_connected()
     }
 
     TEvent event;
-    event.mArgumentList.append(QLatin1String("sysConnectionEvent"));
+    event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 }
@@ -335,7 +335,7 @@ void cTelnet::handle_socket_signal_disconnected()
     postData();
 
     TEvent event;
-    event.mArgumentList.append(QLatin1String("sysDisconnectionEvent"));
+    event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
@@ -356,7 +356,7 @@ void cTelnet::handle_socket_signal_disconnected()
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
     if (!hostInfo.addresses().isEmpty()) {
-        mHostAddress = hostInfo.addresses().first();
+        mHostAddress = hostInfo.addresses().constFirst();
         QString msg = "[ INFO ]  - The IP address of " + hostName + " has been found. It is: " + mHostAddress.toString() + "\n";
         postMessage(msg);
         msg = "[ INFO ]  - Trying to connect to " + mHostAddress.toString() + ":" + QString::number(hostPort) + " ...\n";
@@ -364,7 +364,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = "[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.";
+        QString msg = QStringLiteral("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.");
         postMessage(msg);
         return;
     }
@@ -372,12 +372,12 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 
 bool cTelnet::sendData(QString& data)
 {
-    while (data.indexOf("\n") != -1) {
-        data.replace(QChar('\n'), "");
+    while (data.indexOf(QStringLiteral("\n")) != -1) {
+        data.replace(QChar('\n'), QString());
     }
 
     TEvent event;
-    event.mArgumentList.append(QLatin1String("sysDataSendRequest"));
+    event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(data);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1089,7 +1089,7 @@ void cTelnet::processTelnetCommand(const string& command)
         }
 
         TEvent event;
-        event.mArgumentList.append(QLatin1String("sysTelnetEvent"));
+        event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(QString::number(type));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -1161,26 +1161,26 @@ void cTelnet::setGMCPVariables(const QString& msg)
     QString var;
     QString arg;
     if (msg.indexOf('\n') > -1) {
-        var = msg.section("\n", 0, 0);
-        arg = msg.section("\n", 1);
+        var = msg.section(QStringLiteral("\n"), 0, 0);
+        arg = msg.section(QStringLiteral("\n"), 1);
     } else {
-        var = msg.section(" ", 0, 0);
-        arg = msg.section(" ", 1);
+        var = msg.section(QStringLiteral(" "), 0, 0);
+        arg = msg.section(QStringLiteral(" "), 1);
     }
 
-    if (msg.startsWith("Client.GUI")) {
+    if (msg.startsWith(QStringLiteral("Client.GUI"))) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
 
         QString version = msg.section('\n', 0);
-        version.replace("Client.GUI ", "");
-        version.replace('\n', " ");
+        version.replace(QStringLiteral("Client.GUI "), QString());
+        version.replace('\n', QStringLiteral(" "));
         version = version.section(' ', 0, 0);
 
         int newVersion = version.toInt();
         if (mpHost->mServerGUI_Package_version != newVersion) {
-            QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
+            QString _smsg = QStringLiteral("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
                                     .arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
             mpHost->mpConsole->print(_smsg.toLatin1().data());
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);

@@ -22,7 +22,7 @@
      <number>5</number>
     </property>
     <item>
-     <widget class="QLineEdit" name="titel">
+     <widget class="QLineEdit" name="title">
       <property name="palette">
        <palette>
         <active>
@@ -146,7 +146,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>edit</tabstop>
   <tabstop>saveButton</tabstop>
   <tabstop>cancelButton</tabstop>
-  <tabstop>titel</tabstop>
+  <tabstop>title</tabstop>
  </tabstops>
  <resources/>
  <connections/>
