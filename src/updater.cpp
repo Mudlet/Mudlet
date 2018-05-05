@@ -403,6 +403,7 @@ QString Updater::getPreviousVersion() const
     QDataStream ifs(&file);
     ifs >> previousVersion;
     file.close();
+    file.remove();
 
     return previousVersion;
 }
