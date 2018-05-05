@@ -44,6 +44,7 @@
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
+#include "edbee/models/textautocompleteprovider.h"
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -211,6 +212,7 @@ public:
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
+    static QStringList mLuaFunctionNames;
     bool mHasSavedLayout;
     QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
     QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;

@@ -207,6 +207,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
+    edbee::StringTextAutoCompleteProvider* provider = new edbee::StringTextAutoCompleteProvider();
+    QListIterator<QString> i(mudlet::mLuaFunctionNames);
+    while (i.hasNext())
+        {
+            provider->add(i.next());
+        }
+    edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
+
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpSourceEditorEdbee->textEditorComponent(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slot_editorContextMenu()));
 

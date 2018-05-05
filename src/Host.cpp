@@ -48,6 +48,7 @@
 #include <errno.h>
 #include <zip.h>
 
+QStringList mudlet::mLuaFunctionNames = QStringList();
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this)
@@ -173,6 +174,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
+    mudlet::mLuaFunctionNames = QStringList(mLuaInterpreter.mLuaFunctionNames);
     QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("log"));
     QString logFileName = QStringLiteral("%1/errors.txt").arg(directoryLogFile);
     QDir dirLogFile;

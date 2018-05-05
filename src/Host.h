@@ -174,6 +174,7 @@ public:
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
 
+    QList<QString> mLuaFunctionNames;
     int commandLineMinimumHeight;
     bool mAlertOnNewData;
     bool mAllowToSendCommand;

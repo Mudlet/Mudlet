@@ -32,6 +32,7 @@
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
+#include <edbee/texteditorwidget.h>
 #include "post_guard.h"
 
 extern "C" {
@@ -429,6 +430,7 @@ public:
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
+    QStringList mLuaFunctionNames;
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
