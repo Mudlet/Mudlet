@@ -115,6 +115,7 @@ public slots:
     void slot_setLogDir();
     void slot_resetLogDir();
     void slot_logFileNameFormatChange(const int index);
+    void slot_changeLogFileAsHtml(const bool isHtml);
 
     // Save.
     void slot_save_and_exit();

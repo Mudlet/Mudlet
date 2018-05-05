@@ -133,35 +133,21 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
     pushButton_showGlyphUsage->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                          .arg("<p>This will bring up a display showing all the symbols used in the current "
-                                               "map and whether they can be drawn using just the specifed font, any other "
-                                               "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                               "that make up that symbol, so that they can be identified even if they "
-                                               "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                               "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+                                          .arg(tr("<p>This will bring up a display showing all the symbols used in the current "
+                                                  "map and whether they can be drawn using just the specifed font, any other "
+                                                  "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                                  "that make up that symbol, so that they can be identified even if they "
+                                                  "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                                  "that symbol are listed, which may help to identify any unexpected or odd cases.<p>")));
     fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                        .arg("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                             "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+                                        .arg(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                                "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                             .arg("<p>Using a single font is likely to produce a more consistent style but may "
-                                                                  "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                                  "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                                  "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                  "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
-
-    // Set the properties on tab_logging
-    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
-                                                   .arg("<p>This option sets the format of the log name.</p>"
-                                                        "<p>If 'Named file' is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH:mm:ss (e.g., 1970-01-01#00:00:00)"), QStringLiteral("yyyy-MM-dd#HH:mm:ss"));
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH:mm:ss (e.g., 1970-01-01T00:00:00)"), QStringLiteral("yyyy-MM-dd#THH:mm:ss"));
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate logs by day)"), QStringLiteral("yyyy-MM-dd"));
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate logs by month)"), QStringLiteral("yyyy-MM"));
-    comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
-    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (Logs are appended if a log file of the same name already exists).</p>"));
-    lineEdit_logFileName->setPlaceholderText(tr("logfile"));
-    lineEdit_logFileName->setEnabled(false);
-
+                                                             .arg(tr("<p>Using a single font is likely to produce a more consistent style but may "
+                                                                     "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                                     "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                                     "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                                     "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -233,12 +219,8 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_mapperColors->setEnabled(false);
 
     // on tab_logging:
-    pushButton_whereToLog->setEnabled(false);
-    pushButton_resetLogDir->setEnabled(false);
-    comboBox_logFileNameFormat->setEnabled(false);
-    lineEdit_logFileName->setEnabled(false);
-    mIsToLogInHtml->setEnabled(false);
-    mIsLoggingTimestamps->setEnabled(false);
+    groupBox_logFiles->setEnabled(false);
+    groupBox_logOptions->setEnabled(false);
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
@@ -292,12 +274,8 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_mapperColors->setEnabled(true);
 
     // on tab_logging:
-    pushButton_whereToLog->setEnabled(true);
-    pushButton_resetLogDir->setEnabled(true);
-    comboBox_logFileNameFormat->setEnabled(true);
-    lineEdit_logFileName->setEnabled(true);
-    mIsToLogInHtml->setEnabled(true);
-    mIsLoggingTimestamps->setEnabled(true);
+    groupBox_logFiles->setEnabled(true);
+    groupBox_logOptions->setEnabled(true);
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(true);
@@ -431,10 +409,50 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
     rightBorderWidth->setValue(pHost->mBorderRightWidth);
-    comboBox_logFileNameFormat->setCurrentIndex(pHost->mLogFileNameFormatIndex);
-    lineEdit_logFileName->setText(pHost->mLogFileName);
+
+    // Set the properties on tab_logging
+    // Note that '/' and ':' cannot be used in a file name format because they
+    // are reserved characters for one or more OSs!
+    comboBox_logFileNameFormat->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                   .arg(tr("<p>This option sets the format of the log-file name.</p>"
+                                                           "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log-file of the same name already exists.)</p>")));
+    if (pHost->mIsNextLogFileInHtmlFormat) {
+        mIsToLogInHtml->setChecked(true);
+        // This is the previous standard:
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)"), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
+        // The ISO standard for this uses T as the date/time separator
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)"), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)"), QStringLiteral("yyyy-MM-dd"));
+        // It might be possible to use QDateTime::weekNumber but that number is not
+        // available from the QDateTime::toString(...) method
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.html)"), QStringLiteral("yyyy-MM"));
+        // The empty Qt::ItemDataRole::UserRole	here is the trigger to use the
+        // user's literal filename entry - which is to be translated "logfile".
+        label_logFileNameExtension->setText(QStringLiteral(".html"));
+    } else {
+        mIsToLogInHtml->setChecked(false);
+        // This is the previous standard:
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)"), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
+        // The ISO standard for this uses T as the date/time separator
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)"), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"), QStringLiteral("yyyy-MM-dd"));
+        // It might be possible to use QDateTime::weekNumber but that number is not
+        // available from the QDateTime::toString(...) method
+        comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"), QStringLiteral("yyyy-MM"));
+        // The empty Qt::ItemDataRole::UserRole	here is the trigger to use the
+        // user's literal filename entry - which is to be translated "logfile".
+        label_logFileNameExtension->setText(QStringLiteral(".txt"));
+    }
+    comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
+    lineEdit_logFileName->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>Set a custom name for your log. (Logs are appended if a log file of the same name already exists).</p>")));
+    lineEdit_logFileName->setPlaceholderText(tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
+
+    comboBox_logFileNameFormat->setCurrentIndex(comboBox_logFileNameFormat->findData(pHost->mLogFileNameFormat));
     lineEdit_logFileName->setEnabled(pHost->mLogFileNameFormat.isEmpty());
-    mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+    label_logFileNameExtension->setEnabled(pHost->mLogFileNameFormat.isEmpty());
+    lineEdit_logFileName->setText(pHost->mLogFileName);
+
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
     mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
@@ -635,6 +653,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_whereToLog, SIGNAL(clicked()), this, SLOT(slot_setLogDir()));
     connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
     connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
+    connect(mIsToLogInHtml, SIGNAL(clicked(bool)), this, SLOT(slot_changeLogFileAsHtml(bool)));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1721,10 +1740,33 @@ void dlgProfilePreferences::copyMap()
 void dlgProfilePreferences::slot_setLogDir()
 {
     Host* pHost = mpHost;
-    if (!pHost)
+    if (!pHost) {
         return;
+    }
 
-    QDir currentLogDir = QFileDialog::getExistingDirectory(this, tr("Select log directory"), pHost->mLogDir, QFileDialog::ShowDirsOnly);
+    /*
+     * To show the files even though we are looking for a directory so that the
+     * user can see the files that may get appended to depending on the format
+     * selection, we need to use QFileDialog::DontUseNativeDialog because on
+     * Windows the native one does not show files when selecting a directory.
+     *
+     * Also from Qt Docs:
+     * "On Windows, the dialog will spin a blocking modal event loop that will
+     * not dispatch any QTimers, and if parent is not 0 then it will position
+     * the dialog just below the parent's title bar.
+     *
+     * Warning: Do not delete parent during the execution of the dialog. If you
+     * want to do this, you should create the dialog yourself using one of the
+     * QFileDialog constructors."
+     *
+     * That warning suggests *bad things* would happen if the "Save" button or
+     * the widget title bar close button was pressed on the Profile Preferrences
+     * dialog while the directory selector is open...!
+     */
+    QDir currentLogDir = QFileDialog::getExistingDirectory(this,
+                                                           tr("Where should Mudlet save log-files?"),
+                                                           pHost->mLogDir,
+                                                           QFileDialog::DontUseNativeDialog	);
     mLogDirPath = currentLogDir.absolutePath();
 
     return;
@@ -1733,8 +1775,9 @@ void dlgProfilePreferences::slot_setLogDir()
 void dlgProfilePreferences::slot_resetLogDir()
 {
     Host* pHost = mpHost;
-    if (!pHost)
+    if (!pHost) {
         return;
+    }
 
     mLogDirPath.clear();
     return;
@@ -1745,8 +1788,9 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
     Q_UNUSED(index);
 
     Host* pHost = mpHost;
-    if (!pHost)
+    if (!pHost) {
         return;
+    }
 
     lineEdit_logFileName->setEnabled(comboBox_logFileNameFormat->currentData().toString().isEmpty());
 }
@@ -1813,7 +1857,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mLogDir = mLogDirPath;
         pHost->mLogFileName = lineEdit_logFileName->text();
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
-        pHost->mLogFileNameFormatIndex = comboBox_logFileNameFormat->currentIndex();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
@@ -2698,5 +2741,22 @@ void dlgProfilePreferences::slot_changeShowToolBar(const int newIndex)
         // This control has been set to the "Never" setting but so is the other
         // control - so force it back to the "Only if no profile one
         comboBox_toolBarVisibility->setCurrentIndex(1);
+    }
+}
+
+void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
+{
+    if (isHtml) {
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.html)"));
+        label_logFileNameExtension->setText(QStringLiteral(".html"));
+    } else {
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
+        label_logFileNameExtension->setText(QStringLiteral(".txt"));
     }
 }

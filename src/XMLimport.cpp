@@ -784,7 +784,6 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mLogDir = attributes().value("mLogDir").toString();
     pHost->mLogFileName = attributes().value("mLogFileName").toString();
     pHost->mLogFileNameFormat = attributes().value("mLogFileNameFormat").toString();
-    pHost->mLogFileNameFormatIndex = attributes().value("mLogFileNameFormatIndex").toInt();
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");

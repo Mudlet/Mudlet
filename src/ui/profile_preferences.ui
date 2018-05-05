@@ -2079,71 +2079,6 @@
        <string>Logging</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_30">
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_logFiles">
-         <property name="title">
-          <string>Log files</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_31">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_whereToLog">
-            <property name="text">
-             <string>Save log files in:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_whereToLog</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_whereToLog">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(Optional) Save log files in selected directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Press to select folder</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QPushButton" name="pushButton_resetLogDir">
-            <property name="toolTip">
-             <string>Set the log directory to default.</string>
-            </property>
-            <property name="text">
-             <string>Reset</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_logFileNameFormat">
-            <property name="text">
-             <string>Log format:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_logFileNameFormat</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_logFileName">
-            <property name="text">
-             <string>Log name:</string>
-            </property>
-            <property name="buddy">
-             <cstring>lineEdit_logFileName</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEdit_logFileName"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_logOptions">
          <property name="title">
@@ -2179,6 +2114,92 @@
              </size>
             </property>
            </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_logFiles">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="title">
+          <string>Log files</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_31" columnstretch="0,1,0">
+          <item row="0" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_whereToLog">
+            <property name="text">
+             <string>Save log files in:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_whereToLog</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_whereToLog">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(Optional) Save log files in selected directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Press to select folder</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="pushButton_resetLogDir">
+            <property name="toolTip">
+             <string>Set the log directory to default.</string>
+            </property>
+            <property name="text">
+             <string>Reset</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileNameFormat">
+            <property name="text">
+             <string>Log format:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_logFileNameFormat</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBox_logFileNameFormat">
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToContents</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileName">
+            <property name="text">
+             <string>Log name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEdit_logFileName">
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2" alignment="Qt::AlignLeft">
+           <widget class="QLabel" name="label_logFileNameExtension">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>.txt</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -2326,7 +2347,7 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="2" column="0">
         <widget class="QGroupBox" name="groupbox_searchEngineSelection">
          <property name="title">
           <string>Search Engine</string>
@@ -2338,32 +2359,7 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
-        <widget class="QGroupBox" name="groupBox_debug">
-         <property name="title">
-          <string>Other Special options</string>
-         </property>
-         <layout class="QFormLayout" name="formLayout_Debug">
-          <property name="labelAlignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </layout>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <spacer name="verticalSpacer_specialOptions">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="4" column="0">
+       <item row="3" column="0">
         <widget class="QGroupBox" name="groupBox_updates">
          <property name="title">
           <string>Mudlet updates</string>
@@ -2378,6 +2374,31 @@
           </item>
          </layout>
         </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QGroupBox" name="groupBox_debug">
+         <property name="title">
+          <string>Other Special options</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_Debug">
+          <property name="labelAlignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </layout>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <spacer name="verticalSpacer_specialOptions">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>

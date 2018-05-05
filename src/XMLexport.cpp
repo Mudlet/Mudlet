@@ -334,7 +334,6 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mLogDir", pHost->mLogDir);
     writeAttribute("mLogFileName", pHost->mLogFileName);
     writeAttribute("mLogFileNameFormat", pHost->mLogFileNameFormat);
-    writeAttribute("mLogFileNameFormatIndex", QString::number(pHost->mLogFileNameFormatIndex));
     writeAttribute("mAlertOnNewData", pHost->mAlertOnNewData ? "yes" : "no");
     writeAttribute("mFORCE_NO_COMPRESSION", pHost->mFORCE_NO_COMPRESSION ? "yes" : "no");
     writeAttribute("mFORCE_GA_OFF", pHost->mFORCE_GA_OFF ? "yes" : "no");
