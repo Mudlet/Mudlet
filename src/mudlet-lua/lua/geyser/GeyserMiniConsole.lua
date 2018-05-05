@@ -30,7 +30,7 @@ end
 -- and won't give the best results.
 -- @param font Font family name to use (see https://doc.qt.io/qt-5/qfont.html#setFamily for details)
 function Geyser.MiniConsole:setFont (font)
-  setConsoleBufferSize(self.name, font)
+  setFont(self.name, font)
 end
 
 --- Returns the font family in use by this miniconsole.
