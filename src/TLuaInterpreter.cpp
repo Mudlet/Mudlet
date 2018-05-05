@@ -2394,8 +2394,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L,
-                            "setFont: bad argument #%d type (more than one argument supplied and first,\n"
-                            "window name, as string expected (omission selects \"main\" window), got %s!",
+                            "setFont: bad argument #%d type for the optional window name - expected string, got %s!",
                             s,
                             luaL_typename(L, s));
             return lua_error(L);
