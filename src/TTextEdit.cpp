@@ -532,55 +532,32 @@ void TTextEdit::updateLastLine()
     update(r);
 }
 
-/**
- * @brief TTextEdit::getNextGraphemeSize
- * @param str
- * @param startOffset
- * @param nextChar [out] character unicode
- * @return number of character of grapheme
- */
-inline int TTextEdit::getNextGraphemeSize(const QString& str, int startOffset, /* out */ uint *character)
+inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
 {
-    int offset = startOffset;
-
-    // 1. character
-    QChar c = str.at(offset);
-    uint unicode = 0;
-    offset += 1;
-    if (!c.isHighSurrogate() || offset >= str.size()) {
-        unicode = c.unicode();
-    } else {
-        QChar lowSurrogate = str.at(offset);
-        if (!lowSurrogate.isLowSurrogate()) {
-            // illegal grapheme
-            unicode = c.unicode();
+    if (str.isEmpty()) {
+        return 0;
+    }
+    QChar first = str.at(0);
+    if (first.isSurrogate() && str.size() >= 2) {
+        QChar second = str.at(1);
+        if (first.isHighSurrogate() && second.isLowSurrogate()) {
+            return QChar::surrogateToUcs4(first, second);
+        } else if (first.isLowSurrogate() && second.isHighSurrogate()) {
+            return QChar::surrogateToUcs4(second, first);
         } else {
-            offset += 1;
-            unicode = QChar::surrogateToUcs4(c, lowSurrogate);
+            // str format error
+            return first.unicode();
         }
+    } else {
+        return first.unicode();
     }
-
-    // 2. combining diacritical
-    while (offset < str.size()) {
-        QChar nextChar = str.at(offset);
-        ushort u = nextChar.unicode();
-        if (!(u >= 0x0300 && u <= 0x036F)) {
-            break;
-        }
-        offset++;
-    }
-
-
-    if (character) {
-        *character = unicode;
-    }
-    return offset - startOffset;
 }
 
 void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
 {
     QPoint cursor(0, lineOfScreen);
     QString lineText = mpBuffer->lineBuffer[lineNumber];
+    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
 
     if (mShowTimeStamps) {
         TChar timeStampStyle;
@@ -592,22 +569,40 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
         timeStampStyle.fgB = 0;
         QString timestamp = mpBuffer->timeBuffer[lineNumber];
         for (QChar c : timestamp) {
-            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, c.unicode(), timeStampStyle));
+            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
         }
     }
 
+    int columnWithOutTimestamp = 0;
     for (int indexOfChar = 0; indexOfChar < lineText.size();) {
-        uint unicode;
-        int numberOfCharacter = getNextGraphemeSize(lineText, indexOfChar, &unicode);
+        int nextBoundary = boundaryFinder.toNextBoundary();
+
         TChar &charStyle = mpBuffer->buffer[lineNumber][indexOfChar];
-        cursor.setX(cursor.x() + drawGrapheme(painter, cursor, lineText.mid(indexOfChar, numberOfCharacter), unicode, charStyle));
-        indexOfChar += numberOfCharacter;
+        int graphemeWidth = drawGrapheme(painter, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
+        cursor.setX(cursor.x() + graphemeWidth);
+        indexOfChar = nextBoundary;
+        columnWithOutTimestamp += graphemeWidth;
     }
 }
 
-int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, uint unicode, TChar &charStyle)
+/**
+ * @brief TTextEdit::drawGrapheme
+ * @param painter
+ * @param cursor
+ * @param grapheme
+ * @param column Used to calculate the width of Tab
+ * @param charStyle
+ * @return Return the display width of the grapheme
+ */
+int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle)
 {
-    int charWidth = mk_wcwidth_cjk(unicode) == 2 ? 2 : 1;
+    uint unicode = getGraphemeBaseCharacter(grapheme);
+    int charWidth;
+    if (unicode == '\t') {
+        charWidth = column / 8 * 8 + 8;
+    } else {
+        charWidth = mk_wcwidth_cjk(unicode) == 2 ? 2 : 1;
+    }
 
     bool isBold = charStyle.flags & TCHAR_BOLD;
     bool isUnderline = charStyle.flags & TCHAR_UNDERLINE;
