@@ -267,10 +267,11 @@ void Updater::updateBinaryOnLinux()
 
 void Updater::installOrRestartClicked(QAbstractButton* button, const QString& filePath)
 {
+    Q_UNUSED(button)
+
     // moc, when used with cmake on macos bugs out if the entire function declaration and definition is entirely
     // commented out so we leave a stub in
 #if !defined(Q_OS_MACOS)
-    Q_UNUSED(button)
 
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
