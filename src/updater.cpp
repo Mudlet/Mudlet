@@ -105,7 +105,7 @@ void Updater::showChangelog() const
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().constFirst().getVersion();
 #elif defined(Q_OS_WIN32)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
 #endif
@@ -234,7 +234,7 @@ void Updater::untarOnLinux(const QString& fileName)
     tar.setProcessChannelMode(QProcess::MergedChannels);
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
     // tar output folder has to end with a slash
-    tar.start("tar", QStringList() << "-xvf" << fileName << "-C" << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QStringLiteral("/"));
+    tar.start(QStringLiteral("tar"), QStringList() << QStringLiteral("-xvf") << fileName << QStringLiteral("-C") << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QStringLiteral("/"));
     if (!tar.waitForFinished()) {
         qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
@@ -273,7 +273,7 @@ void Updater::updateBinaryOnLinux()
 }
 #endif // Q_OS_LINUX
 
-void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
+void Updater::installOrRestartClicked(QAbstractButton* button, const QString& filePath)
 {
     // moc, when used with cmake on macos bugs out if the entire function declaration and definition is entirely
     // commented out so we leave a stub in
