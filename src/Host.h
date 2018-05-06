@@ -220,10 +220,16 @@ public:
 
     bool mIsLoggingTimestamps;
 
+    // Where to put HTML/text logfile (default is the "Logs" under the profile's
+    // one):
     QString mLogDir;
+    // A user entered name - if blank a language specific default is used:
     QString mLogFileName;
+    // The first argument to QDateTime::toString(...) to generate a date/time
+    // dependent filename unless it is empty in which case the above value is
+    // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" is set as a
+    // default in the constructor:
     QString mLogFileNameFormat;
-    int mLogFileNameFormatIndex;
 
     bool mResetProfile;
     int mScreenHeight;
