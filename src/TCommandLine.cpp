@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -121,8 +122,28 @@ void TCommandLine::slot_textChanged(const QString& text)
 {
 }
 
+void TCommandLine::processNormalKey(QEvent* event)
+{
+    QPlainTextEdit::event(event);
+    adjustHeight();
+
+    if (mpHost->mAutoClearCommandLineAfterSend) {
+        mHistoryBuffer = -1;
+    } else {
+        mHistoryBuffer = 0;
+    }
+    if (mTabCompletionOld != toPlainText()) {
+        mUserKeptOnTyping = true;
+        mAutoCompletionCount = -1;
+    } else {
+        mUserKeptOnTyping = false;
+    }
+    spellCheck();
+}
+
 bool TCommandLine::event(QEvent* event)
 {
+    const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent* ke = static_cast<QKeyEvent*>(event);
 
@@ -134,20 +155,28 @@ bool TCommandLine::event(QEvent* event)
 
         switch (ke->key()) {
         case Qt::Key_Space:
-            mTabCompletionCount = -1;
-            mAutoCompletionCount = -1;
-            mTabCompletionTyped = "";
-            mAutoCompletionTyped = "";
-            if (mpHost->mAutoClearCommandLineAfterSend) {
-                mHistoryBuffer = -1;
+            if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                mTabCompletionCount = -1;
+                mAutoCompletionCount = -1;
+                mTabCompletionTyped.clear();
+                mAutoCompletionTyped.clear();
+                if (mpHost->mAutoClearCommandLineAfterSend) {
+                    mHistoryBuffer = -1;
+                } else {
+                    mHistoryBuffer = 0;
+                }
+                mLastCompletion.clear();
+                break;
+
             } else {
-                mHistoryBuffer = 0;
+                // Process as a normal key if there are ANY modifiers
+                // just the Ctrl one
+                processNormalKey(event);
+                return false;
             }
-            mLastCompletion = "";
-            break;
 
         case Qt::Key_Backtab:
-            if (ke->modifiers() & Qt::ControlModifier) {
+            if ((ke->modifiers() & allModifiers ) == Qt::ControlModifier) {
                 int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 int count = mudlet::self()->mpTabBar->count();
                 if (currentIndex - 1 < 0) {
@@ -155,15 +184,24 @@ bool TCommandLine::event(QEvent* event)
                 } else {
                     mudlet::self()->mpTabBar->setCurrentIndex(currentIndex - 1);
                 }
-            } else {
+                ke->accept();
+                return true;
+
+            } else if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
                 handleTabCompletion(false);
                 adjustHeight();
+                ke->accept();
+                return true;
+
+            } else {
+                // Process as a normal key if there are ANY modifiers other than
+                // just the Ctrl one
+                processNormalKey(event);
+                return false;
             }
-            ke->accept();
-            return true;
 
         case Qt::Key_Tab:
-            if (ke->modifiers() & Qt::ControlModifier) {
+            if ((ke->modifiers() & allModifiers ) == Qt::ControlModifier) {
                 int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 int count = mudlet::self()->mpTabBar->count();
                 if (currentIndex + 1 < count) {
@@ -171,67 +209,82 @@ bool TCommandLine::event(QEvent* event)
                 } else {
                     mudlet::self()->mpTabBar->setCurrentIndex(0);
                 }
-            } else {
+                ke->accept();
+                return true;
+
+            } else if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
                 handleTabCompletion(true);
+                ke->accept();
+                return true;
+
+            } else {
+                // Process as a normal key if there are ANY modifiers other than
+                // just the Ctrl one
+                processNormalKey(event);
+                return false;
             }
-            ke->accept();
-            return true;
 
         case Qt::Key_unknown:
             qWarning() << "ERROR: key unknown!";
             break;
 
         case Qt::Key_Backspace:
-            if (mpHost->mAutoClearCommandLineAfterSend) {
-                mHistoryBuffer = -1;
-            } else {
-                mHistoryBuffer = 0;
-            }
-            if (mTabCompletionTyped.size() >= 1) {
-                mTabCompletionTyped.chop(1);
-                mAutoCompletionTyped.chop(1);
+            if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                if (mpHost->mAutoClearCommandLineAfterSend) {
+                    mHistoryBuffer = -1;
+                } else {
+                    mHistoryBuffer = 0;
+                }
+
+                if (mTabCompletionTyped.size() >= 1) {
+                    mTabCompletionTyped.chop(1);
+                    mAutoCompletionTyped.chop(1);
+                }
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
-                mLastCompletion = "";
+                mLastCompletion.clear();
+                QPlainTextEdit::event(event);
+
+                adjustHeight();
+
+                return true;
             } else {
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
-                mLastCompletion = "";
+                // Process as a normal key if there are ANY modifiers
+                processNormalKey(event);
+                return false;
             }
-            QPlainTextEdit::event(event);
-
-            adjustHeight();
-
-            return true;
 
         case Qt::Key_Delete:
-            if (mpHost->mAutoClearCommandLineAfterSend) {
-                mHistoryBuffer = -1;
+            if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                if (mpHost->mAutoClearCommandLineAfterSend) {
+                    mHistoryBuffer = -1;
+                } else {
+                    mHistoryBuffer = 0;
+                }
+
+                if (mTabCompletionTyped.size() >= 1) {
+                    mTabCompletionTyped.chop(1);
+                    mAutoCompletionTyped.chop(1);
+                } else {
+                    mTabCompletionTyped.clear();
+                    mAutoCompletionTyped.clear();
+                    mUserKeptOnTyping = false;
+                }
+                mAutoCompletionCount = -1;
+                mTabCompletionCount = -1;
+                mLastCompletion.clear();
+                QPlainTextEdit::event(event);
+                adjustHeight();
+                return true;
             } else {
-                mHistoryBuffer = 0;
+                // Process as a normal key if there are ANY modifiers
+                processNormalKey(event);
+                return false;
             }
-            if (mTabCompletionTyped.size() >= 1) {
-                mTabCompletionTyped.chop(1);
-                mAutoCompletionTyped.chop(1);
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
-                mLastCompletion = "";
-            } else {
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
-                mLastCompletion = "";
-                mTabCompletionTyped = "";
-                mAutoCompletionTyped = "";
-                mUserKeptOnTyping = false;
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
-            }
-            QPlainTextEdit::event(event);
-            adjustHeight();
-            return true;
 
         case Qt::Key_Return:
-            if (ke->modifiers() & Qt::ControlModifier) {
+            if ((ke->modifiers() & allModifiers ) == Qt::ControlModifier) {
+                // If Ctrl-Return is pressed - scroll to the bottom of text:
                 mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size();
                 mpConsole->mLowerPane->hide();
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
@@ -239,22 +292,36 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mUpperPane->mIsTailMode = true;
                 mpConsole->mUpperPane->updateScreenView();
                 mpConsole->mUpperPane->forceUpdate();
-                ke->accept();
-                return true;
-            } else if (ke->modifiers() & Qt::ShiftModifier) {
+            } else if ((ke->modifiers() & allModifiers ) == Qt::ShiftModifier) {
                 textCursor().insertBlock();
-                ke->accept();
-                return true;
             } else {
+                enterCommand(ke);
+                mAutoCompletionCount = -1;
+                mAutoCompletionTyped.clear();
+                mLastCompletion.clear();
+                mTabCompletionTyped.clear();
+                mUserKeptOnTyping = false;
+                mTabCompletionCount = -1;
+                if (mpHost->mAutoClearCommandLineAfterSend) {
+                    clear();
+                    mHistoryBuffer = -1;
+                } else {
+                    mHistoryBuffer = 0;
+                }
+                adjustHeight();
+            }
+            ke->accept();
+            return true;
+
+        case Qt::Key_Enter:
+            if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
                 enterCommand(ke);
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
-                mLastCompletion = "";
-                mTabCompletionTyped = "";
-                mAutoCompletionTyped = "";
+                mLastCompletion.clear();
+                mTabCompletionTyped.clear();
+                mAutoCompletionTyped.clear();
                 mUserKeptOnTyping = false;
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
                 if (mpHost->mAutoClearCommandLineAfterSend) {
                     clear();
                     mHistoryBuffer = -1;
@@ -264,106 +331,121 @@ bool TCommandLine::event(QEvent* event)
                 adjustHeight();
                 ke->accept();
                 return true;
-            }
-
-        case Qt::Key_Enter:
-            enterCommand(ke);
-            mTabCompletionCount = -1;
-            mAutoCompletionCount = -1;
-            mLastCompletion = "";
-            mTabCompletionTyped = "";
-            mAutoCompletionTyped = "";
-            mUserKeptOnTyping = false;
-            mTabCompletionCount = -1;
-            mAutoCompletionCount = -1;
-            if (mpHost->mAutoClearCommandLineAfterSend) {
-                clear();
-                mHistoryBuffer = -1;
             } else {
-                mHistoryBuffer = 0;
+                // Process as a normal key if there are ANY modifiers
+                processNormalKey(event);
+                return false;
             }
-            adjustHeight();
-            ke->accept();
-            return true;
 
         case Qt::Key_Down:
-            if (ke->modifiers() & Qt::ControlModifier) {
+            if ((ke->modifiers() & allModifiers ) == Qt::ControlModifier) {
+                // If EXACTLY <Ctrl>-Down is pressed
                 moveCursor(QTextCursor::Down, QTextCursor::MoveAnchor);
-            } else {
+                ke->accept();
+                return true;
+            } else if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                // If EXACTLY Up is pressed without modifiers
                 historyDown(ke);
-            }
-            ke->accept();
-            return true;
-
-        case Qt::Key_Up:
-            if (ke->modifiers() & Qt::ControlModifier) {
-                moveCursor(QTextCursor::Up, QTextCursor::MoveAnchor);
-            } else {
-                historyUp(ke);
-            }
-            ke->accept();
-            return true;
-
-        case Qt::Key_Escape:
-
-            selectAll();
-            mAutoCompletion = false;
-            mTabCompletion = false;
-            mTabCompletionTyped = "";
-            mAutoCompletionTyped = "";
-            mUserKeptOnTyping = false;
-            mTabCompletionCount = -1;
-            mAutoCompletionCount = -1;
-            setPalette(mRegularPalette);
-            if (mpHost->mAutoClearCommandLineAfterSend) {
-                mHistoryBuffer = -1;
-            } else {
-                mHistoryBuffer = 0;
-            }
-            ke->accept();
-            return true;
-
-        case Qt::Key_PageUp:
-            mpConsole->scrollUp(mpHost->mScreenHeight);
-            ke->accept();
-            return true;
-
-        case Qt::Key_PageDown:
-            mpConsole->scrollDown(mpHost->mScreenHeight);
-            ke->accept();
-            return true;
-
-        case Qt::Key_C:
-            if (ke->modifiers() & Qt::ControlModifier) {
-                if (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0)) {
-                    mpConsole->mUpperPane->copySelectionToClipboard();
-                    ke->accept();
-                    return true;
-                }
-            }
-            break;
-
-        default:
-
-            if (mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
                 ke->accept();
                 return true;
             } else {
-                QPlainTextEdit::event(event);
-                adjustHeight();
+                // Process as a normal key if there are ANY modifiers other than
+                // just the Ctrl one
+                processNormalKey(event);
+                return false;
+            }
 
+        case Qt::Key_Up:
+            if ((ke->modifiers() & allModifiers ) == Qt::ControlModifier) {
+                // If EXACTLY <Ctrl>-Up is pressed
+                moveCursor(QTextCursor::Up, QTextCursor::MoveAnchor);
+                ke->accept();
+                return true;
+            } else if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                // If EXACTLY Up is pressed without modifiers
+                historyUp(ke);
+                ke->accept();
+                return true;
+            } else {
+                // Process as a normal key if there are ANY modifiers other than
+                // just the Ctrl one
+                processNormalKey(event);
+                return false;
+            }
+
+        case Qt::Key_Escape:
+            if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                selectAll();
+                mAutoCompletion = false;
+                mTabCompletion = false;
+                mTabCompletionTyped.clear();
+                mAutoCompletionTyped.clear();
+                mUserKeptOnTyping = false;
+                mTabCompletionCount = -1;
+                mAutoCompletionCount = -1;
+                setPalette(mRegularPalette);
                 if (mpHost->mAutoClearCommandLineAfterSend) {
                     mHistoryBuffer = -1;
                 } else {
                     mHistoryBuffer = 0;
                 }
-                if (mTabCompletionOld != toPlainText()) {
-                    mUserKeptOnTyping = true;
-                    mAutoCompletionCount = -1;
+                ke->accept();
+                return true;
+            } else {
+                // Process as a normal key if there are ANY modifiers
+                processNormalKey(event);
+                return false;
+            }
+
+        case Qt::Key_PageUp:
+            if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                mpConsole->scrollUp(mpHost->mScreenHeight);
+                ke->accept();
+                return true;
+            } else {
+                // Process as a normal key if there are ANY modifiers
+                processNormalKey(event);
+                return false;
+            }
+
+        case Qt::Key_PageDown:
+            if ((ke->modifiers() & allModifiers ) == Qt::NoModifier) {
+                mpConsole->scrollDown(mpHost->mScreenHeight);
+                ke->accept();
+                return true;
+            } else {
+                // Process as a normal key if there are ANY modifiers
+                processNormalKey(event);
+                return false;
+            }
+
+        case Qt::Key_C:
+            if (((ke->modifiers() & allModifiers ) == Qt::ControlModifier)
+                && (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0))) {
+
+                // Only process as a Control-C if it is EXACTLY those two keys
+                // and no other AND there is a selection active in the TConsole
+                mpConsole->mUpperPane->copySelectionToClipboard();
+                ke->accept();
+                return true;
+            } else {
+                // Process as any other keypress - we could just use a "fall-though"...
+                if (mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
+                    ke->accept();
+                    return true;
                 } else {
-                    mUserKeptOnTyping = false;
+                    processNormalKey(event);
+                    return false;
                 }
-                spellCheck();
+            }
+            // break not needed
+
+        default:
+            if (mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
+                ke->accept();
+                return true;
+            } else {
+                processNormalKey(event);
                 return false;
             }
         }
