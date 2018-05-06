@@ -41,6 +41,7 @@
 #include <QPainter>
 #include <QScrollBar>
 #include <QString>
+#include <QTextBoundaryFinder>
 #include <QTextCursor>
 #include <QToolTip>
 #include "post_guard.h"
