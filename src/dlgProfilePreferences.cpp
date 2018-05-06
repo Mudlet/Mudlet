@@ -104,6 +104,17 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
+    // Set the properties of the log options 
+    pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>(Optional) Save log files in selected directory.</p>"));
+    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
+                                                   .arg("<p>This option sets the format of the log name.</p>"
+                                                        "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
+    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (Logs are appended if a log file of the same name already exists).</p>"));
+    lineEdit_logFileName->setPlaceholderText(tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
+    label_logFileNameExtension->setVisible(false);
+    label_logFileName->setVisible(false);
+    lineEdit_logFileName->setVisible(false);
+
     if (pHost) {
         initWithHost(pHost);
     } else {
@@ -148,6 +159,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                                      "does not have a needed glyph (a font's individual character/symbol) to represent "
                                                                      "the grapheme (what is to be represented).  Clearing this checkbox will allow "
                                                                      "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
+
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -218,8 +230,7 @@ void dlgProfilePreferences::disableHostDetails()
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(false);
 
-    // on tab_logging:
-    groupBox_logFiles->setEnabled(false);
+    // on groupBox_logOptions:
     groupBox_logOptions->setEnabled(false);
     lineEdit_logFileName->setVisible(false);
     label_logFileName->setVisible(false);
@@ -277,7 +288,6 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_mapperColors->setEnabled(true);
 
     // on tab_logging:
-    groupBox_logFiles->setEnabled(true);
     groupBox_logOptions->setEnabled(true);
 
     // on groupBox_specialOptions:
@@ -413,64 +423,41 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
     rightBorderWidth->setValue(pHost->mBorderRightWidth);
 
-    // Set the properties on tab_logging
-    // Note that '/' and ':' cannot be used in a file name format because they
-    // are reserved characters for one or more OSs!
-    comboBox_logFileNameFormat->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                   .arg(tr("<p>This option sets the format of the log-file name.</p>"
-                                                           "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log-file of the same name already exists.)</p>")));
+    // Set the properties in groupBox_logOptions
+    mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
+    mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+
     bool isLogFileNameEntryShown = pHost->mLogFileNameFormat.isEmpty();
+    QString logExtension = pHost->mIsNextLogFileInHtmlFormat ? ".html" : ".txt";
     label_logFileNameExtension->setVisible(isLogFileNameEntryShown);
     lineEdit_logFileName->setVisible(isLogFileNameEntryShown);
     label_logFileName->setVisible(isLogFileNameEntryShown);
-    if (pHost->mIsNextLogFileInHtmlFormat) {
-        mIsToLogInHtml->setChecked(true);
-        // This is the previous standard:
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)"), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
-        // The ISO standard for this uses T as the date/time separator
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)"), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)"), QStringLiteral("yyyy-MM-dd"));
-        // It might be possible to use QDateTime::weekNumber but that number is not
-        // available from the QDateTime::toString(...) method
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.html)"), QStringLiteral("yyyy-MM"));
-        // The empty Qt::ItemDataRole::UserRole	here is the trigger to use the
-        // user's literal filename entry - which is to be translated "logfile".
-        label_logFileNameExtension->setText(QStringLiteral(".html"));
-    } else {
-        mIsToLogInHtml->setChecked(false);
-        // This is the previous standard:
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)"), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
-        // The ISO standard for this uses T as the date/time separator
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)"), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"), QStringLiteral("yyyy-MM-dd"));
-        // It might be possible to use QDateTime::weekNumber but that number is not
-        // available from the QDateTime::toString(...) method
-        comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"), QStringLiteral("yyyy-MM"));
-        // The empty Qt::ItemDataRole::UserRole	here is the trigger to use the
-        // user's literal filename entry - which is to be translated "logfile".
-        label_logFileNameExtension->setText(QStringLiteral(".txt"));
-    }
-    // pHost->mLogDir should be empty for the default location:
-    mLogDirPath = pHost->mLogDir;
-    lineEdit_logFileFolder->setText(mLogDirPath);
-    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
-    // Enable the reset button if the current location is not the default one:
-    toolButton_resetLogDir->setEnabled(lineEdit_logFileFolder->text() != lineEdit_logFileFolder->placeholderText());
-    lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                       .arg(tr("<p>Shows the location which will be used for to store log files (either plain text or HTML format) "
-                                               "will be stored.  If there are files already present in that location they may be appended to if "
-                                               "their name matches what the format chosen in the remaining options would select.</p>"
-                                               "<p><i>Note: the location displayed here is not directly editable.<i> To change it, you must use "
-                                               "the buttons to the right.  If the location has been reset to the default for this profile it "
-                                               "will be shown in a different shade and the reset button will be disabled.</p>")));
+    label_logFileNameExtension->setText(logExtension);
+
+    // This is the previous standard:
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
+    // The ISO standard for this uses T as the date/time separator
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd"));
+    // It might be possible to use QDateTime::weekNumber but that number is not
+    // available from the QDateTime::toString(...) method
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01%1)").arg(logExtension), QStringLiteral("yyyy-MM"));
     comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
-    lineEdit_logFileName->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                     .arg(tr("<p>Set a custom name for your log. (Logs are appended if a log file of the same name already exists).</p>")));
-    lineEdit_logFileName->setPlaceholderText(tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
     comboBox_logFileNameFormat->setCurrentIndex(comboBox_logFileNameFormat->findData(pHost->mLogFileNameFormat));
+
     lineEdit_logFileName->setText(pHost->mLogFileName);
 
-    mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
+    // pHost->mLogDir should be empty for the default location:
+    mLogDirPath = pHost->mLogDir;
+    if (mLogDirPath.isEmpty()) {
+        pushButton_whereToLog->setText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    } else {
+        pushButton_whereToLog->setText(mLogDirPath);
+    }
+    // Enable the reset button if the current location is not the default one:
+    pushButton_resetLogDir->setEnabled(pushButton_whereToLog->text() != mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+
+
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
     mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
@@ -668,7 +655,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
 
     connect(pushButton_whereToLog, SIGNAL(clicked()), this, SLOT(slot_setLogDir()));
-    connect(toolButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
+    connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
     connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
     connect(mIsToLogInHtml, SIGNAL(clicked(bool)), this, SLOT(slot_changeLogFileAsHtml(bool)));
 }
@@ -744,7 +731,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 
     disconnect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)));
     disconnect(pushButton_whereToLog, SIGNAL(clicked()));
-    disconnect(toolButton_resetLogDir, SIGNAL(clicked()));
+    disconnect(pushButton_resetLogDir, SIGNAL(clicked()));
     disconnect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)));
     disconnect(mIsToLogInHtml, SIGNAL(clicked(bool)));
 }
@@ -1785,25 +1772,19 @@ void dlgProfilePreferences::slot_setLogDir()
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
-    QDir currentLogDir = QFileDialog::getExistingDirectory(this,
-                                                           tr("Where should Mudlet save log-files?"),
-                                                           (mLogDirPath.isEmpty() ? lineEdit_logFileFolder->placeholderText() : mLogDirPath),
-                                                           QFileDialog::DontUseNativeDialog);
-    if (!(currentLogDir.isRelative() && currentLogDir.path() == QLatin1String("."))) {
-        // This has the side effect of making it not possible to store logs in
-        // the same folder as the executable but we need it to avoid setting the
-        // log file directory to that by accident (clicking on cancel or close)
+    QString currentLogDir = QFileDialog::getExistingDirectory(this,
+                                                              tr("Where should Mudlet save log files?"),
+                                                              pushButton_whereToLog->text(),
+                                                              QFileDialog::DontUseNativeDialog);
 
-        if (currentLogDir.absolutePath() != lineEdit_logFileFolder->placeholderText()) {
-            mLogDirPath = currentLogDir.absolutePath();
-            toolButton_resetLogDir->setEnabled(true);
-        } else {
-            // Clear back to show the default as the placehoder text
-            mLogDirPath.clear();
-            toolButton_resetLogDir->setEnabled(false);
-        }
-        lineEdit_logFileFolder->setText(mLogDirPath);
+    if (!currentLogDir.isEmpty() && currentLogDir != NULL) {
+        mLogDirPath = currentLogDir;
+        pushButton_whereToLog->setText(mLogDirPath);
+        // Enable pushButton_resetLogDir if the directory is set to the default path
+        pushButton_resetLogDir->setEnabled(mLogDirPath != mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
     }
+
+    return;
 }
 
 void dlgProfilePreferences::slot_resetLogDir()
@@ -1814,8 +1795,10 @@ void dlgProfilePreferences::slot_resetLogDir()
     }
 
     mLogDirPath.clear();
-    lineEdit_logFileFolder->clear();
-    toolButton_resetLogDir->setEnabled(false);
+    pushButton_whereToLog->setText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    pushButton_resetLogDir->setEnabled(false);
+    
+    return;
 }
 
 void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
