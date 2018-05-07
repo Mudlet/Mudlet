@@ -104,13 +104,21 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
-    // Set the properties of the log options 
+    // Set the properties of the log options
+    lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                               .arg(tr("<p>Shows the location which will be used for to store log files (either plain text or HTML format) "
+                                                       "will be stored.  If there are files already present in that location they may be appended to if "
+                                                       "their name matches what the format chosen in the remaining options would select.</p>"
+                                                       "<p><i>Note: the location displayed here is not directly editable.<i> To change it, you must use "
+                                                       "the buttons to the right.  If the location has been reset to the default for this profile it "
+                                                       "will be shown in a different shade and the reset button will be disabled.</p>")));
     pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>(Optional) Save log files in selected directory.</p>"));
     comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
                                                    .arg("<p>This option sets the format of the log name.</p>"
                                                         "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
     lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (Logs are appended if a log file of the same name already exists).</p>"));
-    lineEdit_logFileName->setPlaceholderText(tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
+    lineEdit_logFileName->setPlaceholderText(
+            tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
     label_logFileNameExtension->setVisible(false);
     label_logFileName->setVisible(false);
     lineEdit_logFileName->setVisible(false);
@@ -449,13 +457,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // pHost->mLogDir should be empty for the default location:
     mLogDirPath = pHost->mLogDir;
-    if (mLogDirPath.isEmpty()) {
-        pushButton_whereToLog->setText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
-    } else {
-        pushButton_whereToLog->setText(mLogDirPath);
-    }
+    lineEdit_logFileFolder->setText(mLogDirPath);
+    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
     // Enable the reset button if the current location is not the default one:
-    pushButton_resetLogDir->setEnabled(pushButton_whereToLog->text() != mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    pushButton_resetLogDir->setEnabled(lineEdit_logFileFolder->text() != lineEdit_logFileFolder->placeholderText());
 
 
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
@@ -1772,18 +1777,18 @@ void dlgProfilePreferences::slot_setLogDir()
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
-    QString currentLogDir = QFileDialog::getExistingDirectory(this,
-                                                              tr("Where should Mudlet save log files?"),
-                                                              pushButton_whereToLog->text(),
-                                                              QFileDialog::DontUseNativeDialog);
+    QString currentLogDir = QFileDialog::getExistingDirectory(
+            this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lineEdit_logFileFolder->placeholderText() : mLogDirPath), QFileDialog::DontUseNativeDialog);
 
+    // Set the text of lineEdit_logFileFolder to the selected directory
     if (!currentLogDir.isEmpty() && currentLogDir != NULL) {
         mLogDirPath = currentLogDir;
-        pushButton_whereToLog->setText(mLogDirPath);
-        // Enable pushButton_resetLogDir if the directory is set to the default path
+        lineEdit_logFileFolder->setText(mLogDirPath);
+        // Disable pushButton_resetLogDir if the directory is set to the default path
         pushButton_resetLogDir->setEnabled(mLogDirPath != mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
     }
 
+    // If 'Cancel' is pushed, do nothing and keep mLogDirPath as its current value.
     return;
 }
 
@@ -1795,9 +1800,9 @@ void dlgProfilePreferences::slot_resetLogDir()
     }
 
     mLogDirPath.clear();
-    pushButton_whereToLog->setText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    lineEdit_logFileFolder->clear();
     pushButton_resetLogDir->setEnabled(false);
-    
+
     return;
 }
 

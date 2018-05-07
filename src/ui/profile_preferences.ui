@@ -281,8 +281,8 @@
          <property name="title">
           <string>Log options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_6" columnstretch="0,1,0">
-          <item row="0" column="0" colspan="3">
+         <layout class="QGridLayout" name="gridLayout_6">
+          <item row="0" column="0" colspan="4">
            <widget class="QCheckBox" name="mIsToLogInHtml">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -292,7 +292,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="3">
+          <item row="1" column="0" colspan="4">
            <widget class="QCheckBox" name="mIsLoggingTimestamps">
             <property name="text">
              <string>Add timestamps at the beginning of log lines</string>
@@ -310,16 +310,20 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QPushButton" name="pushButton_whereToLog">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-              <horstretch>1</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+           <widget class="QLineEdit" name="lineEdit_logFileFolder">
+            <property name="readOnly">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
           <item row="2" column="2">
+           <widget class="QPushButton" name="pushButton_whereToLog">
+            <property name="text">
+             <string>Browse...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
            <widget class="QPushButton" name="pushButton_resetLogDir">
             <property name="toolTip">
              <string>Set the log directory to default so that logs are saved to the profile's 'log' directory.</string>
@@ -339,11 +343,8 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">
+          <item row="3" column="1" colspan="3">
            <widget class="QComboBox" name="comboBox_logFileNameFormat">
-            <property name="sizeAdjustPolicy">
-             <enum>QComboBox::AdjustToContents</enum>
-            </property>
            </widget>
           </item>
           <item row="4" column="0" alignment="Qt::AlignRight">
@@ -356,14 +357,14 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="4" column="1" colspan="2">
            <widget class="QLineEdit" name="lineEdit_logFileName">
             <property name="alignment">
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
            </widget>
           </item>
-          <item row="4" column="2">
+          <item row="4" column="3">
            <widget class="QLabel" name="label_logFileNameExtension">
             <property name="enabled">
              <bool>true</bool>
