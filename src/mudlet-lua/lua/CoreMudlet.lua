@@ -702,7 +702,14 @@ if false then
   function getTime(returnType, format)
   end
 
-
+  --- Return seconds since unix epoch with milliseconds
+  ---
+  --- @usage Get seconds since unix epoch with milliseconds
+  ---   <pre>
+  ---   getEpoch()
+  ---   </pre>
+  function getEpoch()
+  end
 
   --- Returns the timestamp string as it's seen when you enable the timestamps view (blue 'i' button bottom right of the Mudlet screen).
   ---

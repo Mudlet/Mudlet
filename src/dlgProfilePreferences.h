@@ -35,6 +35,7 @@
 #include <QtCore>
 #include <QDialog>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QMap>
 #include "post_guard.h"
 

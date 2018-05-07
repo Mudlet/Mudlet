@@ -232,13 +232,13 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_Return:
             if (ke->modifiers() & Qt::ControlModifier) {
-                mpConsole->console2->mCursorY = mpConsole->buffer.size();
-                mpConsole->console2->hide();
+                mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size();
+                mpConsole->mLowerPane->hide();
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
-                mpConsole->console->mCursorY = mpConsole->buffer.size();
-                mpConsole->console->mIsTailMode = true;
-                mpConsole->console->updateScreenView();
-                mpConsole->console->forceUpdate();
+                mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
+                mpConsole->mUpperPane->mIsTailMode = true;
+                mpConsole->mUpperPane->updateScreenView();
+                mpConsole->mUpperPane->forceUpdate();
                 ke->accept();
                 return true;
             } else if (ke->modifiers() & Qt::ShiftModifier) {
@@ -335,8 +335,8 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_C:
             if (ke->modifiers() & Qt::ControlModifier) {
-                if (mpConsole->console->mSelectedRegion != QRegion(0, 0, 0, 0)) {
-                    mpConsole->console->copySelectionToClipboard();
+                if (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0)) {
+                    mpConsole->mUpperPane->copySelectionToClipboard();
                     ke->accept();
                     return true;
                 }
@@ -377,8 +377,8 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     textCursor().movePosition(QTextCursor::Start);
     textCursor().movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, mSelectedText.length());
 
-    mpConsole->console->forceUpdate();
-    mpConsole->console2->forceUpdate();
+    mpConsole->mUpperPane->forceUpdate();
+    mpConsole->mLowerPane->forceUpdate();
     QPlainTextEdit::focusInEvent(event);
 }
 

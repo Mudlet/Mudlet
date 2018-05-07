@@ -38,7 +38,7 @@
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false)
+Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false), mpInstallOrRestart(new QPushButton(tr("Update")))
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
@@ -151,8 +151,8 @@ void Updater::setupOnWindows()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
-    installOrRestartButton = new QPushButton(tr("Update"));
-    updateDialog->addInstallButton(installOrRestartButton);
+    mpInstallOrRestart->setText(tr("Update"));
+    updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
 }
 
@@ -213,8 +213,8 @@ void Updater::setupOnLinux()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
-    installOrRestartButton = new QPushButton(tr("Update"));
-    updateDialog->addInstallButton(installOrRestartButton);
+    mpInstallOrRestart->setText(tr("Update"));
+    updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
 }
 
@@ -305,8 +305,8 @@ void Updater::installOrRestartClicked(QAbstractButton* button, const QString& fi
 #elif defined(Q_OS_WIN32)
         finishSetup();
 #endif
-        installOrRestartButton->setText(tr("Restart to apply update"));
-        installOrRestartButton->setEnabled(true);
+        mpInstallOrRestart->setText(tr("Restart to apply update"));
+        mpInstallOrRestart->setEnabled(true);
     });
     watcher->setFuture(future);
 #endif // !Q_OS_MACOS

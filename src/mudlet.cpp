@@ -1355,7 +1355,40 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
-bool mudlet::setFontSize(Host* pHost, const QString& name, int size)
+bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& font)
+{
+    if (!pHost) {
+        return false;
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(window)) {
+        TConsole* pC = dockWindowConsoleMap.value(window);
+        pC->setMiniConsoleFont(font);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+QString mudlet::getWindowFont(Host* pHost, const QString& name)
+{
+    if (!pHost) {
+        return QString();
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(name)) {
+        return dockWindowConsoleMap.value(name)->mUpperPane->mDisplayFont.family();
+    } else {
+        return QString();
+    }
+}
+
+bool mudlet::setWindowFontSize(Host *pHost, const QString &name, int size)
 {
     if (!pHost) {
         return false;
@@ -1382,7 +1415,7 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
 
     if (dockWindowConsoleMap.contains(name)) {
-        return dockWindowConsoleMap.value(name)->console->mDisplayFont.pointSize();
+        return dockWindowConsoleMap.value(name)->mUpperPane->mDisplayFont.pointSize();
     } else {
         return -1;
     }
@@ -1411,12 +1444,12 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
-        pC->console->setIsMiniConsole();
-        pC->console2->setIsMiniConsole();
+        pC->mUpperPane->setIsMiniConsole();
+        pC->mLowerPane->setIsMiniConsole();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
 
-        setFontSize(pHost, name, 10);
+        setWindowFontSize(pHost, name, 10);
 
         if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();
@@ -1596,7 +1629,7 @@ bool mudlet::clearWindow(Host* pHost, const QString& name)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
     if (dockWindowConsoleMap.contains(name)) {
         dockWindowConsoleMap[name]->buffer.clear();
-        dockWindowConsoleMap[name]->console->update();
+        dockWindowConsoleMap[name]->mUpperPane->update();
         return true;
     } else {
         return false;
@@ -3571,7 +3604,7 @@ int mudlet::getColumnCount(Host* pHost, QString& name)
         return -1;
     }
 
-    return dockWindowConsoleMap[name]->console->getColumnCount();
+    return dockWindowConsoleMap[name]->mUpperPane->getColumnCount();
 }
 
 int mudlet::getRowCount(Host* pHost, QString& name)
@@ -3583,7 +3616,7 @@ int mudlet::getRowCount(Host* pHost, QString& name)
         return -1;
     }
 
-    return dockWindowConsoleMap[name]->console->getRowCount();
+    return dockWindowConsoleMap[name]->mUpperPane->getRowCount();
 }
 
 // Can be called from lua sub-system OR from slot_replay(), the presence of a

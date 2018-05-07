@@ -58,8 +58,7 @@ env:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
   - secure: XxdhHVraWpXpWo4tluD7NwJtqQT1b6LKoxX6QWKzR0fvcKgqBy2jlXMu0KVtTYtVI7M1wFdjtwSixK1UGFZyDgEYYUnDTufq7E81TWJSQ5ZhxNRaDAyO2vkLNFpH7LkwVrV/fWCPKE9t3/WiowwQnXesm9MMxAzbd2mIaeyiccY=
 git:
-  submodules: false
-  # We selectively pull in the wanted submodules ourselves now
+  submodules: false # We selectively pull in the wanted submodules ourselves now
 matrix:
   exclude:
   - os: osx
@@ -74,7 +73,7 @@ before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then `luarocks path`; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then $(luarocks path); fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
@@ -87,7 +86,9 @@ script:
   - cd ../build
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
   - if [ "${CC}" = "clang" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${Q_OR_C_MAKE}" = "qmake" ] ; then SPEC="-spec linux-clang"; fi
-  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ${SPEC} ../src/mudlet.pro && make -j2; else cmake --version; cmake .. && make -j2 && make check; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PROCS=$(sysctl -n hw.physicalcpu); else PROCS=$(nproc); fi
+  - echo "Compiling using ${PROCS} cores."
+  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ${SPEC} ../src/mudlet.pro && make -j ${PROCS}; else cmake --version; cmake .. && make -j ${PROCS} && make check; fi
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
   - bash CI/travis.after_success.sh

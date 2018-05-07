@@ -138,7 +138,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.8.1
+VERSION = 3.9.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -280,7 +280,7 @@ unix:!macx {
         -L"C:\\mingw32\\lib" \
         -llua51 \
         -lpcre-1 \
-        -llibhunspell-1.4 \
+        -llibhunspell-1.6 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lyajl \
