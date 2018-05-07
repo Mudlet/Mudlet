@@ -325,9 +325,6 @@
           </item>
           <item row="2" column="3">
            <widget class="QPushButton" name="pushButton_resetLogDir">
-            <property name="toolTip">
-             <string>Set the log directory to default so that logs are saved to the profile's 'log' directory.</string>
-            </property>
             <property name="text">
              <string>Reset</string>
             </property>
