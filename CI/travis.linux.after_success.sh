@@ -7,7 +7,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
 
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
     # instead of deployment, we upload to coverity for cron jobs
-	  tar czf Mudlet.tgz cov-int
+	  tar czf Mudlet.tgz build/cov-int
     ls -l Mudlet.tgz
     # we make this FAIL to not thrash our allowance if things go wrong!
     curl --form token=$COVERITY_SCAN_TOKEN \
