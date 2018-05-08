@@ -44,6 +44,7 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QTextCodec>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include "post_guard.h"
@@ -820,14 +821,36 @@ void TConsole::toggleLogging(bool isMessageEnabled)
     // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
     // but the action is "Per Profile"...!
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
+    QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file);
         file.close();
 
-        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
-        // Revised file name derived from time so that alphabetical filename and
-        // date sort order are the same...
+        QString directoryLogFile;
+        QString logFileName;
+        // If no log directory is set, default to Mudlet's replay and log files path
+        if (mpHost->mLogDir.isEmpty() || mpHost->mLogDir == NULL) {
+            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+        } else {
+            directoryLogFile = mpHost->mLogDir;
+        }
+        // The format being empty is a signal value that means use a specified
+        // name:
+        if (mpHost->mLogFileNameFormat.isEmpty()) {
+            if (mpHost->mLogFileName.isEmpty()) {
+                // If no log name is set, use the default placeholder
+                logFileName = tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).");
+            } else {
+                // Otherwise a specific name as one is given
+                logFileName = mpHost->mLogFileName;
+            }
+        } else {
+            logFileName = logDateTime.toString(mpHost->mLogFileNameFormat);
+        }
+
+        // The preset file name formats are derived from date/times so that
+        // alphabetical filename and date sort order are the same...
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -835,12 +858,21 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
+            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, logFileName);
         } else {
-            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
+            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, logFileName);
         }
         mLogFile.setFileName(mLogFileName);
-        mLogFile.open(QIODevice::WriteOnly);
+        // We do not want to use WriteOnly here:
+        // Append = "The device is opened in append mode so that all data is
+        // written to the end of the file."
+        // WriteOnly = "The device is open for writing. Note that this mode
+        // implies Truncate."
+        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+            mLogFile.open(QIODevice::ReadWrite);
+        } else {
+            mLogFile.open(QIODevice::Append);
+        }
         mLogStream.setDevice(&mLogFile);
         if (isMessageEnabled) {
             QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
@@ -861,7 +893,23 @@ void TConsole::toggleLogging(bool isMessageEnabled)
     }
 
     if (mLogToLogFile) {
+        // Logging is being turned on
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+            QString log;
+            QTextStream logStream(&log);
+            /*
+             * From the Qt Documentation:
+             * 'On Windows, the codec will be based on a system locale. On Unix
+             * systems, the codec will might fall back to using the iconv
+             * library if no builtin codec for the locale can be found."
+             *
+             * Note that in these cases the codec's name will be "System".'
+             *
+             * So if we are going to use UTF-8 as we declare in the HTML
+             * header we had better set that codec to be used:
+             */
+            QTextCodec* logCodec = QTextCodec::codecForName("UTF-8");
+            logStream.setCodec(logCodec);
             QStringList fontsList;                  // List of fonts to become the font-family entry for
                                                     // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
@@ -876,37 +924,95 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             fontsList << QStringLiteral("Courier");
             fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
 
-            mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
-            mLogStream << "<html>\n";
-            mLogStream << " <head>\n";
-            mLogStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
+            logStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
+            logStream << "<html>\n";
+            logStream << " <head>\n";
+            logStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
             // put the charset as early as possible as the parser MUST restart when it
             // switches away from the ASCII default
-            mLogStream << "  <meta name='generator' content='Mudlet MUD Client version: " << APP_VERSION << APP_BUILD << "'>\n";
+            logStream << "  <meta name='generator' content='" << tr("Mudlet MUD Client version: %1%2").arg(APP_VERSION, APP_BUILD) << "'>\n";
             // Nice to identify what made the file!
-            mLogStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(profile_name) << "</title>\n";
+            logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(profile_name) << "</title>\n";
             // Web-page title
-            mLogStream << "  <style type='text/css'>\n";
-            mLogStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(255,255,255); background-color:rgb("
-                       << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
-            mLogStream << "        span { white-space: pre; } -->\n";
-            mLogStream << "  </style>\n";
-            mLogStream << "  </head>\n";
-            mLogStream << "  <body><div>";
+            logStream << "  <style type='text/css'>\n";
+            logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb("
+                      << mpHost->mFgColor.red() << "," << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue()
+                      << "); background-color:rgb("
+                      << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
+            logStream << "        span { white-space: pre; } -->\n";
+            logStream << "  </style>\n";
+            logStream << "  </head>\n";
+            bool isAtBody = false;
+            bool foundBody = false;
+            while (!mLogStream.atEnd()) {
+                QString line = mLogStream.readLine();
+                if (line.contains("<body><div>")) {
+                    // Begin writing old log to the current log when the body is
+                    // found.
+                    isAtBody = true;
+                    foundBody = true;
+                } else if (line.contains("</div></body>")) {
+                    // Stop writing to current log once the end of the old log's
+                    // <body> is reached.
+                    isAtBody = false;
+                }
+
+                if (isAtBody) {
+                    logStream << line << "\n";
+                }
+            }
+            if (!foundBody) {
+                logStream << "  <body><div>\n";
+            } else {
+                // Put a horizontal line between separate log sessions
+                logStream << "  </div><hr><div>\n";
+            }
+            logStream << QStringLiteral("<p>%1</p>\n")
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'",
+                                                      "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
+
+            if (!mLogFile.resize(0)) {
+                qWarning() << "TConsole::toggleLogging(...) ERROR - Failed to resize HTML Logfile - it may now be corrupted...!";
+            }
+            mLogStream << log;
             mLogFile.flush();
+        } else {
+            // File is NOT an HTML one but pure text:
+            // Put a horizontal line between separate log sessions
+            // Unfortunately QLatin1String does not have a repeated() method,
+            // but it does mean we can use non-ASCII/Latin1 characters:
+            // Using 10x U+23AF Horizontal line extension from "Box drawing characters":
+            if (mLogFile.size() > 5) {
+                // Allow a few junk characters ("BOM"???) at the very start of
+                // file to not trigger the insertion of this line:
+                mLogStream << QStringLiteral("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").repeated(8).append(QChar::LineFeed);
+            }
+            mLogStream << logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.\n",
+                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
+
         }
-        logButton->setToolTip(tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>"));
+        logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                              .arg(tr("<p>Stop logging MUD output to log file.</p>")));
     } else {
+        // Logging is being turned off
         buffer.logRemainingOutput();
+        QString endDateTimeLine = tr("Log session ending at %1.")
+                .arg(logDateTime.toString(tr("hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy",
+                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogStream << "</div></body>\n";
+            mLogStream << QStringLiteral("<p>%1</p>\n").arg(endDateTimeLine);
+            mLogStream << "  </div></body>\n";
             mLogStream << "</html>\n";
+        } else {
+            // File is NOT an HTML one but pure text:
+            mLogStream << endDateTimeLine << "\n";
         }
         mLogFile.flush();
         mLogFile.close();
-        logButton->setToolTip(tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>"));
+        logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                              .arg(tr("<p>Start logging MUD output to log file.</p>")));
     }
 }
 

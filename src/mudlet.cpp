@@ -2189,9 +2189,7 @@ void mudlet::slot_userToolBar_hovered(QAction* pA)
     }
 }
 
-void mudlet::slot_userToolBar_orientation_changed(Qt::Orientation dir)
-{
-}
+void mudlet::slot_userToolBar_orientation_changed(Qt::Orientation dir) {}
 
 Host* mudlet::getActiveHost()
 {
@@ -2379,12 +2377,10 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
 // profile loaded so no TConsoles with a "rescue" context menu):
 void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
-    if (! isVisible && mMenuBarVisibility == visibleNever) {
+    if (!isVisible && mMenuBarVisibility == visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
         int hostCount = mHostManager.getHostCount();
-        if ( (hostCount < 2 && (mToolbarVisibility & visibleAlways))
-           ||(hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
-
+        if ((hostCount < 2 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
             mpMainToolBar->show();
         }
     }
@@ -2394,9 +2390,7 @@ void mudlet::adjustToolBarVisibility()
 {
     // Are there any profiles loaded - note that the dummy "default_host" counts
     // as the first one
-    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways)
-       ||(mToolbarVisibility & visibleMaskNormally)) {
-
+    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways) || (mToolbarVisibility & visibleMaskNormally)) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -3003,7 +2997,7 @@ mudlet::~mudlet()
     // There may be a corner case if a replay is running AND the application is
     // closing down AND the updater on a particular platform pauses the
     // application destruction...?
-    delete(mpTimerReplay);
+    delete (mpTimerReplay);
     mpTimerReplay = nullptr;
 
     mudlet::_self = nullptr;
@@ -3132,14 +3126,13 @@ void mudlet::replayOver()
     mpActionReplay->setCheckable(false);
     mpActionReplay->setEnabled(true);
     dactionReplay->setEnabled(true);
-    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                               .arg(tr("<p>Load a Mudlet replay.</p>")));
+    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Load a Mudlet replay.</p>")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 }
 
 void mudlet::slot_replaySpeedUp()
 {
-    if(mpLabelReplaySpeedDisplay) {
+    if (mpLabelReplaySpeedDisplay) {
         mReplaySpeed = mReplaySpeed * 2;
         mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
@@ -3149,7 +3142,7 @@ void mudlet::slot_replaySpeedUp()
 
 void mudlet::slot_replaySpeedDown()
 {
-    if(mpLabelReplaySpeedDisplay) {
+    if (mpLabelReplaySpeedDisplay) {
         mReplaySpeed = mReplaySpeed / 2;
         if (mReplaySpeed < 1) {
             mReplaySpeed = 1;

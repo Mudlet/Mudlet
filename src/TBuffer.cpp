@@ -2959,26 +2959,19 @@ void TBuffer::log(int fromLine, int toLine)
         mpHost->mpConsole->mLogStream.flush();
     }
 
-    QString toLog;
+    QStringList linesToLog;
     for (int i = fromLine; i <= toLine; i++) {
-        QString lineToLog;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            QPoint P1 = QPoint(0, i);
-            QPoint P2 = QPoint(buffer[i].size(), i);
-            lineToLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
+            // This only handles a single line of logged text at a time:
+            linesToLog << bufferToHtml(QPoint(0, i), QPoint(buffer.at(i).size(), i), mpHost->mIsLoggingTimestamps);
         } else {
-            if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
-                lineToLog = timeBuffer[i].left(13);
-            }
-            lineToLog.append(lineBuffer[i]);
-            lineToLog.append("\n");
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(13) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
-        toLog = toLog % lineToLog;
     }
 
     // record the last log call into a temporary buffer - we'll actually log
     // on the next iteration after duplication detection has run
-    lastTextToLog = std::move(toLog);
+    lastTextToLog = std::move(linesToLog.join(QString()));
     lastLoggedFromLine = fromLine;
     lastloggedToLine = toLine;
 }
