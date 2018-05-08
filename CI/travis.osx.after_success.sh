@@ -2,6 +2,11 @@
 
 set -e
 
+if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+	echo Job not executed under cron run
+	exit
+fi
+
 # we deploy only qmake and clang combination for macOS
 if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
