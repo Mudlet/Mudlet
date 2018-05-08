@@ -105,15 +105,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     // Set the properties of the log options
-    lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                               .arg(tr("<p>Shows the location which will be used to store log files (either plain text or HTML format)."
-                                                       "  If there are files already present in that location they may be appended to if "
-                                                       "their name matches what the format chosen in the remaining options would select.</p>"
-                                                       "<p><i>Note: the location displayed here is not directly editable.<i> To change it, you must use "
-                                                       "the buttons to the right.  If the location has been reset to the default for this profile it "
-                                                       "will be shown in a different shade and the reset button will be disabled.</p>")));
+    lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
     pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Select a directory where logs will be saved.</p>"));
-    pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory where logs will be saved to the profile's <i>log</i> directory.</p>"));
+    pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
     comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
                                                    .arg("<p>This option sets the format of the log name.</p>"
                                                         "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
@@ -461,7 +455,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_logFileFolder->setText(mLogDirPath);
     lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
     // set the cursor position to the end of the lineEdit's text property.
-    lineEdit_logFileFolder->setCursorPosition(mLogDirPath.length() > 0 ? mLogDirPath.length() : lineEdit_logFileFolder->placeholderText().length());
+    lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
     // Enable the reset button if the current location is not the default one:
     pushButton_resetLogDir->setEnabled(mLogDirPath.length() > 0);
 
@@ -1792,9 +1786,6 @@ void dlgProfilePreferences::slot_setLogDir()
             // to Mudlet's default log path.
             mLogDirPath.clear();
             lineEdit_logFileFolder->clear();
-            // Set the cursor position to the end of the lineEdit's placeholder
-            // text.
-            lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->placeholderText().length());
             pushButton_resetLogDir->setEnabled(false);
         } else {
             // set mLogDirPath to the selected directory
@@ -1804,7 +1795,7 @@ void dlgProfilePreferences::slot_setLogDir()
             // directory.
             lineEdit_logFileFolder->setText(mLogDirPath);
             // Set the cursor position to the end of the text.
-            lineEdit_logFileFolder->setCursorPosition(mLogDirPath.length());
+            lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
             pushButton_resetLogDir->setEnabled(true);
         }
     }
