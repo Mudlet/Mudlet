@@ -5,7 +5,7 @@ os:
 dist: trusty
 sudo: false
 addons:
-  apt: &apt-addon
+  apt:
     sources:
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
     - sourceline: 'ppa:beineri/opt-qt593-trusty'
@@ -33,7 +33,9 @@ addons:
     - lua-filesystem
     - lua-zip
     - lua-sql-sqlite3
-compiler: clang
+compiler:
+- clang
+- gcc
 env:
   matrix:
   - Q_OR_C_MAKE=cmake
@@ -59,36 +61,17 @@ env:
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
 matrix:
+  exclude:
+  - os: osx
+    compiler: gcc
   include:
   - os: linux
     compiler: gcc
     env: 
     - Q_OR_C_MAKE=cmake
     - QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
-  - os: linux
-    compiler: gcc
-    env: 
-    - Q_OR_C_MAKE=cmake
-    - QT_VERSION=59 # actually Qt 5.9
-  - os: linux
-    compiler: gcc
-    env:
-    - Q_OR_C_MAKE=qmake
-    - QT_VERSION=59
-    addons:
-      apt: *apt-addon
-      coverity_scan:
-        project:
-          name: "Mudlet/Mudlet"
-          description: "<Your project description here>"
-        notification_email: vperetokin@gmail.com
-        build_command_prepend: |
-          # source the set-build-info as it exports some variables for us!
-          source CI/travis.set-build-info.sh
-          mkdir -p build
-        build_command: ./CI/travis.compile.sh
-        branch_pattern: AddCoverityScans
 before_install:
+  - export TRAVIS_EVENT_TYPE="cron" # this is temporary to let us play around with coverity
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
@@ -96,17 +79,13 @@ before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then $(luarocks path); fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - ./CI/travis.before_install.sh
-install: ./CI/travis.install.sh
+install: source CI/travis.install.sh
 before_script: |
   # source the set-build-info as it exports some variables for us!
   source CI/travis.set-build-info.sh
   mkdir -p build
-script: |
-  if [ "${COVERITY_SCAN_BRANCH}" = 1 ]; then
-    echo "Already built and uploaded to coverity. Skipping build..."
-    exit 0
-  fi
-  ./CI/travis.compile.sh
+script:
+- ./CI/travis.compile.sh
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
   - bash CI/travis.after_success.sh
