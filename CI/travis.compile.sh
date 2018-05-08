@@ -1,4 +1,12 @@
 #!/bin/bash
+
+if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
+  if [ "${CC}" = "clang" ] || [ "${Q_OR_C_MAKE}" = "cmake" ] || [ "${QT_VERSION}" = "56" ]; then
+    echo Job not executed under cron run
+    exit 0
+  fi
+fi
+
 cd build
 if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
   # need to set additional compile flags on osx
