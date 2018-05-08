@@ -1,8 +1,8 @@
 #!/bin/bash
-#if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
-#	echo Job not executed under cron run
-#	exit
-#fi
+if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+	echo Job not executed under cron run
+	exit
+fi
 
 set -e
 BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl"
