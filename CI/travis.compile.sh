@@ -2,10 +2,12 @@
 compile_line=()
 if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   if [ "${CC}" = "clang" ] || [ "${Q_OR_C_MAKE}" = "cmake" ] || [ "${QT_VERSION}" = "56" ]; then
-    echo Job not executed under cron run
-    exit 0
+#    echo Job not executed under cron run
+#    exit 0
+    echo "Do nothing"
+  else
+    compile_line+=(cov-build --dir cov-int)
   fi
-  compile_line+=(cov-build --dir cov-int)
 fi
 
 cd build
