@@ -19,6 +19,7 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   tar xzf cov*.tar.gz
   rm -f cov*.tar.gz
   export PATH="coverity/$(ls -d cov*)/bin:$PATH"
+  echo The new PATH is now "${PATH}"
   cd ..
 # Coverity scan tool installed
 fi
