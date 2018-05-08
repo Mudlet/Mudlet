@@ -28,5 +28,5 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   qmake ${SPEC} ../src/mudlet.pro && make -j ${PROCS}
 else
   cmake --version
-  cmake .. && make -j ${PROCS} && make check
+  cmake .. && make -j ${PROCS}
 fi
