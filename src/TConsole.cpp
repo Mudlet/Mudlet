@@ -1930,9 +1930,11 @@ bool TConsole::setMiniConsoleFontSize(int size)
 void TConsole::refreshMiniConsole() const
 {
     mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
+    mUpperPane->setFont(mUpperPane->mDisplayFont);
     mUpperPane->updateScreenView();
     mUpperPane->forceUpdate();
     mLowerPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
+    mLowerPane->setFont(mLowerPane->mDisplayFont);
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 }
