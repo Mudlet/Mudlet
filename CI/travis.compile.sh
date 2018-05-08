@@ -5,7 +5,7 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
     echo Job not executed under cron run
     exit 0
   fi
-  compile_line+=(cov-build --dir cov-int)
+  compile_line+=("CCACHE_DISABLE=1" cov-build --dir cov-int)
 fi
 
 cd build
