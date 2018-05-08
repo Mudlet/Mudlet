@@ -1,10 +1,11 @@
 #!/bin/bash
-
+compile_line=()
 if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   if [ "${CC}" = "clang" ] || [ "${Q_OR_C_MAKE}" = "cmake" ] || [ "${QT_VERSION}" = "56" ]; then
     echo Job not executed under cron run
     exit 0
   fi
+  compile_line+=(cov-build --dir cov-int)
 fi
 
 cd build
@@ -25,8 +26,13 @@ fi
 echo "Compiling using ${PROCS} cores."
 if [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   qmake -v
-  qmake ${SPEC} ../src/mudlet.pro && make -j ${PROCS}
+  qmake ${SPEC} ../src/mudlet.pro
 else
   cmake --version
-  cmake .. && make -j ${PROCS}
+  cmake ..
 fi
+
+compile_line+=(make -j ${PROCS})
+ 
+set -x
+"${compile_line[@]}"
