@@ -11,7 +11,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
 	  tar czf Mudlet.tgz cov-int
     ls -l Mudlet.tgz
     # we make this FAIL to not thrash our allowance if things go wrong!
-    curl --form token=$COVERITY_SCAN_TOKEN \
+    curl --form token="${COVERITY_SCAN_TOKEN}" \
       --form email=coverity@mudlet.org \
       --form file=@Mudlet.tgz \
       --form version="master branch head" \
