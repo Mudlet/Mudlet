@@ -36,6 +36,10 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include <iostream>
+#include <sstream>
+#include <fstream>
+
 using namespace std;
 
 XMLexport::XMLexport( Host * pH )
@@ -247,9 +251,102 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     return false;
 }
 
-bool XMLexport::saveXml(const QString& fileName) const
+void inline XMLexport::replaceAll(std::string& source, const char from, const std::string& to)
 {
-    return mExportDoc.save_file(fileName.toLocal8Bit().data(), "    ");
+    std::string newString;
+    newString.reserve(source.length()); // avoids a few memory allocations
+
+    std::string::size_type lastPos = 0;
+    std::string::size_type findPos;
+
+    while (std::string::npos != (findPos = source.find(from, lastPos))) {
+        newString.append(source, lastPos, findPos - lastPos);
+        newString += to;
+        lastPos = findPos + 1;
+    }
+
+    // Care for the rest after last occurrence
+    newString += source.substr(lastPos);
+
+    source.swap(newString);
+}
+
+bool XMLexport::saveXml(const QString& fileName)
+{
+    std::stringstream saveStringStream(ios::out);
+    std::ofstream saveFileStream(fileName.toLocal8Bit().data());
+
+    std::string output;
+
+//    localScript.replace(QChar('\x01'), QStringLiteral("\xFFFC\x2401")); // SOH
+//    localScript.replace(QChar('\x02'), QStringLiteral("\xFFFC\x2402")); // STX
+//    localScript.replace(QChar('\x03'), QStringLiteral("\xFFFC\x2403")); // ETX
+//    localScript.replace(QChar('\x04'), QStringLiteral("\xFFFC\x2404")); // EOT
+//    localScript.replace(QChar('\x05'), QStringLiteral("\xFFFC\x2405")); // ENQ
+//    localScript.replace(QChar('\x06'), QStringLiteral("\xFFFC\x2406")); // ACK
+//    localScript.replace(QChar('\x07'), QStringLiteral("\xFFFC\x2407")); // BEL
+//    localScript.replace(QChar('\x08'), QStringLiteral("\xFFFC\x2408")); // BS
+//    localScript.replace(QChar('\x0B'), QStringLiteral("\xFFFC\x240B")); // VT
+//    localScript.replace(QChar('\x0C'), QStringLiteral("\xFFFC\x240C")); // FF
+//    localScript.replace(QChar('\x0E'), QStringLiteral("\xFFFC\x240E")); // SS
+//    localScript.replace(QChar('\x0F'), QStringLiteral("\xFFFC\x240F")); // SI
+//    localScript.replace(QChar('\x10'), QStringLiteral("\xFFFC\x2410")); // DLE
+//    localScript.replace(QChar('\x11'), QStringLiteral("\xFFFC\x2411")); // DC1
+//    localScript.replace(QChar('\x12'), QStringLiteral("\xFFFC\x2412")); // DC2
+//    localScript.replace(QChar('\x13'), QStringLiteral("\xFFFC\x2413")); // DC3
+//    localScript.replace(QChar('\x14'), QStringLiteral("\xFFFC\x2414")); // DC4
+//    localScript.replace(QChar('\x15'), QStringLiteral("\xFFFC\x2415")); // NAK
+//    localScript.replace(QChar('\x16'), QStringLiteral("\xFFFC\x2416")); // SYN
+//    localScript.replace(QChar('\x17'), QStringLiteral("\xFFFC\x2417")); // ETB
+//    localScript.replace(QChar('\x18'), QStringLiteral("\xFFFC\x2418")); // CAN
+//    localScript.replace(QChar('\x19'), QStringLiteral("\xFFFC\x2419")); // EM
+//    localScript.replace(QChar('\x1A'), QStringLiteral("\xFFFC\x241A")); // SUB
+//    localScript.replace(QChar('\x1B'), QStringLiteral("\xFFFC\x241B")); // ESC
+//    localScript.replace(QChar('\x1C'), QStringLiteral("\xFFFC\x241C")); // FS
+//    localScript.replace(QChar('\x1D'), QStringLiteral("\xFFFC\x241D")); // GS
+//    localScript.replace(QChar('\x1E'), QStringLiteral("\xFFFC\x241E")); // RS
+//    localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
+//    localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
+
+    mExportDoc.save(saveStringStream);
+    output = saveStringStream.str();
+
+    replaceAll(output, '\x01', "\uFFFC\u2401"); // SOH
+    replaceAll(output, '\x02', "\uFFFC\u2402"); // STX
+    replaceAll(output, '\x03', "\uFFFC\u2403"); // ETX
+    replaceAll(output, '\x04', "\uFFFC\u2404"); // EOT
+    replaceAll(output, '\x05', "\uFFFC\u2405"); // ENQ
+    replaceAll(output, '\x06', "\uFFFC\u2406"); // ACK
+    replaceAll(output, '\x07', "\uFFFC\u2407"); // BEL
+    replaceAll(output, '\x08', "\uFFFC\u2408"); // BS
+    replaceAll(output, '\x0B', "\uFFFC\u240B"); // VT
+    replaceAll(output, '\x0C', "\uFFFC\u240C"); // FF
+    replaceAll(output, '\x0E', "\uFFFC\u240E"); // SS
+    replaceAll(output, '\x0F', "\uFFFC\u240F"); // SI
+    replaceAll(output, '\x10', "\uFFFC\u2410"); // DLE
+    replaceAll(output, '\x11', "\uFFFC\u2411"); // DC1
+    replaceAll(output, '\x12', "\uFFFC\u2412"); // DC2
+    replaceAll(output, '\x13', "\uFFFC\u2413"); // DC3
+    replaceAll(output, '\x14', "\uFFFC\u2414"); // DC4
+    replaceAll(output, '\x15', "\uFFFC\u2415"); // NAK
+    replaceAll(output, '\x16', "\uFFFC\u2416"); // SYN
+    replaceAll(output, '\x17', "\uFFFC\u2417"); // ETB
+    replaceAll(output, '\x18', "\uFFFC\u2418"); // CAN
+    replaceAll(output, '\x19', "\uFFFC\u2419"); // EM
+    replaceAll(output, '\x1A', "\uFFFC\u241A"); // SUB
+    replaceAll(output, '\x1B', "\uFFFC\u241B"); // ESC
+    replaceAll(output, '\x1C', "\uFFFC\u241C"); // FS
+    replaceAll(output, '\x1D', "\uFFFC\u241D"); // GS
+    replaceAll(output, '\x1E', "\uFFFC\u241E"); // RS
+    replaceAll(output, '\x1F', "\uFFFC\u241F"); // US
+    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL
+
+    saveFileStream << output;
+    if (saveFileStream.bad()) {
+        return false;
+    }
+    return true;
+//    return mExportDoc.save_file(fileName.toLocal8Bit().data(), "    ");
 }
 
 void XMLexport::showXmlDebug()
@@ -1306,37 +1403,5 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
 
 bool XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElement)
 {
-    QString localScript = script;
-    localScript.replace(QChar('\x01'), QStringLiteral("\xFFFC\x2401")); // SOH
-    localScript.replace(QChar('\x02'), QStringLiteral("\xFFFC\x2402")); // STX
-    localScript.replace(QChar('\x03'), QStringLiteral("\xFFFC\x2403")); // ETX
-    localScript.replace(QChar('\x04'), QStringLiteral("\xFFFC\x2404")); // EOT
-    localScript.replace(QChar('\x05'), QStringLiteral("\xFFFC\x2405")); // ENQ
-    localScript.replace(QChar('\x06'), QStringLiteral("\xFFFC\x2406")); // ACK
-    localScript.replace(QChar('\x07'), QStringLiteral("\xFFFC\x2407")); // BEL
-    localScript.replace(QChar('\x08'), QStringLiteral("\xFFFC\x2408")); // BS
-    localScript.replace(QChar('\x0B'), QStringLiteral("\xFFFC\x240B")); // VT
-    localScript.replace(QChar('\x0C'), QStringLiteral("\xFFFC\x240C")); // FF
-    localScript.replace(QChar('\x0E'), QStringLiteral("\xFFFC\x240E")); // SS
-    localScript.replace(QChar('\x0F'), QStringLiteral("\xFFFC\x240F")); // SI
-    localScript.replace(QChar('\x10'), QStringLiteral("\xFFFC\x2410")); // DLE
-    localScript.replace(QChar('\x11'), QStringLiteral("\xFFFC\x2411")); // DC1
-    localScript.replace(QChar('\x12'), QStringLiteral("\xFFFC\x2412")); // DC2
-    localScript.replace(QChar('\x13'), QStringLiteral("\xFFFC\x2413")); // DC3
-    localScript.replace(QChar('\x14'), QStringLiteral("\xFFFC\x2414")); // DC4
-    localScript.replace(QChar('\x15'), QStringLiteral("\xFFFC\x2415")); // NAK
-    localScript.replace(QChar('\x16'), QStringLiteral("\xFFFC\x2416")); // SYN
-    localScript.replace(QChar('\x17'), QStringLiteral("\xFFFC\x2417")); // ETB
-    localScript.replace(QChar('\x18'), QStringLiteral("\xFFFC\x2418")); // CAN
-    localScript.replace(QChar('\x19'), QStringLiteral("\xFFFC\x2419")); // EM
-    localScript.replace(QChar('\x1A'), QStringLiteral("\xFFFC\x241A")); // SUB
-    localScript.replace(QChar('\x1B'), QStringLiteral("\xFFFC\x241B")); // ESC
-    localScript.replace(QChar('\x1C'), QStringLiteral("\xFFFC\x241C")); // FS
-    localScript.replace(QChar('\x1D'), QStringLiteral("\xFFFC\x241D")); // GS
-    localScript.replace(QChar('\x1E'), QStringLiteral("\xFFFC\x241E")); // RS
-    localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
-    localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
-    xmlElement.append_child("script").text().set(localScript.toLocal8Bit().data());
-
-    return (!hasError());
+    return xmlElement.append_child("script").text().set(script.toLocal8Bit().data()) ? true : false;
 }
