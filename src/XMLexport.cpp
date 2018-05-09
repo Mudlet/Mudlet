@@ -134,7 +134,7 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
     decl.append_attribute("version") = "1.0";
     decl.append_attribute("encoding") = "UTF-8";
 
-    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
+//    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
     if (isOk) {
         auto triggerPackageNode = mMudletPackageNode.append_child("TriggerPackage");
@@ -237,7 +237,7 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     decl.append_attribute("version") = "1.0";
     decl.append_attribute("encoding") = "UTF-8";
 
-    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
+//    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
     if (writeHost(mpHost, mMudletPackageNode)) {
         return saveXml(filename_pugi_xml);
@@ -246,7 +246,10 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     return false;
 }
 
-bool XMLexport::saveXml(const QString &fileName) const { return mExportDoc.save_file(fileName.toLocal8Bit().data(), "    "); }
+bool XMLexport::saveXml(const QString& fileName) const
+{
+    return mExportDoc.save_file(fileName.toLocal8Bit().data(), "    ");
+}
 
 void XMLexport::showXmlDebug()
 {
