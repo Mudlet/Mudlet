@@ -83,6 +83,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
+, mLogDir(QString())
+, mLogFileName(QString())
+, mLogFileNameFormat(QLatin1String("yyyy-MM-dd#hh-mm-ss"))
 , mResetProfile(false)
 , mScreenHeight(25)
 , mScreenWidth(90)
@@ -474,7 +477,7 @@ void Host::reenableAllTriggers()
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    if(mSearchEngineData.contains(mSearchEngineName))
+    if (mSearchEngineData.contains(mSearchEngineName))
         return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
     else
         return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
@@ -573,10 +576,6 @@ bool Host::resetStopWatch(int watchID)
     } else {
         return false;
     }
-}
-
-void Host::callEventHandlers()
-{
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)

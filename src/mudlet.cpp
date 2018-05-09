@@ -1355,7 +1355,40 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
-bool mudlet::setFontSize(Host* pHost, const QString& name, int size)
+bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& font)
+{
+    if (!pHost) {
+        return false;
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(window)) {
+        TConsole* pC = dockWindowConsoleMap.value(window);
+        pC->setMiniConsoleFont(font);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+QString mudlet::getWindowFont(Host* pHost, const QString& name)
+{
+    if (!pHost) {
+        return QString();
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(name)) {
+        return dockWindowConsoleMap.value(name)->mUpperPane->mDisplayFont.family();
+    } else {
+        return QString();
+    }
+}
+
+bool mudlet::setWindowFontSize(Host *pHost, const QString &name, int size)
 {
     if (!pHost) {
         return false;
@@ -1382,7 +1415,7 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
 
     if (dockWindowConsoleMap.contains(name)) {
-        return dockWindowConsoleMap.value(name)->console->mDisplayFont.pointSize();
+        return dockWindowConsoleMap.value(name)->mUpperPane->mDisplayFont.pointSize();
     } else {
         return -1;
     }
@@ -1411,12 +1444,12 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
-        pC->console->setIsMiniConsole();
-        pC->console2->setIsMiniConsole();
+        pC->mUpperPane->setIsMiniConsole();
+        pC->mLowerPane->setIsMiniConsole();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
 
-        setFontSize(pHost, name, 10);
+        setWindowFontSize(pHost, name, 10);
 
         if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();
@@ -1596,7 +1629,7 @@ bool mudlet::clearWindow(Host* pHost, const QString& name)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
     if (dockWindowConsoleMap.contains(name)) {
         dockWindowConsoleMap[name]->buffer.clear();
-        dockWindowConsoleMap[name]->console->update();
+        dockWindowConsoleMap[name]->mUpperPane->update();
         return true;
     } else {
         return false;
@@ -2156,9 +2189,7 @@ void mudlet::slot_userToolBar_hovered(QAction* pA)
     }
 }
 
-void mudlet::slot_userToolBar_orientation_changed(Qt::Orientation dir)
-{
-}
+void mudlet::slot_userToolBar_orientation_changed(Qt::Orientation dir) {}
 
 Host* mudlet::getActiveHost()
 {
@@ -2346,12 +2377,10 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
 // profile loaded so no TConsoles with a "rescue" context menu):
 void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
-    if (! isVisible && mMenuBarVisibility == visibleNever) {
+    if (!isVisible && mMenuBarVisibility == visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
         int hostCount = mHostManager.getHostCount();
-        if ( (hostCount < 2 && (mToolbarVisibility & visibleAlways))
-           ||(hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
-
+        if ((hostCount < 2 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
             mpMainToolBar->show();
         }
     }
@@ -2361,9 +2390,7 @@ void mudlet::adjustToolBarVisibility()
 {
     // Are there any profiles loaded - note that the dummy "default_host" counts
     // as the first one
-    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways)
-       ||(mToolbarVisibility & visibleMaskNormally)) {
-
+    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways) || (mToolbarVisibility & visibleMaskNormally)) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -2970,7 +2997,7 @@ mudlet::~mudlet()
     // There may be a corner case if a replay is running AND the application is
     // closing down AND the updater on a particular platform pauses the
     // application destruction...?
-    delete(mpTimerReplay);
+    delete (mpTimerReplay);
     mpTimerReplay = nullptr;
 
     mudlet::_self = nullptr;
@@ -3099,14 +3126,13 @@ void mudlet::replayOver()
     mpActionReplay->setCheckable(false);
     mpActionReplay->setEnabled(true);
     dactionReplay->setEnabled(true);
-    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                               .arg(tr("<p>Load a Mudlet replay.</p>")));
+    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Load a Mudlet replay.</p>")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 }
 
 void mudlet::slot_replaySpeedUp()
 {
-    if(mpLabelReplaySpeedDisplay) {
+    if (mpLabelReplaySpeedDisplay) {
         mReplaySpeed = mReplaySpeed * 2;
         mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
@@ -3116,7 +3142,7 @@ void mudlet::slot_replaySpeedUp()
 
 void mudlet::slot_replaySpeedDown()
 {
-    if(mpLabelReplaySpeedDisplay) {
+    if (mpLabelReplaySpeedDisplay) {
         mReplaySpeed = mReplaySpeed / 2;
         if (mReplaySpeed < 1) {
             mReplaySpeed = 1;
@@ -3571,7 +3597,7 @@ int mudlet::getColumnCount(Host* pHost, QString& name)
         return -1;
     }
 
-    return dockWindowConsoleMap[name]->console->getColumnCount();
+    return dockWindowConsoleMap[name]->mUpperPane->getColumnCount();
 }
 
 int mudlet::getRowCount(Host* pHost, QString& name)
@@ -3583,7 +3609,7 @@ int mudlet::getRowCount(Host* pHost, QString& name)
         return -1;
     }
 
-    return dockWindowConsoleMap[name]->console->getRowCount();
+    return dockWindowConsoleMap[name]->mUpperPane->getRowCount();
 }
 
 // Can be called from lua sub-system OR from slot_replay(), the presence of a

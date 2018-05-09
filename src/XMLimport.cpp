@@ -781,6 +781,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
     pHost->mIsNextLogFileInHtmlFormat = (attributes().value("mRawStreamDump") == "yes");
     pHost->mIsLoggingTimestamps = (attributes().value("mIsLoggingTimestamps") == "yes");
+    pHost->mLogDir = attributes().value("mLogDir").toString();
+    pHost->mLogFileName = attributes().value("mLogFileName").toString();
+    pHost->mLogFileNameFormat = attributes().value("mLogFileNameFormat").toString();
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
@@ -806,12 +809,9 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     }
 
-    if(attributes().hasAttribute(QLatin1String("mSearchEngineName")))
-    {
+    if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
-    }
-    else
-    {
+    } else {
         pHost->mSearchEngineName = QString("Google");
     }
 
@@ -1021,7 +1021,7 @@ int XMLimport::readTriggerPackage()
 
 // imports a trigger and returns its ID - in case of a group, returns the ID
 // of the top-level trigger group.
-int XMLimport::readTriggerGroup(TTrigger *pParent)
+int XMLimport::readTriggerGroup(TTrigger* pParent)
 {
     auto pT = new TTrigger(pParent, mpHost);
 
