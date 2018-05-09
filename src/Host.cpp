@@ -245,7 +245,6 @@ void Host::saveModules(int sync)
         QString moduleName = it.key();
         QString zipName;
         zip* zipFile = nullptr;
-        // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
             QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
@@ -259,22 +258,18 @@ void Host::saveModules(int sync)
         } else {
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
         }
-        QFile file_xml(filename_xml);
-        if (file_xml.open(QIODevice::WriteOnly)) {
-            XMLexport writer(this);
-            writer.writeModuleXML(&file_xml, it.key());
-            file_xml.close();
 
+        XMLexport writer(this);
+        if (writer.writeModuleXML(it.key(), filename_xml)) {
             if (entry[1].toInt()) {
                 modulesToSync << it.key();
             }
         } else {
-            file_xml.close();
-            //FIXME: Should have an error reported to user
-            //qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
+            qDebug() << "failed to save module" << it.key();
             mModuleSaveBlock = true;
             return;
         }
+
         if (!zipName.isEmpty()) {
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
             QTime t;

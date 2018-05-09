@@ -66,7 +66,7 @@ public:
     bool writeScript(TScript *, pugi::xml_node xmlParent);
     bool writeKey(TKey *, pugi::xml_node xmlParent);
     bool writeVariable(TVar *, LuaInterface *, VarUnit *, pugi::xml_node xmlParent);
-    bool writeModuleXML(QIODevice* device, QString moduleName);
+    bool writeModuleXML(const QString &moduleName, const QString &fileName);
 
     bool exportHost(QIODevice*, const QString &filename_pugi_xml);
     bool exportGenericPackage(QIODevice* device);
@@ -98,6 +98,20 @@ private:
 
     pugi::xml_document mExportDoc;
     void showXmlDebug();
+
+    void writeTriggerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+
+    void writeTimerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+
+    void writeAliasPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+
+    void writeActionPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+
+    void writeScriptPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+
+    void writeKeyPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+
+    void writeVariablePackage(Host *pHost, pugi::xml_node &mMudletPackageNode);
 };
 
 #endif // MUDLET_XMLEXPORT_H
