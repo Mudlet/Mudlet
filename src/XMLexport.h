@@ -99,17 +99,17 @@ private:
     pugi::xml_document mExportDoc;
     void showXmlDebug();
 
-    void writeTriggerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+    void writeTriggerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember);
 
-    void writeTimerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+    void writeTimerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember);
 
-    void writeAliasPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+    void writeAliasPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember);
 
-    void writeActionPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+    void writeActionPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember);
 
-    void writeScriptPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+    void writeScriptPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember);
 
-    void writeKeyPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode);
+    void writeKeyPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember);
 
     void writeVariablePackage(Host *pHost, pugi::xml_node &mMudletPackageNode);
 
