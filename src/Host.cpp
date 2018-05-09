@@ -395,21 +395,14 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
 
     // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
     QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
-    QString filename_pugi_xml = QStringLiteral("%1/%2-pugi.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     QDir dir_xml;
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
     }
-    QFile file_xml(filename_xml);
-    if (file_xml.open(QIODevice::WriteOnly)) {
-        XMLexport writer(this);
-        writer.exportHost(&file_xml, filename_pugi_xml);
-        file_xml.close();
-        saveModules(syncModules ? 1 : 0);
-        return std::make_tuple(true, filename_xml, QString());
-    } else {
-        return std::make_tuple(false, filename_xml, file_xml.errorString());
-    }
+    XMLexport writer(this);
+    writer.exportHost(filename_xml);
+    saveModules(syncModules ? 1 : 0);
+    return std::make_tuple(true, filename_xml, QString());
 }
 
 // Now returns the total weight of the path

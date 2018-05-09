@@ -130,6 +130,12 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
     auto mMudletPackageNode = mExportDoc.append_child("MudletPackage");
     mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toLocal8Bit().data();
 
+    auto decl = mExportDoc.prepend_child(pugi::node_declaration);
+    decl.append_attribute("version") = "1.0";
+    decl.append_attribute("encoding") = "UTF-8";
+
+    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
+
     if (isOk) {
         auto triggerPackageNode = mMudletPackageNode.append_child("TriggerPackage");
         //we go a level down for all these functions so as to not infinitely nest the module
@@ -219,24 +225,28 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
         }
     }
 
-    auto result = mExportDoc.save_file(fileName.toLocal8Bit().data());
-    return result;
+    return saveXml(fileName);
 }
 
-bool XMLexport::exportHost(QIODevice* device, const QString& filename_pugi_xml)
+bool XMLexport::exportHost(const QString &filename_pugi_xml)
 {
-    Q_UNUSED(device)
-
     auto mMudletPackageNode = mExportDoc.append_child("MudletPackage");
     mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toLocal8Bit().data();
 
+    auto decl = mExportDoc.prepend_child(pugi::node_declaration);
+    decl.append_attribute("version") = "1.0";
+    decl.append_attribute("encoding") = "UTF-8";
+
+    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
+
     if (writeHost(mpHost, mMudletPackageNode)) {
-        mExportDoc.save_file(filename_pugi_xml.toLocal8Bit().data());
-        return true;
+        return saveXml(filename_pugi_xml);
     }
 
     return false;
 }
+
+bool XMLexport::saveXml(const QString &fileName) const { return mExportDoc.save_file(fileName.toLocal8Bit().data(), "    "); }
 
 void XMLexport::showXmlDebug()
 {
