@@ -12,7 +12,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
     ls -l Mudlet.tgz
     # we make this FAIL to not thrash our allowance if things go wrong!
     curl --form token=$COVERITY_SCAN_TOKEN \
-      --form email=keneanung@googlemail.com \
+      --form email=coverity@mudlet.org \
       --form file=@Mudlet.tgz \
       --form version="master branch head" \
       --form description="$(git log -1|head -1)" \
