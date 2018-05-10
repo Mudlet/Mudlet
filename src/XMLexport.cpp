@@ -331,6 +331,9 @@ bool XMLexport::writeHost(Host* pHost)
     // future - phpBB code might be useful if it can be done.
     writeAttribute("mRawStreamDump", pHost->mIsNextLogFileInHtmlFormat ? "yes" : "no");
     writeAttribute("mIsLoggingTimestamps", pHost->mIsLoggingTimestamps ? "yes" : "no");
+    writeAttribute("mLogDir", pHost->mLogDir);
+    writeAttribute("mLogFileName", pHost->mLogFileName);
+    writeAttribute("mLogFileNameFormat", pHost->mLogFileNameFormat);
     writeAttribute("mAlertOnNewData", pHost->mAlertOnNewData ? "yes" : "no");
     writeAttribute("mFORCE_NO_COMPRESSION", pHost->mFORCE_NO_COMPRESSION ? "yes" : "no");
     writeAttribute("mFORCE_GA_OFF", pHost->mFORCE_GA_OFF ? "yes" : "no");
@@ -389,10 +392,10 @@ bool XMLexport::writeHost(Host* pHost)
             }
             writeEndElement(); // </mInstalledModules>
         }
-// CHECK: Do we need:
-//        else {
-//            writeEmptyElement( "mInstalledModules" ); // i.e. <mInstalledModules />
-//        }
+        // CHECK: Do we need:
+        //        else {
+        //            writeEmptyElement( "mInstalledModules" ); // i.e. <mInstalledModules />
+        //        }
 
         writeTextElement("url", pHost->mUrl);
         writeTextElement("serverPackageName", pHost->mServerGUI_Package_name);
@@ -543,8 +546,8 @@ bool XMLexport::writeHost(Host* pHost)
 
     if (isOk) {
         writeStartElement("KeyPackage");
-        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTemporary() || (*it)->mModuleMember) {
+        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
+            if (!(*it) || (*it)->isTemporary() || (*it)->mModuleMember) {
                 continue;
             }
             if (!writeKey(*it)) {
@@ -708,10 +711,10 @@ bool XMLexport::writeGenericPackage(Host* pHost)
         writeEndElement(); // </ScriptPackage>
     }
 
-    if( isOk ) {
-        writeStartElement( "KeyPackage" );
-        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTemporary() ) {
+    if (isOk) {
+        writeStartElement("KeyPackage");
+        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
+            if (!(*it) || (*it)->isTemporary()) {
                 continue;
             }
             if (!writeKey(*it)) {

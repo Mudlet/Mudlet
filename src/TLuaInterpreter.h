@@ -245,6 +245,8 @@ public:
     static int loadWindowLayout(lua_State* L);
     static int saveWindowLayout(lua_State* L);
     static int saveProfile(lua_State* L);
+    static int setFont(lua_State* L);
+    static int getFont(lua_State* L);
     static int setFontSize(lua_State* L);
     static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
@@ -372,6 +374,7 @@ public:
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setLabelStyleSheet(lua_State*);
     static int getTime(lua_State*);
+    static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
     static int getTimestamp(lua_State*);
     static int setLink(lua_State*);
