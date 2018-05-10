@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
-    <height>611</height>
+    <width>780</width>
+    <height>715</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -2334,12 +2334,29 @@
        <item row="4" column="0">
         <widget class="QGroupBox" name="groupBox_debug">
          <property name="title">
-          <string>Other Special options</string>
+          <string>Other special options</string>
          </property>
-         <layout class="QFormLayout" name="formLayout_Debug">
-          <property name="labelAlignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
+         <layout class="QFormLayout" name="formLayout_debug">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_setConfigDir">
+            <property name="text">
+             <string>Store settings in:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_setConfigDir">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
