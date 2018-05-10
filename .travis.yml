@@ -73,7 +73,6 @@ matrix:
     - Q_OR_C_MAKE=cmake
     - QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
 before_install:
-  - export TRAVIS_EVENT_TYPE="cron" # this is temporary to let us play around with coverity
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
