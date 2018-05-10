@@ -28,9 +28,6 @@ addons:
     - lua-filesystem
     - lua-zip
     - lua-sql-sqlite3
-compiler:
-  - gcc
-  - clang
 env:
 #  matrix:
 #  - Q_OR_C_MAKE=cmake
