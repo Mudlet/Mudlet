@@ -31,6 +31,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TriggerUnit.h"
+#include "XMLexport.h"
 #include "ctelnet.h"
 
 #include "pre_guard.h"
@@ -381,6 +382,8 @@ private:
     QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
+
+    XMLexport* writer;
 };
 
 #endif // MUDLET_HOST_H

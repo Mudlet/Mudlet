@@ -39,6 +39,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <QtConcurrent>
 
 using namespace std;
 
@@ -245,7 +246,19 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toLocal8Bit().data();
 
     if (writeHost(mpHost, mMudletPackageNode)) {
-        return saveXml(filename_pugi_xml);
+        QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
+//        auto watcher = new QFutureWatcher<bool>;
+//        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+//            if (future.result() == true) {
+////                populateThemesList();
+//            }
+
+////            theme_download_label->hide();
+////            tempThemesArchive->deleteLater();
+//        });
+//        watcher->setFuture(future);
+
+        return true;
     }
 
     return false;
@@ -273,43 +286,19 @@ void inline XMLexport::replaceAll(std::string& source, const char from, const st
 
 bool XMLexport::saveXml(const QString& fileName)
 {
+    cout << "Exporting..." << endl;
     std::stringstream saveStringStream(ios::out);
-    std::ofstream saveFileStream(fileName.toLocal8Bit().data());
-
     std::string output;
 
-//    localScript.replace(QChar('\x01'), QStringLiteral("\xFFFC\x2401")); // SOH
-//    localScript.replace(QChar('\x02'), QStringLiteral("\xFFFC\x2402")); // STX
-//    localScript.replace(QChar('\x03'), QStringLiteral("\xFFFC\x2403")); // ETX
-//    localScript.replace(QChar('\x04'), QStringLiteral("\xFFFC\x2404")); // EOT
-//    localScript.replace(QChar('\x05'), QStringLiteral("\xFFFC\x2405")); // ENQ
-//    localScript.replace(QChar('\x06'), QStringLiteral("\xFFFC\x2406")); // ACK
-//    localScript.replace(QChar('\x07'), QStringLiteral("\xFFFC\x2407")); // BEL
-//    localScript.replace(QChar('\x08'), QStringLiteral("\xFFFC\x2408")); // BS
-//    localScript.replace(QChar('\x0B'), QStringLiteral("\xFFFC\x240B")); // VT
-//    localScript.replace(QChar('\x0C'), QStringLiteral("\xFFFC\x240C")); // FF
-//    localScript.replace(QChar('\x0E'), QStringLiteral("\xFFFC\x240E")); // SS
-//    localScript.replace(QChar('\x0F'), QStringLiteral("\xFFFC\x240F")); // SI
-//    localScript.replace(QChar('\x10'), QStringLiteral("\xFFFC\x2410")); // DLE
-//    localScript.replace(QChar('\x11'), QStringLiteral("\xFFFC\x2411")); // DC1
-//    localScript.replace(QChar('\x12'), QStringLiteral("\xFFFC\x2412")); // DC2
-//    localScript.replace(QChar('\x13'), QStringLiteral("\xFFFC\x2413")); // DC3
-//    localScript.replace(QChar('\x14'), QStringLiteral("\xFFFC\x2414")); // DC4
-//    localScript.replace(QChar('\x15'), QStringLiteral("\xFFFC\x2415")); // NAK
-//    localScript.replace(QChar('\x16'), QStringLiteral("\xFFFC\x2416")); // SYN
-//    localScript.replace(QChar('\x17'), QStringLiteral("\xFFFC\x2417")); // ETB
-//    localScript.replace(QChar('\x18'), QStringLiteral("\xFFFC\x2418")); // CAN
-//    localScript.replace(QChar('\x19'), QStringLiteral("\xFFFC\x2419")); // EM
-//    localScript.replace(QChar('\x1A'), QStringLiteral("\xFFFC\x241A")); // SUB
-//    localScript.replace(QChar('\x1B'), QStringLiteral("\xFFFC\x241B")); // ESC
-//    localScript.replace(QChar('\x1C'), QStringLiteral("\xFFFC\x241C")); // FS
-//    localScript.replace(QChar('\x1D'), QStringLiteral("\xFFFC\x241D")); // GS
-//    localScript.replace(QChar('\x1E'), QStringLiteral("\xFFFC\x241E")); // RS
-//    localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
-//    localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
-
+    auto start = chrono::steady_clock::now();
+    auto totalStart = chrono::steady_clock::now();
     mExportDoc.save(saveStringStream);
-    output = saveStringStream.str();
+    cout << "pugi export to stream took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    start = chrono::steady_clock::now();
+
+    output = saveStringStream.str();    
+    cout << "stream to string " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    start = chrono::steady_clock::now();
 
     replaceAll(output, '\x01', "\uFFFC\u2401"); // SOH
     replaceAll(output, '\x02', "\uFFFC\u2402"); // STX
@@ -339,12 +328,22 @@ bool XMLexport::saveXml(const QString& fileName)
     replaceAll(output, '\x1D', "\uFFFC\u241D"); // GS
     replaceAll(output, '\x1E', "\uFFFC\u241E"); // RS
     replaceAll(output, '\x1F', "\uFFFC\u241F"); // US
-    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL
+    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL    
+    cout << "replacements took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    start = chrono::steady_clock::now();
 
-    saveFileStream << output;
+    // only open the output file stream once we're ready to save
+    // this avoids a blank file in case serialisation crashed
+    std::ofstream saveFileStream(fileName.toLocal8Bit().data());
+    saveFileStream << output;    
+    cout << "serialising to iostream export took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    start = chrono::steady_clock::now();
+
     if (saveFileStream.bad()) {
         return false;
     }
+    cout << "Serialisation in itself took " << chrono::duration <double, milli> (chrono::steady_clock::now() - totalStart).count() << " ms" << endl;
+
     return true;
 //    return mExportDoc.save_file(fileName.toLocal8Bit().data(), "    ");
 }

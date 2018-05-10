@@ -95,8 +95,8 @@ private:
     TAction* mpAction;
     TScript* mpScript;
     TKey* mpKey;
-
     pugi::xml_document mExportDoc;
+
     void showXmlDebug();
     void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
     void writeTimerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);

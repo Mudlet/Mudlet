@@ -399,8 +399,13 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
     }
-    XMLexport writer(this);
-    writer.exportHost(filename_xml);
+
+    if (writer) {
+        delete writer;
+    }
+
+    writer = new XMLexport(this);
+    writer->exportHost(filename_xml);
     saveModules(syncModules ? 1 : 0);
     return std::make_tuple(true, filename_xml, QString());
 }
