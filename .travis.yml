@@ -1,9 +1,6 @@
 language: cpp
 cache:
   - ccache
-os:
-  - osx
-  - linux
 dist: trusty
 sudo: false
 addons:
