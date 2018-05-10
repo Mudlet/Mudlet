@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -324,6 +324,7 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("USE_IRE_DRIVER_BUGFIX", pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no");
     writeAttribute("mUSE_FORCE_LF_AFTER_PROMPT", pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no");
     writeAttribute("mUSE_UNIX_EOL", pHost->mUSE_UNIX_EOL ? "yes" : "no");
+    writeAttribute("runAllKeyMatches", pHost->getKeyUnit()->mIsToProcessAllMatches ? "yes" : "no");
     writeAttribute("mNoAntiAlias", pHost->mNoAntiAlias ? "yes" : "no");
     writeAttribute("mEchoLuaErrors", pHost->mEchoLuaErrors ? "yes" : "no");
     // FIXME: Change to a string or integer property when possible to support more

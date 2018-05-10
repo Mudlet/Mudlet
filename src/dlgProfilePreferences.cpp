@@ -162,7 +162,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                                      "does not have a needed glyph (a font's individual character/symbol) to represent "
                                                                      "the grapheme (what is to be represented).  Clearing this checkbox will allow "
                                                                      "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
-
+    checkBox_runAllKeyBindings->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                           .arg(tr("<p>Check all Key-bindings against key-presses.</p><p><i>Versions of Mudlet prior to <b>3.9.0</b> would "
+                                                   "stop checking after the first matching combination of</i> KeyCode <i>and</i> KeyModifier <i>was found "
+                                                   "and then send the command and/or run the script of that Key-binding only.  This</i> per-profile <i>"
+                                                   "option tells Mudlet to check and run the remaining matches; but, to retain compatibility with "
+                                                   "previous versions, defaults to the <b>un</b>-checked state.</i></p>")));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -421,6 +426,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
+    checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mIsToProcessAllMatches);
     topBorderHeight->setValue(pHost->mBorderTopHeight);
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
@@ -1857,6 +1863,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
+        pHost->getKeyUnit()->mIsToProcessAllMatches = checkBox_runAllKeyBindings->isChecked();
         pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
