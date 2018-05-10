@@ -300,35 +300,35 @@ bool XMLexport::saveXml(const QString& fileName)
     cout << "stream to string " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
-//    replaceAll(output, '\x01', "\uFFFC\u2401"); // SOH
-//    replaceAll(output, '\x02', "\uFFFC\u2402"); // STX
-//    replaceAll(output, '\x03', "\uFFFC\u2403"); // ETX
-//    replaceAll(output, '\x04', "\uFFFC\u2404"); // EOT
-//    replaceAll(output, '\x05', "\uFFFC\u2405"); // ENQ
-//    replaceAll(output, '\x06', "\uFFFC\u2406"); // ACK
-//    replaceAll(output, '\x07', "\uFFFC\u2407"); // BEL
-//    replaceAll(output, '\x08', "\uFFFC\u2408"); // BS
-//    replaceAll(output, '\x0B', "\uFFFC\u240B"); // VT
-//    replaceAll(output, '\x0C', "\uFFFC\u240C"); // FF
-//    replaceAll(output, '\x0E', "\uFFFC\u240E"); // SS
-//    replaceAll(output, '\x0F', "\uFFFC\u240F"); // SI
-//    replaceAll(output, '\x10', "\uFFFC\u2410"); // DLE
-//    replaceAll(output, '\x11', "\uFFFC\u2411"); // DC1
-//    replaceAll(output, '\x12', "\uFFFC\u2412"); // DC2
-//    replaceAll(output, '\x13', "\uFFFC\u2413"); // DC3
-//    replaceAll(output, '\x14', "\uFFFC\u2414"); // DC4
-//    replaceAll(output, '\x15', "\uFFFC\u2415"); // NAK
-//    replaceAll(output, '\x16', "\uFFFC\u2416"); // SYN
-//    replaceAll(output, '\x17', "\uFFFC\u2417"); // ETB
-//    replaceAll(output, '\x18', "\uFFFC\u2418"); // CAN
-//    replaceAll(output, '\x19', "\uFFFC\u2419"); // EM
-//    replaceAll(output, '\x1A', "\uFFFC\u241A"); // SUB
-//    replaceAll(output, '\x1B', "\uFFFC\u241B"); // ESC
-//    replaceAll(output, '\x1C', "\uFFFC\u241C"); // FS
-//    replaceAll(output, '\x1D', "\uFFFC\u241D"); // GS
-//    replaceAll(output, '\x1E', "\uFFFC\u241E"); // RS
-//    replaceAll(output, '\x1F', "\uFFFC\u241F"); // US
-//    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL
+    replaceAll(output, '\x01', "\uFFFC\u2401"); // SOH
+    replaceAll(output, '\x02', "\uFFFC\u2402"); // STX
+    replaceAll(output, '\x03', "\uFFFC\u2403"); // ETX
+    replaceAll(output, '\x04', "\uFFFC\u2404"); // EOT
+    replaceAll(output, '\x05', "\uFFFC\u2405"); // ENQ
+    replaceAll(output, '\x06', "\uFFFC\u2406"); // ACK
+    replaceAll(output, '\x07', "\uFFFC\u2407"); // BEL
+    replaceAll(output, '\x08', "\uFFFC\u2408"); // BS
+    replaceAll(output, '\x0B', "\uFFFC\u240B"); // VT
+    replaceAll(output, '\x0C', "\uFFFC\u240C"); // FF
+    replaceAll(output, '\x0E', "\uFFFC\u240E"); // SS
+    replaceAll(output, '\x0F', "\uFFFC\u240F"); // SI
+    replaceAll(output, '\x10', "\uFFFC\u2410"); // DLE
+    replaceAll(output, '\x11', "\uFFFC\u2411"); // DC1
+    replaceAll(output, '\x12', "\uFFFC\u2412"); // DC2
+    replaceAll(output, '\x13', "\uFFFC\u2413"); // DC3
+    replaceAll(output, '\x14', "\uFFFC\u2414"); // DC4
+    replaceAll(output, '\x15', "\uFFFC\u2415"); // NAK
+    replaceAll(output, '\x16', "\uFFFC\u2416"); // SYN
+    replaceAll(output, '\x17', "\uFFFC\u2417"); // ETB
+    replaceAll(output, '\x18', "\uFFFC\u2418"); // CAN
+    replaceAll(output, '\x19', "\uFFFC\u2419"); // EM
+    replaceAll(output, '\x1A', "\uFFFC\u241A"); // SUB
+    replaceAll(output, '\x1B', "\uFFFC\u241B"); // ESC
+    replaceAll(output, '\x1C', "\uFFFC\u241C"); // FS
+    replaceAll(output, '\x1D', "\uFFFC\u241D"); // GS
+    replaceAll(output, '\x1E', "\uFFFC\u241E"); // RS
+    replaceAll(output, '\x1F', "\uFFFC\u241F"); // US
+    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL
     cout << "replacements took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
