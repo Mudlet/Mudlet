@@ -139,7 +139,7 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
     mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
     auto mMudletPackageNode = mExportDoc.append_child("MudletPackage");
-    mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toLocal8Bit().data();
+    mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
 
     if (isOk) {
         auto triggerPackageNode = mMudletPackageNode.append_child("TriggerPackage");
@@ -223,7 +223,7 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
         auto helpPackageNode = mMudletPackageNode.append_child("HelpPackage");
 
         if (pHost->moduleHelp.contains(moduleName) && pHost->moduleHelp.value(moduleName).contains("helpURL")) {
-            helpPackageNode.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value("helpURL").toLocal8Bit().data());
+            helpPackageNode.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value("helpURL").toUtf8().constData());
 
         } else {
             helpPackageNode.append_child("helpURL").text().set("");
@@ -243,7 +243,7 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
     auto mMudletPackageNode = mExportDoc.append_child("MudletPackage");
-    mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toLocal8Bit().data();
+    mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
 
     if (writeHost(mpHost, mMudletPackageNode)) {
         QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
@@ -300,41 +300,41 @@ bool XMLexport::saveXml(const QString& fileName)
     cout << "stream to string " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
-    replaceAll(output, '\x01', "\uFFFC\u2401"); // SOH
-    replaceAll(output, '\x02', "\uFFFC\u2402"); // STX
-    replaceAll(output, '\x03', "\uFFFC\u2403"); // ETX
-    replaceAll(output, '\x04', "\uFFFC\u2404"); // EOT
-    replaceAll(output, '\x05', "\uFFFC\u2405"); // ENQ
-    replaceAll(output, '\x06', "\uFFFC\u2406"); // ACK
-    replaceAll(output, '\x07', "\uFFFC\u2407"); // BEL
-    replaceAll(output, '\x08', "\uFFFC\u2408"); // BS
-    replaceAll(output, '\x0B', "\uFFFC\u240B"); // VT
-    replaceAll(output, '\x0C', "\uFFFC\u240C"); // FF
-    replaceAll(output, '\x0E', "\uFFFC\u240E"); // SS
-    replaceAll(output, '\x0F', "\uFFFC\u240F"); // SI
-    replaceAll(output, '\x10', "\uFFFC\u2410"); // DLE
-    replaceAll(output, '\x11', "\uFFFC\u2411"); // DC1
-    replaceAll(output, '\x12', "\uFFFC\u2412"); // DC2
-    replaceAll(output, '\x13', "\uFFFC\u2413"); // DC3
-    replaceAll(output, '\x14', "\uFFFC\u2414"); // DC4
-    replaceAll(output, '\x15', "\uFFFC\u2415"); // NAK
-    replaceAll(output, '\x16', "\uFFFC\u2416"); // SYN
-    replaceAll(output, '\x17', "\uFFFC\u2417"); // ETB
-    replaceAll(output, '\x18', "\uFFFC\u2418"); // CAN
-    replaceAll(output, '\x19', "\uFFFC\u2419"); // EM
-    replaceAll(output, '\x1A', "\uFFFC\u241A"); // SUB
-    replaceAll(output, '\x1B', "\uFFFC\u241B"); // ESC
-    replaceAll(output, '\x1C', "\uFFFC\u241C"); // FS
-    replaceAll(output, '\x1D', "\uFFFC\u241D"); // GS
-    replaceAll(output, '\x1E', "\uFFFC\u241E"); // RS
-    replaceAll(output, '\x1F', "\uFFFC\u241F"); // US
-    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL    
+//    replaceAll(output, '\x01', "\uFFFC\u2401"); // SOH
+//    replaceAll(output, '\x02', "\uFFFC\u2402"); // STX
+//    replaceAll(output, '\x03', "\uFFFC\u2403"); // ETX
+//    replaceAll(output, '\x04', "\uFFFC\u2404"); // EOT
+//    replaceAll(output, '\x05', "\uFFFC\u2405"); // ENQ
+//    replaceAll(output, '\x06', "\uFFFC\u2406"); // ACK
+//    replaceAll(output, '\x07', "\uFFFC\u2407"); // BEL
+//    replaceAll(output, '\x08', "\uFFFC\u2408"); // BS
+//    replaceAll(output, '\x0B', "\uFFFC\u240B"); // VT
+//    replaceAll(output, '\x0C', "\uFFFC\u240C"); // FF
+//    replaceAll(output, '\x0E', "\uFFFC\u240E"); // SS
+//    replaceAll(output, '\x0F', "\uFFFC\u240F"); // SI
+//    replaceAll(output, '\x10', "\uFFFC\u2410"); // DLE
+//    replaceAll(output, '\x11', "\uFFFC\u2411"); // DC1
+//    replaceAll(output, '\x12', "\uFFFC\u2412"); // DC2
+//    replaceAll(output, '\x13', "\uFFFC\u2413"); // DC3
+//    replaceAll(output, '\x14', "\uFFFC\u2414"); // DC4
+//    replaceAll(output, '\x15', "\uFFFC\u2415"); // NAK
+//    replaceAll(output, '\x16', "\uFFFC\u2416"); // SYN
+//    replaceAll(output, '\x17', "\uFFFC\u2417"); // ETB
+//    replaceAll(output, '\x18', "\uFFFC\u2418"); // CAN
+//    replaceAll(output, '\x19', "\uFFFC\u2419"); // EM
+//    replaceAll(output, '\x1A', "\uFFFC\u241A"); // SUB
+//    replaceAll(output, '\x1B', "\uFFFC\u241B"); // ESC
+//    replaceAll(output, '\x1C', "\uFFFC\u241C"); // FS
+//    replaceAll(output, '\x1D', "\uFFFC\u241D"); // GS
+//    replaceAll(output, '\x1E', "\uFFFC\u241E"); // RS
+//    replaceAll(output, '\x1F', "\uFFFC\u241F"); // US
+//    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL
     cout << "replacements took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
     // only open the output file stream once we're ready to save
     // this avoids a blank file in case serialisation crashed
-    std::ofstream saveFileStream(fileName.toLocal8Bit().data());
+    std::ofstream saveFileStream(fileName.toUtf8().constData());
     saveFileStream << output;    
     cout << "serialising to iostream export took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
@@ -345,7 +345,7 @@ bool XMLexport::saveXml(const QString& fileName)
     cout << "Serialisation in itself took " << chrono::duration <double, milli> (chrono::steady_clock::now() - totalStart).count() << " ms" << endl;
 
     return true;
-//    return mExportDoc.save_file(fileName.toLocal8Bit().data(), "    ");
+//    return mExportDoc.save_file(fileName.toUtf8().constData(), "    ");
 }
 
 void XMLexport::showXmlDebug()
@@ -388,32 +388,32 @@ bool XMLexport::writeHost(Host *pHost, pugi::xml_node mMudletPackageNode)
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
-    host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toLocal8Bit().data();
-    host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toLocal8Bit().data();
+    host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
+    host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
-    host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toLocal8Bit().data();
-    host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toLocal8Bit().data();
-    host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toLocal8Bit().data();
-    host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toLocal8Bit().data();
-    host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toLocal8Bit().data();
+    host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
+    host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
+    host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
+    host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
+    host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
         ignore = ignore.append(it.next());
     }
-    host.append_attribute("mDoubleClickIgnore") = ignore.toLocal8Bit().data();
+    host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
 
     { // Blocked so that indentation reflects that of the XML file
-        host.append_child("name").text().set(pHost->mHostName.toLocal8Bit().data());
+        host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
 
         auto mInstalledPackages = host.append_child("mInstalledPackages");
 
         for (int i = 0; i < pHost->mInstalledPackages.size(); ++i) {
-            mInstalledPackages.append_child("string").text().set(pHost->mInstalledPackages.at(i).toLocal8Bit().data());
+            mInstalledPackages.append_child("string").text().set(pHost->mInstalledPackages.at(i).toUtf8().constData());
         }
 
         if (pHost->mInstalledModules.size()) {
@@ -422,80 +422,80 @@ bool XMLexport::writeHost(Host *pHost, pugi::xml_node mMudletPackageNode)
             pHost->modulesToWrite.clear();
             while (it.hasNext()) {
                 it.next();
-                mInstalledModules.append_child("key").text().set(it.key().toLocal8Bit().data());
+                mInstalledModules.append_child("key").text().set(it.key().toUtf8().constData());
                 QStringList entry = it.value();
-                mInstalledModules.append_child("filepath").text().set(entry.at(0).toLocal8Bit().data());
-                mInstalledModules.append_child("globalSave").text().set(entry.at(1).toLocal8Bit().data());
+                mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
+                mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
                 if (entry.at(1).toInt()) {
                     pHost->modulesToWrite.insert(it.key(), entry);
                 }
-                mInstalledModules.append_child("priority").text().set(QString::number(pHost->mModulePriorities.value(it.key())).toLocal8Bit().data());
+                mInstalledModules.append_child("priority").text().set(QString::number(pHost->mModulePriorities.value(it.key())).toUtf8().constData());
             }
         }
 
-        host.append_child("url").text().set(pHost->mUrl.toLocal8Bit().data());
-        host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toLocal8Bit().data());
-        host.append_child("serverPackageVersion").text().set(QString::number(pHost->mServerGUI_Package_version).toLocal8Bit().data());
-        host.append_child("port").text().set(QString::number(pHost->mPort).toLocal8Bit().data());
-        host.append_child("borderTopHeight").text().set(QString::number(pHost->mBorderTopHeight).toLocal8Bit().data());
-        host.append_child("borderBottomHeight").text().set(QString::number(pHost->mBorderBottomHeight).toLocal8Bit().data());
-        host.append_child("borderLeftWidth").text().set(QString::number(pHost->mBorderLeftWidth).toLocal8Bit().data());
-        host.append_child("borderRightWidth").text().set(QString::number(pHost->mBorderRightWidth).toLocal8Bit().data());
-        host.append_child("wrapAt").text().set(QString::number(pHost->mWrapAt).toLocal8Bit().data());
-        host.append_child("wrapIndentCount").text().set(QString::number(pHost->mWrapIndentCount).toLocal8Bit().data());
-        host.append_child("mFgColor").text().set(pHost->mFgColor.name().toLocal8Bit().data());
-        host.append_child("mBgColor").text().set(pHost->mBgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandFgColor").text().set(pHost->mCommandFgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandBgColor").text().set(pHost->mCommandBgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandLineFgColor").text().set(pHost->mCommandLineFgColor.name().toLocal8Bit().data());
-        host.append_child("mCommandLineBgColor").text().set(pHost->mCommandLineBgColor.name().toLocal8Bit().data());
-        host.append_child("mBlack").text().set(pHost->mBlack.name().toLocal8Bit().data());
-        host.append_child("mLightBlack").text().set(pHost->mLightBlack.name().toLocal8Bit().data());
-        host.append_child("mRed").text().set(pHost->mRed.name().toLocal8Bit().data());
-        host.append_child("mLightRed").text().set(pHost->mLightRed.name().toLocal8Bit().data());
-        host.append_child("mBlue").text().set(pHost->mBlue.name().toLocal8Bit().data());
-        host.append_child("mLightBlue").text().set(pHost->mLightBlue.name().toLocal8Bit().data());
-        host.append_child("mGreen").text().set(pHost->mGreen.name().toLocal8Bit().data());
-        host.append_child("mLightGreen").text().set(pHost->mLightGreen.name().toLocal8Bit().data());
-        host.append_child("mYellow").text().set(pHost->mYellow.name().toLocal8Bit().data());
-        host.append_child("mLightYellow").text().set(pHost->mLightYellow.name().toLocal8Bit().data());
-        host.append_child("mCyan").text().set(pHost->mCyan.name().toLocal8Bit().data());
-        host.append_child("mLightCyan").text().set(pHost->mLightCyan.name().toLocal8Bit().data());
-        host.append_child("mMagenta").text().set(pHost->mMagenta.name().toLocal8Bit().data());
-        host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toLocal8Bit().data());
-        host.append_child("mWhite").text().set(pHost->mWhite.name().toLocal8Bit().data());
-        host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toLocal8Bit().data());
-        host.append_child("mDisplayFont").text().set(pHost->mDisplayFont.toString().toLocal8Bit().data());
-        host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toLocal8Bit().data());
+        host.append_child("url").text().set(pHost->mUrl.toUtf8().constData());
+        host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
+        host.append_child("serverPackageVersion").text().set(QString::number(pHost->mServerGUI_Package_version).toUtf8().constData());
+        host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
+        host.append_child("borderTopHeight").text().set(QString::number(pHost->mBorderTopHeight).toUtf8().constData());
+        host.append_child("borderBottomHeight").text().set(QString::number(pHost->mBorderBottomHeight).toUtf8().constData());
+        host.append_child("borderLeftWidth").text().set(QString::number(pHost->mBorderLeftWidth).toUtf8().constData());
+        host.append_child("borderRightWidth").text().set(QString::number(pHost->mBorderRightWidth).toUtf8().constData());
+        host.append_child("wrapAt").text().set(QString::number(pHost->mWrapAt).toUtf8().constData());
+        host.append_child("wrapIndentCount").text().set(QString::number(pHost->mWrapIndentCount).toUtf8().constData());
+        host.append_child("mFgColor").text().set(pHost->mFgColor.name().toUtf8().constData());
+        host.append_child("mBgColor").text().set(pHost->mBgColor.name().toUtf8().constData());
+        host.append_child("mCommandFgColor").text().set(pHost->mCommandFgColor.name().toUtf8().constData());
+        host.append_child("mCommandBgColor").text().set(pHost->mCommandBgColor.name().toUtf8().constData());
+        host.append_child("mCommandLineFgColor").text().set(pHost->mCommandLineFgColor.name().toUtf8().constData());
+        host.append_child("mCommandLineBgColor").text().set(pHost->mCommandLineBgColor.name().toUtf8().constData());
+        host.append_child("mBlack").text().set(pHost->mBlack.name().toUtf8().constData());
+        host.append_child("mLightBlack").text().set(pHost->mLightBlack.name().toUtf8().constData());
+        host.append_child("mRed").text().set(pHost->mRed.name().toUtf8().constData());
+        host.append_child("mLightRed").text().set(pHost->mLightRed.name().toUtf8().constData());
+        host.append_child("mBlue").text().set(pHost->mBlue.name().toUtf8().constData());
+        host.append_child("mLightBlue").text().set(pHost->mLightBlue.name().toUtf8().constData());
+        host.append_child("mGreen").text().set(pHost->mGreen.name().toUtf8().constData());
+        host.append_child("mLightGreen").text().set(pHost->mLightGreen.name().toUtf8().constData());
+        host.append_child("mYellow").text().set(pHost->mYellow.name().toUtf8().constData());
+        host.append_child("mLightYellow").text().set(pHost->mLightYellow.name().toUtf8().constData());
+        host.append_child("mCyan").text().set(pHost->mCyan.name().toUtf8().constData());
+        host.append_child("mLightCyan").text().set(pHost->mLightCyan.name().toUtf8().constData());
+        host.append_child("mMagenta").text().set(pHost->mMagenta.name().toUtf8().constData());
+        host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toUtf8().constData());
+        host.append_child("mWhite").text().set(pHost->mWhite.name().toUtf8().constData());
+        host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
+        host.append_child("mDisplayFont").text().set(pHost->mDisplayFont.toString().toUtf8().constData());
+        host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toUtf8().constData());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
-        host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toLocal8Bit().data());
-        host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toLocal8Bit().data());
+        host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
+        host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toUtf8().constData());
 
-        host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toLocal8Bit().data());
-        host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toLocal8Bit().data());
-        host.append_child("mBlack2").text().set(pHost->mBlack_2.name().toLocal8Bit().data());
-        host.append_child("mLightBlack2").text().set(pHost->mLightBlack_2.name().toLocal8Bit().data());
-        host.append_child("mRed2").text().set(pHost->mRed_2.name().toLocal8Bit().data());
-        host.append_child("mLightRed2").text().set(pHost->mLightRed_2.name().toLocal8Bit().data());
-        host.append_child("mBlue2").text().set(pHost->mBlue_2.name().toLocal8Bit().data());
-        host.append_child("mLightBlue2").text().set(pHost->mLightBlue_2.name().toLocal8Bit().data());
-        host.append_child("mGreen2").text().set(pHost->mGreen_2.name().toLocal8Bit().data());
-        host.append_child("mLightGreen2").text().set(pHost->mLightGreen_2.name().toLocal8Bit().data());
-        host.append_child("mYellow2").text().set(pHost->mYellow_2.name().toLocal8Bit().data());
-        host.append_child("mLightYellow2").text().set(pHost->mLightYellow_2.name().toLocal8Bit().data());
-        host.append_child("mCyan2").text().set(pHost->mCyan_2.name().toLocal8Bit().data());
-        host.append_child("mLightCyan2").text().set(pHost->mLightCyan_2.name().toLocal8Bit().data());
-        host.append_child("mMagenta2").text().set(pHost->mMagenta_2.name().toLocal8Bit().data());
-        host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toLocal8Bit().data());
-        host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toLocal8Bit().data());
-        host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toLocal8Bit().data());
-        host.append_child("mSpellDic").text().set(pHost->mSpellDic.toLocal8Bit().data());
+        host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toUtf8().constData());
+        host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toUtf8().constData());
+        host.append_child("mBlack2").text().set(pHost->mBlack_2.name().toUtf8().constData());
+        host.append_child("mLightBlack2").text().set(pHost->mLightBlack_2.name().toUtf8().constData());
+        host.append_child("mRed2").text().set(pHost->mRed_2.name().toUtf8().constData());
+        host.append_child("mLightRed2").text().set(pHost->mLightRed_2.name().toUtf8().constData());
+        host.append_child("mBlue2").text().set(pHost->mBlue_2.name().toUtf8().constData());
+        host.append_child("mLightBlue2").text().set(pHost->mLightBlue_2.name().toUtf8().constData());
+        host.append_child("mGreen2").text().set(pHost->mGreen_2.name().toUtf8().constData());
+        host.append_child("mLightGreen2").text().set(pHost->mLightGreen_2.name().toUtf8().constData());
+        host.append_child("mYellow2").text().set(pHost->mYellow_2.name().toUtf8().constData());
+        host.append_child("mLightYellow2").text().set(pHost->mLightYellow_2.name().toUtf8().constData());
+        host.append_child("mCyan2").text().set(pHost->mCyan_2.name().toUtf8().constData());
+        host.append_child("mLightCyan2").text().set(pHost->mLightCyan_2.name().toUtf8().constData());
+        host.append_child("mMagenta2").text().set(pHost->mMagenta_2.name().toUtf8().constData());
+        host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toUtf8().constData());
+        host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toUtf8().constData());
+        host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toUtf8().constData());
+        host.append_child("mSpellDic").text().set(pHost->mSpellDic.toUtf8().constData());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave
         // them in place for now even though we no longer use them for compatibility
         // with older version of Mudlet
-        host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toLocal8Bit().data());
-        host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toLocal8Bit().data());
+        host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData());
+        host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
 
     writeTriggerPackage(pHost, mMudletPackageNode, true);
@@ -525,7 +525,7 @@ void XMLexport::writeVariablePackage(Host *pHost, pugi::xml_node &mMudletPackage
             QSetIterator<QString> itHiddenVariableName(vu->hiddenByUser);
             while (itHiddenVariableName.hasNext()) {
                 auto variableName = itHiddenVariableName.next();
-                hiddenVariablesNode.append_child("name").text().set(variableName.toLocal8Bit().data());
+                hiddenVariablesNode.append_child("name").text().set(variableName.toUtf8().constData());
             }
         }
 
@@ -616,10 +616,10 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
         if (pVar->getValueType() == LUA_TTABLE) {
             auto variableGroupNode = xmlParent.append_child("VariableGroup");
 
-            variableGroupNode.append_child("name").text().set(pVar->getName().toLocal8Bit().data());
-            variableGroupNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toLocal8Bit().data());
-            variableGroupNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toLocal8Bit().data());
-            variableGroupNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toLocal8Bit().data());
+            variableGroupNode.append_child("name").text().set(pVar->getName().toUtf8().constData());
+            variableGroupNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
+            variableGroupNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
+            variableGroupNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
 
             QListIterator<TVar*> itNestedVariable(pVar->getChildren(false));
             while (isOk && itNestedVariable.hasNext()) {
@@ -630,10 +630,10 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
         } else {
             auto variableNode = xmlParent.append_child("Variable");
 
-            variableNode.append_child("name").text().set(pVar->getName().toLocal8Bit().data());
-            variableNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toLocal8Bit().data());
-            variableNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toLocal8Bit().data());
-            variableNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toLocal8Bit().data());
+            variableNode.append_child("name").text().set(pVar->getName().toUtf8().constData());
+            variableNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
+            variableNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
+            variableNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
         }
     }
 
@@ -835,28 +835,28 @@ bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
 
         { // Blocked so that indentation reflects that of the XML file
 
-            trigger.append_child("name").text().set(pT->mName.toLocal8Bit().data());
+            trigger.append_child("name").text().set(pT->mName.toUtf8().constData());
             writeScriptElement(pT->mScript, trigger);
 
-            trigger.append_child("triggerType").text().set(QString::number(pT->mTriggerType).toLocal8Bit().data());
-            trigger.append_child("conditonLineDelta").text().set(QString::number(pT->mConditionLineDelta).toLocal8Bit().data());
-            trigger.append_child("mStayOpen").text().set(QString::number(pT->mStayOpen).toLocal8Bit().data());
-            trigger.append_child("mCommand").text().set(pT->mCommand.toLocal8Bit().data());
-            trigger.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
-            trigger.append_child("mFgColor").text().set(pT->mFgColor.name().toLocal8Bit().data());
-            trigger.append_child("mBgColor").text().set(pT->mBgColor.name().toLocal8Bit().data());
-            trigger.append_child("mSoundFile").text().set(pT->mSoundFile.toLocal8Bit().data());
-            trigger.append_child("colorTriggerFgColor").text().set(pT->mColorTriggerFgColor.name().toLocal8Bit().data());
-            trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toLocal8Bit().data());
+            trigger.append_child("triggerType").text().set(QString::number(pT->mTriggerType).toUtf8().constData());
+            trigger.append_child("conditonLineDelta").text().set(QString::number(pT->mConditionLineDelta).toUtf8().constData());
+            trigger.append_child("mStayOpen").text().set(QString::number(pT->mStayOpen).toUtf8().constData());
+            trigger.append_child("mCommand").text().set(pT->mCommand.toUtf8().constData());
+            trigger.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            trigger.append_child("mFgColor").text().set(pT->mFgColor.name().toUtf8().constData());
+            trigger.append_child("mBgColor").text().set(pT->mBgColor.name().toUtf8().constData());
+            trigger.append_child("mSoundFile").text().set(pT->mSoundFile.toUtf8().constData());
+            trigger.append_child("colorTriggerFgColor").text().set(pT->mColorTriggerFgColor.name().toUtf8().constData());
+            trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toUtf8().constData());
 
             auto regexCodeList = trigger.append_child("regexCodeList");
             for (int i = 0; i < pT->mRegexCodeList.size(); ++i) {
-                regexCodeList.append_child("string").text().set(pT->mRegexCodeList.at(i).toLocal8Bit().data());
+                regexCodeList.append_child("string").text().set(pT->mRegexCodeList.at(i).toUtf8().constData());
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
             for (int i : pT->mRegexCodePropertyList) {
-                regexCodePropertyList.append_child("integer").text().set(QString::number(i).toLocal8Bit().data());
+                regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }
 
@@ -953,12 +953,12 @@ bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
         aliasContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            aliasContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
+            aliasContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
             writeScriptElement(pT->mScript, aliasContentsNode);
 
-            aliasContentsNode.append_child("command").text().set(pT->mCommand.toLocal8Bit().data());
-            aliasContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
-            aliasContentsNode.append_child("regex").text().set(pT->mRegexCode.toLocal8Bit().data());
+            aliasContentsNode.append_child("command").text().set(pT->mCommand.toUtf8().constData());
+            aliasContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            aliasContentsNode.append_child("regex").text().set(pT->mRegexCode.toUtf8().constData());
         }
 
         isOk = !hasError();
@@ -1057,26 +1057,26 @@ bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
         actionContentsNode.append_attribute("useCustomLayout") = pT->mUseCustomLayout ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            actionContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
-            actionContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
+            actionContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
+            actionContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             writeScriptElement(pT->mScript, actionContentsNode);
 
-            actionContentsNode.append_child("css").text().set(pT->css.toLocal8Bit().data());
-            actionContentsNode.append_child("commandButtonUp").text().set(pT->mCommandButtonUp.toLocal8Bit().data());
-            actionContentsNode.append_child("commandButtonDown").text().set(pT->mCommandButtonDown.toLocal8Bit().data());
-            actionContentsNode.append_child("icon").text().set(pT->mIcon.toLocal8Bit().data());
-            actionContentsNode.append_child("orientation").text().set(QString::number(pT->mOrientation).toLocal8Bit().data());
-            actionContentsNode.append_child("location").text().set(QString::number(pT->mLocation).toLocal8Bit().data());
-            actionContentsNode.append_child("posX").text().set(QString::number(pT->mPosX).toLocal8Bit().data());
-            actionContentsNode.append_child("posY").text().set(QString::number(pT->mPosY).toLocal8Bit().data());
+            actionContentsNode.append_child("css").text().set(pT->css.toUtf8().constData());
+            actionContentsNode.append_child("commandButtonUp").text().set(pT->mCommandButtonUp.toUtf8().constData());
+            actionContentsNode.append_child("commandButtonDown").text().set(pT->mCommandButtonDown.toUtf8().constData());
+            actionContentsNode.append_child("icon").text().set(pT->mIcon.toUtf8().constData());
+            actionContentsNode.append_child("orientation").text().set(QString::number(pT->mOrientation).toUtf8().constData());
+            actionContentsNode.append_child("location").text().set(QString::number(pT->mLocation).toUtf8().constData());
+            actionContentsNode.append_child("posX").text().set(QString::number(pT->mPosX).toUtf8().constData());
+            actionContentsNode.append_child("posY").text().set(QString::number(pT->mPosY).toUtf8().constData());
             // We now use a boolean but file must use original "1" (false)
             // or "2" (true) for backward compatibility
-            actionContentsNode.append_child("mButtonState").text().set(QString::number(pT->mButtonState ? 2 : 1).toLocal8Bit().data());
-            actionContentsNode.append_child("sizeX").text().set(QString::number(pT->mSizeX).toLocal8Bit().data());
-            actionContentsNode.append_child("sizeY").text().set(QString::number(pT->mSizeY).toLocal8Bit().data());
-            actionContentsNode.append_child("buttonColumn").text().set(QString::number(pT->mButtonColumns).toLocal8Bit().data());
-            actionContentsNode.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toLocal8Bit().data());
-            actionContentsNode.append_child("buttonColor").text().set(pT->mButtonColor.name().toLocal8Bit().data());
+            actionContentsNode.append_child("mButtonState").text().set(QString::number(pT->mButtonState ? 2 : 1).toUtf8().constData());
+            actionContentsNode.append_child("sizeX").text().set(QString::number(pT->mSizeX).toUtf8().constData());
+            actionContentsNode.append_child("sizeY").text().set(QString::number(pT->mSizeY).toUtf8().constData());
+            actionContentsNode.append_child("buttonColumn").text().set(QString::number(pT->mButtonColumns).toUtf8().constData());
+            actionContentsNode.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toUtf8().constData());
+            actionContentsNode.append_child("buttonColor").text().set(pT->mButtonColor.name().toUtf8().constData());
         }
 
         isOk = !hasError();
@@ -1174,13 +1174,13 @@ bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
         timerContentsNode.append_attribute("isOffsetTimer") = pT->isOffsetTimer() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            timerContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
+            timerContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
 
             writeScriptElement(pT->mScript, timerContentsNode);
 
-            timerContentsNode.append_child("command").text().set(pT->mCommand.toLocal8Bit().data());
-            timerContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
-            timerContentsNode.append_child("time").text().set(pT->mTime.toString("hh:mm:ss.zzz").toLocal8Bit().data());
+            timerContentsNode.append_child("command").text().set(pT->mCommand.toUtf8().constData());
+            timerContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            timerContentsNode.append_child("time").text().set(pT->mTime.toString("hh:mm:ss.zzz").toUtf8().constData());
         }
 
         isOk = !hasError();
@@ -1276,13 +1276,13 @@ bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
         scriptContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            scriptContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
-            scriptContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
+            scriptContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
+            scriptContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             writeScriptElement(pT->mScript, scriptContentsNode);
 
             auto eventHandlerList = scriptContentsNode.append_child("eventHandlerList");
             for (int i = 0; i < pT->mEventHandlerList.size(); ++i) {
-                eventHandlerList.append_child("string").text().set(pT->mEventHandlerList.at(i).toLocal8Bit().data());
+                eventHandlerList.append_child("string").text().set(pT->mEventHandlerList.at(i).toUtf8().constData());
             }
         }
 
@@ -1379,13 +1379,13 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
         keyContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            keyContentsNode.append_child("name").text().set(pT->mName.toLocal8Bit().data());
-            keyContentsNode.append_child("packageName").text().set(pT->mPackageName.toLocal8Bit().data());
+            keyContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
+            keyContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             writeScriptElement(pT->mScript, keyContentsNode);
 
-            keyContentsNode.append_child("command").text().set(pT->mCommand.toLocal8Bit().data());
-            keyContentsNode.append_child("keyCode").text().set(QString::number(pT->mKeyCode).toLocal8Bit().data());
-            keyContentsNode.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toLocal8Bit().data());
+            keyContentsNode.append_child("command").text().set(pT->mCommand.toUtf8().constData());
+            keyContentsNode.append_child("keyCode").text().set(QString::number(pT->mKeyCode).toUtf8().constData());
+            keyContentsNode.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toUtf8().constData());
         }
 
         isOk = !hasError();
@@ -1402,5 +1402,5 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
 
 bool XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElement)
 {
-    return xmlElement.append_child("script").text().set(script.toLocal8Bit().data()) ? true : false;
+    return xmlElement.append_child("script").text().set(script.toUtf8().constData()) ? true : false;
 }
