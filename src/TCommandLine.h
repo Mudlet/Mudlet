@@ -62,7 +62,8 @@ private:
     void enterCommand(QKeyEvent* event);
     void adjustHeight();
     void mousePressEvent(QMouseEvent* event) override;
-    void processNormalKey(QEvent* event);
+    void processNormalKey(QEvent*);
+    bool processPotentialKeyBinding(QKeyEvent*);
 
     int mHistoryBuffer;
     QStringList mHistoryList;
