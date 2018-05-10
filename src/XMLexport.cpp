@@ -39,6 +39,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <chrono>
 #include <QtConcurrent>
 
 using namespace std;
