@@ -357,14 +357,12 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
     if (!hostInfo.addresses().isEmpty()) {
         mHostAddress = hostInfo.addresses().constFirst();
-        QString msg = "[ INFO ]  - The IP address of " + hostName + " has been found. It is: " + mHostAddress.toString() + "\n";
-        postMessage(msg);
-        msg = "[ INFO ]  - Trying to connect to " + mHostAddress.toString() + ":" + QString::number(hostPort) + " ...\n";
-        postMessage(msg);
+        postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
+        postMessage(tr("[ INFO ]  - Trying to connect to %1: %2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = QStringLiteral("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.");
+        QString msg = tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.");
         postMessage(msg);
         return;
     }
@@ -372,9 +370,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 
 bool cTelnet::sendData(QString& data)
 {
-    while (data.indexOf(QStringLiteral("\n")) != -1) {
-        data.replace(QChar('\n'), QString());
-    }
+    data.remove(QChar::LineFeed);
 
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
@@ -1161,8 +1157,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
     QString var;
     QString arg;
     if (msg.indexOf('\n') > -1) {
-        var = msg.section(QStringLiteral("\n"), 0, 0);
-        arg = msg.section(QStringLiteral("\n"), 1);
+        var = msg.section(QChar::LineFeed, 0, 0);
+        arg = msg.section(QChar::LineFeed, 1);
     } else {
         var = msg.section(QStringLiteral(" "), 0, 0);
         arg = msg.section(QStringLiteral(" "), 1);
@@ -1174,8 +1170,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
         }
 
         QString version = msg.section('\n', 0);
-        version.replace(QStringLiteral("Client.GUI "), QString());
-        version.replace('\n', QStringLiteral(" "));
+        version.remove(QStringLiteral("Client.GUI "));
+        version.replace(QChar::LineFeed, QChar::Space);
         version = version.section(' ', 0, 0);
 
         int newVersion = version.toInt();

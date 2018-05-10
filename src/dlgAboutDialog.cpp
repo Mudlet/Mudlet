@@ -84,7 +84,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
         }
 
         // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar(169) % QStringLiteral(" Mudlet makers 2008-") % QStringLiteral(__DATE__).mid(7);
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
         QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
