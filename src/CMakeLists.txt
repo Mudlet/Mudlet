@@ -484,7 +484,7 @@ target_link_libraries(mudlet
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
-#    ${PUGIXML_LIBRARIES}
+    ${PUGIXML_LIBRARIES}
     communi
     lua_yajl
     edbee-lib
