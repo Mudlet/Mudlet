@@ -170,10 +170,6 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
-
-# pugixml options (https://pugixml.org/docs/manual.html#install.building.config)
-#DEFINES += PUGIXML_NO_XPATH
-
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
 # Setting an environmental variable WITH_FONTS to the case insensitive value
 # "no" will stop the inclusion of the fonts present in the source code in the
@@ -266,7 +262,6 @@ unix:!macx {
             -llua5.1 \
             -lhunspell
         INCLUDEPATH += /usr/include/lua5.1
-        INCLUDEPATH += /usr/include
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
@@ -274,6 +269,7 @@ unix:!macx {
         -lGLU \
         -lzip \
         -lz
+        -lpugixml
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
@@ -523,8 +519,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    ../3rdparty/pugixml/src/pugixml.cpp
+    XMLimport.cpp
 
 
 HEADERS += \
