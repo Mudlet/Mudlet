@@ -94,9 +94,6 @@ public:
 
     QFuture<bool> savingFuture;
 
-signals:
-    void saveCompleted();
-
 private:
     QPointer<Host> mpHost;
     TTrigger* mpTrigger;

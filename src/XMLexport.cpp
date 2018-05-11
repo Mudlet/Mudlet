@@ -246,7 +246,7 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
         savingFuture = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
         auto watcher = new QFutureWatcher<bool>;
         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-            mpHost->saveProfileCompleted();
+            mpHost->profileXmlSaved(QStringLiteral("profile"));
         });
         watcher->setFuture(savingFuture);
 

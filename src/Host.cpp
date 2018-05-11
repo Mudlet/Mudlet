@@ -401,32 +401,37 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
         dir_xml.mkpath(directory_xml);
     }
 
-    if (writer) {
+    if (!writers.empty()) {
         return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
     }
 
-    writer.reset(new XMLexport(this));
+    auto writer = new XMLexport(this);
+    writers.insert(QStringLiteral("profile"), writer);
     writer->exportHost(filename_xml);
     saveModules(syncModules ? 1 : 0);
     return std::make_tuple(true, filename_xml, QString());
 }
 
 // profile save completed async - so delete the writer object
-void Host::saveProfileCompleted()
+void Host::profileXmlSaved(const QString& xmlName)
 {
-    writer.reset();
+    auto writer = writers.take(xmlName);
+    delete writer;
+
     emit profileSaveFinished();
 }
 
 bool Host::currentlySavingProfile()
 {
-    return writer ? true : false;
+    return !writers.empty();
 }
 
 void Host::waitForProfileSave()
 {
     qDebug() << getName() << "waiting to saving to finish";
-    writer->savingFuture.waitForFinished();
+    for (auto& writer : writers) {
+        writer->savingFuture.waitForFinished();
+    }
 }
 
 // Now returns the total weight of the path

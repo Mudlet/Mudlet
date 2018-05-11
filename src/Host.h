@@ -170,7 +170,7 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
-    void saveProfileCompleted();
+    void profileXmlSaved(const QString &xmlName);
     bool currentlySavingProfile();
     void waitForProfileSave();
 
@@ -391,7 +391,8 @@ private:
 
     bool mHaveMapperScript;
 
-    QScopedPointer<XMLexport> writer;
+    // keeps track of all of the array writers we're currently operating with
+    QHash<QString, XMLexport*> writers;
 };
 
 #endif // MUDLET_HOST_H
