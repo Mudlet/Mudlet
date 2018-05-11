@@ -410,9 +410,6 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -FItestdbg.h")
 endif()
 
-GET_DIRECTORY_PROPERTY(output INCLUDE_DIRECTORIES)
-MESSAGE(STATUS ${output})
-
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
     ${Qt5Core_INCLUDE_DIRS}
@@ -442,8 +439,6 @@ else()
 endif()
 
 include_directories( ${ZLIB_INCLUDE_DIR} )
-
-message(STATUS "list of include directories: ${INCLUDE_DIRECTORIES}")
 
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
@@ -489,7 +484,7 @@ target_link_libraries(mudlet
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    ${PUGIXML_LIBRARIES}
+#    ${PUGIXML_LIBRARIES}
     communi
     lua_yajl
     edbee-lib
