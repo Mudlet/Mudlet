@@ -253,7 +253,6 @@ bool AliasUnit::processDataStream(const QString& data)
 void AliasUnit::stopAllTriggers()
 {
     for (auto alias : mAliasRootNodeList) {
-        QString name = alias->getName();
         alias->disableFamily();
     }
 }
