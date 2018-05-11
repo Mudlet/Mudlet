@@ -401,20 +401,19 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
     }
 
     if (writer) {
-        return std::make_tuple(false, QString(), QStringLiteral("Already saving"));
+        return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
     }
 
-    writer = new XMLexport(this);
+    writer.reset(new XMLexport(this));
     writer->exportHost(filename_xml);
     saveModules(syncModules ? 1 : 0);
-    return std::make_tuple(true, filename_xml, QStringLiteral("Save started successfully"));
+    return std::make_tuple(true, filename_xml, QString());
 }
 
 // profile save completed async - so delete the writer object
 void Host::saveProfileCompleted()
 {
-    cout << "saving done, deleting writer" << endl;
-    delete writer;
+    writer.reset();
 }
 
 // Now returns the total weight of the path

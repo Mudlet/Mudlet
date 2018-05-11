@@ -338,7 +338,6 @@ bool XMLexport::saveXml(const QString& fileName)
     }
     cout << "Serialisation in itself took " << chrono::duration <double, milli> (chrono::steady_clock::now() - totalStart).count() << " ms" << endl;
     return true;
-//    return mExportDoc.save_file(fileName.toUtf8().constData(), "    ");
 }
 
 void XMLexport::showXmlDebug()

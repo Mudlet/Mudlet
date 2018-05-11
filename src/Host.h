@@ -383,7 +383,7 @@ private:
 
     bool mHaveMapperScript;
 
-    XMLexport* writer;
+    QScopedPointer<XMLexport> writer;
 };
 
 #endif // MUDLET_HOST_H
