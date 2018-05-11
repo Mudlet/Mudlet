@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
@@ -117,6 +117,7 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
+    void slot_changeIsAmbigousWidthGlyphsToBeWide(const bool);
 
 private:
     void initDefaultSettings();
@@ -153,6 +154,7 @@ private:
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
+    bool mIsAmbigousWidthGlyphsToBeWide;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

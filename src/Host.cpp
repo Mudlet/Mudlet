@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -173,6 +173,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSaveProfileOnExit(false)
 , mModuleSaveBlock(false)
 , mHaveMapperScript(false)
+, mIsAmbigousWidthGlyphsToBeWide(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -1154,4 +1155,21 @@ QString Host::readProfileData(const QString& item)
     }
 
     return ret;
+}
+
+void Host::setUseWideAmbiguousEAsianGlyphs(const bool state)
+{
+    bool localState = state;
+    bool needToEmit = false;
+    QMutexLocker locker(& mLock);
+    if (mIsAmbigousWidthGlyphsToBeWide != state) {
+        mIsAmbigousWidthGlyphsToBeWide = state;
+        needToEmit = true;
+    };
+    locker.unlock();
+    // We do not need to keep the mutex as we have a local copy to work with
+    // whilst the connected methods react to the signal:
+    if (needToEmit) {
+        emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
+    }
 }

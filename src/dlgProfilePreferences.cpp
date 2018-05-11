@@ -157,12 +157,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                         .arg(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
                                                 "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                             .arg(tr("<p>Using a single font is likely to produce a more consistent style but may "
-                                                                     "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                                     "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                                     "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                     "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
-
+                                        .arg("<p>Using a single font is likely to produce a more consistent style but may "
+                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                         .arg("<p>Some, generally East Asian, MUDs may use glyphs (characters) that are classified in Unicode "
+                                                              "as being of <i>Ambigous</i> width; this means that some languages which are <i>duo-spaced</i> "
+                                                              "rather than <i>mono-spaced</i> when not drawn with a proportional font have symbols that can be "
+                                                              "drawn both as a wide character and a narrow one (which takes half the horizontal space) depending "
+                                                              "on several factors including the language being displayed. Mudlet cannot not currently determine "
+                                                              "which case applies and so adopters the Unicode.org recommendation to use the narrow spacinging by "
+                                                              "default.  Should this not be suitable for this particular profile, check this option to instead draw "
+                                                              "such characters in the wider style - this is likely to be needed on East Asian MUDs.</p>"));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -197,6 +205,7 @@ void dlgProfilePreferences::disableHostDetails()
     // disable the others:
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -266,6 +275,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(true);
@@ -324,6 +334,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setChecked(pHost->getUseWideAmbiguousEAsianGlyphs());
 
     QString path;
     // This is duplicated (and should be the same as) the code in:
@@ -1994,6 +2005,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+        pHost->setUseWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->isChecked());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         if (pHost->mpEditorDialog) {

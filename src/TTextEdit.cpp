@@ -68,6 +68,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mpConsole(pC)
 , mpHost(pH)
 , mpScrollBar(nullptr)
+, mIsAmbigousWidthGlyphsToBeWide(pH->getUseWideAmbiguousEAsianGlyphs())
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -132,6 +133,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
+
+    connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
 }
 
 void TTextEdit::forceUpdate()
@@ -602,7 +605,11 @@ int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QStri
     if (unicode == '\t') {
         charWidth = column / 8 * 8 + 8;
     } else {
-        charWidth = mk_wcwidth_cjk(unicode) == 2 ? 2 : 1;
+        if (mIsAmbigousWidthGlyphsToBeWide) {
+            charWidth = mk_wcwidth_cjk(unicode) == 2 ? 2 : 1;
+        } else {
+            charWidth = mk_wcwidth(unicode) == 2 ? 2 : 1;
+        }
     }
 
     bool isBold = charStyle.flags & TCHAR_BOLD;
@@ -1666,4 +1673,12 @@ int TTextEdit::getRowCount()
     }
 
     return height() / rowHeight;
+}
+
+void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
+{
+    if (mIsAmbigousWidthGlyphsToBeWide != state) {
+        mIsAmbigousWidthGlyphsToBeWide = state;
+        update();
+    }
 }
