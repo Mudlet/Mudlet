@@ -149,6 +149,7 @@ set(mudlet_MOC_HDRS
     EAction.h
     exitstreewidget.h
     glwidget.h
+    Host.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
@@ -163,13 +164,13 @@ set(mudlet_MOC_HDRS
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
+    XMLexport.h
 )
 
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     FontManager.h
-    Host.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
@@ -201,7 +202,6 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
-    XMLexport.h
     XMLimport.h
 )
 
