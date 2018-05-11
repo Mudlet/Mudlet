@@ -32,8 +32,8 @@
 #include <QXmlStreamWriter>
 #include <QObject>
 #include <QFuture>
-#include "../3rdparty/pugixml/src/pugiconfig.hpp"
-#include "../3rdparty/pugixml/src/pugixml.hpp"
+#include "<pugiconfig>"
+#include "<pugixml>"
 #include "post_guard.h"
 
 class Host;
