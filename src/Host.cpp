@@ -344,10 +344,12 @@ void Host::resetProfile()
     mudlet::self()->mTimerMap.clear();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
+    getKeyUnit()->removeAllTempKeys();
 
 
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
     mEventMap.clear();
@@ -362,7 +364,7 @@ void Host::resetProfile()
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     getScriptUnit()->compileAll();
-    //getTimerUnit()->compileAll();
+    // All the Timers are NOT compiled here;
     mResetProfile = false;
 
     mTimerUnit.reenableAllTriggers();
@@ -504,6 +506,7 @@ void Host::stopAllTriggers()
     mTriggerUnit.stopAllTriggers();
     mAliasUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
+    mKeyUnit.stopAllTriggers();
 }
 
 void Host::reenableAllTriggers()
@@ -511,6 +514,7 @@ void Host::reenableAllTriggers()
     mTriggerUnit.reenableAllTriggers();
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
 }
 
 QPair<QString, QString> Host::getSearchEngine()
