@@ -171,7 +171,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPort(port)
 , mRetries(5)
 , mSaveProfileOnExit(false)
-, mModuleSaveBlock(false)
 , mHaveMapperScript(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
@@ -228,10 +227,6 @@ Host::~Host()
 
 void Host::saveModules(int sync)
 {
-    if (mModuleSaveBlock) {
-        //FIXME: This should generate an error to the user
-        return;
-    }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
     QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
@@ -262,15 +257,12 @@ void Host::saveModules(int sync)
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
         }
 
-        XMLexport writer(this);
-        if (writer.writeModuleXML(it.key(), filename_xml)) {
-            if (entry[1].toInt()) {
-                modulesToSync << it.key();
-            }
-        } else {
-            qDebug() << "failed to save module" << it.key();
-            mModuleSaveBlock = true;
-            return;
+        auto writer = new XMLexport(this);
+        writers.insert(filename_xml, writer);
+        writer->writeModuleXML(moduleName, filename_xml);
+
+        if (entry[1].toInt()) {
+            modulesToSync << moduleName;
         }
 
         if (!zipName.isEmpty()) {
@@ -415,8 +407,10 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
 // profile save completed async - so delete the writer object
 void Host::profileXmlSaved(const QString& xmlName)
 {
-    auto writer = writers.take(xmlName);
-    delete writer;
+    if (writers.contains(xmlName)) {
+        auto writer = writers.take(xmlName);
+        delete writer;
+    }
 
     emit profileSaveFinished();
 }
@@ -430,7 +424,9 @@ void Host::waitForProfileSave()
 {
     qDebug() << getName() << "waiting to saving to finish";
     for (auto& writer : writers) {
-        writer->savingFuture.waitForFinished();
+        for (auto& future: writer->saveFutures) {
+            future.waitForFinished();
+        }
     }
 }
 

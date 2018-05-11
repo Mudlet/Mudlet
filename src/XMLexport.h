@@ -92,7 +92,7 @@ public:
 
     bool writeScriptElement(const QString &, pugi::xml_node xmlElement);
 
-    QFuture<bool> savingFuture;
+    QVector<QFuture<bool>> saveFutures;
 
 private:
     QPointer<Host> mpHost;

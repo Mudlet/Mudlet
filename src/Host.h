@@ -381,7 +381,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-    bool mModuleSaveBlock;
 
     QPushButton* uninstallButton;
     QListWidget* packageList;
