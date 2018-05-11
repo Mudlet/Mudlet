@@ -378,6 +378,7 @@ void Host::resetProfile()
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
 {
     emit profileSaveStarted();
+    qApp->processEvents();
 
     QString directory_xml;
     if (saveLocation.isEmpty()) {
