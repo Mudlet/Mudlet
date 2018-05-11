@@ -442,6 +442,8 @@ endif()
 
 include_directories( ${ZLIB_INCLUDE_DIR} )
 
+message(STATUS "list of include directories: ${INCLUDE_DIRECTORIES}")
+
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 if(USE_FONTS)
