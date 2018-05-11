@@ -228,7 +228,15 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
         }
     }
 
-    return saveXml(fileName);
+    auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
+    auto watcher = new QFutureWatcher<bool>;
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+        mpHost->xmlSaved(fileName);
+    });
+    watcher->setFuture(future);
+    saveFutures.append(future);
+
+    return isOk;
 }
 
 bool XMLexport::exportHost(const QString &filename_pugi_xml)
@@ -246,7 +254,7 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
         auto watcher = new QFutureWatcher<bool>;
         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-            mpHost->profileXmlSaved(QStringLiteral("profile"));
+            mpHost->xmlSaved(QStringLiteral("profile"));
         });
         watcher->setFuture(future);
         saveFutures.append(future);
@@ -279,7 +287,7 @@ void inline XMLexport::replaceAll(std::string& source, const char from, const st
 
 bool XMLexport::saveXml(const QString& fileName)
 {
-    cout << "Exporting..." << endl;
+    cout << "Exporting " << fileName.toLocal8Bit().data() << endl;
     std::stringstream saveStringStream(ios::out);
     std::string output;
 

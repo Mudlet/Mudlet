@@ -404,15 +404,16 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
     return std::make_tuple(true, filename_xml, QString());
 }
 
-// profile save completed async - so delete the writer object
-void Host::profileXmlSaved(const QString& xmlName)
+void Host::xmlSaved(const QString& xmlName)
 {
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
     }
 
-    emit profileSaveFinished();
+    if (writers.empty()) {
+        emit profileSaveFinished();
+    }
 }
 
 bool Host::currentlySavingProfile()

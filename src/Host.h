@@ -170,7 +170,7 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
-    void profileXmlSaved(const QString &xmlName);
+    void xmlSaved(const QString &xmlName);
     bool currentlySavingProfile();
     void waitForProfileSave();
 
