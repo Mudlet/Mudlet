@@ -386,6 +386,8 @@ void Host::resetProfile()
 // returns true+filepath if successful or false+error message otherwise
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
 {
+    emit profileSaveStarted();
+
     QString directory_xml;
     if (saveLocation.isEmpty()) {
         directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
@@ -414,6 +416,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
 void Host::saveProfileCompleted()
 {
     writer.reset();
+    emit profileSaveFinished();
 }
 
 // Now returns the total weight of the path

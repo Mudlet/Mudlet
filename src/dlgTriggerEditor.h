@@ -271,8 +271,9 @@ public slots:
     void slot_setTreeWidgetIconSize(const int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
-
-    void slot_updateStatusBar( const QString statusText); // For the source code editor
+    void slot_updateStatusBar(const QString statusText); // For the source code editor
+    void slot_profileSaveStarted();
+    void slot_profileSaveFinished();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -445,6 +446,8 @@ private:
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
     void clearEditorNotification() const;
+
+    QAction* profileSaveAction;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

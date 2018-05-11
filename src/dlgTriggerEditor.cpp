@@ -397,7 +397,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     exportAction->setEnabled(true);
     connect(exportAction, SIGNAL(triggered()), this, SLOT(slot_export()));
 
-    QAction* profileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
+    profileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
     profileSaveAction->setEnabled(true);
     profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     profileSaveAction->setToolTip(
@@ -7955,6 +7955,18 @@ void dlgTriggerEditor::slot_updateStatusBar(QString statusText)
     }
 
     QMainWindow::statusBar()->showMessage(stripped);
+}
+
+void dlgTriggerEditor::slot_profileSaveStarted()
+{
+    profileSaveAction->setDisabled(true);
+    profileSaveAction->setText(tr("Saving…"));
+}
+
+void dlgTriggerEditor::slot_profileSaveFinished()
+{
+    profileSaveAction->setEnabled(true);
+    profileSaveAction->setText(tr("Save Profile"));
 }
 
 void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)

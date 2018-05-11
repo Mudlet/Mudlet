@@ -60,6 +60,8 @@ class TMap;
 
 class Host : public QObject
 {
+    Q_OBJECT
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -329,6 +331,10 @@ public:
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
+
+signals:
+    void profileSaveStarted();
+    void profileSaveFinished();
 
 private:
     QScopedPointer<LuaInterface> mLuaInterface;
