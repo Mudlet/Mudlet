@@ -2210,6 +2210,8 @@ void mudlet::addSubWindow(TConsole* pConsole)
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
+    hide();
+
     foreach (TConsole* pC, mConsoleMap) {
         if (!pC->close()) {
             event->ignore();
@@ -2227,7 +2229,7 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
     foreach (TConsole* pC, mConsoleMap) {
-        if (pC->mpHost->getName() != "default_host") {
+        if (pC->mpHost->getName() != QStringLiteral("default_host")) {
             // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
             pC->mpHost->mTelnet.disconnect();
 
@@ -2247,6 +2249,13 @@ void mudlet::closeEvent(QCloseEvent* event)
         }
     }
 
+    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
+        auto host = mHostManager.getHost(hostName);
+        if (host->currentlySavingProfile()) {
+            host->waitForProfileSave();
+        }
+    }
+
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
     event->accept();
@@ -2254,7 +2263,9 @@ void mudlet::closeEvent(QCloseEvent* event)
 
 void mudlet::forceClose()
 {
-    for (auto console : mConsoleMap) {
+    hide();
+
+    for (auto& console : mConsoleMap) {
         auto host = console->getHost();
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
@@ -2278,6 +2289,13 @@ void mudlet::forceClose()
         }
 
         console->close();
+    }
+
+    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
+        auto host = mHostManager.getHost(hostName);
+        if (host->currentlySavingProfile()) {
+            host->waitForProfileSave();
+        }
     }
 
     writeSettings();
@@ -2792,7 +2810,7 @@ void mudlet::startAutoLogin()
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
-    for (auto host : hostList) {
+    for (auto& host : hostList) {
         QString val = readProfileData(host, QStringLiteral("autologin"));
         if (val.toInt() == Qt::Checked) {
             doAutoLogin(host);

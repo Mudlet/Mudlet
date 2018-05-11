@@ -419,6 +419,17 @@ void Host::saveProfileCompleted()
     emit profileSaveFinished();
 }
 
+bool Host::currentlySavingProfile()
+{
+    return writer ? true : false;
+}
+
+void Host::waitForProfileSave()
+{
+    qDebug() << getName() << "waiting to saving to finish";
+    writer->savingFuture.waitForFinished();
+}
+
 // Now returns the total weight of the path
 const unsigned int Host::assemblePath()
 {

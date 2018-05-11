@@ -243,14 +243,12 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
 
     if (writeHost(mpHost, mMudletPackageNode)) {
-        auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
+        savingFuture = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
         auto watcher = new QFutureWatcher<bool>;
         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-            cout << "serialization finished, calling saveProfileCompleted()" << endl;
             mpHost->saveProfileCompleted();
-            cout << "saveProfileCompleted done" << endl;
         });
-        watcher->setFuture(future);
+        watcher->setFuture(savingFuture);
 
         return true;
     }

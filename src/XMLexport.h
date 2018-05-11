@@ -31,6 +31,7 @@
 #include <QPointer>
 #include <QXmlStreamWriter>
 #include <QObject>
+#include <QFuture>
 #include "../3rdparty/pugixml/src/pugiconfig.hpp"
 #include "../3rdparty/pugixml/src/pugixml.hpp"
 #include "post_guard.h"
@@ -90,6 +91,8 @@ public:
     bool exportToClipboard(TKey*);
 
     bool writeScriptElement(const QString &, pugi::xml_node xmlElement);
+
+    QFuture<bool> savingFuture;
 
 signals:
     void saveCompleted();

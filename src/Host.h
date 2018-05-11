@@ -171,6 +171,8 @@ public:
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
     void saveProfileCompleted();
+    bool currentlySavingProfile();
+    void waitForProfileSave();
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
