@@ -129,6 +129,8 @@ before_script: |
 script:
 - ./CI/travis.compile.sh
 after_success:
+  - echo "build dir is ${TRAVIS_BUILD_DIR}"
+  - ls -la "${TRAVIS_BUILD_DIR}"
   - cd "${TRAVIS_BUILD_DIR}" || echo "cd to ${TRAVIS_BUILD_DIR} failed"
   - echo "After cd"
   - bash CI/travis.after_success.sh
