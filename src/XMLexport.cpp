@@ -121,9 +121,7 @@ XMLexport::XMLexport( TKey * pT )
 {
 }
 
-XMLexport::~XMLexport()
-{
-}
+XMLexport::~XMLexport() = default;
 
 bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileName)
 {
