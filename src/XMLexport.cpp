@@ -36,11 +36,16 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QtConcurrent>
+#include <QMap>
+#include <QMutableMapIterator>
+#include <QMapIterator>
+#include "post_guard.h"
+#include <chrono>
+#include <fstream>
 #include <iostream>
 #include <sstream>
-#include <fstream>
-#include <chrono>
-#include <QtConcurrent>
 
 using namespace std;
 
@@ -263,6 +268,7 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     return false;
 }
 
+// credit: https://stackoverflow.com/a/29752943/72944
 void inline XMLexport::replaceAll(std::string& source, const char from, const std::string& to)
 {
     std::string newString;
@@ -283,65 +289,107 @@ void inline XMLexport::replaceAll(std::string& source, const char from, const st
     source.swap(newString);
 }
 
+void inline XMLexport::replaceAll(std::string& source, const std::string& from, const std::string& to)
+{
+    std::string newString;
+    newString.reserve(source.length()); // avoids a few memory allocations
+
+    std::string::size_type lastPos = 0;
+    std::string::size_type findPos;
+
+    while (std::string::npos != (findPos = source.find(from, lastPos))) {
+        newString.append(source, lastPos, findPos - lastPos);
+        newString += to;
+        lastPos = findPos + from.length();
+    }
+
+    // Care for the rest after last occurrence
+    newString += source.substr(lastPos);
+
+    source.swap(newString);
+}
+
 bool XMLexport::saveXml(const QString& fileName)
 {
-    cout << "Exporting " << fileName.toLocal8Bit().data() << endl;
+    cout << "opt Exporting " << fileName.toLocal8Bit().data() << endl;
     std::stringstream saveStringStream(ios::out);
     std::string output;
 
     auto start = chrono::steady_clock::now();
     auto totalStart = chrono::steady_clock::now();
     mExportDoc.save(saveStringStream);
-    cout << "pugi export to stream took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    cout << "opt pugi export to stream took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
-    output = saveStringStream.str();    
-    cout << "stream to string " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    output = saveStringStream.str();
+    cout << "opt stream to string " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
-    replaceAll(output, '\x01', "\uFFFC\u2401"); // SOH
-    replaceAll(output, '\x02', "\uFFFC\u2402"); // STX
-    replaceAll(output, '\x03', "\uFFFC\u2403"); // ETX
-    replaceAll(output, '\x04', "\uFFFC\u2404"); // EOT
-    replaceAll(output, '\x05', "\uFFFC\u2405"); // ENQ
-    replaceAll(output, '\x06', "\uFFFC\u2406"); // ACK
-    replaceAll(output, '\x07', "\uFFFC\u2407"); // BEL
-    replaceAll(output, '\x08', "\uFFFC\u2408"); // BS
-    replaceAll(output, '\x0B', "\uFFFC\u240B"); // VT
-    replaceAll(output, '\x0C', "\uFFFC\u240C"); // FF
-    replaceAll(output, '\x0E', "\uFFFC\u240E"); // SS
-    replaceAll(output, '\x0F', "\uFFFC\u240F"); // SI
-    replaceAll(output, '\x10', "\uFFFC\u2410"); // DLE
-    replaceAll(output, '\x11', "\uFFFC\u2411"); // DC1
-    replaceAll(output, '\x12', "\uFFFC\u2412"); // DC2
-    replaceAll(output, '\x13', "\uFFFC\u2413"); // DC3
-    replaceAll(output, '\x14', "\uFFFC\u2414"); // DC4
-    replaceAll(output, '\x15', "\uFFFC\u2415"); // NAK
-    replaceAll(output, '\x16', "\uFFFC\u2416"); // SYN
-    replaceAll(output, '\x17', "\uFFFC\u2417"); // ETB
-    replaceAll(output, '\x18', "\uFFFC\u2418"); // CAN
-    replaceAll(output, '\x19', "\uFFFC\u2419"); // EM
-    replaceAll(output, '\x1A', "\uFFFC\u241A"); // SUB
-    replaceAll(output, '\x1B', "\uFFFC\u241B"); // ESC
-    replaceAll(output, '\x1C', "\uFFFC\u241C"); // FS
-    replaceAll(output, '\x1D', "\uFFFC\u241D"); // GS
-    replaceAll(output, '\x1E', "\uFFFC\u241E"); // RS
-    replaceAll(output, '\x1F', "\uFFFC\u241F"); // US
-    replaceAll(output, '\x7F', "\uFFFC\u2421"); // DEL
-    cout << "replacements took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    QMap<std::string, std::string> replacements {
+        {"&#1;", "\uFFFC\u2401"}, // SOH
+        {"&#2;", "\uFFFC\u2402"}, // STX
+        {"&#3;", "\uFFFC\u2403"}, // ETX
+        {"&#4;", "\uFFFC\u2404"}, // EOT
+        {"&#5;", "\uFFFC\u2405"}, // ENQ
+        {"&#6;", "\uFFFC\u2406"}, // ACK
+        {"&#7;", "\uFFFC\u2407"}, // BEL
+        {"&#8;", "\uFFFC\u2408"}, // BS
+        {"&#11;", "\uFFFC\u240B"}, // VT
+        {"&#12;", "\uFFFC\u240C"}, // FF
+        {"&#14;", "\uFFFC\u240E"}, // SS
+        {"&#15;", "\uFFFC\u240F"}, // SI
+        {"&#10;", "\uFFFC\u2410"}, // DLE
+        {"&#16;", "\uFFFC\u2411"}, // DC1
+        {"&#18;", "\uFFFC\u2412"}, // DC2
+        {"&#19;", "\uFFFC\u2413"}, // DC3
+        {"&#20;", "\uFFFC\u2414"}, // DC4
+        {"&#21;", "\uFFFC\u2415"}, // NAK
+        {"&#22;", "\uFFFC\u2416"}, // SYN
+        {"&#17;", "\uFFFC\u2417"}, // ETB
+        {"&#23;", "\uFFFC\u2418"}, // CAN
+        {"&#25;", "\uFFFC\u2419"}, // EM
+        {"&#26;", "\uFFFC\u241A"}, // SUB
+        {"&#27;", "\uFFFC\u241B"}, // ESC
+        {"&#28;", "\uFFFC\u241C"}, // FS
+        {"&#29;", "\uFFFC\u241D"}, // GS
+        {"&#30;", "\uFFFC\u241E"}, // RS
+        {"&#31;", "\uFFFC\u241F"}, // US
+        {"&#127;", "\uFFFC\u2421"}, // DEL
+    };
+
+    qDebug() << "opt shit to check to to remove:" << replacements.count();
+
+    QMutableMapIterator<std::string, std::string> searching(replacements);
+    while (searching.hasNext()) {
+        if (output.find(searching.next().key()) == std::string::npos) {
+            searching.remove();
+        } else {
+            qDebug() << "omg we actually found something!!";
+        }
+    }
+
+    qDebug() << "opt shit left to remove:" << replacements.count();
+
+    QMapIterator<std::string, std::string> replacing(replacements);
+    while (replacing.hasNext()) {
+        replacing.next();
+        replaceAll(output, replacing.key(), replacing.value());
+    }
+
+    cout << "opt replacements took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
     // only open the output file stream once we're ready to save
     // this avoids a blank file in case serialisation crashed
     std::ofstream saveFileStream(fileName.toUtf8().constData());
-    saveFileStream << output;    
-    cout << "serialising to iostream export took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
+    saveFileStream << output;
+    cout << "opt serialising to iostream export took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
     start = chrono::steady_clock::now();
 
     if (saveFileStream.bad()) {
         return false;
     }
-    cout << "Serialisation in itself took " << chrono::duration <double, milli> (chrono::steady_clock::now() - totalStart).count() << " ms" << endl;
+    cout << "opt Serialisation in itself took " << chrono::duration <double, milli> (chrono::steady_clock::now() - totalStart).count() << " ms" << endl;
     return true;
 }
 

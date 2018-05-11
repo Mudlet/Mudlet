@@ -112,8 +112,9 @@ private:
     void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
     void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackageNode);
-    bool saveXml(const QString& fileName);
     void inline replaceAll(std::string& source, const char from, const std::string& to);
+    void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
+    bool saveXml(const QString &fileName);
 };
 
 #endif // MUDLET_XMLEXPORT_H
