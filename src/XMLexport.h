@@ -30,6 +30,7 @@
 #include <QClipboard>
 #include <QPointer>
 #include <QXmlStreamWriter>
+#include <QObject>
 #include "../3rdparty/pugixml/src/pugiconfig.hpp"
 #include "../3rdparty/pugixml/src/pugixml.hpp"
 #include "post_guard.h"
@@ -46,8 +47,10 @@ class TVar;
 class VarUnit;
 
 
-class XMLexport : public QXmlStreamWriter
+class XMLexport : public QObject
 {
+    Q_OBJECT
+
 public:
     XMLexport(Host*);
     XMLexport(TTrigger*);
@@ -56,6 +59,7 @@ public:
     XMLexport(TAction*);
     XMLexport(TScript*);
     XMLexport(TKey*);
+    ~XMLexport();
 
     bool writeHost(Host *, pugi::xml_node hostPackage);
 
@@ -86,6 +90,9 @@ public:
     bool exportToClipboard(TKey*);
 
     bool writeScriptElement(const QString &, pugi::xml_node xmlElement);
+
+signals:
+    void saveCompleted();
 
 private:
     QPointer<Host> mpHost;

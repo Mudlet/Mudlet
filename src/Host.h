@@ -168,8 +168,8 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
+    void saveProfileCompleted();
 
-public:
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;

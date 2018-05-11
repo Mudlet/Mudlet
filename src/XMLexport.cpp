@@ -53,7 +53,6 @@ XMLexport::XMLexport( Host * pH )
 , mpScript( Q_NULLPTR )
 , mpKey( Q_NULLPTR )
 {
-    setAutoFormatting(true);
 }
 
 XMLexport::XMLexport( TTrigger * pT )
@@ -65,7 +64,6 @@ XMLexport::XMLexport( TTrigger * pT )
 , mpScript( Q_NULLPTR )
 , mpKey( Q_NULLPTR )
 {
-    setAutoFormatting(true);
 }
 
 XMLexport::XMLexport( TTimer * pT )
@@ -77,7 +75,6 @@ XMLexport::XMLexport( TTimer * pT )
 , mpScript( Q_NULLPTR )
 , mpKey( Q_NULLPTR )
 {
-    setAutoFormatting(true);
 }
 
 XMLexport::XMLexport( TAlias * pT )
@@ -89,7 +86,6 @@ XMLexport::XMLexport( TAlias * pT )
 , mpScript( Q_NULLPTR )
 , mpKey( Q_NULLPTR )
 {
-    setAutoFormatting(true);
 }
 
 XMLexport::XMLexport( TAction * pT )
@@ -101,7 +97,6 @@ XMLexport::XMLexport( TAction * pT )
 , mpScript( Q_NULLPTR )
 , mpKey( Q_NULLPTR )
 {
-    setAutoFormatting(true);
 }
 
 XMLexport::XMLexport( TScript * pT )
@@ -113,7 +108,6 @@ XMLexport::XMLexport( TScript * pT )
 , mpScript( pT )
 , mpKey( Q_NULLPTR )
 {
-    setAutoFormatting(true);
 }
 
 XMLexport::XMLexport( TKey * pT )
@@ -125,7 +119,10 @@ XMLexport::XMLexport( TKey * pT )
 , mpScript( Q_NULLPTR )
 , mpKey( pT )
 {
-    setAutoFormatting(true);
+}
+
+XMLexport::~XMLexport()
+{
 }
 
 bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileName)
@@ -236,7 +233,6 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
 
 bool XMLexport::exportHost(const QString &filename_pugi_xml)
 {
-
     auto decl = mExportDoc.prepend_child(pugi::node_declaration);
     decl.append_attribute("version") = "1.0";
     decl.append_attribute("encoding") = "UTF-8";
@@ -247,17 +243,14 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
     mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
 
     if (writeHost(mpHost, mMudletPackageNode)) {
-        QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
-//        auto watcher = new QFutureWatcher<bool>;
-//        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-//            if (future.result() == true) {
-////                populateThemesList();
-//            }
-
-////            theme_download_label->hide();
-////            tempThemesArchive->deleteLater();
-//        });
-//        watcher->setFuture(future);
+        auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
+        auto watcher = new QFutureWatcher<bool>;
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+            qDebug() << "serialization finished, calling saveProfileCompleted()";
+            mpHost->saveProfileCompleted();
+            qDebug() << "saveProfileCompleted done";
+        });
+        watcher->setFuture(future);
 
         return true;
     }
@@ -344,7 +337,6 @@ bool XMLexport::saveXml(const QString& fileName)
         return false;
     }
     cout << "Serialisation in itself took " << chrono::duration <double, milli> (chrono::steady_clock::now() - totalStart).count() << " ms" << endl;
-
     return true;
 //    return mExportDoc.save_file(fileName.toUtf8().constData(), "    ");
 }
@@ -513,7 +505,7 @@ bool XMLexport::writeHost(Host *pHost, pugi::xml_node mMudletPackageNode)
 
     writeVariablePackage(pHost, mMudletPackageNode);
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 void XMLexport::writeVariablePackage(Host *pHost, pugi::xml_node &mMudletPackageNode) {
@@ -638,179 +630,179 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
         }
     }
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 bool XMLexport::exportGenericPackage(QIODevice* device)
 {
-    setDevice(device);
+//    setDevice(device);
 
-    writeStartDocument();
-    if (hasError()) {
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    bool isOk = writeGenericPackage(mpHost);
+//    bool isOk = writeGenericPackage(mpHost);
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    return (isOk && (!hasError()));
+//    return (isOk && (!hasError()));
 }
 
 bool XMLexport::writeGenericPackage(Host* pHost)
 {
-    bool isOk = true;
-    if (isOk) {
-        writeStartElement("TriggerPackage");
-        for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); isOk && it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTemporary()) {
-                continue;
-            }
-            if (!writeTrigger(*it, pugi::xml_node())) {
-                isOk = false;
-            }
-        }
-        writeEndElement(); // </TriggerPackage>
-    }
+//    bool isOk = true;
+//    if (isOk) {
+//        writeStartElement("TriggerPackage");
+//        for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); isOk && it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
+//            if (!(*it) || (*it)->isTemporary()) {
+//                continue;
+//            }
+//            if (!writeTrigger(*it, pugi::xml_node())) {
+//                isOk = false;
+//            }
+//        }
+//        writeEndElement(); // </TriggerPackage>
+//    }
 
-    if (isOk) {
-        writeStartElement("TimerPackage");
-        for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); isOk && it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTemporary()) {
-                continue;
-            }
-            if (!writeTimer(*it, pugi::xml_node())) {
-                isOk = false;
-            }
-        }
-        writeEndElement(); // </TimerPackage>
-    }
+//    if (isOk) {
+//        writeStartElement("TimerPackage");
+//        for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); isOk && it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
+//            if (!(*it) || (*it)->isTemporary()) {
+//                continue;
+//            }
+//            if (!writeTimer(*it, pugi::xml_node())) {
+//                isOk = false;
+//            }
+//        }
+//        writeEndElement(); // </TimerPackage>
+//    }
 
-    if (isOk) {
-        writeStartElement("AliasPackage");
-        for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); isOk && it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTemporary()) {
-                continue;
-            }
-            if (!writeAlias(*it, pugi::xml_node())) {
-                isOk = false;
-            }
-        }
-        writeEndElement(); // </AliasPackage>
-    }
+//    if (isOk) {
+//        writeStartElement("AliasPackage");
+//        for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); isOk && it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
+//            if (!(*it) || (*it)->isTemporary()) {
+//                continue;
+//            }
+//            if (!writeAlias(*it, pugi::xml_node())) {
+//                isOk = false;
+//            }
+//        }
+//        writeEndElement(); // </AliasPackage>
+//    }
 
-    if (isOk) {
-        writeStartElement("ActionPackage");
-        for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); isOk && it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
-            if (!(*it)) {
-                continue;
-            }
-            if (!writeAction(*it, pugi::xml_node())) {
-                isOk = false;
-            }
-        }
-        writeEndElement(); // </ActionPackage>
-    }
+//    if (isOk) {
+//        writeStartElement("ActionPackage");
+//        for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); isOk && it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
+//            if (!(*it)) {
+//                continue;
+//            }
+//            if (!writeAction(*it, pugi::xml_node())) {
+//                isOk = false;
+//            }
+//        }
+//        writeEndElement(); // </ActionPackage>
+//    }
 
-    if (isOk) {
-        writeStartElement("ScriptPackage");
-        for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); isOk && it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
-            if (!(*it)) {
-                continue;
-            }
-            if (!writeScript(*it, pugi::xml_node())) {
-                isOk = false;
-            }
-        }
-        writeEndElement(); // </ScriptPackage>
-    }
+//    if (isOk) {
+//        writeStartElement("ScriptPackage");
+//        for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); isOk && it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
+//            if (!(*it)) {
+//                continue;
+//            }
+//            if (!writeScript(*it, pugi::xml_node())) {
+//                isOk = false;
+//            }
+//        }
+//        writeEndElement(); // </ScriptPackage>
+//    }
 
-    if( isOk ) {
-        writeStartElement( "KeyPackage" );
-        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTemporary() ) {
-                continue;
-            }
-            if (!writeKey(*it, pugi::xml_node())) {
-                isOk = false;
-            }
-        }
-        writeEndElement(); // </KeyPackage>
-    }
+//    if( isOk ) {
+//        writeStartElement( "KeyPackage" );
+//        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
+//            if( ! (*it) || (*it)->isTemporary() ) {
+//                continue;
+//            }
+//            if (!writeKey(*it, pugi::xml_node())) {
+//                isOk = false;
+//            }
+//        }
+//        writeEndElement(); // </KeyPackage>
+//    }
 
-    return (isOk && (!hasError()));
+//    return (isOk && (!hasError()));
 }
 
 bool XMLexport::exportTrigger(QIODevice* device)
 {
-    setDevice(device);
+//    setDevice(device);
 
-    writeStartDocument();
-    if (hasError()) {
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("TriggerPackage");
-    bool isOk = writeTrigger(mpTrigger, pugi::xml_node());
-    writeEndElement(); // </TriggerPackage>
+//    writeStartElement("TriggerPackage");
+//    bool isOk = writeTrigger(mpTrigger, pugi::xml_node());
+//    writeEndElement(); // </TriggerPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    return (isOk && (!hasError()));
+//    return (isOk && (!hasError()));
 }
 
 bool XMLexport::exportToClipboard(TTrigger* pT)
 {
-    // The use of pT is a cludge - it was already used in the previously invoked
-    // in this XMLexport instance's constructor (and stored in mpTrigger) and it
-    // is only used here for its signature.
-    Q_UNUSED(pT);
+//    // The use of pT is a cludge - it was already used in the previously invoked
+//    // in this XMLexport instance's constructor (and stored in mpTrigger) and it
+//    // is only used here for its signature.
+//    Q_UNUSED(pT);
 
-    QBuffer xmlBuffer;
-    // set the device explicitly so QXmlStreamWriter knows where to write to
-    setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::WriteOnly);
+//    QBuffer xmlBuffer;
+//    // set the device explicitly so QXmlStreamWriter knows where to write to
+//    setDevice(&xmlBuffer);
+//    xmlBuffer.open(QIODevice::WriteOnly);
 
-    writeStartDocument();
-    if (hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("TriggerPackage");
-    bool isOk = writeTrigger(mpTrigger, pugi::xml_node());
-    writeEndElement(); //TriggerPackage
+//    writeStartElement("TriggerPackage");
+//    bool isOk = writeTrigger(mpTrigger, pugi::xml_node());
+//    writeEndElement(); //TriggerPackage
 
-    writeEndElement(); //MudletPackage
-    writeEndDocument();
+//    writeEndElement(); //MudletPackage
+//    writeEndDocument();
 
-    if (!isOk || hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    if (!isOk || hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    QClipboard* cb = QApplication::clipboard();
-    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+//    QClipboard* cb = QApplication::clipboard();
+//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
-    xmlBuffer.close();
-    return true;
+//    xmlBuffer.close();
+//    return true;
 }
 
 bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
@@ -861,7 +853,7 @@ bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
             }
         }
 
-        isOk = !hasError();
+        isOk = true;
     }
 
     for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
@@ -870,75 +862,75 @@ bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
         }
     }
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 bool XMLexport::exportAlias(QIODevice* device)
 {
-    setDevice(device);
+//    setDevice(device);
 
-    writeStartDocument();
-    if (hasError()) {
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("AliasPackage");
-    bool isOk = writeAlias(mpAlias, pugi::xml_node());
-    writeEndElement(); // </AliasPackage>
+//    writeStartElement("AliasPackage");
+//    bool isOk = writeAlias(mpAlias, pugi::xml_node());
+//    writeEndElement(); // </AliasPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    return (isOk && (!hasError()));
+//    return (isOk && (!hasError()));
 }
 
 bool XMLexport::exportToClipboard(TAlias* pT)
 {
-    // The use of pT is a cludge - it was already used in the previously invoked
-    // in this XMLexport instance's constructor (and stored in mpAlias) and it
-    // is only used here for its signature.
-    Q_UNUSED(pT);
+//    // The use of pT is a cludge - it was already used in the previously invoked
+//    // in this XMLexport instance's constructor (and stored in mpAlias) and it
+//    // is only used here for its signature.
+//    Q_UNUSED(pT);
 
-    // autoFormatting is set to true in constructor
+//    // autoFormatting is set to true in constructor
 
-    QBuffer xmlBuffer;
-    // set the device explicitly so QXmlStreamWriter knows where to write to
-    setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::WriteOnly);
+//    QBuffer xmlBuffer;
+//    // set the device explicitly so QXmlStreamWriter knows where to write to
+//    setDevice(&xmlBuffer);
+//    xmlBuffer.open(QIODevice::WriteOnly);
 
-    writeStartDocument();
-    if (hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("AliasPackage");
-    bool isOk = writeAlias(mpAlias, pugi::xml_node());
-    writeEndElement(); // </AliasPackage>
+//    writeStartElement("AliasPackage");
+//    bool isOk = writeAlias(mpAlias, pugi::xml_node());
+//    writeEndElement(); // </AliasPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    if (!isOk || hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    if (!isOk || hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    QClipboard* cb = QApplication::clipboard();
-    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+//    QClipboard* cb = QApplication::clipboard();
+//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
-    xmlBuffer.close();
-    return true;
+//    xmlBuffer.close();
+//    return true;
 }
 
 bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
@@ -962,7 +954,7 @@ bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
             aliasContentsNode.append_child("regex").text().set(pT->mRegexCode.toUtf8().constData());
         }
 
-        isOk = !hasError();
+        isOk = true;
     }
 
     for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
@@ -971,12 +963,12 @@ bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
         }
     }
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 bool XMLexport::exportAction(QIODevice* device)
 {
-    setDevice(device);
+ /*   setDevice(device);
 
     writeStartDocument();
     if (hasError()) {
@@ -995,51 +987,51 @@ bool XMLexport::exportAction(QIODevice* device)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    return (isOk && (!hasError()));
+    return (isOk && (!hasError()))*/;
 }
 
 bool XMLexport::exportToClipboard(TAction* pT)
 {
-    // The use of pT is a cludge - it was already used in the previously invoked
-    // in this XMLexport instance's constructor (and stored in mpAction) and it
-    // is only used here for its signature.
-    Q_UNUSED(pT);
+//    // The use of pT is a cludge - it was already used in the previously invoked
+//    // in this XMLexport instance's constructor (and stored in mpAction) and it
+//    // is only used here for its signature.
+//    Q_UNUSED(pT);
 
-    // autoFormatting is set to true in constructor
+//    // autoFormatting is set to true in constructor
 
-    QBuffer xmlBuffer;
-    // set the device explicitly so QXmlStreamWriter knows where to write to
-    setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::WriteOnly);
+//    QBuffer xmlBuffer;
+//    // set the device explicitly so QXmlStreamWriter knows where to write to
+//    setDevice(&xmlBuffer);
+//    xmlBuffer.open(QIODevice::WriteOnly);
 
-    writeStartDocument();
-    if (hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("ActionPackage");
-    bool isOk = writeAction(mpAction, pugi::xml_node());
-    writeEndElement(); // </ActionPackage>
+//    writeStartElement("ActionPackage");
+//    bool isOk = writeAction(mpAction, pugi::xml_node());
+//    writeEndElement(); // </ActionPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    if (!isOk || hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    if (!isOk || hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    QClipboard* cb = QApplication::clipboard();
-    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+//    QClipboard* cb = QApplication::clipboard();
+//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
-    xmlBuffer.close();
-    return true;
+//    xmlBuffer.close();
+//    return true;
 }
 
 bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
@@ -1080,7 +1072,7 @@ bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
             actionContentsNode.append_child("buttonColor").text().set(pT->mButtonColor.name().toUtf8().constData());
         }
 
-        isOk = !hasError();
+        isOk = true;
     }
 
     for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
@@ -1089,75 +1081,75 @@ bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
         }
     }
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 bool XMLexport::exportTimer(QIODevice* device)
 {
-    setDevice(device);
+//    setDevice(device);
 
-    writeStartDocument();
-    if (hasError()) {
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("TimerPackage");
-    bool isOk = writeTimer(mpTimer, pugi::xml_node());
-    writeEndElement(); // </TimerPackage>
+//    writeStartElement("TimerPackage");
+//    bool isOk = writeTimer(mpTimer, pugi::xml_node());
+//    writeEndElement(); // </TimerPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    return (isOk && (!hasError()));
+//    return (isOk && (!hasError()));
 }
 
 bool XMLexport::exportToClipboard(TTimer* pT)
 {
-    // The use of pT is a cludge - it was already used in the previously invoked
-    // in this XMLexport instance's constructor (and stored in mpTimer) and it
-    // is only used here for its signature.
-    Q_UNUSED(pT);
+//    // The use of pT is a cludge - it was already used in the previously invoked
+//    // in this XMLexport instance's constructor (and stored in mpTimer) and it
+//    // is only used here for its signature.
+//    Q_UNUSED(pT);
 
-    // autoFormatting is set to true in constructor
+//    // autoFormatting is set to true in constructor
 
-    QBuffer xmlBuffer;
-    // set the device explicitly so QXmlStreamWriter knows where to write to
-    setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::WriteOnly);
+//    QBuffer xmlBuffer;
+//    // set the device explicitly so QXmlStreamWriter knows where to write to
+//    setDevice(&xmlBuffer);
+//    xmlBuffer.open(QIODevice::WriteOnly);
 
-    writeStartDocument();
-    if (hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("TimerPackage");
-    bool isOk = writeTimer(mpTimer, pugi::xml_node());
-    writeEndElement(); // </TimerPackage>
+//    writeStartElement("TimerPackage");
+//    bool isOk = writeTimer(mpTimer, pugi::xml_node());
+//    writeEndElement(); // </TimerPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    if (!isOk || hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    if (!isOk || hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    QClipboard* cb = QApplication::clipboard();
-    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+//    QClipboard* cb = QApplication::clipboard();
+//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
-    xmlBuffer.close();
-    return true;
+//    xmlBuffer.close();
+//    return true;
 }
 
 bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
@@ -1184,7 +1176,7 @@ bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
             timerContentsNode.append_child("time").text().set(pT->mTime.toString("hh:mm:ss.zzz").toUtf8().constData());
         }
 
-        isOk = !hasError();
+        isOk = true;
     }
 
     for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
@@ -1193,75 +1185,75 @@ bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
         }
     }
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 bool XMLexport::exportScript(QIODevice* device)
 {
-    setDevice(device);
+//    setDevice(device);
 
-    writeStartDocument();
-    if (hasError()) {
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("ScriptPackage");
-    bool isOk = writeScript(mpScript, pugi::xml_node());
-    writeEndElement(); // </ScriptPackage>
+//    writeStartElement("ScriptPackage");
+//    bool isOk = writeScript(mpScript, pugi::xml_node());
+//    writeEndElement(); // </ScriptPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    return (isOk && (!hasError()));
+//    return (isOk && (!hasError()));
 }
 
 bool XMLexport::exportToClipboard(TScript* pT)
 {
-    // The use of pT is a cludge - it was already used in the previously invoked
-    // in this XMLexport instance's constructor (and stored in mpScript) and it
-    // is only used here for its signature.
-    Q_UNUSED(pT);
+//    // The use of pT is a cludge - it was already used in the previously invoked
+//    // in this XMLexport instance's constructor (and stored in mpScript) and it
+//    // is only used here for its signature.
+//    Q_UNUSED(pT);
 
-    // autoFormatting is set to true in constructor
+//    // autoFormatting is set to true in constructor
 
-    QBuffer xmlBuffer;
-    // set the device explicitly so QXmlStreamWriter knows where to write to
-    setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::WriteOnly);
+//    QBuffer xmlBuffer;
+//    // set the device explicitly so QXmlStreamWriter knows where to write to
+//    setDevice(&xmlBuffer);
+//    xmlBuffer.open(QIODevice::WriteOnly);
 
-    writeStartDocument();
-    if (hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("ScriptPackage");
-    bool isOk = writeScript(mpScript, pugi::xml_node());
-    writeEndElement(); // </ScriptPackage>
+//    writeStartElement("ScriptPackage");
+//    bool isOk = writeScript(mpScript, pugi::xml_node());
+//    writeEndElement(); // </ScriptPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    if (!isOk || hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    if (!isOk || hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    QClipboard* cb = QApplication::clipboard();
-    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+//    QClipboard* cb = QApplication::clipboard();
+//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
-    xmlBuffer.close();
-    return true;
+//    xmlBuffer.close();
+//    return true;
 }
 
 bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
@@ -1287,7 +1279,7 @@ bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
             }
         }
 
-        isOk = !hasError();
+        isOk = true;
     }
 
     for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); it++) {
@@ -1296,75 +1288,75 @@ bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
         }
     }
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 bool XMLexport::exportKey(QIODevice* device)
 {
-    setDevice(device);
+//    setDevice(device);
 
-    writeStartDocument();
-    if (hasError()) {
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("KeyPackage");
-    bool isOk = writeKey(mpKey, pugi::xml_node());
-    writeEndElement(); // </KeyPackage>
+//    writeStartElement("KeyPackage");
+//    bool isOk = writeKey(mpKey, pugi::xml_node());
+//    writeEndElement(); // </KeyPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    return (isOk && (!hasError()));
+//    return (isOk && (!hasError()));
 }
 
 bool XMLexport::exportToClipboard(TKey* pT)
 {
-    // The use of pT is a cludge - it was already used in the previously invoked
-    // in this XMLexport instance's constructor (and stored in mpKey) and it
-    // is only used here for its signature.
-    Q_UNUSED(pT);
+//    // The use of pT is a cludge - it was already used in the previously invoked
+//    // in this XMLexport instance's constructor (and stored in mpKey) and it
+//    // is only used here for its signature.
+//    Q_UNUSED(pT);
 
-    // autoFormatting is set to true in constructor
+//    // autoFormatting is set to true in constructor
 
-    QBuffer xmlBuffer;
-    // set the device explicitly so QXmlStreamWriter knows where to write to
-    setDevice(&xmlBuffer);
-    xmlBuffer.open(QIODevice::WriteOnly);
+//    QBuffer xmlBuffer;
+//    // set the device explicitly so QXmlStreamWriter knows where to write to
+//    setDevice(&xmlBuffer);
+//    xmlBuffer.open(QIODevice::WriteOnly);
 
-    writeStartDocument();
-    if (hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    writeStartDocument();
+//    if (hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    writeDTD("<!DOCTYPE MudletPackage>");
+//    writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement("MudletPackage");
-    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+//    writeStartElement("MudletPackage");
+//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement("KeyPackage");
-    bool isOk = writeKey(mpKey, pugi::xml_node());
-    writeEndElement(); // </KeyPackage>
+//    writeStartElement("KeyPackage");
+//    bool isOk = writeKey(mpKey, pugi::xml_node());
+//    writeEndElement(); // </KeyPackage>
 
-    writeEndElement(); // </MudletPackage>
-    writeEndDocument();
+//    writeEndElement(); // </MudletPackage>
+//    writeEndDocument();
 
-    if (!isOk || hasError()) {
-        xmlBuffer.close();
-        return false;
-    }
+//    if (!isOk || hasError()) {
+//        xmlBuffer.close();
+//        return false;
+//    }
 
-    QClipboard* cb = QApplication::clipboard();
-    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
+//    QClipboard* cb = QApplication::clipboard();
+//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
-    xmlBuffer.close();
-    return true;
+//    xmlBuffer.close();
+//    return true;
 }
 
 bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
@@ -1389,7 +1381,7 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
             keyContentsNode.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toUtf8().constData());
         }
 
-        isOk = !hasError();
+        isOk = true;
     }
 
     for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
@@ -1398,7 +1390,7 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
         }
     }
 
-    return (isOk && (!hasError()));
+    return isOk;
 }
 
 bool XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElement)
