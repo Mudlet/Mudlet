@@ -246,9 +246,9 @@ bool XMLexport::exportHost(const QString &filename_pugi_xml)
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
         auto watcher = new QFutureWatcher<bool>;
         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-            qDebug() << "serialization finished, calling saveProfileCompleted()";
+            cout << "serialization finished, calling saveProfileCompleted()" << endl;
             mpHost->saveProfileCompleted();
-            qDebug() << "saveProfileCompleted done";
+            cout << "saveProfileCompleted done" << endl;
         });
         watcher->setFuture(future);
 

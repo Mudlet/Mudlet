@@ -413,7 +413,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
 // profile save completed async - so delete the writer object
 void Host::saveProfileCompleted()
 {
-    qDebug() << "saving done, deleted writer";
+    cout << "saving done, deleting writer" << endl;
     delete writer;
 }
 
