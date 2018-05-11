@@ -297,7 +297,6 @@ void Host::saveModules(int sync)
             if (host->mHostName == mHostName) {
                 continue;
             }
-            QMap<QString, QStringList> installedModules = host->mInstalledModules;
             QMap<QString, int> modulePri = host->mModulePriorities;
             QMapIterator<QString, int> it3(modulePri);
             QMap<int, QStringList> moduleOrder;
