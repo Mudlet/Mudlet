@@ -410,6 +410,8 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -FItestdbg.h")
 endif()
 
+message(STATUS "PUGIXML_INCLUDE_DIR: ${PUGIXML_INCLUDE_DIR}")
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
     ${Qt5Core_INCLUDE_DIRS}

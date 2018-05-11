@@ -266,6 +266,7 @@ unix:!macx {
             -llua5.1 \
             -lhunspell
         INCLUDEPATH += /usr/include/lua5.1
+        INCLUDEPATH += /usr/include
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
