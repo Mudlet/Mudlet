@@ -89,6 +89,7 @@ script:
 - ./CI/travis.compile.sh
 after_success:
   - cd "${TRAVIS_BUILD_DIR}" || echo "cd to ${TRAVIS_BUILD_DIR} failed"
+  - echo "After cd"
   - bash CI/travis.after_success.sh
 notifications:
   webhooks:
