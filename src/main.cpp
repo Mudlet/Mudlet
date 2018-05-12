@@ -425,6 +425,7 @@ int main(int argc, char* argv[])
         }
 
         // Repeat for other text, but we know it will fit at given size
+        // PLACEMARKER: Date-stamp needing annual update
         QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
         QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
