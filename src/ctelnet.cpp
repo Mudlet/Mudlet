@@ -362,8 +362,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.");
-        postMessage(msg);
+        postMessage(tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."););
         return;
     }
 }
@@ -1160,8 +1159,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
         var = msg.section(QChar::LineFeed, 0, 0);
         arg = msg.section(QChar::LineFeed, 1);
     } else {
-        var = msg.section(QStringLiteral(" "), 0, 0);
-        arg = msg.section(QStringLiteral(" "), 1);
+        var = msg.section(QChar::Space, 0, 0);
+        arg = msg.section(QChar::Space, 1);
     }
 
     if (msg.startsWith(QStringLiteral("Client.GUI"))) {
