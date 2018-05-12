@@ -362,7 +362,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        postMessage(tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."););
+        postMessage(tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."));
         return;
     }
 }
