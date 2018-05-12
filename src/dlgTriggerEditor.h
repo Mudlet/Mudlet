@@ -447,7 +447,7 @@ private:
     // QAction* mpAction_searchRegExp;
     void clearEditorNotification() const;
 
-    QAction* profileSaveAction;
+    QAction* mProfileSaveAction;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

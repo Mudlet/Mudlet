@@ -397,15 +397,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     exportAction->setEnabled(true);
     connect(exportAction, SIGNAL(triggered()), this, SLOT(slot_export()));
 
-    profileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
-    profileSaveAction->setEnabled(true);
-    profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
-    profileSaveAction->setToolTip(
+    mProfileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
+    mProfileSaveAction->setEnabled(true);
+    mProfileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
+    mProfileSaveAction->setToolTip(
             QStringLiteral("<html><head/><body><p>%1</p></body></html>")
                     .arg(tr(R"(Saves your profile. (Ctrl+Shift+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
-    profileSaveAction->setStatusTip(
+    mProfileSaveAction->setStatusTip(
             tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
-    connect(profileSaveAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAction()));
+    connect(mProfileSaveAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAction()));
 
     QAction* saveProfileAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
     saveProfileAsAction->setEnabled(true);
@@ -446,7 +446,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(importAction);
     toolBar->addAction(exportAction);
     toolBar->addAction(saveProfileAsAction);
-    toolBar->addAction(profileSaveAction);
+    toolBar->addAction(mProfileSaveAction);
 
     connect(button_displayAllVariables, SIGNAL(toggled(bool)), this, SLOT(slot_toggleHiddenVariables(bool)));
 
@@ -7952,14 +7952,14 @@ void dlgTriggerEditor::slot_updateStatusBar(QString statusText)
 
 void dlgTriggerEditor::slot_profileSaveStarted()
 {
-    profileSaveAction->setDisabled(true);
-    profileSaveAction->setText(tr("Saving…"));
+    mProfileSaveAction->setDisabled(true);
+    mProfileSaveAction->setText(tr("Saving…"));
 }
 
 void dlgTriggerEditor::slot_profileSaveFinished()
 {
-    profileSaveAction->setEnabled(true);
-    profileSaveAction->setText(tr("Save Profile"));
+    mProfileSaveAction->setEnabled(true);
+    mProfileSaveAction->setText(tr("Save Profile"));
 }
 
 void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
