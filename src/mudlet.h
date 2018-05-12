@@ -155,6 +155,9 @@ public:
     int getLastLineNumber(Host*, const QString&);
     void readSettings(const QSettings&);
     void writeSettings();
+    void writeConfigPath();
+    QString mConfigDir;
+    int mConfigDirIndex;
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
     void processEventLoopHack();

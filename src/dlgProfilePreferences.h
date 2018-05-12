@@ -117,6 +117,10 @@ public slots:
     void slot_logFileNameFormatChange(const int index);
     void slot_changeLogFileAsHtml(const bool isHtml);
 
+    // Config.
+    void slot_configDirOptionChange(const int index);
+    void slot_setConfigDir();
+
     // Save.
     void slot_save_and_exit();
 
@@ -167,6 +171,8 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
 
     QString mLogDirPath;
+
+    QString mConfigDirPath;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

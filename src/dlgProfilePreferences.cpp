@@ -104,7 +104,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
-    // Set the properties of the log options
+    // groupBox_logOptions:
     lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
     pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Select a directory where logs will be saved.</p>"));
     pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
@@ -117,6 +117,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     label_logFileNameExtension->setVisible(false);
     label_logFileName->setVisible(false);
     lineEdit_logFileName->setVisible(false);
+
+    // groupBox_config:
+
 
     if (pHost) {
         initWithHost(pHost);
@@ -246,6 +249,10 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_ircOptions enabled...
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
+    comboBox_selectConfigDir->setEnabled(false);
+    label_setConfigDir->hide();
+    lineEdit_configDir->hide();
+    toolButton_setConfigDir->hide();
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -299,6 +306,7 @@ void dlgProfilePreferences::enableHostDetails()
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
     groupbox_searchEngineSelection->setEnabled(true);
+    comboBox_selectConfigDir->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -585,6 +593,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
+    // groupBox_config
+    comboBox_selectConfigDir->setCurrentIndex(mudlet::self()->mConfigDirIndex);
+    // Set the text of lineEdit_configDir to the default .config
+    // folder in the user's home directory if pHost->mConfigDir is empty
+    if (mudlet::self()->mConfigDir.isEmpty()) {
+        lineEdit_configDir->setText(QDir::homePath() + "/.config");
+    } else {
+        lineEdit_configDir->setText(mudlet::self()->mConfigDir);
+    }
+    // Make options to set a config dir visible if the option "Select
+    // a directory" is selected
+    bool isShown = comboBox_selectConfigDir->currentIndex() == 1;
+    label_setConfigDir->setVisible(isShown);
+    lineEdit_configDir->setVisible(isShown);
+    toolButton_setConfigDir->setVisible(isShown);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -660,6 +683,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
     connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
     connect(mIsToLogInHtml, SIGNAL(clicked(bool)), this, SLOT(slot_changeLogFileAsHtml(bool)));
+
+    connect(comboBox_selectConfigDir, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_configDirOptionChange(int)));
+    connect(toolButton_setConfigDir, SIGNAL(clicked()), this, SLOT(slot_setConfigDir()));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1833,6 +1859,59 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
     label_logFileNameExtension->setVisible(isShown);
 }
 
+void dlgProfilePreferences::slot_configDirOptionChange(const int index)
+{
+    Q_UNUSED(index);
+
+    // Show options to set the config directory if 'Select a
+    // directory...' is selected
+    bool isShown = comboBox_selectConfigDir->currentIndex() == 1;
+    label_setConfigDir->setVisible(isShown);
+    lineEdit_configDir->setVisible(isShown);
+    toolButton_setConfigDir->setVisible(isShown);
+
+    switch (comboBox_selectConfigDir->currentIndex()) {
+    case 0:
+        // Clear mConfigDirPath if 'Default' is selected
+        mConfigDirPath.clear();
+    case 1:
+        // Set mConfigDirPath to the value of lineEdit_configDir if
+        // 'Select a directory' is selected
+        mConfigDirPath = lineEdit_configDir->text();
+    case 2:
+        // Set mConfigDirPath to a relative path if 'Relative to the
+        // application file' is selected
+        mConfigDirPath = "./";
+    }
+}
+
+void dlgProfilePreferences::slot_setConfigDir()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    QString dir = QFileDialog::getExistingDirectory(this,
+                                                    tr("Select a directory where your configuration will be stored"),
+                                                    (lineEdit_configDir->text().isEmpty() ? QDir::homePath() + "/.config" : lineEdit_configDir->text()),
+                                                    QFileDialog::DontUseNativeDialog);
+    if (!dir.isEmpty() && dir != NULL) {
+        if (dir == QDir::homePath() + "/.config") {
+            // Clear mConfigDirPath if the directory is selected is
+            // equal to the default
+            mConfigDirPath.clear();
+            lineEdit_configDir->setText(QDir::homePath() + "/.config");
+        } else {
+            // Set mConfigDirPath to the selected directory
+            mConfigDirPath = dir;
+            lineEdit_configDir->setText(mConfigDirPath);
+            lineEdit_configDir->setCursorPosition(lineEdit_configDir->text().length());
+        }
+    }
+    return;
+}
+
 void dlgProfilePreferences::slot_save_and_exit()
 {
     if (mpDialogMapGlyphUsage) {
@@ -1895,6 +1974,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mLogDir = mLogDirPath;
         pHost->mLogFileName = lineEdit_logFileName->text();
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
+        mudlet::self()->mConfigDir = mConfigDirPath;
+        mudlet::self()->mConfigDirIndex = comboBox_selectConfigDir->currentIndex();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
@@ -2261,7 +2342,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
         return;
     }
 
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::self()->mpSettings;
     QString themesURL = settings.value("colorSublimeThemesURL", QStringLiteral("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still

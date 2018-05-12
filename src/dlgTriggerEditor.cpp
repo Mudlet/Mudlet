@@ -718,9 +718,7 @@ void dlgTriggerEditor::readSettings()
        For compatibility with older settings, if no config is loaded
        from the config directory "mudlet", application "Mudlet", we try to load from the config
        directory "Mudlet", application "Mudlet 1.0". */
-    QSettings settings_new("mudlet", "Mudlet");
-    QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
-
+    QSettings& settings = *mudlet::self()->mpSettings;
 
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
@@ -734,7 +732,7 @@ void dlgTriggerEditor::writeSettings()
        were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
        (the organization name) to "mudlet".
        Furthermore, we skip the version from the application name to follow the convention.*/
-    QSettings settings("mudlet", "Mudlet");
+    QSettings& settings = *mudlet::self()->mpSettings;
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
 }
