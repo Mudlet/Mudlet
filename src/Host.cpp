@@ -375,16 +375,16 @@ void Host::resetProfile()
 // takes a directory to save in or an empty string for the default location
 // as well as a boolean whenever to sync the modules or not
 // returns true+filepath if successful or false+error message otherwise
-std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, bool syncModules)
 {
     emit profileSaveStarted();
     qApp->processEvents();
 
     QString directory_xml;
-    if (saveLocation.isEmpty()) {
+    if (saveFolder.isEmpty()) {
         directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
     } else {
-        directory_xml = saveLocation;
+        directory_xml = saveFolder;
     }
 
     // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
@@ -394,7 +394,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
         dir_xml.mkpath(directory_xml);
     }
 
-    if (!writers.empty()) {
+    if (currentlySavingProfile()) {
         return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
     }
 
@@ -403,6 +403,22 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
     writer->exportHost(filename_xml);
     saveModules(syncModules ? 1 : 0);
     return std::make_tuple(true, filename_xml, QString());
+}
+
+// exports without the host settings for some reason
+std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
+{
+    emit profileSaveStarted();
+    qApp->processEvents();
+
+    if (currentlySavingProfile()) {
+        return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
+    }
+
+    auto writer = new XMLexport(this);
+    writers.insert(QStringLiteral("profile"), writer);
+    writer->exportGenericPackage(file);
+    return std::make_tuple(true, file, QString());
 }
 
 void Host::xmlSaved(const QString& xmlName)
@@ -424,7 +440,6 @@ bool Host::currentlySavingProfile()
 
 void Host::waitForProfileSave()
 {
-    qDebug() << getName() << "waiting to saving to finish";
     for (auto& writer : writers) {
         for (auto& future: writer->saveFutures) {
             future.waitForFinished();

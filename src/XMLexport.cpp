@@ -588,40 +588,40 @@ void XMLexport::writeVariablePackage(Host *pHost, pugi::xml_node &mMudletPackage
         }
 }
 
-void XMLexport::writeKeyPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember) {
+void XMLexport::writeKeyPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool includeModuleMembers) {
     auto keyPackageNode = mMudletPackageNode.append_child("KeyPackage");
     for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTemporary() || (ignoreModuleMember && (*it)->mModuleMember)) {
+            if( ! (*it) || (*it)->isTemporary() || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
             writeKey(*it, keyPackageNode);
         }
 }
 
-void XMLexport::writeScriptPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember) {
+void XMLexport::writeScriptPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool includeModuleMembers) {
     auto scriptPackageNode = mMudletPackageNode.append_child("ScriptPackage");
     for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
-            if (!(*it) || (ignoreModuleMember && (*it)->mModuleMember)) {
+            if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
             writeScript(*it, scriptPackageNode);
         }
 }
 
-void XMLexport::writeActionPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember) {
+void XMLexport::writeActionPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool includeModuleMembers) {
     auto actionPackageNode = mMudletPackageNode.append_child("ActionPackage");
     for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
-            if (!(*it) || (ignoreModuleMember && (*it)->mModuleMember)) {
+            if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
             writeAction(*it, actionPackageNode);
         }
 }
 
-void XMLexport::writeAliasPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember) {
+void XMLexport::writeAliasPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool includeModuleMembers) {
     auto aliasPackageNode = mMudletPackageNode.append_child("AliasPackage");
     for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
-            if (!(*it) || (ignoreModuleMember && (*it)->mModuleMember)) {
+            if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
             if (!(*it)->isTemporary()) {
@@ -630,10 +630,10 @@ void XMLexport::writeAliasPackage(const Host *pHost, pugi::xml_node &mMudletPack
         }
 }
 
-void XMLexport::writeTimerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool ignoreModuleMember) {
+void XMLexport::writeTimerPackage(const Host *pHost, pugi::xml_node &mMudletPackageNode, bool includeModuleMembers) {
     auto timerPackageNode = mMudletPackageNode.append_child("TimerPackage");
     for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
-        if (!(*it) || (ignoreModuleMember && (*it)->mModuleMember)) {
+        if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
             continue;
         }
         if (!(*it)->isTemporary()) {
@@ -685,110 +685,48 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
     return isOk;
 }
 
-bool XMLexport::exportGenericPackage(QIODevice* device)
+bool XMLexport::exportGenericPackage(const QString& exportFileName)
 {
-//    setDevice(device);
+    auto decl = mExportDoc.prepend_child(pugi::node_declaration);
+    decl.append_attribute("version") = "1.0";
+    decl.append_attribute("encoding") = "UTF-8";
 
-//    writeStartDocument();
-//    if (hasError()) {
-//        return false;
-//    }
+    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
-//    writeDTD("<!DOCTYPE MudletPackage>");
+    auto mMudletPackageNode = mExportDoc.append_child("MudletPackage");
+    mMudletPackageNode.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
 
-//    writeStartElement("MudletPackage");
-//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
+    if (writeGenericPackage(mpHost, mMudletPackageNode)) {
+        auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
+        auto watcher = new QFutureWatcher<bool>;
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+            mpHost->xmlSaved(QStringLiteral("profile"));
+        });
+        watcher->setFuture(future);
+        saveFutures.append(future);
 
-//    bool isOk = writeGenericPackage(mpHost);
-
-//    writeEndElement(); // </MudletPackage>
-//    writeEndDocument();
-
-//    return (isOk && (!hasError()));
+        return true;
+    }
 }
 
-bool XMLexport::writeGenericPackage(Host* pHost)
+bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackageNode)
 {
-//    bool isOk = true;
-//    if (isOk) {
-//        writeStartElement("TriggerPackage");
-//        for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); isOk && it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
-//            if (!(*it) || (*it)->isTemporary()) {
-//                continue;
-//            }
-//            if (!writeTrigger(*it, pugi::xml_node())) {
-//                isOk = false;
-//            }
-//        }
-//        writeEndElement(); // </TriggerPackage>
-//    }
+    writeTriggerPackage(pHost, mMudletPackageNode, true);
 
-//    if (isOk) {
-//        writeStartElement("TimerPackage");
-//        for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); isOk && it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
-//            if (!(*it) || (*it)->isTemporary()) {
-//                continue;
-//            }
-//            if (!writeTimer(*it, pugi::xml_node())) {
-//                isOk = false;
-//            }
-//        }
-//        writeEndElement(); // </TimerPackage>
-//    }
+    writeTimerPackage(pHost, mMudletPackageNode, true);
 
-//    if (isOk) {
-//        writeStartElement("AliasPackage");
-//        for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); isOk && it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
-//            if (!(*it) || (*it)->isTemporary()) {
-//                continue;
-//            }
-//            if (!writeAlias(*it, pugi::xml_node())) {
-//                isOk = false;
-//            }
-//        }
-//        writeEndElement(); // </AliasPackage>
-//    }
+    writeAliasPackage(pHost, mMudletPackageNode, true);
 
-//    if (isOk) {
-//        writeStartElement("ActionPackage");
-//        for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); isOk && it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
-//            if (!(*it)) {
-//                continue;
-//            }
-//            if (!writeAction(*it, pugi::xml_node())) {
-//                isOk = false;
-//            }
-//        }
-//        writeEndElement(); // </ActionPackage>
-//    }
+    writeActionPackage(pHost, mMudletPackageNode, true);
 
-//    if (isOk) {
-//        writeStartElement("ScriptPackage");
-//        for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); isOk && it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
-//            if (!(*it)) {
-//                continue;
-//            }
-//            if (!writeScript(*it, pugi::xml_node())) {
-//                isOk = false;
-//            }
-//        }
-//        writeEndElement(); // </ScriptPackage>
-//    }
+    writeScriptPackage(pHost, mMudletPackageNode, true);
 
-//    if( isOk ) {
-//        writeStartElement( "KeyPackage" );
-//        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-//            if( ! (*it) || (*it)->isTemporary() ) {
-//                continue;
-//            }
-//            if (!writeKey(*it, pugi::xml_node())) {
-//                isOk = false;
-//            }
-//        }
-//        writeEndElement(); // </KeyPackage>
-//    }
+    writeKeyPackage(pHost, mMudletPackageNode, true);
 
-//    return (isOk && (!hasError()));
+    // variables weren't previously exported as a generic package
+    writeVariablePackage(pHost, mMudletPackageNode);
+
+    return true;
 }
 
 bool XMLexport::exportTrigger(QIODevice* device)

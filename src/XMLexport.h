@@ -74,8 +74,8 @@ public:
     bool writeModuleXML(const QString &moduleName, const QString &fileName);
 
     bool exportHost(const QString &filename_pugi_xml);
-    bool exportGenericPackage(QIODevice* device);
-    bool writeGenericPackage(Host*);
+    bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackageNode);
+    bool exportGenericPackage(const QString& exportFileName);
     bool exportTrigger(QIODevice*);
     bool exportTimer(QIODevice*);
     bool exportAlias(QIODevice*);
@@ -105,12 +105,12 @@ private:
     pugi::xml_document mExportDoc;
 
     void showXmlDebug();
-    void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeTimerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeAliasPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeActionPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
+    void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool includeModuleMembers);
+    void writeTimerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool includeModuleMembers);
+    void writeAliasPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool includeModuleMembers);
+    void writeActionPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool includeModuleMembers);
+    void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool includeModuleMembers);
+    void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool includeModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackageNode);
     void inline replaceAll(std::string& source, const char from, const std::string& to);
     void inline replaceAll(std::string& source, const std::string& from, const std::string& to);

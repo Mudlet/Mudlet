@@ -7656,14 +7656,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
         fileName.append(QStringLiteral(".xml"));
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Backup Profile:"), tr("Cannot write file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-    XMLexport writer(mpHost); //just export a generic package without host element
-    writer.exportGenericPackage(&file);
-    file.close();
+    mpHost->saveProfileAs(fileName);
 }
 
 bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)

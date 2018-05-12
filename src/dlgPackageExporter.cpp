@@ -207,7 +207,7 @@ void dlgPackageExporter::slot_export_package()
                 modKeyMap.insert(item, keyMap[item]);
             }
         }
-        writer.exportGenericPackage(&file_xml);
+        writer.exportGenericPackage(filePath);
         file_xml.close();
         //now fix all the stuff we weren't exporting
         //trigger, timer, alias,action,script, keys
