@@ -48,7 +48,6 @@
 #include <errno.h>
 #include <zip.h>
 
-
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this)
 , mpConsole(nullptr)

@@ -71,6 +71,11 @@
 #include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QVariantHash>
 #include "post_guard.h"
 
 #include <zip.h>
@@ -123,6 +128,7 @@ QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
+QVariantHash mudlet::mLuaFunctionNames;
 
 QPointer<mudlet> mudlet::_self = nullptr;
 
@@ -521,6 +527,12 @@ void mudlet::initEdbee()
     auto grammarManager = edbee->grammarManager();
     // We only need the single Lua lexer, probably ever
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
+
+    //Open and parse luaFunctionList
+    loadLuaFunctionList();
+
+    //QFile file(fileName);
+    //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
 
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 }
@@ -3341,6 +3353,50 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
         zip_error_to_str(buf, sizeof(buf), err, errno);
         return false;
     }
+
+    return true;
+}
+
+//loads the luaFunctionList for use by the edbee Autocompleter
+bool mudlet::loadLuaFunctionList()
+{
+    qDebug() << "Loading the luaFunctionList via loadLuaFunctionList()...";
+    QFile* jsonFile = new QFile(getMudletPath(mainDataItemPath, QStringLiteral("luaFunctionList.json")));
+    if (!jsonFile->open(QFile::ReadOnly)) {
+        qDebug() << "Failed to open luaFunctionList.txt";
+        return false;
+    }
+
+    qDebug() << "Successfully opened luaFunctionList.txt";
+
+    const QByteArray data = jsonFile->readAll();
+
+    qDebug() << "Read file, length:" << data.length();
+
+    jsonFile->close();
+
+    auto json_doc = QJsonDocument::fromJson(data);
+
+    if(json_doc.isNull()){
+        qDebug()<<"Failed to create JSON doc.";
+        return false;
+    }
+
+    if(!json_doc.isObject()){
+        qDebug()<<"JSON is not an object.";
+        return false;
+    }
+
+    QJsonObject json_obj=json_doc.object();
+
+    if(json_obj.isEmpty()){
+        qDebug()<<"JSON object is empty.";
+        return false;
+    }
+
+    qDebug() << "JSON Object is" << json_obj.count() << "long.";
+
+    mudlet::mLuaFunctionNames = json_obj.toVariantHash();
 
     return true;
 }
