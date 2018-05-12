@@ -67,8 +67,8 @@
 #include <list>
 #include <string>
 
-#undef lua_register
-#define lua_register(L,n,f) ( mLuaFunctionNames << "Adding function" << n, lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
+//#undef lua_register
+//#define lua_register(L,n,f) ( mLuaFunctionNames << n, lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
 
 // Provides the lua zip module for MacOs platform that does not have an easy way
 // to provide it as a prebuilt library module (unlike Windows/Linux) - was

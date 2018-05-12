@@ -430,7 +430,6 @@ public:
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
-    QStringList mLuaFunctionNames;
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
