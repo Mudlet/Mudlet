@@ -326,7 +326,7 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mUSE_UNIX_EOL", pHost->mUSE_UNIX_EOL ? "yes" : "no");
     writeAttribute("mNoAntiAlias", pHost->mNoAntiAlias ? "yes" : "no");
     writeAttribute("mEchoLuaErrors", pHost->mEchoLuaErrors ? "yes" : "no");
-    writeAttribute("AmbigousWidthGlyphsToBeWide", pHost->mIsAmbigousWidthGlyphsToBeWide ? "yes" : "no");
+    writeAttribute("AmbigousWidthGlyphsToBeWide", pHost->mIsAmbigousWidthGlyphsSettingAutomatic ? "auto" : pHost->mIsAmbigousWidthGlyphsToBeWide ? "yes" : "no");
     // FIXME: Change to a string or integer property when possible to support more
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.

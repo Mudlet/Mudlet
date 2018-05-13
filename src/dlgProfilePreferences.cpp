@@ -167,10 +167,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                               "as being of <i>Ambigous</i> width; this means that some languages which are <i>duo-spaced</i> "
                                                               "rather than <i>mono-spaced</i> when not drawn with a proportional font have symbols that can be "
                                                               "drawn both as a wide character and a narrow one (which takes half the horizontal space) depending "
-                                                              "on several factors including the language being displayed. Mudlet cannot not currently determine "
-                                                              "which case applies and so adopters the Unicode.org recommendation to use the narrow spacinging by "
-                                                              "default.  Should this not be suitable for this particular profile, check this option to instead draw "
-                                                              "such characters in the wider style - this is likely to be needed on East Asian MUDs.</p>"));
+                                                              "on several factors including the language being displayed. Mudlet may not always get this right "
+                                                              "but you can override the setting for each profile here if needed.</p>"
+                                                              "<p>This control has three settings:"
+                                                              "<ul><li><b>Unchecked</b> = Draw ambiguous width character with a narrow width.</li>"
+                                                              "<li><b>Checked</b> = Draw ambiguous width character with a wide width.</li>"
+                                                              "<li><b>Partly checked</b> <i>{Default}</i> = Use a 'wide' setting for MUD Server "
+                                                              "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                              "<p><i>This is intended to be a temporary arrangement and is likely to change when Mudlet gains "
+                                                              "full support for languages other than English.</i></p>"));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -334,7 +339,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
-    checkBox_useWideAmbiguousEastAsianGlyphs->setChecked(pHost->getUseWideAmbiguousEAsianGlyphs());
+    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getUseWideAmbiguousEAsianGlyphsControlState());
 
     QString path;
     // This is duplicated (and should be the same as) the code in:
@@ -2005,7 +2010,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-        pHost->setUseWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->isChecked());
+        pHost->setUseWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         if (pHost->mpEditorDialog) {
@@ -2093,6 +2098,15 @@ void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
     Host* pHost = mpHost;
     if (pHost) {
         pHost->mTelnet.setEncoding(pHost->mTelnet.getComputerEncoding(newEncoding));
+
+        if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting currently
+            // - eventually it would move to the locale/language control when it
+            // goes in, but we only need to change the setting for this if it is
+            // set to be automatic changed as necessary:
+
+            pHost->setUseWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        }
     }
 }
 

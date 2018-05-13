@@ -173,6 +173,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSaveProfileOnExit(false)
 , mModuleSaveBlock(false)
 , mHaveMapperScript(false)
+, mIsAmbigousWidthGlyphsSettingAutomatic(true)
 , mIsAmbigousWidthGlyphsToBeWide(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
@@ -1157,18 +1158,55 @@ QString Host::readProfileData(const QString& item)
     return ret;
 }
 
-void Host::setUseWideAmbiguousEAsianGlyphs(const bool state)
+void Host::setUseWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
-    bool localState = state;
+    bool localState = false;
     bool needToEmit = false;
+    const QString encoding(mTelnet.getEncoding());
+
     QMutexLocker locker(& mLock);
-    if (mIsAmbigousWidthGlyphsToBeWide != state) {
-        mIsAmbigousWidthGlyphsToBeWide = state;
-        needToEmit = true;
-    };
+    if (state == Qt::PartiallyChecked) {
+        // Set things automatically
+        mIsAmbigousWidthGlyphsSettingAutomatic = true;
+
+        if ( encoding == QLatin1String("GBK")
+           ||encoding == QLatin1String("GB18030")) {
+
+            // Need to use wide width for ambiguous characters
+            if (!mIsAmbigousWidthGlyphsToBeWide) {
+                // But the last setting was narrow - so we need to change
+                mIsAmbigousWidthGlyphsToBeWide = true;
+                localState = true;
+                needToEmit = true;
+            }
+
+        } else {
+            // Need to use narrow width for ambiguous characters
+            if (mIsAmbigousWidthGlyphsToBeWide) {
+                // But the last setting was wide - so we need to change
+                mIsAmbigousWidthGlyphsToBeWide = false;
+                localState = false;
+                needToEmit = true;
+            }
+
+        }
+
+    } else {
+        // Set things manually:
+        mIsAmbigousWidthGlyphsSettingAutomatic = false;
+        if (mIsAmbigousWidthGlyphsToBeWide != (state == Qt::Checked)) {
+            // The last setting is the opposite to what we want:
+
+            mIsAmbigousWidthGlyphsToBeWide = (state == Qt::Checked);
+            localState = (state == Qt::Checked);
+            needToEmit = true;
+        };
+
+    }
+
     locker.unlock();
-    // We do not need to keep the mutex as we have a local copy to work with
-    // whilst the connected methods react to the signal:
+    // We do not need to keep the mutex any longer as we have a local copy to
+    // work with whilst the connected methods react to the signal:
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }

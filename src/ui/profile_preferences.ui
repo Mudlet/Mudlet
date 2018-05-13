@@ -990,7 +990,10 @@
           <item row="2" column="1">
            <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
             <property name="text">
-             <string>Make 'Ambiguous' width E. Asian characters wide</string>
+             <string>Make 'Ambiguous' E. Asian width characters wide</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
