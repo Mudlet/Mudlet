@@ -143,91 +143,91 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
     mudletPackage.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
 
     if (isOk) {
-        auto triggerPackageNode = mudletPackage.append_child("TriggerPackage");
+        auto triggerPackage = mudletPackage.append_child("TriggerPackage");
         //we go a level down for all these functions so as to not infinitely nest the module
         for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); isOk && it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
             if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-                writeTrigger(*it, triggerPackageNode);
+                writeTrigger(*it, triggerPackage);
             }
         }
     }
 
     if (isOk) {
-        auto timerPackageNode = mudletPackage.append_child("TimerPackage");
+        auto timerPackage = mudletPackage.append_child("TimerPackage");
 
         for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); isOk && it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
             if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-                writeTimer(*it, timerPackageNode);
+                writeTimer(*it, timerPackage);
             }
         }
     }
 
     if (isOk) {
-        auto aliasPackageNode = mudletPackage.append_child("AliasPackage");
+        auto aliasPackage = mudletPackage.append_child("AliasPackage");
 
         for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); isOk && it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
             if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-                writeAlias(*it, aliasPackageNode);
+                writeAlias(*it, aliasPackage);
             }
         }
     }
 
     if (isOk) {
-        auto actionPackageNode = mudletPackage.append_child("ActionPackage");
+        auto actionPackage = mudletPackage.append_child("ActionPackage");
 
         for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); isOk && it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
             if ((*it)->mModuleMember) {
-                writeAction(*it, actionPackageNode);
+                writeAction(*it, actionPackage);
             }
         }
     }
 
     if (isOk) {
-        auto scriptPackageNode = mudletPackage.append_child("ScriptPackage");
+        auto scriptPackage = mudletPackage.append_child("ScriptPackage");
 
         for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); isOk && it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
             if ((*it)->mModuleMember) {
-                writeScript(*it, scriptPackageNode);
+                writeScript(*it, scriptPackage);
             }
         }
     }
 
     if (isOk) {
-        auto keyPackageNode = mudletPackage.append_child("KeyPackage");
+        auto keyPackage = mudletPackage.append_child("KeyPackage");
 
         for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
             if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-                writeKey(*it, keyPackageNode);
+                writeKey(*it, keyPackage);
             }
         }
     }
 
     if (isOk) {
-        auto helpPackageNode = mudletPackage.append_child("HelpPackage");
+        auto helpPackage = mudletPackage.append_child("HelpPackage");
 
         if (pHost->moduleHelp.contains(moduleName) && pHost->moduleHelp.value(moduleName).contains("helpURL")) {
-            helpPackageNode.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value("helpURL").toUtf8().constData());
+            helpPackage.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value("helpURL").toUtf8().constData());
 
         } else {
-            helpPackageNode.append_child("helpURL").text().set("");
+            helpPackage.append_child("helpURL").text().set("");
         }
     }
 
@@ -561,16 +561,16 @@ bool XMLexport::writeHost(Host *pHost, pugi::xml_node mudletPackage)
 }
 
 void XMLexport::writeVariablePackage(Host *pHost, pugi::xml_node &mudletPackage) {
-    auto variablePackageNode = mudletPackage.append_child("VariablePackage");
+    auto variablePackage = mudletPackage.append_child("VariablePackage");
     LuaInterface* lI = pHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     //do hidden variables first
     { // Blocked so that indentation reflects that of the XML file
-            auto hiddenVariablesNode = variablePackageNode.append_child("HiddenVariables");
+            auto hiddenVariables = variablePackage.append_child("HiddenVariables");
             QSetIterator<QString> itHiddenVariableName(vu->hiddenByUser);
             while (itHiddenVariableName.hasNext()) {
                 auto variableName = itHiddenVariableName.next();
-                hiddenVariablesNode.append_child("name").text().set(variableName.toUtf8().constData());
+                hiddenVariables.append_child("name").text().set(variableName.toUtf8().constData());
             }
         }
 
@@ -583,73 +583,73 @@ void XMLexport::writeVariablePackage(Host *pHost, pugi::xml_node &mudletPackage)
     if (base) {
             QListIterator<TVar*> itVariable(base->getChildren(false));
             while (itVariable.hasNext()) {
-                writeVariable(itVariable.next(), lI, vu, variablePackageNode);
+                writeVariable(itVariable.next(), lI, vu, variablePackage);
             }
         }
 }
 
 void XMLexport::writeKeyPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool includeModuleMembers) {
-    auto keyPackageNode = mudletPackage.append_child("KeyPackage");
+    auto keyPackage = mudletPackage.append_child("KeyPackage");
     for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
             if( ! (*it) || (*it)->isTemporary() || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
-            writeKey(*it, keyPackageNode);
+            writeKey(*it, keyPackage);
         }
 }
 
 void XMLexport::writeScriptPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool includeModuleMembers) {
-    auto scriptPackageNode = mudletPackage.append_child("ScriptPackage");
+    auto scriptPackage = mudletPackage.append_child("ScriptPackage");
     for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
             if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
-            writeScript(*it, scriptPackageNode);
+            writeScript(*it, scriptPackage);
         }
 }
 
 void XMLexport::writeActionPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool includeModuleMembers) {
-    auto actionPackageNode = mudletPackage.append_child("ActionPackage");
+    auto actionPackage = mudletPackage.append_child("ActionPackage");
     for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
             if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
-            writeAction(*it, actionPackageNode);
+            writeAction(*it, actionPackage);
         }
 }
 
 void XMLexport::writeAliasPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool includeModuleMembers) {
-    auto aliasPackageNode = mudletPackage.append_child("AliasPackage");
+    auto aliasPackage = mudletPackage.append_child("AliasPackage");
     for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
             if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
                 continue;
             }
             if (!(*it)->isTemporary()) {
-                writeAlias(*it, aliasPackageNode);
+                writeAlias(*it, aliasPackage);
             }
         }
 }
 
 void XMLexport::writeTimerPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool includeModuleMembers) {
-    auto timerPackageNode = mudletPackage.append_child("TimerPackage");
+    auto timerPackage = mudletPackage.append_child("TimerPackage");
     for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
         if (!(*it) || (includeModuleMembers && (*it)->mModuleMember)) {
             continue;
         }
         if (!(*it)->isTemporary()) {
-            writeTimer(*it, timerPackageNode);
+            writeTimer(*it, timerPackage);
         }
     }
 }
 
 void XMLexport::writeTriggerPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool ignoreModuleMembers) {
-    auto triggerPackageNode = mudletPackage.append_child("TriggerPackage");
+    auto triggerPackage = mudletPackage.append_child("TriggerPackage");
     for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
         if (!(*it) || (ignoreModuleMembers && (*it)->mModuleMember)) {
             continue;
         }
         if (!(*it)->isTemporary()) {
-            writeTrigger(*it, triggerPackageNode);
+            writeTrigger(*it, triggerPackage);
         }
     }
 }
@@ -659,26 +659,26 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
     bool isOk = true;
     if (pVariableUnit->isSaved(pVar)) {
         if (pVar->getValueType() == LUA_TTABLE) {
-            auto variableGroupNode = xmlParent.append_child("VariableGroup");
+            auto variableGroup = xmlParent.append_child("VariableGroup");
 
-            variableGroupNode.append_child("name").text().set(pVar->getName().toUtf8().constData());
-            variableGroupNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
-            variableGroupNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
-            variableGroupNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
+            variableGroup.append_child("name").text().set(pVar->getName().toUtf8().constData());
+            variableGroup.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
+            variableGroup.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
+            variableGroup.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
 
             QListIterator<TVar*> itNestedVariable(pVar->getChildren(false));
             while (isOk && itNestedVariable.hasNext()) {
-                if (!writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroupNode)) {
+                if (!writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup)) {
                     isOk = false;
                 }
             }
         } else {
-            auto variableNode = xmlParent.append_child("Variable");
+            auto variable = xmlParent.append_child("Variable");
 
-            variableNode.append_child("name").text().set(pVar->getName().toUtf8().constData());
-            variableNode.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
-            variableNode.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
-            variableNode.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
+            variable.append_child("name").text().set(pVar->getName().toUtf8().constData());
+            variable.append_child("keyType").text().set(QString::number(pVar->getKeyType()).toUtf8().constData());
+            variable.append_child("value").text().set(pLuaInterface->getValue(pVar).toUtf8().constData());
+            variable.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
         }
     }
 
@@ -747,9 +747,9 @@ bool XMLexport::exportTrigger(const QString& fileName)
 {
     auto mudletPackage = writeXmlHeader();
 
-    auto triggerPackageNode = mudletPackage.append_child("TriggerPackage");
+    auto triggerPackage = mudletPackage.append_child("TriggerPackage");
 
-    writeTrigger(mpTrigger, triggerPackageNode);
+    writeTrigger(mpTrigger, triggerPackage);
 
     return saveXml(fileName);
 }
@@ -860,9 +860,9 @@ bool XMLexport::exportAlias(const QString& fileName)
 {
     auto mudletPackage = writeXmlHeader();
 
-    auto aliasPackageNode = mudletPackage.append_child("AliasPackage");
+    auto aliasPackage = mudletPackage.append_child("AliasPackage");
 
-    writeAlias(mpAlias, aliasPackageNode);
+    writeAlias(mpAlias, aliasPackage);
 
     return saveXml(fileName);
 }
@@ -915,21 +915,21 @@ bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        auto aliasContentsNode = xmlParent.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
+        auto aliasContents = xmlParent.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
-        xmlParent = aliasContentsNode;
+        xmlParent = aliasContents;
 
-        aliasContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
-        aliasContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
+        aliasContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
+        aliasContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            aliasContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
-            writeScriptElement(pT->mScript, aliasContentsNode);
+            aliasContents.append_child("name").text().set(pT->mName.toUtf8().constData());
+            writeScriptElement(pT->mScript, aliasContents);
 
-            aliasContentsNode.append_child("command").text().set(pT->mCommand.toUtf8().constData());
-            aliasContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-            aliasContentsNode.append_child("regex").text().set(pT->mRegexCode.toUtf8().constData());
+            aliasContents.append_child("command").text().set(pT->mCommand.toUtf8().constData());
+            aliasContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            aliasContents.append_child("regex").text().set(pT->mRegexCode.toUtf8().constData());
         }
 
         isOk = true;
@@ -948,9 +948,9 @@ bool XMLexport::exportAction(const QString& fileName)
 {
     auto mudletPackage = writeXmlHeader();
 
-    auto actionPackageNode = mudletPackage.append_child("ActionPackage");
+    auto actionPackage = mudletPackage.append_child("ActionPackage");
 
-    writeAction(mpAction, actionPackageNode);
+    writeAction(mpAction, actionPackage);
 
     return saveXml(fileName);
 }
@@ -1003,38 +1003,38 @@ bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
 {
     bool isOk = true;    
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        auto actionContentsNode = xmlParent.append_child(pT->isFolder() ? "ActionGroup" : "Action");
+        auto actionContents = xmlParent.append_child(pT->isFolder() ? "ActionGroup" : "Action");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
-        xmlParent = actionContentsNode;
+        xmlParent = actionContents;
 
-        actionContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
-        actionContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
-        actionContentsNode.append_attribute("isPushButton") = pT->mIsPushDownButton ? "yes" : "no";
-        actionContentsNode.append_attribute("isFlatButton") = pT->mButtonFlat ? "yes" : "no";
-        actionContentsNode.append_attribute("useCustomLayout") = pT->mUseCustomLayout ? "yes" : "no";
+        actionContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
+        actionContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
+        actionContents.append_attribute("isPushButton") = pT->mIsPushDownButton ? "yes" : "no";
+        actionContents.append_attribute("isFlatButton") = pT->mButtonFlat ? "yes" : "no";
+        actionContents.append_attribute("useCustomLayout") = pT->mUseCustomLayout ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            actionContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
-            actionContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-            writeScriptElement(pT->mScript, actionContentsNode);
+            actionContents.append_child("name").text().set(pT->mName.toUtf8().constData());
+            actionContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            writeScriptElement(pT->mScript, actionContents);
 
-            actionContentsNode.append_child("css").text().set(pT->css.toUtf8().constData());
-            actionContentsNode.append_child("commandButtonUp").text().set(pT->mCommandButtonUp.toUtf8().constData());
-            actionContentsNode.append_child("commandButtonDown").text().set(pT->mCommandButtonDown.toUtf8().constData());
-            actionContentsNode.append_child("icon").text().set(pT->mIcon.toUtf8().constData());
-            actionContentsNode.append_child("orientation").text().set(QString::number(pT->mOrientation).toUtf8().constData());
-            actionContentsNode.append_child("location").text().set(QString::number(pT->mLocation).toUtf8().constData());
-            actionContentsNode.append_child("posX").text().set(QString::number(pT->mPosX).toUtf8().constData());
-            actionContentsNode.append_child("posY").text().set(QString::number(pT->mPosY).toUtf8().constData());
+            actionContents.append_child("css").text().set(pT->css.toUtf8().constData());
+            actionContents.append_child("commandButtonUp").text().set(pT->mCommandButtonUp.toUtf8().constData());
+            actionContents.append_child("commandButtonDown").text().set(pT->mCommandButtonDown.toUtf8().constData());
+            actionContents.append_child("icon").text().set(pT->mIcon.toUtf8().constData());
+            actionContents.append_child("orientation").text().set(QString::number(pT->mOrientation).toUtf8().constData());
+            actionContents.append_child("location").text().set(QString::number(pT->mLocation).toUtf8().constData());
+            actionContents.append_child("posX").text().set(QString::number(pT->mPosX).toUtf8().constData());
+            actionContents.append_child("posY").text().set(QString::number(pT->mPosY).toUtf8().constData());
             // We now use a boolean but file must use original "1" (false)
             // or "2" (true) for backward compatibility
-            actionContentsNode.append_child("mButtonState").text().set(QString::number(pT->mButtonState ? 2 : 1).toUtf8().constData());
-            actionContentsNode.append_child("sizeX").text().set(QString::number(pT->mSizeX).toUtf8().constData());
-            actionContentsNode.append_child("sizeY").text().set(QString::number(pT->mSizeY).toUtf8().constData());
-            actionContentsNode.append_child("buttonColumn").text().set(QString::number(pT->mButtonColumns).toUtf8().constData());
-            actionContentsNode.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toUtf8().constData());
-            actionContentsNode.append_child("buttonColor").text().set(pT->mButtonColor.name().toUtf8().constData());
+            actionContents.append_child("mButtonState").text().set(QString::number(pT->mButtonState ? 2 : 1).toUtf8().constData());
+            actionContents.append_child("sizeX").text().set(QString::number(pT->mSizeX).toUtf8().constData());
+            actionContents.append_child("sizeY").text().set(QString::number(pT->mSizeY).toUtf8().constData());
+            actionContents.append_child("buttonColumn").text().set(QString::number(pT->mButtonColumns).toUtf8().constData());
+            actionContents.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toUtf8().constData());
+            actionContents.append_child("buttonColor").text().set(pT->mButtonColor.name().toUtf8().constData());
         }
 
         isOk = true;
@@ -1053,9 +1053,9 @@ bool XMLexport::exportTimer(const QString& fileName)
 {
     auto mudletPackage = writeXmlHeader();
 
-    auto timerPackageNode = mudletPackage.append_child("TimerPackage");
+    auto timerPackage = mudletPackage.append_child("TimerPackage");
 
-    writeTimer(mpTimer, timerPackageNode);
+    writeTimer(mpTimer, timerPackage);
 
     return saveXml(fileName);
 }
@@ -1108,24 +1108,24 @@ bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        auto timerContentsNode = xmlParent.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
+        auto timerContents = xmlParent.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
-        xmlParent = timerContentsNode;
+        xmlParent = timerContents;
 
-        timerContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
-        timerContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
-        timerContentsNode.append_attribute("isTempTimer") = pT->isTemporary() ? "yes" : "no";
-        timerContentsNode.append_attribute("isOffsetTimer") = pT->isOffsetTimer() ? "yes" : "no";
+        timerContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
+        timerContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
+        timerContents.append_attribute("isTempTimer") = pT->isTemporary() ? "yes" : "no";
+        timerContents.append_attribute("isOffsetTimer") = pT->isOffsetTimer() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            timerContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
+            timerContents.append_child("name").text().set(pT->mName.toUtf8().constData());
 
-            writeScriptElement(pT->mScript, timerContentsNode);
+            writeScriptElement(pT->mScript, timerContents);
 
-            timerContentsNode.append_child("command").text().set(pT->mCommand.toUtf8().constData());
-            timerContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-            timerContentsNode.append_child("time").text().set(pT->mTime.toString("hh:mm:ss.zzz").toUtf8().constData());
+            timerContents.append_child("command").text().set(pT->mCommand.toUtf8().constData());
+            timerContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            timerContents.append_child("time").text().set(pT->mTime.toString("hh:mm:ss.zzz").toUtf8().constData());
         }
 
         isOk = true;
@@ -1144,9 +1144,9 @@ bool XMLexport::exportScript(const QString& fileName)
 {
     auto mudletPackage = writeXmlHeader();
 
-    auto scriptPackageNode = mudletPackage.append_child("ScriptPackage");
+    auto scriptPackage = mudletPackage.append_child("ScriptPackage");
 
-    writeScript(mpScript, scriptPackageNode);
+    writeScript(mpScript, scriptPackage);
 
     return saveXml(fileName);
 }
@@ -1199,20 +1199,20 @@ bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
 {
     bool isOk = true;    
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        auto scriptContentsNode = xmlParent.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
+        auto scriptContents = xmlParent.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
-        xmlParent = scriptContentsNode;
+        xmlParent = scriptContents;
 
-        scriptContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
-        scriptContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
+        scriptContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
+        scriptContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            scriptContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
-            scriptContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-            writeScriptElement(pT->mScript, scriptContentsNode);
+            scriptContents.append_child("name").text().set(pT->mName.toUtf8().constData());
+            scriptContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            writeScriptElement(pT->mScript, scriptContents);
 
-            auto eventHandlerList = scriptContentsNode.append_child("eventHandlerList");
+            auto eventHandlerList = scriptContents.append_child("eventHandlerList");
             for (int i = 0; i < pT->mEventHandlerList.size(); ++i) {
                 eventHandlerList.append_child("string").text().set(pT->mEventHandlerList.at(i).toUtf8().constData());
             }
@@ -1234,9 +1234,9 @@ bool XMLexport::exportKey(const QString& fileName)
 {
     auto mudletPackage = writeXmlHeader();
 
-    auto keyPackageNode = mudletPackage.append_child("KeyPackage");
+    auto keyPackage = mudletPackage.append_child("KeyPackage");
 
-    writeKey(mpKey, keyPackageNode);
+    writeKey(mpKey, keyPackage);
 
     return saveXml(fileName);
 }
@@ -1289,22 +1289,22 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        auto keyContentsNode = xmlParent.append_child(pT->isFolder() ? "KeyGroup" : "Key");
+        auto keyContents = xmlParent.append_child(pT->isFolder() ? "KeyGroup" : "Key");
 
         // set the xml parent to the trigger we just made so nested triggers will get written to it
-        xmlParent = keyContentsNode;
+        xmlParent = keyContents;
 
-        keyContentsNode.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
-        keyContentsNode.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
+        keyContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
+        keyContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
-            keyContentsNode.append_child("name").text().set(pT->mName.toUtf8().constData());
-            keyContentsNode.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-            writeScriptElement(pT->mScript, keyContentsNode);
+            keyContents.append_child("name").text().set(pT->mName.toUtf8().constData());
+            keyContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
+            writeScriptElement(pT->mScript, keyContents);
 
-            keyContentsNode.append_child("command").text().set(pT->mCommand.toUtf8().constData());
-            keyContentsNode.append_child("keyCode").text().set(QString::number(pT->mKeyCode).toUtf8().constData());
-            keyContentsNode.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toUtf8().constData());
+            keyContents.append_child("command").text().set(pT->mCommand.toUtf8().constData());
+            keyContents.append_child("keyCode").text().set(QString::number(pT->mKeyCode).toUtf8().constData());
+            keyContents.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toUtf8().constData());
         }
 
         isOk = true;
