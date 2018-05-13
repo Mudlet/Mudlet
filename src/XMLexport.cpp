@@ -380,13 +380,6 @@ QString XMLexport::saveXml()
     return QString::fromStdString(output);
 }
 
-void XMLexport::showXmlDebug()
-{
-    std::cout << "Document:\n";
-    mExportDoc.save(std::cout);
-    std::cout << endl;
-}
-
 bool XMLexport::writeHost(Host *pHost, pugi::xml_node mudletPackage)
 {
     bool isOk = true;
