@@ -32,6 +32,7 @@
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
+#include <edbee/texteditorwidget.h>
 #include "post_guard.h"
 
 extern "C" {

@@ -44,6 +44,7 @@
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
+#include "edbee/models/textautocompleteprovider.h"
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -211,6 +212,7 @@ public:
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
+    static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
     QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
     QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
@@ -225,6 +227,7 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
