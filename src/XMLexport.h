@@ -116,6 +116,8 @@ private:
     void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
     bool saveXml(const QString& fileName);
     pugi::xml_node writeXmlHeader();
+    void sanitizeForQxml(std::string &output);
+    QString saveXml();
 };
 
 #endif // MUDLET_XMLEXPORT_H

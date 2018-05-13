@@ -295,88 +295,89 @@ void inline XMLexport::replaceAll(std::string& source, const std::string& from, 
     source.swap(newString);
 }
 
-bool XMLexport::saveXml(const QString& fileName)
+// sanitize non-printable characters for backwards & forward compatibility
+// work qxml which is stuck at 1.0 and doesn't support properly
+// encoding them. See https://github.com/Mudlet/Mudlet/issues/500
+void XMLexport::sanitizeForQxml(std::string& output)
 {
-    cout << "opt Exporting " << fileName.toLocal8Bit().data() << endl;
-    std::stringstream saveStringStream(ios::out);
-    std::string output;
-
-    auto start = chrono::steady_clock::now();
-    auto totalStart = chrono::steady_clock::now();
-    mExportDoc.save(saveStringStream);
-    cout << "opt pugi export to stream took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
-    start = chrono::steady_clock::now();
-
-    output = saveStringStream.str();
-    cout << "opt stream to string " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
-    start = chrono::steady_clock::now();
-
-    QMap<std::string, std::string> replacements {
-        {"&#1;", "\uFFFC\u2401"}, // SOH
-        {"&#2;", "\uFFFC\u2402"}, // STX
-        {"&#3;", "\uFFFC\u2403"}, // ETX
-        {"&#4;", "\uFFFC\u2404"}, // EOT
-        {"&#5;", "\uFFFC\u2405"}, // ENQ
-        {"&#6;", "\uFFFC\u2406"}, // ACK
-        {"&#7;", "\uFFFC\u2407"}, // BEL
-        {"&#8;", "\uFFFC\u2408"}, // BS
-        {"&#11;", "\uFFFC\u240B"}, // VT
-        {"&#12;", "\uFFFC\u240C"}, // FF
-        {"&#14;", "\uFFFC\u240E"}, // SS
-        {"&#15;", "\uFFFC\u240F"}, // SI
-        {"&#10;", "\uFFFC\u2410"}, // DLE
-        {"&#16;", "\uFFFC\u2411"}, // DC1
-        {"&#18;", "\uFFFC\u2412"}, // DC2
-        {"&#19;", "\uFFFC\u2413"}, // DC3
-        {"&#20;", "\uFFFC\u2414"}, // DC4
-        {"&#21;", "\uFFFC\u2415"}, // NAK
-        {"&#22;", "\uFFFC\u2416"}, // SYN
-        {"&#17;", "\uFFFC\u2417"}, // ETB
-        {"&#23;", "\uFFFC\u2418"}, // CAN
-        {"&#25;", "\uFFFC\u2419"}, // EM
-        {"&#26;", "\uFFFC\u241A"}, // SUB
-        {"&#27;", "\uFFFC\u241B"}, // ESC
-        {"&#28;", "\uFFFC\u241C"}, // FS
-        {"&#29;", "\uFFFC\u241D"}, // GS
-        {"&#30;", "\uFFFC\u241E"}, // RS
-        {"&#31;", "\uFFFC\u241F"}, // US
-        {"&#127;", "\uFFFC\u2421"}, // DEL
+    QMap<std::string, std::string> replacements{
+            {"&#1;", "\uFFFC\u2401"},   // SOH
+            {"&#2;", "\uFFFC\u2402"},   // STX
+            {"&#3;", "\uFFFC\u2403"},   // ETX
+            {"&#4;", "\uFFFC\u2404"},   // EOT
+            {"&#5;", "\uFFFC\u2405"},   // ENQ
+            {"&#6;", "\uFFFC\u2406"},   // ACK
+            {"&#7;", "\uFFFC\u2407"},   // BEL
+            {"&#8;", "\uFFFC\u2408"},   // BS
+            {"&#11;", "\uFFFC\u240B"},  // VT
+            {"&#12;", "\uFFFC\u240C"},  // FF
+            {"&#14;", "\uFFFC\u240E"},  // SS
+            {"&#15;", "\uFFFC\u240F"},  // SI
+            {"&#10;", "\uFFFC\u2410"},  // DLE
+            {"&#16;", "\uFFFC\u2411"},  // DC1
+            {"&#18;", "\uFFFC\u2412"},  // DC2
+            {"&#19;", "\uFFFC\u2413"},  // DC3
+            {"&#20;", "\uFFFC\u2414"},  // DC4
+            {"&#21;", "\uFFFC\u2415"},  // NAK
+            {"&#22;", "\uFFFC\u2416"},  // SYN
+            {"&#17;", "\uFFFC\u2417"},  // ETB
+            {"&#23;", "\uFFFC\u2418"},  // CAN
+            {"&#25;", "\uFFFC\u2419"},  // EM
+            {"&#26;", "\uFFFC\u241A"},  // SUB
+            {"&#27;", "\uFFFC\u241B"},  // ESC
+            {"&#28;", "\uFFFC\u241C"},  // FS
+            {"&#29;", "\uFFFC\u241D"},  // GS
+            {"&#30;", "\uFFFC\u241E"},  // RS
+            {"&#31;", "\uFFFC\u241F"},  // US
+            {"&#127;", "\uFFFC\u2421"}, // DEL
     };
-
-    qDebug() << "opt shit to check to to remove:" << replacements.count();
 
     QMutableMapIterator<std::string, std::string> searching(replacements);
     while (searching.hasNext()) {
         if (output.find(searching.next().key()) == std::string::npos) {
             searching.remove();
-        } else {
-            qDebug() << "omg we actually found something!!";
         }
     }
-
-    qDebug() << "opt shit left to remove:" << replacements.count();
 
     QMapIterator<std::string, std::string> replacing(replacements);
     while (replacing.hasNext()) {
         replacing.next();
         replaceAll(output, replacing.key(), replacing.value());
     }
+}
 
-    cout << "opt replacements took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
-    start = chrono::steady_clock::now();
+bool XMLexport::saveXml(const QString& fileName)
+{
+    std::stringstream saveStringStream(ios::out);
+    std::string output;
+
+    mExportDoc.save(saveStringStream);
+    output = saveStringStream.str();
+
+    sanitizeForQxml(output);
 
     // only open the output file stream once we're ready to save
     // this avoids a blank file in case serialisation crashed
     std::ofstream saveFileStream(fileName.toUtf8().constData());
     saveFileStream << output;
-    cout << "opt serialising to iostream export took " << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms" << endl;
-    start = chrono::steady_clock::now();
 
     if (saveFileStream.bad()) {
         return false;
     }
-    cout << "opt Serialisation in itself took " << chrono::duration <double, milli> (chrono::steady_clock::now() - totalStart).count() << " ms" << endl;
     return true;
+}
+
+QString XMLexport::saveXml()
+{
+    std::stringstream saveStringStream(ios::out);
+    std::string output;
+
+    mExportDoc.save(saveStringStream);
+    output = saveStringStream.str();
+
+    sanitizeForQxml(output);
+
+    return QString::fromStdString(output);
 }
 
 void XMLexport::showXmlDebug()
@@ -735,44 +736,19 @@ bool XMLexport::exportTrigger(const QString& fileName)
 
 bool XMLexport::exportToClipboard(TTrigger* pT)
 {
-//    // The use of pT is a cludge - it was already used in the previously invoked
-//    // in this XMLexport instance's constructor (and stored in mpTrigger) and it
-//    // is only used here for its signature.
-//    Q_UNUSED(pT);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpTrigger) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-//    QBuffer xmlBuffer;
-//    // set the device explicitly so QXmlStreamWriter knows where to write to
-//    setDevice(&xmlBuffer);
-//    xmlBuffer.open(QIODevice::WriteOnly);
+    auto mudletPackage = writeXmlHeader();
+    auto triggerPackage = mudletPackage.append_child("TriggerPackage");
+    writeTrigger(mpTrigger, triggerPackage);
+    auto xml = saveXml();
 
-//    writeStartDocument();
-//    if (hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    writeDTD("<!DOCTYPE MudletPackage>");
-
-//    writeStartElement("MudletPackage");
-//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
-
-//    writeStartElement("TriggerPackage");
-//    bool isOk = writeTrigger(mpTrigger, pugi::xml_node());
-//    writeEndElement(); //TriggerPackage
-
-//    writeEndElement(); //MudletPackage
-//    writeEndDocument();
-
-//    if (!isOk || hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    QClipboard* cb = QApplication::clipboard();
-//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
-
-//    xmlBuffer.close();
-//    return true;
+    auto clipboard = QApplication::clipboard();
+    clipboard->setText(xml, QClipboard::Clipboard);
+    return true;
 }
 
 bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
@@ -848,46 +824,19 @@ bool XMLexport::exportAlias(const QString& fileName)
 
 bool XMLexport::exportToClipboard(TAlias* pT)
 {
-//    // The use of pT is a cludge - it was already used in the previously invoked
-//    // in this XMLexport instance's constructor (and stored in mpAlias) and it
-//    // is only used here for its signature.
-//    Q_UNUSED(pT);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpAlias) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-//    // autoFormatting is set to true in constructor
+    auto mudletPackage = writeXmlHeader();
+    auto aliasPackage = mudletPackage.append_child("AliasPackage");
+    writeAlias(mpAlias, aliasPackage);
+    auto xml = saveXml();
 
-//    QBuffer xmlBuffer;
-//    // set the device explicitly so QXmlStreamWriter knows where to write to
-//    setDevice(&xmlBuffer);
-//    xmlBuffer.open(QIODevice::WriteOnly);
-
-//    writeStartDocument();
-//    if (hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    writeDTD("<!DOCTYPE MudletPackage>");
-
-//    writeStartElement("MudletPackage");
-//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
-
-//    writeStartElement("AliasPackage");
-//    bool isOk = writeAlias(mpAlias, pugi::xml_node());
-//    writeEndElement(); // </AliasPackage>
-
-//    writeEndElement(); // </MudletPackage>
-//    writeEndDocument();
-
-//    if (!isOk || hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    QClipboard* cb = QApplication::clipboard();
-//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
-
-//    xmlBuffer.close();
-//    return true;
+    auto clipboard = QApplication::clipboard();
+    clipboard->setText(xml, QClipboard::Clipboard);
+    return true;
 }
 
 bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
@@ -936,46 +885,19 @@ bool XMLexport::exportAction(const QString& fileName)
 
 bool XMLexport::exportToClipboard(TAction* pT)
 {
-//    // The use of pT is a cludge - it was already used in the previously invoked
-//    // in this XMLexport instance's constructor (and stored in mpAction) and it
-//    // is only used here for its signature.
-//    Q_UNUSED(pT);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpAction) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-//    // autoFormatting is set to true in constructor
+    auto mudletPackage = writeXmlHeader();
+    auto actionPackage = mudletPackage.append_child("ActionPackage");
+    writeAction(mpAction, actionPackage);
+    auto xml = saveXml();
 
-//    QBuffer xmlBuffer;
-//    // set the device explicitly so QXmlStreamWriter knows where to write to
-//    setDevice(&xmlBuffer);
-//    xmlBuffer.open(QIODevice::WriteOnly);
-
-//    writeStartDocument();
-//    if (hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    writeDTD("<!DOCTYPE MudletPackage>");
-
-//    writeStartElement("MudletPackage");
-//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
-
-//    writeStartElement("ActionPackage");
-//    bool isOk = writeAction(mpAction, pugi::xml_node());
-//    writeEndElement(); // </ActionPackage>
-
-//    writeEndElement(); // </MudletPackage>
-//    writeEndDocument();
-
-//    if (!isOk || hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    QClipboard* cb = QApplication::clipboard();
-//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
-
-//    xmlBuffer.close();
-//    return true;
+    auto clipboard = QApplication::clipboard();
+    clipboard->setText(xml, QClipboard::Clipboard);
+    return true;
 }
 
 bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
@@ -1041,46 +963,19 @@ bool XMLexport::exportTimer(const QString& fileName)
 
 bool XMLexport::exportToClipboard(TTimer* pT)
 {
-//    // The use of pT is a cludge - it was already used in the previously invoked
-//    // in this XMLexport instance's constructor (and stored in mpTimer) and it
-//    // is only used here for its signature.
-//    Q_UNUSED(pT);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpTimer) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-//    // autoFormatting is set to true in constructor
+    auto mudletPackage = writeXmlHeader();
+    auto timerPackage = mudletPackage.append_child("TimerPackage");
+    writeTimer(mpTimer, timerPackage);
+    auto xml = saveXml();
 
-//    QBuffer xmlBuffer;
-//    // set the device explicitly so QXmlStreamWriter knows where to write to
-//    setDevice(&xmlBuffer);
-//    xmlBuffer.open(QIODevice::WriteOnly);
-
-//    writeStartDocument();
-//    if (hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    writeDTD("<!DOCTYPE MudletPackage>");
-
-//    writeStartElement("MudletPackage");
-//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
-
-//    writeStartElement("TimerPackage");
-//    bool isOk = writeTimer(mpTimer, pugi::xml_node());
-//    writeEndElement(); // </TimerPackage>
-
-//    writeEndElement(); // </MudletPackage>
-//    writeEndDocument();
-
-//    if (!isOk || hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    QClipboard* cb = QApplication::clipboard();
-//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
-
-//    xmlBuffer.close();
-//    return true;
+    auto clipboard = QApplication::clipboard();
+    clipboard->setText(xml, QClipboard::Clipboard);
+    return true;
 }
 
 bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
@@ -1132,46 +1027,19 @@ bool XMLexport::exportScript(const QString& fileName)
 
 bool XMLexport::exportToClipboard(TScript* pT)
 {
-//    // The use of pT is a cludge - it was already used in the previously invoked
-//    // in this XMLexport instance's constructor (and stored in mpScript) and it
-//    // is only used here for its signature.
-//    Q_UNUSED(pT);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpScript) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-//    // autoFormatting is set to true in constructor
+    auto mudletPackage = writeXmlHeader();
+    auto scriptPackage = mudletPackage.append_child("ScriptPackage");
+    writeScript(mpScript, scriptPackage);
+    auto xml = saveXml();
 
-//    QBuffer xmlBuffer;
-//    // set the device explicitly so QXmlStreamWriter knows where to write to
-//    setDevice(&xmlBuffer);
-//    xmlBuffer.open(QIODevice::WriteOnly);
-
-//    writeStartDocument();
-//    if (hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    writeDTD("<!DOCTYPE MudletPackage>");
-
-//    writeStartElement("MudletPackage");
-//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
-
-//    writeStartElement("ScriptPackage");
-//    bool isOk = writeScript(mpScript, pugi::xml_node());
-//    writeEndElement(); // </ScriptPackage>
-
-//    writeEndElement(); // </MudletPackage>
-//    writeEndDocument();
-
-//    if (!isOk || hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    QClipboard* cb = QApplication::clipboard();
-//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
-
-//    xmlBuffer.close();
-//    return true;
+    auto clipboard = QApplication::clipboard();
+    clipboard->setText(xml, QClipboard::Clipboard);
+    return true;
 }
 
 bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
@@ -1222,46 +1090,19 @@ bool XMLexport::exportKey(const QString& fileName)
 
 bool XMLexport::exportToClipboard(TKey* pT)
 {
-//    // The use of pT is a cludge - it was already used in the previously invoked
-//    // in this XMLexport instance's constructor (and stored in mpKey) and it
-//    // is only used here for its signature.
-//    Q_UNUSED(pT);
+    // The use of pT is a cludge - it was already used in the previously invoked
+    // in this XMLexport instance's constructor (and stored in mpKey) and it
+    // is only used here for its signature.
+    Q_UNUSED(pT);
 
-//    // autoFormatting is set to true in constructor
+    auto mudletPackage = writeXmlHeader();
+    auto keyPackage = mudletPackage.append_child("KeyPackage");
+    writeKey(mpKey, keyPackage);
+    auto xml = saveXml();
 
-//    QBuffer xmlBuffer;
-//    // set the device explicitly so QXmlStreamWriter knows where to write to
-//    setDevice(&xmlBuffer);
-//    xmlBuffer.open(QIODevice::WriteOnly);
-
-//    writeStartDocument();
-//    if (hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    writeDTD("<!DOCTYPE MudletPackage>");
-
-//    writeStartElement("MudletPackage");
-//    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
-
-//    writeStartElement("KeyPackage");
-//    bool isOk = writeKey(mpKey, pugi::xml_node());
-//    writeEndElement(); // </KeyPackage>
-
-//    writeEndElement(); // </MudletPackage>
-//    writeEndDocument();
-
-//    if (!isOk || hasError()) {
-//        xmlBuffer.close();
-//        return false;
-//    }
-
-//    QClipboard* cb = QApplication::clipboard();
-//    cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
-
-//    xmlBuffer.close();
-//    return true;
+    auto clipboard = QApplication::clipboard();
+    clipboard->setText(xml, QClipboard::Clipboard);
+    return true;
 }
 
 bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
