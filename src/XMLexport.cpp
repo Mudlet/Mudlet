@@ -734,7 +734,7 @@ bool XMLexport::exportTrigger(const QString& fileName)
     return saveXml(fileName);
 }
 
-bool XMLexport::exportToClipboard(TTrigger* pT)
+void XMLexport::exportToClipboard(TTrigger* pT)
 {
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpTrigger) and it
@@ -748,7 +748,6 @@ bool XMLexport::exportToClipboard(TTrigger* pT)
 
     auto clipboard = QApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
-    return true;
 }
 
 bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
@@ -822,7 +821,7 @@ bool XMLexport::exportAlias(const QString& fileName)
     return saveXml(fileName);
 }
 
-bool XMLexport::exportToClipboard(TAlias* pT)
+void XMLexport::exportToClipboard(TAlias* pT)
 {
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpAlias) and it
@@ -836,7 +835,6 @@ bool XMLexport::exportToClipboard(TAlias* pT)
 
     auto clipboard = QApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
-    return true;
 }
 
 bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
@@ -883,7 +881,7 @@ bool XMLexport::exportAction(const QString& fileName)
     return saveXml(fileName);
 }
 
-bool XMLexport::exportToClipboard(TAction* pT)
+void XMLexport::exportToClipboard(TAction* pT)
 {
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpAction) and it
@@ -897,7 +895,6 @@ bool XMLexport::exportToClipboard(TAction* pT)
 
     auto clipboard = QApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
-    return true;
 }
 
 bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
@@ -961,7 +958,7 @@ bool XMLexport::exportTimer(const QString& fileName)
     return saveXml(fileName);
 }
 
-bool XMLexport::exportToClipboard(TTimer* pT)
+void XMLexport::exportToClipboard(TTimer* pT)
 {
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpTimer) and it
@@ -975,7 +972,6 @@ bool XMLexport::exportToClipboard(TTimer* pT)
 
     auto clipboard = QApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
-    return true;
 }
 
 bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
@@ -1025,7 +1021,7 @@ bool XMLexport::exportScript(const QString& fileName)
     return saveXml(fileName);
 }
 
-bool XMLexport::exportToClipboard(TScript* pT)
+void XMLexport::exportToClipboard(TScript* pT)
 {
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpScript) and it
@@ -1039,7 +1035,6 @@ bool XMLexport::exportToClipboard(TScript* pT)
 
     auto clipboard = QApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
-    return true;
 }
 
 bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
@@ -1088,7 +1083,7 @@ bool XMLexport::exportKey(const QString& fileName)
     return saveXml(fileName);
 }
 
-bool XMLexport::exportToClipboard(TKey* pT)
+void XMLexport::exportToClipboard(TKey* pT)
 {
     // The use of pT is a cludge - it was already used in the previously invoked
     // in this XMLexport instance's constructor (and stored in mpKey) and it
@@ -1102,7 +1097,6 @@ bool XMLexport::exportToClipboard(TKey* pT)
 
     auto clipboard = QApplication::clipboard();
     clipboard->setText(xml, QClipboard::Clipboard);
-    return true;
 }
 
 bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
@@ -1139,7 +1133,7 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
     return isOk;
 }
 
-bool XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElement)
+void XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElement)
 {
-    return xmlElement.append_child("script").text().set(script.toUtf8().constData()) ? true : false;
+    xmlElement.append_child("script").text().set(script.toUtf8().constData());
 }

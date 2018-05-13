@@ -83,14 +83,14 @@ public:
     bool exportScript(const QString& fileName);
     bool exportKey(const QString& fileName);
 
-    bool exportToClipboard(TTrigger*);
-    bool exportToClipboard(TTimer*);
-    bool exportToClipboard(TAlias*);
-    bool exportToClipboard(TAction*);
-    bool exportToClipboard(TScript*);
-    bool exportToClipboard(TKey*);
+    void exportToClipboard(TTrigger*);
+    void exportToClipboard(TTimer*);
+    void exportToClipboard(TAlias*);
+    void exportToClipboard(TAction*);
+    void exportToClipboard(TScript*);
+    void exportToClipboard(TKey*);
 
-    bool writeScriptElement(const QString&, pugi::xml_node xmlElement);
+    void writeScriptElement(const QString&, pugi::xml_node xmlElement);
 
     QVector<QFuture<bool>> saveFutures;
 

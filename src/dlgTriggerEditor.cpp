@@ -7130,9 +7130,8 @@ void dlgTriggerEditor::exportTriggerToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportTimerToClipboard()
@@ -7154,9 +7153,8 @@ void dlgTriggerEditor::exportTimerToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportAliasToClipboard()
@@ -7178,9 +7176,8 @@ void dlgTriggerEditor::exportAliasToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportActionToClipboard()
@@ -7202,9 +7199,8 @@ void dlgTriggerEditor::exportActionToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportScriptToClipboard()
@@ -7226,9 +7222,8 @@ void dlgTriggerEditor::exportScriptToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportKeyToClipboard()
@@ -7251,9 +7246,8 @@ void dlgTriggerEditor::exportKeyToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 
