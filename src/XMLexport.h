@@ -62,8 +62,7 @@ public:
     XMLexport(TKey*);
     ~XMLexport();
 
-    bool writeHost(Host*, pugi::xml_node hostPackage);
-
+    void writeHost(Host*, pugi::xml_node hostPackage);
     void writeTrigger(TTrigger*, pugi::xml_node xmlParent);
     void writeTimer(TTimer*, pugi::xml_node xmlParent);
     void writeAlias(TAlias*, pugi::xml_node xmlParent);
@@ -71,9 +70,9 @@ public:
     void writeScript(TScript*, pugi::xml_node xmlParent);
     void writeKey(TKey*, pugi::xml_node xmlParent);
     void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
-    bool writeModuleXML(const QString& moduleName, const QString& fileName);
+    void writeModuleXML(const QString& moduleName, const QString& fileName);
 
-    bool exportHost(const QString& filename_pugi_xml);
+    void exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage);
     bool exportGenericPackage(const QString& exportFileName);
     bool exportTrigger(const QString& fileName);
@@ -104,13 +103,12 @@ private:
     TKey* mpKey;
     pugi::xml_document mExportDoc;
 
-    void showXmlDebug();
-    void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool includeModuleMembers);
-    void writeTimerPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool includeModuleMembers);
-    void writeAliasPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool includeModuleMembers);
-    void writeActionPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool includeModuleMembers);
-    void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool includeModuleMembers);
-    void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool includeModuleMembers);
+    void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeTimerPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeAliasPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeActionPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
     void inline replaceAll(std::string& source, const char from, const std::string& to);
     void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
