@@ -346,7 +346,7 @@ QString XMLexport::saveXml()
     return QString::fromStdString(output);
 }
 
-void XMLexport::writeHost(Host *pHost, pugi::xml_node mudletPackage)
+void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 {
     auto hostPackage = mudletPackage.append_child("HostPackage");
     auto host = hostPackage.append_child("Host");
@@ -496,77 +496,83 @@ void XMLexport::writeHost(Host *pHost, pugi::xml_node mudletPackage)
     writeVariablePackage(pHost, mudletPackage);
 }
 
-void XMLexport::writeVariablePackage(Host *pHost, pugi::xml_node &mudletPackage) {
+void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
+{
     auto variablePackage = mudletPackage.append_child("VariablePackage");
     LuaInterface* lI = pHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     //do hidden variables first
     { // Blocked so that indentation reflects that of the XML file
-            auto hiddenVariables = variablePackage.append_child("HiddenVariables");
-            QSetIterator<QString> itHiddenVariableName(vu->hiddenByUser);
-            while (itHiddenVariableName.hasNext()) {
-                auto variableName = itHiddenVariableName.next();
-                hiddenVariables.append_child("name").text().set(variableName.toUtf8().constData());
-            }
+        auto hiddenVariables = variablePackage.append_child("HiddenVariables");
+        QSetIterator<QString> itHiddenVariableName(vu->hiddenByUser);
+        while (itHiddenVariableName.hasNext()) {
+            auto variableName = itHiddenVariableName.next();
+            hiddenVariables.append_child("name").text().set(variableName.toUtf8().constData());
         }
+    }
 
     TVar* base = vu->getBase();
     if (!base) {
-            lI->getVars(false);
-            base = vu->getBase();
-        }
+        lI->getVars(false);
+        base = vu->getBase();
+    }
 
     if (base) {
-            QListIterator<TVar*> itVariable(base->getChildren(false));
-            while (itVariable.hasNext()) {
-                writeVariable(itVariable.next(), lI, vu, variablePackage);
-            }
+        QListIterator<TVar*> itVariable(base->getChildren(false));
+        while (itVariable.hasNext()) {
+            writeVariable(itVariable.next(), lI, vu, variablePackage);
         }
+    }
 }
 
-void XMLexport::writeKeyPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool skipModuleMembers) {
+void XMLexport::writeKeyPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
+{
     auto keyPackage = mudletPackage.append_child("KeyPackage");
-    for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTemporary() || (skipModuleMembers && (*it)->mModuleMember)) {
-                continue;
-            }
-            writeKey(*it, keyPackage);
+    for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
+        if (!(*it) || (*it)->isTemporary() || (skipModuleMembers && (*it)->mModuleMember)) {
+            continue;
         }
+        writeKey(*it, keyPackage);
+    }
 }
 
-void XMLexport::writeScriptPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool skipModuleMembers) {
+void XMLexport::writeScriptPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
+{
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
     for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
-            if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
-                continue;
-            }
-            writeScript(*it, scriptPackage);
+        if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
+            continue;
         }
+        writeScript(*it, scriptPackage);
+    }
 }
 
-void XMLexport::writeActionPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool skipModuleMembers) {
+void XMLexport::writeActionPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
+{
     auto actionPackage = mudletPackage.append_child("ActionPackage");
     for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
-            if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
-                continue;
-            }
-            writeAction(*it, actionPackage);
+        if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
+            continue;
         }
+        writeAction(*it, actionPackage);
+    }
 }
 
-void XMLexport::writeAliasPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool skipModuleMembers) {
+void XMLexport::writeAliasPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
+{
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
     for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
-            if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
-                continue;
-            }
-            if (!(*it)->isTemporary()) {
-                writeAlias(*it, aliasPackage);
-            }
+        if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
+            continue;
         }
+        if (!(*it)->isTemporary()) {
+            writeAlias(*it, aliasPackage);
+        }
+    }
 }
 
-void XMLexport::writeTimerPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool skipModuleMembers) {
+void XMLexport::writeTimerPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
+{
     auto timerPackage = mudletPackage.append_child("TimerPackage");
     for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
         if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
@@ -578,7 +584,8 @@ void XMLexport::writeTimerPackage(const Host *pHost, pugi::xml_node &mudletPacka
     }
 }
 
-void XMLexport::writeTriggerPackage(const Host *pHost, pugi::xml_node &mudletPackage, bool ignoreModuleMembers) {
+void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMembers)
+{
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
     for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
         if (!(*it) || (ignoreModuleMembers && (*it)->mModuleMember)) {
@@ -590,7 +597,7 @@ void XMLexport::writeTriggerPackage(const Host *pHost, pugi::xml_node &mudletPac
     }
 }
 
-void XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *pVariableUnit, pugi::xml_node xmlParent)
+void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* pVariableUnit, pugi::xml_node xmlParent)
 {
     if (pVariableUnit->isSaved(pVar)) {
         if (pVar->getValueType() == LUA_TTABLE) {
@@ -623,9 +630,7 @@ bool XMLexport::exportGenericPackage(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-            mpHost->xmlSaved(QStringLiteral("profile"));
-        });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
         watcher->setFuture(future);
         saveFutures.append(future);
 
@@ -688,7 +693,7 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
+void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto trigger = xmlParent.append_child(pT->isFolder() ? "TriggerGroup" : "Trigger");
@@ -768,7 +773,7 @@ void XMLexport::exportToClipboard(TAlias* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
+void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto aliasContents = xmlParent.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
@@ -821,7 +826,7 @@ void XMLexport::exportToClipboard(TAction* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
+void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto actionContents = xmlParent.append_child(pT->isFolder() ? "ActionGroup" : "Action");
@@ -891,7 +896,7 @@ void XMLexport::exportToClipboard(TTimer* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
+void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto timerContents = xmlParent.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
@@ -947,7 +952,7 @@ void XMLexport::exportToClipboard(TScript* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
+void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto scriptContents = xmlParent.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
@@ -1002,7 +1007,7 @@ void XMLexport::exportToClipboard(TKey* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
+void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto keyContents = xmlParent.append_child(pT->isFolder() ? "KeyGroup" : "Key");
@@ -1029,7 +1034,7 @@ void XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
     }
 }
 
-void XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElement)
+void XMLexport::writeScriptElement(const QString& script, pugi::xml_node xmlElement)
 {
     xmlElement.append_child("script").text().set(script.toUtf8().constData());
 }
