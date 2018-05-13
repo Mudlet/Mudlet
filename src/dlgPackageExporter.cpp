@@ -85,8 +85,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     }
     packagePath.replace(R"(\)", "/");
 
-    tempDir = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("/tmp/"));
-    tempDir = tempDir + "/" + packageName;
+    tempDir = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("tmp/%1").arg(packageName));
     QDir packageDir = QDir(tempDir);
     if (!packageDir.exists()) {
         packageDir.mkpath(tempDir);
@@ -102,10 +101,10 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
         out.flush();
         configFile.close();
     }
-    connect(ui->addFiles, SIGNAL(clicked()), this, SLOT(slot_addFiles()));
+    connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
 
     ui->buttonBox->addButton(exportButton, QDialogButtonBox::ResetRole);
-    connect(exportButton, SIGNAL(clicked()), this, SLOT(slot_export_package()));
+    connect(exportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
 
     listTriggers();
     listAliases();
@@ -131,179 +130,183 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetIt
 
 void dlgPackageExporter::slot_export_package()
 {
-    QFile file_xml(filePath);
-    if (file_xml.open(QIODevice::WriteOnly)) {
-        XMLexport writer(mpHost);
-        //write trigs
-        QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Triggers"), Qt::MatchExactly, 0);
-        QTreeWidgetItem* top = items.first();
-        QList<QTreeWidgetItem*> trigList;
-        recurseTree(top, trigList);
-        for (auto item : trigList) {
-            if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)) {
-                triggerMap[item]->exportItem = false;
-            } else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder) {
-                triggerMap[item]->mModuleMasterFolder = false;
-                modTriggerMap.insert(item, triggerMap[item]);
-            }
-        }
-        items = treeWidget->findItems(QString("Timers"), Qt::MatchExactly, 0);
-        top = items.first();
-        QList<QTreeWidgetItem*> timerList;
-        recurseTree(top, timerList);
-        for (auto item : timerList) {
-            if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)) {
-                timerMap[item]->exportItem = false;
-            } else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder) {
-                timerMap[item]->mModuleMasterFolder = false;
-                modTimerMap.insert(item, timerMap[item]);
-            }
-        }
-        items = treeWidget->findItems(QString("Aliases"), Qt::MatchExactly, 0);
-        top = items.first();
-        QList<QTreeWidgetItem*> aliasList;
-        recurseTree(top, aliasList);
-        for (auto item : aliasList) {
-            if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
-                aliasMap[item]->exportItem = false;
-            } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
-                aliasMap[item]->mModuleMasterFolder = false;
-                modAliasMap.insert(item, aliasMap[item]);
-            }
-        }
-        items = treeWidget->findItems(QString("Buttons"), Qt::MatchExactly, 0);
-        top = items.first();
-        QList<QTreeWidgetItem*> actionList;
-        recurseTree(top, actionList);
-        for (auto item : actionList) {
-            if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
-                actionMap[item]->exportItem = false;
-            } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
-                actionMap[item]->mModuleMasterFolder = false;
-                modActionMap.insert(item, actionMap[item]);
-            }
-        }
-        items = treeWidget->findItems(QString("Scripts"), Qt::MatchExactly, 0);
-        top = items.first();
-        QList<QTreeWidgetItem*> scriptList;
-        recurseTree(top, scriptList);
-        for (auto item : scriptList) {
-            if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
-                scriptMap[item]->exportItem = false;
-            } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
-                scriptMap[item]->mModuleMasterFolder = false;
-                modScriptMap.insert(item, scriptMap[item]);
-            }
-        }
-        items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
-        top = items.first();
-        QList<QTreeWidgetItem*> keyList;
-        recurseTree(top, keyList);
-        for (auto item : keyList) {
-            if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
-                keyMap[item]->exportItem = false;
-            } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
-                keyMap[item]->mModuleMasterFolder = false;
-                modKeyMap.insert(item, keyMap[item]);
-            }
-        }
-        writer.exportGenericPackage(filePath);
-        file_xml.close();
-        //now fix all the stuff we weren't exporting
-        //trigger, timer, alias,action,script, keys
-        for (auto item : trigList) {
-            if (triggerMap.contains(item)) {
-                triggerMap[item]->exportItem = true;
-            }
-            if (modTriggerMap.contains(item)) {
-                modTriggerMap[item]->mModuleMasterFolder = true;
-            }
-        }
-        for (auto item : timerList) {
-            if (timerMap.contains(item)) {
-                timerMap[item]->exportItem = true;
-            }
-            if (modTimerMap.contains(item)) {
-                modTimerMap[item]->mModuleMasterFolder = true;
-            }
-        }
-        for (auto item : actionList) {
-            if (actionMap.contains(item)) {
-                actionMap[item]->exportItem = true;
-            }
-            if (modActionMap.contains(item)) {
-                modActionMap[item]->mModuleMasterFolder = true;
-            }
-        }
-        for (auto item : scriptList) {
-            if (scriptMap.contains(item)) {
-                scriptMap[item]->exportItem = true;
-            }
-            if (modScriptMap.contains(item)) {
-                modScriptMap[item]->mModuleMasterFolder = true;
-            }
-        }
-        for (auto item : keyList) {
-            if (keyMap.contains(item)) {
-                keyMap[item]->exportItem = true;
-            }
-            if (modKeyMap.contains(item)) {
-                modKeyMap[item]->mModuleMasterFolder = true;
-            }
-        }
-        for (auto item : aliasList) {
-            if (aliasMap.contains(item)) {
-                aliasMap[item]->exportItem = true;
-            }
-            if (modAliasMap.contains(item)) {
-                modAliasMap[item]->mModuleMasterFolder = true;
-            }
-        }
-
-
-        int err = 0;
-        char buf[100];
-        zip* archive;
-        archive = zip_open(zipFile.toStdString().c_str(), ZIP_CREATE, &err);
-        if (err != 0) {
-            zip_error_to_str(buf, sizeof(buf), err, errno);
-            //FIXME: report error to user qDebug()<<"dp zip open error"<<zipFile<<buf;
-            close();
-            return;
-        }
-        QDir dir(tempDir);
-        QStringList contents = dir.entryList();
-        for (int i = 0; i < contents.size(); i++) {
-            QString fname = contents[i];
-            if (fname == "." || fname == "..") {
-                continue;
-            }
-            QString fullName = tempDir + "/" + contents[i];
-            struct zip_source* s = zip_source_file(archive, fullName.toStdString().c_str(), 0, 0);
-            if (s == nullptr) {
-                int sep = 0;
-                zip_error_get(archive, &err, &sep);
-                zip_error_to_str(buf, sizeof(buf), err, errno);
-                //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
-            }
-            err = zip_add(archive, fname.toStdString().c_str(), s);
-            if (err == -1) {
-                int sep = 0;
-                zip_error_get(archive, &err, &sep);
-                zip_error_to_str(buf, sizeof(buf), err, errno);
-                //FIXME: report error to userqDebug()<<"added file error"<<fullName<<fname<<buf;
-            }
-        }
-        err = zip_close(archive);
-        if (err != 0) {
-            zip_error_to_str(buf, sizeof(buf), err, errno);
-            //FIXME: report error to userqDebug()<<"dp close file error"<<buf;
-            close();
-            return;
-        }
-    } else {
-        ui->infoLabel->setText("Failed to export - couldn't open " + filePath + " for writing in. Do you have the necessary permissions to write to that folder?");
+    QFile checkWriteability(filePath);
+    if (!checkWriteability.open(QIODevice::WriteOnly)) {
+        ui->infoLabel->setText(tr("Failed to export - couldn't open %1 for writing in. Do you have the necessary permissions to write to that folder?").arg(filePath));
+        return;
     }
+    checkWriteability.close();
+
+    XMLexport writer(mpHost);
+    //write trigs
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QStringLiteral("Triggers"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    QList<QTreeWidgetItem*> trigList;
+    recurseTree(top, trigList);
+    for (auto item : trigList) {
+        if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)) {
+            triggerMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder) {
+            triggerMap[item]->mModuleMasterFolder = false;
+            modTriggerMap.insert(item, triggerMap[item]);
+        }
+    }
+    items = treeWidget->findItems(QStringLiteral("Timers"), Qt::MatchExactly, 0);
+    top = items.first();
+    QList<QTreeWidgetItem*> timerList;
+    recurseTree(top, timerList);
+    for (auto item : timerList) {
+        if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)) {
+            timerMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder) {
+            timerMap[item]->mModuleMasterFolder = false;
+            modTimerMap.insert(item, timerMap[item]);
+        }
+    }
+    items = treeWidget->findItems(QStringLiteral("Aliases"), Qt::MatchExactly, 0);
+    top = items.first();
+    QList<QTreeWidgetItem*> aliasList;
+    recurseTree(top, aliasList);
+    for (auto item : aliasList) {
+        if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
+            aliasMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
+            aliasMap[item]->mModuleMasterFolder = false;
+            modAliasMap.insert(item, aliasMap[item]);
+        }
+    }
+    items = treeWidget->findItems(QStringLiteral("Buttons"), Qt::MatchExactly, 0);
+    top = items.first();
+    QList<QTreeWidgetItem*> actionList;
+    recurseTree(top, actionList);
+    for (auto item : actionList) {
+        if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
+            actionMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
+            actionMap[item]->mModuleMasterFolder = false;
+            modActionMap.insert(item, actionMap[item]);
+        }
+    }
+    items = treeWidget->findItems(QStringLiteral("Scripts"), Qt::MatchExactly, 0);
+    top = items.first();
+    QList<QTreeWidgetItem*> scriptList;
+    recurseTree(top, scriptList);
+    for (auto item : scriptList) {
+        if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
+            scriptMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
+            scriptMap[item]->mModuleMasterFolder = false;
+            modScriptMap.insert(item, scriptMap[item]);
+        }
+    }
+    items = treeWidget->findItems(QStringLiteral("Keys"), Qt::MatchExactly, 0);
+    top = items.first();
+    QList<QTreeWidgetItem*> keyList;
+    recurseTree(top, keyList);
+    for (auto item : keyList) {
+        if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
+            keyMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
+            keyMap[item]->mModuleMasterFolder = false;
+            modKeyMap.insert(item, keyMap[item]);
+        }
+    }
+
+    writer.exportGenericPackage(filePath);
+
+    //now fix all the stuff we weren't exporting
+    //trigger, timer, alias,action,script, keys
+    for (auto item : trigList) {
+        if (triggerMap.contains(item)) {
+            triggerMap[item]->exportItem = true;
+        }
+        if (modTriggerMap.contains(item)) {
+            modTriggerMap[item]->mModuleMasterFolder = true;
+        }
+    }
+    for (auto item : timerList) {
+        if (timerMap.contains(item)) {
+            timerMap[item]->exportItem = true;
+        }
+        if (modTimerMap.contains(item)) {
+            modTimerMap[item]->mModuleMasterFolder = true;
+        }
+    }
+    for (auto item : actionList) {
+        if (actionMap.contains(item)) {
+            actionMap[item]->exportItem = true;
+        }
+        if (modActionMap.contains(item)) {
+            modActionMap[item]->mModuleMasterFolder = true;
+        }
+    }
+    for (auto item : scriptList) {
+        if (scriptMap.contains(item)) {
+            scriptMap[item]->exportItem = true;
+        }
+        if (modScriptMap.contains(item)) {
+            modScriptMap[item]->mModuleMasterFolder = true;
+        }
+    }
+    for (auto item : keyList) {
+        if (keyMap.contains(item)) {
+            keyMap[item]->exportItem = true;
+        }
+        if (modKeyMap.contains(item)) {
+            modKeyMap[item]->mModuleMasterFolder = true;
+        }
+    }
+    for (auto item : aliasList) {
+        if (aliasMap.contains(item)) {
+            aliasMap[item]->exportItem = true;
+        }
+        if (modAliasMap.contains(item)) {
+            modAliasMap[item]->mModuleMasterFolder = true;
+        }
+    }
+
+
+    int err = 0;
+    char buf[100];
+    zip* archive;
+    archive = zip_open(zipFile.toStdString().c_str(), ZIP_CREATE, &err);
+    if (err != 0) {
+        zip_error_to_str(buf, sizeof(buf), err, errno);
+        //FIXME: report error to user qDebug()<<"dp zip open error"<<zipFile<<buf;
+        close();
+        return;
+    }
+    QDir dir(tempDir);
+    QStringList contents = dir.entryList();
+    for (int i = 0; i < contents.size(); i++) {
+        QString fname = contents[i];
+        if (fname == "." || fname == "..") {
+            continue;
+        }
+        QString fullName = tempDir + "/" + contents[i];
+        struct zip_source* s = zip_source_file(archive, fullName.toStdString().c_str(), 0, 0);
+        if (s == nullptr) {
+            int sep = 0;
+            zip_error_get(archive, &err, &sep);
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
+        }
+        err = zip_add(archive, fname.toStdString().c_str(), s);
+        if (err == -1) {
+            int sep = 0;
+            zip_error_get(archive, &err, &sep);
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            //FIXME: report error to userqDebug()<<"added file error"<<fullName<<fname<<buf;
+        }
+    }
+    err = zip_close(archive);
+    if (err != 0) {
+        zip_error_to_str(buf, sizeof(buf), err, errno);
+        //FIXME: report error to userqDebug()<<"dp close file error"<<buf;
+        close();
+        return;
+    }
+
     close();
 }
 
