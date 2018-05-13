@@ -735,7 +735,11 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
+#if QT_VERSION < QT_VERSION_CHECK(5, 7, 0)
+            for (int i : pT->mRegexCodePropertyList) {
+#else
             for (int i : qAsConst(pT->mRegexCodePropertyList)) {
+#endif
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }
