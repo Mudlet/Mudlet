@@ -62,26 +62,26 @@ public:
     XMLexport(TKey*);
     ~XMLexport();
 
-    bool writeHost(Host *, pugi::xml_node hostPackage);
+    bool writeHost(Host*, pugi::xml_node hostPackage);
 
-    bool writeTrigger(TTrigger *, pugi::xml_node xmlParent);
-    bool writeTimer(TTimer *, pugi::xml_node xmlParent);
-    bool writeAlias(TAlias *, pugi::xml_node xmlParent);
-    bool writeAction(TAction *, pugi::xml_node xmlParent);
-    bool writeScript(TScript *, pugi::xml_node xmlParent);
-    bool writeKey(TKey *, pugi::xml_node xmlParent);
-    bool writeVariable(TVar *, LuaInterface *, VarUnit *, pugi::xml_node xmlParent);
-    bool writeModuleXML(const QString &moduleName, const QString &fileName);
+    bool writeTrigger(TTrigger*, pugi::xml_node xmlParent);
+    bool writeTimer(TTimer*, pugi::xml_node xmlParent);
+    bool writeAlias(TAlias*, pugi::xml_node xmlParent);
+    bool writeAction(TAction*, pugi::xml_node xmlParent);
+    bool writeScript(TScript*, pugi::xml_node xmlParent);
+    bool writeKey(TKey*, pugi::xml_node xmlParent);
+    bool writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
+    bool writeModuleXML(const QString& moduleName, const QString& fileName);
 
-    bool exportHost(const QString &filename_pugi_xml);
+    bool exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackageNode);
     bool exportGenericPackage(const QString& exportFileName);
-    bool exportTrigger(QIODevice*);
-    bool exportTimer(QIODevice*);
-    bool exportAlias(QIODevice*);
-    bool exportAction(QIODevice*);
-    bool exportScript(QIODevice*);
-    bool exportKey(QIODevice*);
+    bool exportTrigger(const QString& fileName);
+    bool exportTimer(const QString& fileName);
+    bool exportAlias(const QString& fileName);
+    bool exportAction(const QString& fileName);
+    bool exportScript(const QString& fileName);
+    bool exportKey(const QString& fileName);
 
     bool exportToClipboard(TTrigger*);
     bool exportToClipboard(TTimer*);
@@ -90,7 +90,7 @@ public:
     bool exportToClipboard(TScript*);
     bool exportToClipboard(TKey*);
 
-    bool writeScriptElement(const QString &, pugi::xml_node xmlElement);
+    bool writeScriptElement(const QString&, pugi::xml_node xmlElement);
 
     QVector<QFuture<bool>> saveFutures;
 
@@ -114,7 +114,8 @@ private:
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackageNode);
     void inline replaceAll(std::string& source, const char from, const std::string& to);
     void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
-    bool saveXml(const QString &fileName);
+    bool saveXml(const QString& fileName);
+    pugi::xml_node writeXmlHeader();
 };
 
 #endif // MUDLET_XMLEXPORT_H

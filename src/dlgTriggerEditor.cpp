@@ -6966,7 +6966,7 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
 }
 
-void dlgTriggerEditor::exportTrigger(QFile& file)
+void dlgTriggerEditor::exportTrigger(const QString& fileName)
 {
     QString name;
     TTrigger* pT = nullptr;
@@ -6985,12 +6985,12 @@ void dlgTriggerEditor::exportTrigger(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportTrigger(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportTrigger(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportTimer(QFile& file)
+void dlgTriggerEditor::exportTimer(const QString& fileName)
 {
     QString name;
     TTimer* pT = nullptr;
@@ -7009,12 +7009,12 @@ void dlgTriggerEditor::exportTimer(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportTimer(&file)) {
-        statusBar()->showMessage(tr("Package") + name + tr(" saved"), 2000);
+    if (writer.exportTimer(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportAlias(QFile& file)
+void dlgTriggerEditor::exportAlias(const QString& fileName)
 {
     QString name;
     TAlias* pT = nullptr;
@@ -7033,12 +7033,12 @@ void dlgTriggerEditor::exportAlias(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportAlias(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportAlias(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportAction(QFile& file)
+void dlgTriggerEditor::exportAction(const QString& fileName)
 {
     QString name;
     TAction* pT = nullptr;
@@ -7057,12 +7057,12 @@ void dlgTriggerEditor::exportAction(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportAction(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportAction(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportScript(QFile& file)
+void dlgTriggerEditor::exportScript(const QString& fileName)
 {
     QString name;
     TScript* pT = nullptr;
@@ -7081,12 +7081,12 @@ void dlgTriggerEditor::exportScript(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportScript(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportScript(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportKey(QFile& file)
+void dlgTriggerEditor::exportKey(const QString& fileName)
 {
     QString name;
     TKey* pT = nullptr;
@@ -7106,8 +7106,8 @@ void dlgTriggerEditor::exportKey(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportKey(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportKey(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
@@ -7279,22 +7279,22 @@ void dlgTriggerEditor::slot_export()
 
     switch (mCurrentView) {
     case static_cast<int>(EditorViewType::cmTriggerView):
-        exportTrigger(file);
+        exportTrigger(fileName);
         break;
     case static_cast<int>(EditorViewType::cmTimerView):
-        exportTimer(file);
+        exportTimer(fileName);
         break;
     case static_cast<int>(EditorViewType::cmAliasView):
-        exportAlias(file);
+        exportAlias(fileName);
         break;
     case static_cast<int>(EditorViewType::cmScriptView):
-        exportScript(file);
+        exportScript(fileName);
         break;
     case static_cast<int>(EditorViewType::cmActionView):
-        exportAction(file);
+        exportAction(fileName);
         break;
     case static_cast<int>(EditorViewType::cmKeysView):
-        exportKey(file);
+        exportKey(fileName);
         break;
     };
 }
