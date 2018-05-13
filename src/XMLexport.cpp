@@ -133,14 +133,7 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
     auto pHost = mpHost;
     bool isOk = true;
 
-    auto decl = mExportDoc.prepend_child(pugi::node_declaration);
-    decl.append_attribute("version") = "1.0";
-    decl.append_attribute("encoding") = "UTF-8";
-
-    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
-
-    auto mudletPackage = mExportDoc.append_child("MudletPackage");
-    mudletPackage.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
+    auto mudletPackage = writeXmlHeader();
 
     if (isOk) {
         auto triggerPackage = mudletPackage.append_child("TriggerPackage");
@@ -244,14 +237,7 @@ bool XMLexport::writeModuleXML(const QString &moduleName, const QString &fileNam
 
 bool XMLexport::exportHost(const QString &filename_pugi_xml)
 {
-    auto decl = mExportDoc.prepend_child(pugi::node_declaration);
-    decl.append_attribute("version") = "1.0";
-    decl.append_attribute("encoding") = "UTF-8";
-
-    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
-
-    auto mudletPackage = mExportDoc.append_child("MudletPackage");
-    mudletPackage.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
+    auto mudletPackage = writeXmlHeader();
 
     if (writeHost(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
@@ -687,14 +673,7 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
 
 bool XMLexport::exportGenericPackage(const QString& exportFileName)
 {
-    auto decl = mExportDoc.prepend_child(pugi::node_declaration);
-    decl.append_attribute("version") = "1.0";
-    decl.append_attribute("encoding") = "UTF-8";
-
-    mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
-
-    auto mudletPackage = mExportDoc.append_child("MudletPackage");
-    mudletPackage.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
+    auto mudletPackage = writeXmlHeader();
 
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
