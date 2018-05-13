@@ -171,9 +171,6 @@ macx {
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
 
-# pugixml options (https://pugixml.org/docs/manual.html#install.building.config)
-#DEFINES += PUGIXML_NO_XPATH
-
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
 # Setting an environmental variable WITH_FONTS to the case insensitive value
 # "no" will stop the inclusion of the fonts present in the source code in the
@@ -454,6 +451,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 
 ################################## File Lists ##################################
 SOURCES += \
+    ../3rdparty/pugixml/src/pugixml.cpp \
     ActionUnit.cpp \
     AliasUnit.cpp \
     ctelnet.cpp \
@@ -522,8 +520,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    ../3rdparty/pugixml/src/pugixml.cpp
+    XMLimport.cpp
 
 
 HEADERS += \
