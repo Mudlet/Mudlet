@@ -64,13 +64,13 @@ public:
 
     bool writeHost(Host*, pugi::xml_node hostPackage);
 
-    bool writeTrigger(TTrigger*, pugi::xml_node xmlParent);
-    bool writeTimer(TTimer*, pugi::xml_node xmlParent);
-    bool writeAlias(TAlias*, pugi::xml_node xmlParent);
-    bool writeAction(TAction*, pugi::xml_node xmlParent);
-    bool writeScript(TScript*, pugi::xml_node xmlParent);
-    bool writeKey(TKey*, pugi::xml_node xmlParent);
-    bool writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
+    void writeTrigger(TTrigger*, pugi::xml_node xmlParent);
+    void writeTimer(TTimer*, pugi::xml_node xmlParent);
+    void writeAlias(TAlias*, pugi::xml_node xmlParent);
+    void writeAction(TAction*, pugi::xml_node xmlParent);
+    void writeScript(TScript*, pugi::xml_node xmlParent);
+    void writeKey(TKey*, pugi::xml_node xmlParent);
+    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
     bool writeModuleXML(const QString& moduleName, const QString& fileName);
 
     bool exportHost(const QString& filename_pugi_xml);

@@ -641,9 +641,8 @@ void XMLexport::writeTriggerPackage(const Host *pHost, pugi::xml_node &mudletPac
     }
 }
 
-bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *pVariableUnit, pugi::xml_node xmlParent)
+void XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *pVariableUnit, pugi::xml_node xmlParent)
 {
-    bool isOk = true;
     if (pVariableUnit->isSaved(pVar)) {
         if (pVar->getValueType() == LUA_TTABLE) {
             auto variableGroup = xmlParent.append_child("VariableGroup");
@@ -654,10 +653,8 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
             variableGroup.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
 
             QListIterator<TVar*> itNestedVariable(pVar->getChildren(false));
-            while (isOk && itNestedVariable.hasNext()) {
-                if (!writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup)) {
-                    isOk = false;
-                }
+            while (itNestedVariable.hasNext()) {
+                writeVariable(itNestedVariable.next(), pLuaInterface, pVariableUnit, variableGroup);
             }
         } else {
             auto variable = xmlParent.append_child("Variable");
@@ -668,8 +665,6 @@ bool XMLexport::writeVariable(TVar *pVar, LuaInterface *pLuaInterface, VarUnit *
             variable.append_child("valueType").text().set(QString::number(pVar->getValueType()).toUtf8().constData());
         }
     }
-
-    return isOk;
 }
 
 bool XMLexport::exportGenericPackage(const QString& exportFileName)
@@ -750,9 +745,8 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
+void XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
 {
-    bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto trigger = xmlParent.append_child(pT->isFolder() ? "TriggerGroup" : "Trigger");
 
@@ -793,21 +787,15 @@ bool XMLexport::writeTrigger(TTrigger *pT, pugi::xml_node xmlParent)
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-            for (int i : pT->mRegexCodePropertyList) {
+            for (int i : qAsConst(pT->mRegexCodePropertyList)) {
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }
-
-        isOk = true;
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
-        if (!writeTrigger(*it, xmlParent)) {
-            isOk = false;
-        }
+    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
+        writeTrigger(*it, xmlParent);
     }
-
-    return isOk;
 }
 
 bool XMLexport::exportAlias(const QString& fileName)
@@ -837,9 +825,8 @@ void XMLexport::exportToClipboard(TAlias* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
+void XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
 {
-    bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto aliasContents = xmlParent.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
 
@@ -857,17 +844,11 @@ bool XMLexport::writeAlias(TAlias *pT, pugi::xml_node xmlParent)
             aliasContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             aliasContents.append_child("regex").text().set(pT->mRegexCode.toUtf8().constData());
         }
-
-        isOk = true;
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
-        if (!writeAlias(*it, xmlParent)) {
-            isOk = false;
-        }
+    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
+        writeAlias(*it, xmlParent);
     }
-
-    return isOk;
 }
 
 bool XMLexport::exportAction(const QString& fileName)
@@ -897,9 +878,8 @@ void XMLexport::exportToClipboard(TAction* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
+void XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
 {
-    bool isOk = true;    
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto actionContents = xmlParent.append_child(pT->isFolder() ? "ActionGroup" : "Action");
 
@@ -934,17 +914,11 @@ bool XMLexport::writeAction(TAction *pT, pugi::xml_node xmlParent)
             actionContents.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toUtf8().constData());
             actionContents.append_child("buttonColor").text().set(pT->mButtonColor.name().toUtf8().constData());
         }
-
-        isOk = true;
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
-        if (!writeAction(*it, xmlParent)) {
-            isOk = false;
-        }
+    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
+        writeAction(*it, xmlParent);
     }
-
-    return isOk;
 }
 
 bool XMLexport::exportTimer(const QString& fileName)
@@ -974,9 +948,8 @@ void XMLexport::exportToClipboard(TTimer* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
+void XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
 {
-    bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto timerContents = xmlParent.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
 
@@ -997,17 +970,11 @@ bool XMLexport::writeTimer(TTimer *pT, pugi::xml_node xmlParent)
             timerContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             timerContents.append_child("time").text().set(pT->mTime.toString("hh:mm:ss.zzz").toUtf8().constData());
         }
-
-        isOk = true;
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
-        if (!writeTimer(*it, xmlParent)) {
-            isOk = false;
-        }
+    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
+        writeTimer(*it, xmlParent);
     }
-
-    return isOk;
 }
 
 bool XMLexport::exportScript(const QString& fileName)
@@ -1037,9 +1004,8 @@ void XMLexport::exportToClipboard(TScript* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
+void XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
 {
-    bool isOk = true;    
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto scriptContents = xmlParent.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
 
@@ -1059,17 +1025,11 @@ bool XMLexport::writeScript(TScript *pT, pugi::xml_node xmlParent)
                 eventHandlerList.append_child("string").text().set(pT->mEventHandlerList.at(i).toUtf8().constData());
             }
         }
-
-        isOk = true;
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); it++) {
-        if (!writeScript(*it, xmlParent)) {
-            isOk = false;
-        }
+    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++) {
+        writeScript(*it, xmlParent);
     }
-
-    return isOk;
 }
 
 bool XMLexport::exportKey(const QString& fileName)
@@ -1099,9 +1059,8 @@ void XMLexport::exportToClipboard(TKey* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
+void XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
 {
-    bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto keyContents = xmlParent.append_child(pT->isFolder() ? "KeyGroup" : "Key");
 
@@ -1120,17 +1079,11 @@ bool XMLexport::writeKey(TKey *pT, pugi::xml_node xmlParent)
             keyContents.append_child("keyCode").text().set(QString::number(pT->mKeyCode).toUtf8().constData());
             keyContents.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toUtf8().constData());
         }
-
-        isOk = true;
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it) {
-        if (!writeKey(*it, xmlParent)) {
-            isOk = false;
-        }
+    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
+        writeKey(*it, xmlParent);
     }
-
-    return isOk;
 }
 
 void XMLexport::writeScriptElement(const QString &script, pugi::xml_node xmlElement)
