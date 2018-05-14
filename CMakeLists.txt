@@ -33,6 +33,9 @@
 
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.1)
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11") # Qt 5.10 with which we build on OS X only supports 10.11 and up.
+endif()
 
 project(mudlet)
 
@@ -270,4 +273,3 @@ endif(CCACHE_FOUND)
 add_subdirectory(src)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(3rdparty/lua_yajl)
-add_subdirectory(3rdparty/pugixml)

@@ -76,7 +76,7 @@ CONFIG += c++11
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.10
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.11
 
 QT += network opengl uitools multimedia gui concurrent
 qtHaveModule(gamepad): QT += gamepad
@@ -169,7 +169,6 @@ macx {
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
-
 
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
 # Setting an environmental variable WITH_FONTS to the case insensitive value
@@ -269,7 +268,8 @@ unix:!macx {
         -lyajl \
         -lGLU \
         -lzip \
-        -lz
+        -lz \
+        -lpugixml
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
@@ -287,6 +287,7 @@ unix:!macx {
         -lopengl32 \
         -lglut \
         -lglu32 \
+        -lpugixml \
         -L"$${MINGW_BASE_DIR}\\bin"
     INCLUDEPATH += "C:\\mingw32\\include" \
                    "C:\\Libraries\\boost_1_60_0" \
@@ -322,7 +323,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip
+    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 
@@ -451,7 +452,6 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 
 ################################## File Lists ##################################
 SOURCES += \
-    ../3rdparty/pugixml/src/pugixml.cpp \
     ActionUnit.cpp \
     AliasUnit.cpp \
     ctelnet.cpp \
@@ -1332,6 +1332,7 @@ DISTFILES += \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
+    ../cmake/FindPUGIXML.cmake \
     ../.travis.yml \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
