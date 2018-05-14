@@ -25,10 +25,6 @@ if(USE_FONTS)
     add_definitions(-DINCLUDE_FONTS)
 endif()
 
-if(APPLE)
-    set(MACOSX_DEPLOYMENT_TARGET "10.11") # Qt 5.10 with which we build on OS X only supports 10.11 and up.
-endif()
-
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
