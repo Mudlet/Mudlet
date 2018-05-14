@@ -2421,8 +2421,10 @@ int TLuaInterpreter::setFont(lua_State* L)
             displayFont.setFamily(font);
             pHost->mDisplayFont = displayFont;
             // apply changes to main console and its while-scrolling component too.
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(displayFont);
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(displayFont);
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
@@ -2456,7 +2458,7 @@ int TLuaInterpreter::getFont(lua_State* L)
             windowName = QString::fromUtf8(lua_tostring(L, 1));
 
             if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-                font = pHost->mDisplayFont.family();
+                font = pHost->mpConsole->mUpperPane->fontInfo().family();
             } else {
                 font = mudlet::self()->getWindowFont(pHost, windowName);
             }
@@ -2468,7 +2470,7 @@ int TLuaInterpreter::getFont(lua_State* L)
             }
         }
     } else {
-        font = pHost->mDisplayFont.family();
+        font = pHost->mpConsole->mUpperPane->fontInfo().family();
     }
 
     lua_pushstring(L, font.toUtf8().constData());

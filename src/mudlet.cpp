@@ -1382,7 +1382,7 @@ QString mudlet::getWindowFont(Host* pHost, const QString& name)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
 
     if (dockWindowConsoleMap.contains(name)) {
-        return dockWindowConsoleMap.value(name)->mUpperPane->mDisplayFont.family();
+        return dockWindowConsoleMap.value(name)->mUpperPane->fontInfo().family();
     } else {
         return QString();
     }
