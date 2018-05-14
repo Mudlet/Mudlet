@@ -317,12 +317,12 @@ private:
     void expand_child_action(TAction*, QTreeWidgetItem*);
     void expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
 
-    void exportTrigger(QFile&);
-    void exportTimer(QFile&);
-    void exportAlias(QFile&);
-    void exportAction(QFile&);
-    void exportScript(QFile&);
-    void exportKey(QFile&);
+    void exportTrigger(const QString &fileName);
+    void exportTimer(const QString &fileName);
+    void exportAlias(const QString &fileName);
+    void exportAction(const QString &fileName);
+    void exportScript(const QString &fileName);
+    void exportKey(const QString &fileName);
 
     void exportTriggerToClipboard();
     void exportTimerToClipboard();
@@ -447,7 +447,7 @@ private:
     // QAction* mpAction_searchRegExp;
     void clearEditorNotification() const;
 
-    QAction* profileSaveAction;
+    QAction* mProfileSaveAction;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

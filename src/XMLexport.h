@@ -62,40 +62,36 @@ public:
     XMLexport(TKey*);
     ~XMLexport();
 
-    bool writeHost(Host *, pugi::xml_node hostPackage);
+    void writeHost(Host*, pugi::xml_node hostPackage);
+    void writeTrigger(TTrigger*, pugi::xml_node xmlParent);
+    void writeTimer(TTimer*, pugi::xml_node xmlParent);
+    void writeAlias(TAlias*, pugi::xml_node xmlParent);
+    void writeAction(TAction*, pugi::xml_node xmlParent);
+    void writeScript(TScript*, pugi::xml_node xmlParent);
+    void writeKey(TKey*, pugi::xml_node xmlParent);
+    void writeVariable(TVar*, LuaInterface*, VarUnit*, pugi::xml_node xmlParent);
+    void writeModuleXML(const QString& moduleName, const QString& fileName);
 
-    bool writeTrigger(TTrigger *, pugi::xml_node xmlParent);
-    bool writeTimer(TTimer *, pugi::xml_node xmlParent);
-    bool writeAlias(TAlias *, pugi::xml_node xmlParent);
-    bool writeAction(TAction *, pugi::xml_node xmlParent);
-    bool writeScript(TScript *, pugi::xml_node xmlParent);
-    bool writeKey(TKey *, pugi::xml_node xmlParent);
-    bool writeVariable(TVar *, LuaInterface *, VarUnit *, pugi::xml_node xmlParent);
-    bool writeModuleXML(const QString &moduleName, const QString &fileName);
+    void exportHost(const QString& filename_pugi_xml);
+    bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage);
+    bool exportGenericPackage(const QString& exportFileName);
+    bool exportTrigger(const QString& fileName);
+    bool exportTimer(const QString& fileName);
+    bool exportAlias(const QString& fileName);
+    bool exportAction(const QString& fileName);
+    bool exportScript(const QString& fileName);
+    bool exportKey(const QString& fileName);
 
-    bool exportHost(const QString &filename_pugi_xml);
-    bool exportGenericPackage(QIODevice* device);
-    bool writeGenericPackage(Host*);
-    bool exportTrigger(QIODevice*);
-    bool exportTimer(QIODevice*);
-    bool exportAlias(QIODevice*);
-    bool exportAction(QIODevice*);
-    bool exportScript(QIODevice*);
-    bool exportKey(QIODevice*);
+    void exportToClipboard(TTrigger*);
+    void exportToClipboard(TTimer*);
+    void exportToClipboard(TAlias*);
+    void exportToClipboard(TAction*);
+    void exportToClipboard(TScript*);
+    void exportToClipboard(TKey*);
 
-    bool exportToClipboard(TTrigger*);
-    bool exportToClipboard(TTimer*);
-    bool exportToClipboard(TAlias*);
-    bool exportToClipboard(TAction*);
-    bool exportToClipboard(TScript*);
-    bool exportToClipboard(TKey*);
+    void writeScriptElement(const QString&, pugi::xml_node xmlElement);
 
-    bool writeScriptElement(const QString &, pugi::xml_node xmlElement);
-
-    QFuture<bool> savingFuture;
-
-signals:
-    void saveCompleted();
+    QVector<QFuture<bool>> saveFutures;
 
 private:
     QPointer<Host> mpHost;
@@ -107,16 +103,19 @@ private:
     TKey* mpKey;
     pugi::xml_document mExportDoc;
 
-    void showXmlDebug();
-    void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeTimerPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeAliasPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeActionPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackageNode, bool ignoreModuleMember);
-    void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackageNode);
-    bool saveXml(const QString& fileName);
+    void writeTriggerPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeTimerPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeAliasPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeActionPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
+    void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
     void inline replaceAll(std::string& source, const char from, const std::string& to);
+    void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
+    bool saveXml(const QString& fileName);
+    pugi::xml_node writeXmlHeader();
+    void sanitizeForQxml(std::string& output);
+    QString saveXml();
 };
 
 #endif // MUDLET_XMLEXPORT_H

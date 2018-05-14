@@ -2210,8 +2210,6 @@ void mudlet::addSubWindow(TConsole* pConsole)
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    hide();
-
     foreach (TConsole* pC, mConsoleMap) {
         if (!pC->close()) {
             event->ignore();
@@ -2249,6 +2247,9 @@ void mudlet::closeEvent(QCloseEvent* event)
         }
     }
 
+    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
+    hide();
+
     for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
         auto host = mHostManager.getHost(hostName);
         if (host->currentlySavingProfile()) {
@@ -2263,8 +2264,6 @@ void mudlet::closeEvent(QCloseEvent* event)
 
 void mudlet::forceClose()
 {
-    hide();
-
     for (auto& console : mConsoleMap) {
         auto host = console->getHost();
         host->saveProfile();
@@ -2289,7 +2288,10 @@ void mudlet::forceClose()
         }
 
         console->close();
-    }
+    }    
+
+    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
+    hide();
 
     for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
         auto host = mHostManager.getHost(hostName);

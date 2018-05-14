@@ -143,6 +143,7 @@ public:
     void raiseEvent(const TEvent& event);
     void resetProfile();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), bool syncModules = false);
+    std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();
     void reenableAllTriggers();
 
@@ -170,7 +171,7 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
-    void saveProfileCompleted();
+    void xmlSaved(const QString &xmlName);
     bool currentlySavingProfile();
     void waitForProfileSave();
 
@@ -381,7 +382,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-    bool mModuleSaveBlock;
 
     QPushButton* uninstallButton;
     QListWidget* packageList;
@@ -391,7 +391,8 @@ private:
 
     bool mHaveMapperScript;
 
-    QScopedPointer<XMLexport> writer;
+    // keeps track of all of the array writers we're currently operating with
+    QHash<QString, XMLexport*> writers;
 };
 
 #endif // MUDLET_HOST_H

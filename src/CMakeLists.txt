@@ -147,9 +147,9 @@ set(mudlet_MOC_HDRS
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
+    Host.h
     exitstreewidget.h
     glwidget.h
-    Host.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
@@ -488,6 +488,7 @@ target_link_libraries(mudlet
     communi
     lua_yajl
     edbee-lib
+    pugixml
 )
 
 if(USE_UPDATER)
