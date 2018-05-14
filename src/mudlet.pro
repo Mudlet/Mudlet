@@ -268,7 +268,7 @@ unix:!macx {
         -lyajl \
         -lGLU \
         -lzip \
-        -lz
+        -lz \
         -lpugixml
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
