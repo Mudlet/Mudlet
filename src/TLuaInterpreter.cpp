@@ -2458,7 +2458,7 @@ int TLuaInterpreter::getFont(lua_State* L)
             windowName = QString::fromUtf8(lua_tostring(L, 1));
 
             if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-                font = mudlet::self()->mConsoleMap[pHost]->mUpperPane->fontInfo().family();
+                font = pHost->mpConsole->mUpperPane->fontInfo().family();
             } else {
                 font = mudlet::self()->getWindowFont(pHost, windowName);
             }
@@ -2470,7 +2470,7 @@ int TLuaInterpreter::getFont(lua_State* L)
             }
         }
     } else {
-        font = mudlet::self()->mConsoleMap[pHost]->mUpperPane->fontInfo().family();
+        font = pHost->mpConsole->mUpperPane->fontInfo().family();
     }
 
     lua_pushstring(L, font.toUtf8().constData());
