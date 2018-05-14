@@ -322,7 +322,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip
+    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip libpugixml
     INCLUDEPATH += /usr/local/include
 }
 
@@ -1331,6 +1331,7 @@ DISTFILES += \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
+    ../cmake/FindPUGIXML.cmake \
     ../.travis.yml \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
