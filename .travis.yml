@@ -3,7 +3,6 @@ cache:
   - ccache
 dist: trusty
 sudo: false
-osx_image: xcode6.4
 addons:
   apt:
     sources: &add-sources
@@ -49,10 +48,12 @@ git:
 matrix:
   include:
   - os: osx
+    osx_image: xcode8
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
   - os: osx
+    osx_image: xcode8
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
