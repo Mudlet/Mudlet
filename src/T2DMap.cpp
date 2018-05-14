@@ -2059,7 +2059,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                                         QString::number(_paid->min_z),
                                         QString::number(_paid->max_z));
             } else {
-                infoText = QStringLiteral("\n");
+                infoText = QChar::LineFeed;
             }
 
             if (!_prid->name.isEmpty()) {
