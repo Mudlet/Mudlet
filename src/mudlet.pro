@@ -322,7 +322,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip libpugixml
+    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 
