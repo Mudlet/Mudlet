@@ -448,6 +448,7 @@ private:
     void clearEditorNotification() const;
 
     QAction* mProfileSaveAction;
+    QAction* mProfileSaveAsAction;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

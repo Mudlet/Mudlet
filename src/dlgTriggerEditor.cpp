@@ -407,9 +407,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
     connect(mProfileSaveAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAction()));
 
-    QAction* saveProfileAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
-    saveProfileAsAction->setEnabled(true);
-    connect(saveProfileAsAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAsAction()));
+    mProfileSaveAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
+    mProfileSaveAsAction->setEnabled(true);
+    connect(mProfileSaveAsAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAsAction()));
 
     QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
     viewStatsAction->setStatusTip(tr("Generates a statics summary display on the main profile console."));
@@ -445,7 +445,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(deleteTriggerAction);
     toolBar->addAction(importAction);
     toolBar->addAction(exportAction);
-    toolBar->addAction(saveProfileAsAction);
+    toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
     connect(button_displayAllVariables, SIGNAL(toggled(bool)), this, SLOT(slot_toggleHiddenVariables(bool)));
@@ -7947,12 +7947,14 @@ void dlgTriggerEditor::slot_updateStatusBar(QString statusText)
 void dlgTriggerEditor::slot_profileSaveStarted()
 {
     mProfileSaveAction->setDisabled(true);
+    mProfileSaveAsAction->setDisabled(true);
     mProfileSaveAction->setText(tr("Saving…"));
 }
 
 void dlgTriggerEditor::slot_profileSaveFinished()
 {
     mProfileSaveAction->setEnabled(true);
+    mProfileSaveAsAction->setEnabled(true);
     mProfileSaveAction->setText(tr("Save Profile"));
 }
 
