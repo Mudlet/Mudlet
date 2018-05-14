@@ -488,7 +488,6 @@ target_link_libraries(mudlet
     communi
     lua_yajl
     edbee-lib
-    pugixml
 )
 
 if(USE_UPDATER)
