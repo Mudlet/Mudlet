@@ -397,19 +397,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     exportAction->setEnabled(true);
     connect(exportAction, SIGNAL(triggered()), this, SLOT(slot_export()));
 
-    QAction* profileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
-    profileSaveAction->setEnabled(true);
-    profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
-    profileSaveAction->setToolTip(
+    mProfileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
+    mProfileSaveAction->setEnabled(true);
+    mProfileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
+    mProfileSaveAction->setToolTip(
             QStringLiteral("<html><head/><body><p>%1</p></body></html>")
                     .arg(tr(R"(Saves your profile. (Ctrl+Shift+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
-    profileSaveAction->setStatusTip(
+    mProfileSaveAction->setStatusTip(
             tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
-    connect(profileSaveAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAction()));
+    connect(mProfileSaveAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAction()));
 
-    QAction* saveProfileAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
-    saveProfileAsAction->setEnabled(true);
-    connect(saveProfileAsAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAsAction()));
+    mProfileSaveAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
+    mProfileSaveAsAction->setEnabled(true);
+    connect(mProfileSaveAsAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAsAction()));
 
     QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
     viewStatsAction->setStatusTip(tr("Generates a statics summary display on the main profile console."));
@@ -445,8 +445,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(deleteTriggerAction);
     toolBar->addAction(importAction);
     toolBar->addAction(exportAction);
-    toolBar->addAction(saveProfileAsAction);
-    toolBar->addAction(profileSaveAction);
+    toolBar->addAction(mProfileSaveAsAction);
+    toolBar->addAction(mProfileSaveAction);
 
     connect(button_displayAllVariables, SIGNAL(toggled(bool)), this, SLOT(slot_toggleHiddenVariables(bool)));
 
@@ -6406,6 +6406,7 @@ void dlgTriggerEditor::saveOpenChanges()
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
     if (mNeedUpdateData) {
+        saveOpenChanges();
         treeWidget_triggers->clear();
         treeWidget_aliases->clear();
         treeWidget_timers->clear();
@@ -6421,6 +6422,7 @@ void dlgTriggerEditor::enterEvent(QEvent* pE)
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
     if (mNeedUpdateData) {
+        saveOpenChanges();
         treeWidget_triggers->clear();
         treeWidget_aliases->clear();
         treeWidget_timers->clear();
@@ -6964,7 +6966,7 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
 }
 
-void dlgTriggerEditor::exportTrigger(QFile& file)
+void dlgTriggerEditor::exportTrigger(const QString& fileName)
 {
     QString name;
     TTrigger* pT = nullptr;
@@ -6983,12 +6985,12 @@ void dlgTriggerEditor::exportTrigger(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportTrigger(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportTrigger(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportTimer(QFile& file)
+void dlgTriggerEditor::exportTimer(const QString& fileName)
 {
     QString name;
     TTimer* pT = nullptr;
@@ -7007,12 +7009,12 @@ void dlgTriggerEditor::exportTimer(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportTimer(&file)) {
-        statusBar()->showMessage(tr("Package") + name + tr(" saved"), 2000);
+    if (writer.exportTimer(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportAlias(QFile& file)
+void dlgTriggerEditor::exportAlias(const QString& fileName)
 {
     QString name;
     TAlias* pT = nullptr;
@@ -7031,12 +7033,12 @@ void dlgTriggerEditor::exportAlias(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportAlias(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportAlias(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportAction(QFile& file)
+void dlgTriggerEditor::exportAction(const QString& fileName)
 {
     QString name;
     TAction* pT = nullptr;
@@ -7055,12 +7057,12 @@ void dlgTriggerEditor::exportAction(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportAction(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportAction(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportScript(QFile& file)
+void dlgTriggerEditor::exportScript(const QString& fileName)
 {
     QString name;
     TScript* pT = nullptr;
@@ -7079,12 +7081,12 @@ void dlgTriggerEditor::exportScript(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportScript(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportScript(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
-void dlgTriggerEditor::exportKey(QFile& file)
+void dlgTriggerEditor::exportKey(const QString& fileName)
 {
     QString name;
     TKey* pT = nullptr;
@@ -7104,8 +7106,8 @@ void dlgTriggerEditor::exportKey(QFile& file)
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportKey(&file)) {
-        statusBar()->showMessage(tr("Package ") + name + tr(" saved"), 2000);
+    if (writer.exportKey(fileName)) {
+        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
     }
 }
 
@@ -7128,9 +7130,8 @@ void dlgTriggerEditor::exportTriggerToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportTimerToClipboard()
@@ -7152,9 +7153,8 @@ void dlgTriggerEditor::exportTimerToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportAliasToClipboard()
@@ -7176,9 +7176,8 @@ void dlgTriggerEditor::exportAliasToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportActionToClipboard()
@@ -7200,9 +7199,8 @@ void dlgTriggerEditor::exportActionToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportScriptToClipboard()
@@ -7224,9 +7222,8 @@ void dlgTriggerEditor::exportScriptToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 void dlgTriggerEditor::exportKeyToClipboard()
@@ -7249,9 +7246,8 @@ void dlgTriggerEditor::exportKeyToClipboard()
         return;
     }
     XMLexport writer(pT);
-    if (writer.exportToClipboard(pT)) {
-        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
-    }
+    writer.exportToClipboard(pT);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
 }
 
 
@@ -7277,22 +7273,22 @@ void dlgTriggerEditor::slot_export()
 
     switch (mCurrentView) {
     case static_cast<int>(EditorViewType::cmTriggerView):
-        exportTrigger(file);
+        exportTrigger(fileName);
         break;
     case static_cast<int>(EditorViewType::cmTimerView):
-        exportTimer(file);
+        exportTimer(fileName);
         break;
     case static_cast<int>(EditorViewType::cmAliasView):
-        exportAlias(file);
+        exportAlias(fileName);
         break;
     case static_cast<int>(EditorViewType::cmScriptView):
-        exportScript(file);
+        exportScript(fileName);
         break;
     case static_cast<int>(EditorViewType::cmActionView):
-        exportAction(file);
+        exportAction(fileName);
         break;
     case static_cast<int>(EditorViewType::cmKeysView):
-        exportKey(file);
+        exportKey(fileName);
         break;
     };
 }
@@ -7654,14 +7650,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
         fileName.append(QStringLiteral(".xml"));
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Backup Profile:"), tr("Cannot write file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-    XMLexport writer(mpHost); //just export a generic package without host element
-    writer.exportGenericPackage(&file);
-    file.close();
+    mpHost->saveProfileAs(fileName);
 }
 
 bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
@@ -7953,6 +7942,20 @@ void dlgTriggerEditor::slot_updateStatusBar(QString statusText)
     }
 
     QMainWindow::statusBar()->showMessage(stripped);
+}
+
+void dlgTriggerEditor::slot_profileSaveStarted()
+{
+    mProfileSaveAction->setDisabled(true);
+    mProfileSaveAsAction->setDisabled(true);
+    mProfileSaveAction->setText(tr("Saving…"));
+}
+
+void dlgTriggerEditor::slot_profileSaveFinished()
+{
+    mProfileSaveAction->setEnabled(true);
+    mProfileSaveAsAction->setEnabled(true);
+    mProfileSaveAction->setText(tr("Save Profile"));
 }
 
 void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)

@@ -319,6 +319,23 @@ function InstallLuarocks() {
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
 }
 
+function InstallPugixml() {
+  $Env:Path = $NoShPath
+  DownloadFile "http://github.com/zeux/pugixml/releases/download/v1.9/pugixml-1.9.zip" "pugixml-1.9.zip"
+  ExtractZip "pugixml-1.9.zip" "pugixml"
+  Set-Location pugixml\pugixml-1.9
+  if (!(Test-Path -Path "build" -PathType Container)) {
+    Step "Creating pugixml build path"
+    New-Item build -ItemType Directory >> "$logFile" 2>&1
+  }
+  Set-Location build
+  Step "running cmake"
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
+  RunMake
+  RunMakeInstall
+  $Env:Path = $ShPath
+}
+
 function InstallLuaModules(){
   StartPart "Installing lua modules"
   Set-Location \LuaRocks
@@ -371,4 +388,5 @@ CheckAndInstall "zlib" "$Env:MINGW_BASE_DIR\bin\zlib1.dll" { InstallZlib }
 CheckAndInstall "libzip" "$Env:MINGW_BASE_DIR\include\zipconf.h" { InstallLibzip }
 CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { InstallZziplib }
 CheckAndInstall "luarocks" "C:\LuaRocks\luarocks.bat" { InstallLuarocks }
+CheckAndInstall "pugixml" "$Env:MINGW_BASE_DIR\lib\libpugixml.a" { InstallPugixml }
 InstallLuaModules

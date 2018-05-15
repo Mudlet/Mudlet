@@ -1150,6 +1150,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     auto pEditor = new dlgTriggerEditor(pH);
     pH->mpEditorDialog = pEditor;
+    connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
     pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
@@ -1418,7 +1420,7 @@ QString mudlet::getWindowFont(Host* pHost, const QString& name)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
 
     if (dockWindowConsoleMap.contains(name)) {
-        return dockWindowConsoleMap.value(name)->mUpperPane->mDisplayFont.family();
+        return dockWindowConsoleMap.value(name)->mUpperPane->fontInfo().family();
     } else {
         return QString();
     }
@@ -2261,7 +2263,7 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
     foreach (TConsole* pC, mConsoleMap) {
-        if (pC->mpHost->getName() != "default_host") {
+        if (pC->mpHost->getName() != QStringLiteral("default_host")) {
             // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
             pC->mpHost->mTelnet.disconnect();
 
@@ -2281,6 +2283,16 @@ void mudlet::closeEvent(QCloseEvent* event)
         }
     }
 
+    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
+    hide();
+
+    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
+        auto host = mHostManager.getHost(hostName);
+        if (host->currentlySavingProfile()) {
+            host->waitForProfileSave();
+        }
+    }
+
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
     event->accept();
@@ -2288,7 +2300,7 @@ void mudlet::closeEvent(QCloseEvent* event)
 
 void mudlet::forceClose()
 {
-    for (auto console : mConsoleMap) {
+    for (auto& console : mConsoleMap) {
         auto host = console->getHost();
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
@@ -2312,6 +2324,16 @@ void mudlet::forceClose()
         }
 
         console->close();
+    }    
+
+    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
+    hide();
+
+    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
+        auto host = mHostManager.getHost(hostName);
+        if (host->currentlySavingProfile()) {
+            host->waitForProfileSave();
+        }
     }
 
     writeSettings();
@@ -2852,7 +2874,7 @@ void mudlet::startAutoLogin()
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
-    for (auto host : hostList) {
+    for (auto& host : hostList) {
         QString val = readProfileData(host, QStringLiteral("autologin"));
         if (val.toInt() == Qt::Checked) {
             doAutoLogin(host);
