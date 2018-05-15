@@ -25,6 +25,7 @@ addons:
     - lua-filesystem
     - lua-zip
     - lua-sql-sqlite3
+    - libpugixml-dev
 env:
 #  matrix:
 #  - Q_OR_C_MAKE=cmake
@@ -47,10 +48,12 @@ git:
 matrix:
   include:
   - os: osx
+    osx_image: xcode8
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
   - os: osx
+    osx_image: xcode8
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake

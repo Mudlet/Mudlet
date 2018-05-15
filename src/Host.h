@@ -31,6 +31,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TriggerUnit.h"
+#include "XMLexport.h"
 #include "ctelnet.h"
 
 #include "pre_guard.h"
@@ -59,6 +60,8 @@ class TMap;
 
 class Host : public QObject
 {
+    Q_OBJECT
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -140,6 +143,7 @@ public:
     void raiseEvent(const TEvent& event);
     void resetProfile();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), bool syncModules = false);
+    std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();
     void reenableAllTriggers();
 
@@ -167,8 +171,10 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
+    void xmlSaved(const QString &xmlName);
+    bool currentlySavingProfile();
+    void waitForProfileSave();
 
-public:
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
@@ -329,6 +335,10 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
 
+signals:
+    void profileSaveStarted();
+    void profileSaveFinished();
+
 private:
     QScopedPointer<LuaInterface> mLuaInterface;
 
@@ -372,7 +382,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-    bool mModuleSaveBlock;
 
     QPushButton* uninstallButton;
     QListWidget* packageList;
@@ -381,6 +390,9 @@ private:
     QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
+
+    // keeps track of all of the array writers we're currently operating with
+    QHash<QString, XMLexport*> writers;
 };
 
 #endif // MUDLET_HOST_H
