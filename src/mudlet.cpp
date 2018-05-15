@@ -168,7 +168,6 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss", "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mConfigDir(QString())
 , mConfigDirIndex(0)
-
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -501,25 +500,44 @@ mudlet::mudlet()
     initEdbee();
 }
 
-QSettings* mudlet::getQSettings()
+QPointer<QSettings> mudlet::getQConfig()
 {
+    QPointer<QSettings> config;
     // Try for a mudlet config file, first, and check whether a custom
     // path for the configuration is given
-    QSettings config("__mudlet/config.ini", QSettings::IniFormat);
+    config = new QSettings(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
     // if the settings file 'config.ini' (relative to the mudlet
     // executable file) does not exist (read: it doesn't contain the
     // setting "configPath"), try to load the config from the default
     // paths
-    if (!config.contains("configPath")) {
-        QSettings config(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
+    if (!config->contains("configPath")) {
+        config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
     }
 
+    if (config->contains("configPath")) {
+        return config;
+    }
+}
+
+QSettings* mudlet::getQSettings()
+{
+    QPointer<QSettings> config = getQConfig();
     // return the 'Mudlet.ini' config in the path stated in configPath
-    // if configPath exists and is not empty
-    if (config.contains("configPath") && !config.value("configPath").toString().isEmpty()) {
-        QString configPath = config.value("configPath").toString();
+    // if configPath exists
+    if (!config->value("configPath").toString().isEmpty()) {
+        QString configPath = config->value("configPath").toString();
+        mConfigDir = configPath;
+        if (configPath == ".") {
+            // Load config/Mudlet.ini from the same directory as the
+            // application if configPath is set to a relative path
+            return new QSettings(QCoreApplication::applicationDirPath() + "/config/Mudlet.ini", QSettings::IniFormat);
+        }
+        // If configPath is not relative, load Mudlet.ini in configPath
         return new QSettings(configPath + "/Mudlet.ini", QSettings::IniFormat);
     }
+
+    // If config.ini or the value configPath does not exist, use the
+    // default QSettings locations to load Mudlet settings
 
     /*In case sensitive environments, two different config directories
         were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
@@ -2322,6 +2340,7 @@ void mudlet::readSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+    mConfigDirIndex = settings.value("configDirIndex").toInt();
     resize(size);
     move(pos);
     if (settings.value("maximized", false).toBool()) {
@@ -2424,51 +2443,54 @@ bool mudlet::isControlsVisible() const
 
 void mudlet::writeSettings()
 {
+    writeConfigPath();
+
+    QPointer<QSettings> settings = getQSettings();
     /*In case sensitive environments, two different config directories
       were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
       Furthermore, we skip the version from the application name to follow the convention.*/
-    mpSettings->setValue("pos", pos());
-    mpSettings->setValue("size", size());
-    mpSettings->setValue("mainiconsize", mToolbarIconSize);
-    mpSettings->setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
+    settings->setValue("pos", pos());
+    settings->setValue("size", size());
+    settings->setValue("mainiconsize", mToolbarIconSize);
+    settings->setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
-    mpSettings->setValue("showMenuBar", mMenuBarVisibility != visibleNever);
-    mpSettings->setValue("showToolbar", mToolbarVisibility != visibleNever);
+    settings->setValue("showMenuBar", mMenuBarVisibility != visibleNever);
+    settings->setValue("showToolbar", mToolbarVisibility != visibleNever);
 
-    mpSettings->setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
-    mpSettings->setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
-    mpSettings->setValue("maximized", isMaximized());
-    mpSettings->setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
-    mpSettings->setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
-    mpSettings->setValue("compactInputLine", mCompactInputLine);
-
-    Host* pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
-
-    // Run writeConfigPath() if mConfigDir is not empty
-    if (mConfigDir.isEmpty()) {
-        writeConfigPath();
-    }
+    settings->setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
+    settings->setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
+    settings->setValue("maximized", isMaximized());
+    settings->setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
+    settings->setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
+    settings->setValue("compactInputLine", mCompactInputLine);
+    settings->setValue("configDirIndex", mConfigDirIndex);
 }
 
 void mudlet::writeConfigPath()
 {
-    QSettings* config;
-    if (!mConfigDir.isEmpty()) {
+    QPointer<QSettings> config;
+    if (mConfigDir == ".") {
         // Write to a 'config.ini' file in the same directory as the
         // application file if mConfigDir is set to a relative path
-        if (mConfigDir == "./") {
-            config = new QSettings("__mudlet/config.ini", QSettings::IniFormat);
-        } else {
-            // Write to the default QSettings location
-            config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
+        config = new QSettings(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
+    } else {
+        // Otherwise, if config.ini exists in the same directory as
+        // the application, load it
+        QSettings relConfig(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
+        // Remove the configPath value in relConfig if it exists so it
+        // does not override the new config file
+        if (relConfig.contains("configPath")) {
+            relConfig.remove("configPath");
         }
-        config->setValue("configDir", mConfigDir);
+        // Load config in one of the default QSettings locations
+        config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
     }
-    delete config;
+    config->setValue("configPath", mConfigDir);
+    config->sync();
+    qDebug() << "config is opened at: " + config->fileName();
+    qDebug() << "config.configPath set to: " + config->value("configPath").toString();
+    qDebug() << "config status: " + config->status();
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -3494,75 +3516,84 @@ void mudlet::slot_module_manager_destroyed()
 // place...!
 QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
 {
-    QString homeConfigPath = QDir::homePath() + "/.config";
+    QString configDir = (self() == nullptr ? self()->getQConfig()->value("configPath").toString() : self()->mConfigDir);
+    QString configPath;
+    if (!configDir.isEmpty()) {
+        configPath = configDir;
+    } else if (configDir == ".") {
+        configPath = QCoreApplication::applicationDirPath() + "/config";
+    } else {
+        configPath = QDir::homePath() + "/.config/mudlet";
+    }
+
     switch (mode) {
     case mainPath:
         // The root of all mudlet data for the user - does not end in a '/'
-        return QStringLiteral("%1/mudlet").arg(homeConfigPath);
+        return QStringLiteral("%1").arg(configPath);
     case mainDataItemPath:
         // Takes one extra argument as a file (or directory) relating to
         // (profile independent) mudlet data - may end with a '/' if the extra
         // argument does:I agree with Hauwke. It's not difficult (but not 100% fool proof). Rather than saying you aren't trying hard enough I might instead say you just aren't trying.
-        return QStringLiteral("%1/mudlet/%2").arg(homeConfigPath, extra1);
+        return QStringLiteral("%1/%2").arg(configPath, extra1);
     case mainFontsPath:
         // (Added for 3.5.0) a revised location to store Mudlet provided fonts
-        return QStringLiteral("%1/mudlet/fonts").arg(homeConfigPath);
+        return QStringLiteral("%1/fonts").arg(configPath);
     case profilesPath:
         // The directory containing all the saved user's profiles - does not end
         // in '/'
-        return QStringLiteral("%1/mudlet/profiles").arg(homeConfigPath);
+        return QStringLiteral("%1/profiles").arg(configPath);
     case profileHomePath:
         // Takes one extra argument (profile name) that returns the base
         // directory for that profile - does NOT end in a '/' unless the
         // supplied profle name does:
-        return QStringLiteral("%1/mudlet/profiles/%2").arg(homeConfigPath, extra1);
+        return QStringLiteral("%1/profiles/%2").arg(configPath, extra1);
     case profileXmlFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/'
-        return QStringLiteral("%1/mudlet/profiles/%2/current/").arg(homeConfigPath, extra1);
+        return QStringLiteral("%1/profiles/%2/current/").arg(configPath, extra1);
     case profileMapsPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save maps files - does NOT end in a '/'
-        return QStringLiteral("%1/mudlet/profiles/%2/map").arg(homeConfigPath, extra1);
+        return QStringLiteral("%1/profiles/%2/map").arg(configPath, extra1);
     case profileDateTimeStampedMapPathFileName:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
-        return QStringLiteral("%1/mudlet/profiles/%2/map/%3map.dat").arg(homeConfigPath, extra1, extra2);
+        return QStringLiteral("%1/profiles/%2/map/%3map.dat").arg(configPath, extra1, extra2);
     case profileMapPathFileName:
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
-        return QStringLiteral("%1/mudlet/profiles/%2/map/%3").arg(homeConfigPath, extra1, extra2);
+        return QStringLiteral("%1/profiles/%2/map/%3").arg(configPath, extra1, extra2);
     case profileXmlMapPathFileName:
         // Takes one extra argument (profile name) that returns the pathFile
         // name for the downloaded IRE Server provided XML map:
-        return QStringLiteral("%1/mudlet/profiles/%2/map.xml").arg(homeConfigPath, extra1);
+        return QStringLiteral("%1/profiles/%2/map.xml").arg(configPath, extra1);
     case profileDataItemPath:
         // Takes two extra arguments (profile name, data item) that gives a
         // path file name for, typically a data item stored as a single item
         // (binary) profile data) file (ideally these can be moved to a per
         // profile QSettings file but that is a future pipe-dream on my part
         // SlySven):
-        return QStringLiteral("%1/mudlet/profiles/%2/%3").arg(homeConfigPath, extra1, extra2);
+        return QStringLiteral("%1/profiles/%2/%3").arg(configPath, extra1, extra2);
     case profilePackagePath:
         // Takes two extra arguments (profile name, package name) returns the
         // per profile directory used to store (unpacked) package contents
         // - ends with a '/':
-        return QStringLiteral("%1/mudlet/profiles/%2/%3/").arg(homeConfigPath, extra1, extra2);
+        return QStringLiteral("%1/profiles/%2/%3/").arg(configPath, extra1, extra2);
     case profilePackagePathFileName:
         // Takes two extra arguments (profile name, package name) returns the
         // filename of the XML file that contains the (per profile, unpacked)
         // package mudlet items in that package/module:
-        return QStringLiteral("%1/mudlet/profiles/%2/%3/%3.xml").arg(homeConfigPath, extra1, extra2);
+        return QStringLiteral("%1/profiles/%2/%3/%3.xml").arg(configPath, extra1, extra2);
     case profileReplayAndLogFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // that contains replays (*.dat files) and logs (*.html or *.txt) files
         // for that profile - does NOT end in '/':
-        return QStringLiteral("%1/mudlet/profiles/%2/log").arg(homeConfigPath, extra1);
+        return QStringLiteral("%1/profiles/%2/log").arg(configPath, extra1);
     case profileLogErrorsFilePath:
         // Takes one extra argument (profile name) that returns the pathFileName
         // to the map auditing report file that is appended to each time a
         // map is loaded:
-        return QStringLiteral("%1/mudlet/profiles/%2/log/errors.txt").arg(homeConfigPath, extra1);
+        return QStringLiteral("%1/profiles/%2/log/errors.txt").arg(configPath, extra1);
     case editorWidgetThemePathFile:
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
@@ -3570,7 +3601,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // is carried internally in the resource file:
         if (extra1.compare(QStringLiteral("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match
-            return QStringLiteral("%1/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(homeConfigPath, extra1);
+            return QStringLiteral("%1/edbee/Colorsublime-Themes-master/themes/%2").arg(configPath, extra1);
         } else {
             // Match - return path to copy held in resource file
             return QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
@@ -3578,11 +3609,11 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     case editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
         // an edbee editor widget theme:
-        return QStringLiteral("%1/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(homeConfigPath);
+        return QStringLiteral("%1/edbee/Colorsublime-Themes-master/themes.json").arg(configPath);
     case moduleBackupsPath:
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
-        return QStringLiteral("%1/mudlet/moduleBackups/").arg(homeConfigPath);
+        return QStringLiteral("%1/moduleBackups/").arg(configPath);
     }
     Q_UNREACHABLE();
     return QString();

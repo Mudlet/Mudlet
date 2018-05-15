@@ -455,6 +455,7 @@ private:
     void slot_toggle_compact_input_line();
     void set_compact_input_line();
 
+    QPointer<QSettings> getQConfig();
     QSettings* getQSettings();
 
     // Argument to QDateTime::toString(...) to format the elapsed time display

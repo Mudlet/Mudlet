@@ -596,7 +596,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // groupBox_config
     comboBox_selectConfigDir->setCurrentIndex(mudlet::self()->mConfigDirIndex);
     // Set the text of lineEdit_configDir to the default .config
-    // folder in the user's home directory if pHost->mConfigDir is empty
+    // folder in the user's home directory if mConfigDir is empty
     if (mudlet::self()->mConfigDir.isEmpty()) {
         lineEdit_configDir->setText(QDir::homePath() + "/.config");
     } else {
@@ -1865,23 +1865,26 @@ void dlgProfilePreferences::slot_configDirOptionChange(const int index)
 
     // Show options to set the config directory if 'Select a
     // directory...' is selected
-    bool isShown = comboBox_selectConfigDir->currentIndex() == 1;
+    bool isShown = index == 1;
     label_setConfigDir->setVisible(isShown);
     lineEdit_configDir->setVisible(isShown);
     toolButton_setConfigDir->setVisible(isShown);
 
-    switch (comboBox_selectConfigDir->currentIndex()) {
+    switch (index) {
     case 0:
         // Clear mConfigDirPath if 'Default' is selected
         mConfigDirPath.clear();
+        break;
     case 1:
         // Set mConfigDirPath to the value of lineEdit_configDir if
         // 'Select a directory' is selected
         mConfigDirPath = lineEdit_configDir->text();
+        break;
     case 2:
         // Set mConfigDirPath to a relative path if 'Relative to the
         // application file' is selected
-        mConfigDirPath = "./";
+        mConfigDirPath = ".";
+        break;
     }
 }
 
