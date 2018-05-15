@@ -7665,6 +7665,7 @@ bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
         case Qt::Key_Down:
         case Qt::Key_Left:
         case Qt::Key_Right:
+        case Qt::Key_Escape: // This one is needed to allow it to be used to CANCEL the key grab
             this->event(event);
             return true;
         default:
