@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
 #    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -93,9 +94,9 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
+    wcwidth.cpp
     XMLexport.cpp
     XMLimport.cpp
-    wcwidth.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -202,9 +203,9 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
+    wcwidth.h
     XMLexport.h
     XMLimport.h
-    wcwidth.h
 )
 
 if(USE_UPDATER)
