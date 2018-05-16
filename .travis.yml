@@ -1,26 +1,16 @@
 language: cpp
 cache:
   - ccache
-os:
-  - osx
-  - linux
 dist: trusty
 sudo: false
 addons:
   apt:
-    sources:
+    sources: &add-sources
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
     - sourceline: 'ppa:beineri/opt-qt593-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:jonathonf/php7'
-    packages:
-    - qt56base
-    - qt56multimedia
-    - qt56tools
-    - qt59base
-    - qt59multimedia
-    - qt59tools
-    - qt59gamepad
+    packages: &common-packages
     - libhunspell-dev
     - lua5.1
     - liblua5.1-0-dev
@@ -35,15 +25,9 @@ addons:
     - lua-filesystem
     - lua-zip
     - lua-sql-sqlite3
-compiler:
-  - gcc
-  - clang
+    - libpugixml-dev
 env:
-  matrix:
-  - Q_OR_C_MAKE=cmake
-    QT_VERSION=59 # actually Qt 5.9
-  - Q_OR_C_MAKE=qmake
-    QT_VERSION=59 # actually Qt 5.9
+#  matrix:
 #  - Q_OR_C_MAKE=cmake
 #    QT_VERSION=59
 #    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
@@ -62,15 +46,75 @@ env:
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
 matrix:
-  exclude:
-  - os: osx
-    compiler: gcc
   include:
+  - os: osx
+    osx_image: xcode8
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=qmake
+  - os: osx
+    osx_image: xcode8
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=cmake
+
+  - os: linux
+    compiler: gcc
+    env:
+    - Q_OR_C_MAKE=qmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages: &qt59-packages
+        - *common-packages
+        - qt59base
+        - qt59multimedia
+        - qt59tools
+        - qt59gamepad
+  - os: linux
+    compiler: gcc
+    env:
+    - Q_OR_C_MAKE=cmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+  - os: linux
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=qmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+  - os: linux
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=cmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
     - QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
+    addons:
+      apt:
+        sources: *add-sources
+        packages: &qt56-packages
+        - *common-packages
+        - qt56base
+        - qt56multimedia
+        - qt56tools
 before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
