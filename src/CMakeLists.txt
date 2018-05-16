@@ -149,6 +149,7 @@ set(mudlet_MOC_HDRS
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
+    Host.h
     exitstreewidget.h
     glwidget.h
     mudlet.h
@@ -165,13 +166,13 @@ set(mudlet_MOC_HDRS
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
+    XMLexport.h
 )
 
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     FontManager.h
-    Host.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
@@ -204,7 +205,6 @@ set(mudlet_HDRS
     TVar.h
     VarUnit.h
     wcwidth.h
-    XMLexport.h
     XMLimport.h
 )
 
@@ -380,6 +380,7 @@ find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(YAJL REQUIRED)
+find_package(PUGIXML REQUIRED)
 
 # Fall back on original FIND_PACKAGE process on Apple if Package Config failed
 # Originally we did use that but it started to fail on Travis C.I. in June 2016
@@ -424,6 +425,7 @@ include_directories(
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
+    ${PUGIXML_INCLUDE_DIR}
 )
 
 if(Qt5Gamepad_FOUND)
@@ -485,6 +487,7 @@ target_link_libraries(mudlet
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    ${PUGIXML_LIBRARIES}
     communi
     lua_yajl
     edbee-lib

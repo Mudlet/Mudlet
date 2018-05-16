@@ -172,7 +172,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPort(port)
 , mRetries(5)
 , mSaveProfileOnExit(false)
-, mModuleSaveBlock(false)
 , mHaveMapperScript(false)
 , mIsAmbigousWidthGlyphsSettingAutomatic(true)
 , mIsAmbigousWidthGlyphsToBeWide(false)
@@ -231,10 +230,6 @@ Host::~Host()
 
 void Host::saveModules(int sync)
 {
-    if (mModuleSaveBlock) {
-        //FIXME: This should generate an error to the user
-        return;
-    }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
     QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
@@ -251,7 +246,6 @@ void Host::saveModules(int sync)
         QString moduleName = it.key();
         QString zipName;
         zip* zipFile = nullptr;
-        // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
             QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
@@ -265,22 +259,15 @@ void Host::saveModules(int sync)
         } else {
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
         }
-        QFile file_xml(filename_xml);
-        if (file_xml.open(QIODevice::WriteOnly)) {
-            XMLexport writer(this);
-            writer.writeModuleXML(&file_xml, it.key());
-            file_xml.close();
 
-            if (entry[1].toInt()) {
-                modulesToSync << it.key();
-            }
-        } else {
-            file_xml.close();
-            //FIXME: Should have an error reported to user
-            //qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
-            mModuleSaveBlock = true;
-            return;
+        auto writer = new XMLexport(this);
+        writers.insert(filename_xml, writer);
+        writer->writeModuleXML(moduleName, filename_xml);
+
+        if (entry[1].toInt()) {
+            modulesToSync << moduleName;
         }
+
         if (!zipName.isEmpty()) {
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
             QTime t;
@@ -305,7 +292,6 @@ void Host::saveModules(int sync)
             if (host->mHostName == mHostName) {
                 continue;
             }
-            QMap<QString, QStringList> installedModules = host->mInstalledModules;
             QMap<QString, int> modulePri = host->mModulePriorities;
             QMapIterator<QString, int> it3(modulePri);
             QMap<int, QStringList> moduleOrder;
@@ -392,13 +378,16 @@ void Host::resetProfile()
 // takes a directory to save in or an empty string for the default location
 // as well as a boolean whenever to sync the modules or not
 // returns true+filepath if successful or false+error message otherwise
-std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, bool syncModules)
 {
+    emit profileSaveStarted();
+    qApp->processEvents();
+
     QString directory_xml;
-    if (saveLocation.isEmpty()) {
+    if (saveFolder.isEmpty()) {
         directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
     } else {
-        directory_xml = saveLocation;
+        directory_xml = saveFolder;
     }
 
     // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
@@ -407,15 +396,57 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
     }
-    QFile file_xml(filename_xml);
-    if (file_xml.open(QIODevice::WriteOnly)) {
-        XMLexport writer(this);
-        writer.exportHost(&file_xml);
-        file_xml.close();
-        saveModules(syncModules ? 1 : 0);
-        return std::make_tuple(true, filename_xml, QString());
-    } else {
-        return std::make_tuple(false, filename_xml, file_xml.errorString());
+
+    if (currentlySavingProfile()) {
+        return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
+    }
+
+    auto writer = new XMLexport(this);
+    writers.insert(QStringLiteral("profile"), writer);
+    writer->exportHost(filename_xml);
+    saveModules(syncModules ? 1 : 0);
+    return std::make_tuple(true, filename_xml, QString());
+}
+
+// exports without the host settings for some reason
+std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
+{
+    emit profileSaveStarted();
+    qApp->processEvents();
+
+    if (currentlySavingProfile()) {
+        return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
+    }
+
+    auto writer = new XMLexport(this);
+    writers.insert(QStringLiteral("profile"), writer);
+    writer->exportGenericPackage(file);
+    return std::make_tuple(true, file, QString());
+}
+
+void Host::xmlSaved(const QString& xmlName)
+{
+    if (writers.contains(xmlName)) {
+        auto writer = writers.take(xmlName);
+        delete writer;
+    }
+
+    if (writers.empty()) {
+        emit profileSaveFinished();
+    }
+}
+
+bool Host::currentlySavingProfile()
+{
+    return !writers.empty();
+}
+
+void Host::waitForProfileSave()
+{
+    for (auto& writer : writers) {
+        for (auto& future: writer->saveFutures) {
+            future.waitForFinished();
+        }
     }
 }
 
