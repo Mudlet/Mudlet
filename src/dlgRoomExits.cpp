@@ -2329,6 +2329,11 @@ void dlgRoomExits::slot_checkModified()
             }
         }
     }
-    setWindowModified(isModified);
-    button_save->setEnabled(isModified);
+
+    if (isWindowModified() != isModified) {
+        // There has been a change in the "are there changes?" state
+        setWindowModified(isModified);
+        button_save->setEnabled(isModified);
+        update();
+    }
 }
