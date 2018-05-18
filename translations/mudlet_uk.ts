@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="de" sourcelanguage="en">
+<TS version="2.1" language="uk" sourcelanguage="en">
   <context>
     <name>Host</name>
     <message>
@@ -653,6 +653,10 @@ the highlighted room (%1) to:</translation>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
       <translation type="unfinished">
+        <numerusform>Enter the symbol to use 
+for this/these room(s):</numerusform>
+        <numerusform>Enter the symbol to use 
+for this/these room(s):</numerusform>
         <numerusform>Enter the symbol to use 
 for this/these room(s):</numerusform>
         <numerusform>Enter the symbol to use 
@@ -2037,6 +2041,12 @@ Mudlet - is your system running out of memory?</translation>
         <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messsages related to the rooms that are supposed
  to be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+ Look for further messsages related to the rooms that are supposed
+ to be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+ Look for further messsages related to the rooms that are supposed
+ to be in this/these area(s)...</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -2052,6 +2062,12 @@ Mudlet - is your system running out of memory?</translation>
         <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messsages related to the rooms that is/are supposed to
  be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+ Look for further messsages related to the rooms that is/are supposed to
+ be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+ Look for further messsages related to the rooms that is/are supposed to
+ be in this/these area(s)...</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -2060,6 +2076,10 @@ Mudlet - is your system running out of memory?</translation>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation type="unfinished">
+        <numerusform>[ INFO ]  - The missing area(s) are now called:
+(ID) ==&gt; &quot;name&quot;</numerusform>
+        <numerusform>[ INFO ]  - The missing area(s) are now called:
+(ID) ==&gt; &quot;name&quot;</numerusform>
         <numerusform>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</numerusform>
         <numerusform>[ INFO ]  - The missing area(s) are now called:
