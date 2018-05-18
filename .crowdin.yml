@@ -1,5 +1,0 @@
-files:
-  - source: /src/*.cpp
-    translation: /lang/%two_letters_code%/%original_file_name%
-  - source: /src/ui/*.ui
-    translation: /lang/%two_letters_code%/ui/%original_file_name%
