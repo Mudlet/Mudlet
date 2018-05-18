@@ -35,11 +35,32 @@ class TRoom;
 class TExit
 {
 public:
-    bool hasNoRoute;
-    bool hasStub;
-    int destination;
-    int door;
-    int weight;
+    TExit(const QString& exitText, const bool hasExitStub, const bool hasNoRoute, const int weight, const int door) {
+        bool isOk;
+        if (exitText.toInt(&isOk) && isOk) {
+            // Exit destination is convertable to a non-zero integer
+            mDestination = exitText.toInt();
+            mHasStub = false;
+        } else if (hasExitStub) {
+            // Exit is a stub
+            mDestination = 0;
+            mHasStub = true;
+        } else {
+            // No exit so return null result:
+            return nullptr;
+        }
+
+        // Fill in the remaining details:
+        mHasNoRoute = hasNoRoute;
+        mWeight = weight;
+        mDoor = door;
+    }
+
+    bool pHasNoRoute;
+    bool pHasStub;
+    int pDestination;
+    int pDoor;
+    int pWeight;
 
     friend bool operator==( TExit &a, TExit &b )
     {
@@ -111,6 +132,7 @@ private:
 
     // key = (normal) exit DIR_***, value = exit class instance
     QMap<int, TExit*> originalExits;
+    // key = (special exit name/command), value = exit class instance
     QMap<QString, TExit*> originalSpecialExits;
 
     void initExit(int roomId,

@@ -1820,6 +1820,7 @@ void dlgRoomExits::initExit(int roomId,
             none->setChecked(true);
         }
     }
+qDebug() << "dlgRoomExits::initExit() INFO - calling makeExitFromControls for original exit in:" << exitText << "direction.";
     originalExits[direction] = makeExitFromControls(direction);
 }
 
@@ -2058,93 +2059,194 @@ void dlgRoomExits::init(int id)
 TExit* dlgRoomExits::makeExitFromControls(int direction)
 {
     auto exit = new TExit();
+    bool isOk = false;
     switch (direction) {
     case DIR_NORTHWEST:
-        exit->destination = nw->text().toInt();
-        exit->hasStub = stub_nw->isChecked();
+        if (nw->text().toInt(&isOk) && isOk) {
+            // Exit destination is convertable to a non-zero integer
+            exit->destination = nw->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_nw->isChecked()) {
+            // Exit is a stub
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            // No exit so return null result:
+            return nullptr;
+        }
+        // Fill in the remaining details:
         exit->hasNoRoute = noroute_nw->isChecked();
         exit->weight = weight_nw->value();
         exit->door = -2 - doortype_nw->checkedId();
         break;
     case DIR_NORTH:
-        exit->destination = n->text().toInt();
-        exit->hasStub = stub_n->isChecked();
+        if (n->text().toInt(&isOk) && isOk) {
+            exit->destination = n->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_n->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_n->isChecked();
         exit->weight = weight_n->value();
         exit->door = -2 - doortype_n->checkedId();
         break;
     case DIR_NORTHEAST:
-        exit->destination = ne->text().toInt();
-        exit->hasStub = stub_ne->isChecked();
+        if (ne->text().toInt(&isOk) && isOk) {
+            exit->destination = ne->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_ne->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_ne->isChecked();
         exit->weight = weight_ne->value();
         exit->door = -2 - doortype_ne->checkedId();
         break;
     case DIR_UP:
-        exit->destination = up->text().toInt();
-        exit->hasStub = stub_up->isChecked();
+        if (up->text().toInt(&isOk) && isOk) {
+            exit->destination = up->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_up->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_up->isChecked();
         exit->weight = weight_up->value();
         exit->door = -2 - doortype_up->checkedId();
         break;
     case DIR_WEST:
-        exit->destination = w->text().toInt();
-        exit->hasStub = stub_w->isChecked();
+        if (w->text().toInt(&isOk) && isOk) {
+            exit->destination = w->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_w->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_w->isChecked();
         exit->weight = weight_w->value();
         exit->door = -2 - doortype_w->checkedId();
         break;
     case DIR_EAST:
-        exit->destination = e->text().toInt();
-        exit->hasStub = stub_e->isChecked();
+        if (e->text().toInt(&isOk) && isOk) {
+            exit->destination = e->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_e->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_e->isChecked();
         exit->weight = weight_e->value();
         exit->door = -2 - doortype_e->checkedId();
         break;
     case DIR_DOWN:
-        exit->destination = down->text().toInt();
-        exit->hasStub = stub_down->isChecked();
+        if (down->text().toInt(&isOk) && isOk) {
+            exit->destination = down->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_down->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_down->isChecked();
         exit->weight = weight_down->value();
         exit->door = -2 - doortype_down->checkedId();
         break;
     case DIR_SOUTHWEST:
-        exit->destination = sw->text().toInt();
-        exit->hasStub = stub_sw->isChecked();
+        if (sw->text().toInt(&isOk) && isOk) {
+            exit->destination = sw->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_sw->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_sw->isChecked();
         exit->weight = weight_sw->value();
         exit->door = -2 - doortype_sw->checkedId();
         break;
     case DIR_SOUTH:
-        exit->destination = s->text().toInt();
-        exit->hasStub = stub_s->isChecked();
+        if (s->text().toInt(&isOk) && isOk) {
+            exit->destination = s->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_s->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_s->isChecked();
         exit->weight = weight_s->value();
         exit->door = -2 - doortype_s->checkedId();
         break;
     case DIR_SOUTHEAST:
-        exit->destination = se->text().toInt();
-        exit->hasStub = stub_se->isChecked();
+        if (se->text().toInt(&isOk) && isOk) {
+            exit->destination = se->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_se->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_se->isChecked();
         exit->weight = weight_se->value();
         exit->door = -2 - doortype_se->checkedId();
         break;
     case DIR_IN:
-        exit->destination = in->text().toInt();
-        exit->hasStub = stub_in->isChecked();
+        if (in->text().toInt(&isOk) && isOk) {
+            exit->destination = in->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_in->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_in->isChecked();
         exit->weight = weight_in->value();
         exit->door = -2 - doortype_in->checkedId();
         break;
     case DIR_OUT:
-        exit->destination = out->text().toInt();
-        exit->hasStub = stub_out->isChecked();
+        if (out->text().toInt(&isOk) && isOk) {
+            exit->destination = out->text().toInt();
+            exit->hasStub = false;
+        } else if (stub_out->isChecked()) {
+            exit->destination = 0;
+            exit->hasStub = true;
+        } else {
+            return nullptr;
+        }
         exit->hasNoRoute = noroute_out->isChecked();
         exit->weight = weight_out->value();
         exit->door = -2 - doortype_out->checkedId();
         break;
     default:
         Q_UNREACHABLE();
+    }
+
+    // Tempory test code to see if something has gone wrong with return
+    // value from QButtonGRoup::checkedId() - it is expected to be in range
+    // (-2 = "No door", -3 = "Open door", -4 = "Closed door" or
+    // -5 = "Locked door") and is part of an attemp to solve ISSUE #1665:
+    if (exit->door < 0 || exit->door > 3) {
+        // It has to be fatal so that a RELEASE (no debug code) build - which is
+        // where a problem with doors processing is happening
+        // - changes to door settings are not triggering a modification.
+        qFatal("dlgRoomExits::makeExitFromControls(...) FATAL ERROR: Unhandled internal values outside of expected range for TExit::door, it is %i but it should have been between 0 to 3 (inclusive) for the exit in exit dirction %i",
+               exit->door, direction);
     }
 
     return exit;
@@ -2161,111 +2263,171 @@ void dlgRoomExits::slot_checkModified()
     // exit doors
     // exit weights
 
-    TExit* originalExit = originalExits.value(DIR_NORTHWEST);
-    TExit* currentExit = makeExitFromControls(DIR_NORTHWEST);
+    TExit* pOriginalExit = originalExits.value(DIR_NORTHWEST);
+    TExit* pCurrentExit = makeExitFromControls(DIR_NORTHWEST);
 
-    if (originalExit && currentExit && *originalExit != *currentExit) {
+    if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+        isModified = true;
+    } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
         isModified = true;
     }
-    delete currentExit;
 
-    if (!isModified) {
-        originalExit = originalExits.value(DIR_NORTH);
-        currentExit = makeExitFromControls(DIR_NORTH);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
-            isModified = true;
-        }
-        delete currentExit;
+    if (pCurrentExit) {
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_NORTHEAST);
-        currentExit = makeExitFromControls(DIR_NORTHEAST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_NORTH);
+        pCurrentExit = makeExitFromControls(DIR_NORTH);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_UP);
-        currentExit = makeExitFromControls(DIR_UP);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_NORTHEAST);
+        pCurrentExit = makeExitFromControls(DIR_NORTHEAST);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_WEST);
-        currentExit = makeExitFromControls(DIR_WEST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_UP);
+        pCurrentExit = makeExitFromControls(DIR_UP);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_EAST);
-        currentExit = makeExitFromControls(DIR_EAST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_WEST);
+        pCurrentExit = makeExitFromControls(DIR_WEST);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_DOWN);
-        currentExit = makeExitFromControls(DIR_DOWN);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_EAST);
+        pCurrentExit = makeExitFromControls(DIR_EAST);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTHWEST);
-        currentExit = makeExitFromControls(DIR_SOUTHWEST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_DOWN);
+        pCurrentExit = makeExitFromControls(DIR_DOWN);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTH);
-        currentExit = makeExitFromControls(DIR_SOUTH);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_SOUTHWEST);
+        pCurrentExit = makeExitFromControls(DIR_SOUTHWEST);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTHEAST);
-        currentExit = makeExitFromControls(DIR_SOUTHEAST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_SOUTH);
+        pCurrentExit = makeExitFromControls(DIR_SOUTH);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_IN);
-        currentExit = makeExitFromControls(DIR_IN);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_SOUTHEAST);
+        pCurrentExit = makeExitFromControls(DIR_SOUTHEAST);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_OUT);
-        currentExit = makeExitFromControls(DIR_OUT);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_IN);
+        pCurrentExit = makeExitFromControls(DIR_IN);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
             isModified = true;
         }
-        delete currentExit;
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
+    }
+
+    if (!isModified) {
+        pOriginalExit = originalExits.value(DIR_OUT);
+        pCurrentExit = makeExitFromControls(DIR_OUT);
+        if (pOriginalExit && pCurrentExit && *pOriginalExit != *pCurrentExit) {
+            isModified = true;
+        } else if ((pOriginalExit && !pCurrentExit) || (!pOriginalExit && pCurrentExit)) {
+            isModified = true;
+        }
+
+        if (pCurrentExit) {
+            delete pCurrentExit;
+        }
     }
 
     // Detecting actual changes in the special exits is hard because of the
@@ -2279,17 +2441,19 @@ void dlgRoomExits::slot_checkModified()
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
             /*            qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 1) to:%i, command:%s",
- *                   i,
- *                   pI->text(0).toInt(),
- *                   qPrintable(pI->text(7)));
- */
-            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (4 of 5)") || pI->text(0).toInt() <= 0)
+             *                   i,
+             *                   pI->text(0).toInt(),
+             *                   qPrintable(pI->text(7)));
+             */
+            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (4 of 5)") || pI->text(0).toInt() <= 0) {
                 continue; // Ignore new or to be deleted entries
+            }
             currentCount++;
         }
-        if (originalCount != currentCount)
+
+        if (originalCount != currentCount) {
             isModified = true;
-        else {
+        } else {
             if (originalCount) {
                 QMap<QString, TExit*> foundMap = originalSpecialExits;
                 // Now make a TExit value for each current (valid) specialExit
@@ -2299,12 +2463,14 @@ void dlgRoomExits::slot_checkModified()
                 for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
                     QTreeWidgetItem* pI = specialExits->topLevelItem(i);
                     /*                    qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 2) to:%i, command:%s",
- *                           i,
- *                           pI->text(0).toInt(),
- *                           qPrintable(pI->text(7)));
- */
-                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (5 of 5)") || pI->text(0).toInt() <= 0)
+                     *                           i,
+                     *                           pI->text(0).toInt(),
+                     *                           qPrintable(pI->text(7)));
+                     */
+                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (5 of 5)") || pI->text(0).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
+                    }
+
                     QString currentCmd = pI->text(7);
                     TExit currentExit;
                     currentExit.destination = pI->text(0).toInt();
@@ -2312,20 +2478,19 @@ void dlgRoomExits::slot_checkModified()
                     currentExit.door = pI->checkState(6) == Qt::Checked ? 3 : pI->checkState(5) == Qt::Checked ? 2 : pI->checkState(4) == Qt::Checked ? 1 : 0;
                     currentExit.weight = pI->text(2).toInt();
                     currentExit.hasStub = false;
-                    auto exit = foundMap.value(currentCmd);
-                    if (exit
-                        && exit->destination == currentExit.destination
-                        && exit->door        == currentExit.door
-                        && exit->hasNoRoute  == currentExit.hasNoRoute
-                        && exit->weight      == currentExit.weight      ) {
+                    auto pExit = foundMap.value(currentCmd);
+                    if (pExit && *pExit == currentExit) {
                         foundMap.remove(currentCmd);
                     } else {
                         isModified = true;
                         break;
                     }
+
                 }
-                if (foundMap.count())
+
+                if (foundMap.count()) {
                     isModified = true;
+                }
             }
         }
     }
