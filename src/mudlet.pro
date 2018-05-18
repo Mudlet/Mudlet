@@ -630,7 +630,9 @@ TRANSLATIONS = ../translations/mudlet_fr.ts \
                ../translations/mudlet_nl.ts \
                ../translations/mudlet_de.ts \
                ../translations/mudlet_ru.ts \
-               ../translations/mudlet_es.ts
+               ../translations/mudlet_es.ts \
+               # source file for crowdin
+               ../translations/mudlet_en.ts
 
 RESOURCES = mudlet.qrc
 contains(DEFINES, INCLUDE_FONTS) {
