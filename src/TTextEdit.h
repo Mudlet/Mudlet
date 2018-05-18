@@ -155,7 +155,7 @@ private:
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
-    bool mIsAmbigousWidthGlyphsToBeWide;
+    bool mWideAmbigousWidthGlyphs;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

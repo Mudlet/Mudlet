@@ -163,18 +163,17 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "the grapheme (what is to be represented).  Clearing this checkbox will allow "
                                              "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
     checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                         .arg("<p>Some, generally East Asian, MUDs may use glyphs (characters) that are classified in Unicode "
-                                                              "as being of <i>Ambigous</i> width; this means that some languages which are <i>duo-spaced</i> "
-                                                              "rather than <i>mono-spaced</i> when not drawn with a proportional font have symbols that can be "
-                                                              "drawn both as a wide character and a narrow one (which takes half the horizontal space) depending "
-                                                              "on several factors including the language being displayed. Mudlet may not always get this right "
-                                                              "but you can override the setting for each profile here if needed.</p>"
+                                                         .arg("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                              "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                              "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                              "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                              "chose the right width automatically but you can override the setting for each profile.</p>"
                                                               "<p>This control has three settings:"
-                                                              "<ul><li><b>Unchecked</b> = Draw ambiguous width character with a narrow width.</li>"
-                                                              "<li><b>Checked</b> = Draw ambiguous width character with a wide width.</li>"
-                                                              "<li><b>Partly checked</b> <i>{Default}</i> = Use a 'wide' setting for MUD Server "
+                                                              "<ul><li><b>Unchecked</b> '<i>narror</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                              "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
                                                               "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
-                                                              "<p><i>This is intended to be a temporary arrangement and is likely to change when Mudlet gains "
+                                                              "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
                                                               "full support for languages other than English.</i></p>"));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
@@ -339,7 +338,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
-    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getUseWideAmbiguousEAsianGlyphsControlState());
+    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     QString path;
     // This is duplicated (and should be the same as) the code in:
@@ -2010,7 +2009,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-        pHost->setUseWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
+        pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         if (pHost->mpEditorDialog) {
@@ -2105,7 +2104,7 @@ void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
             // goes in, but we only need to change the setting for this if it is
             // set to be automatic changed as necessary:
 
-            pHost->setUseWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
         }
     }
 }

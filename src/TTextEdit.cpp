@@ -69,7 +69,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mpConsole(pC)
 , mpHost(pH)
 , mpScrollBar(nullptr)
-, mIsAmbigousWidthGlyphsToBeWide(pH->getUseWideAmbiguousEAsianGlyphs())
+, mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -606,7 +606,7 @@ int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QStri
     if (unicode == '\t') {
         charWidth = column / 8 * 8 + 8;
     } else {
-        if (mIsAmbigousWidthGlyphsToBeWide) {
+        if (mWideAmbigousWidthGlyphs) {
             charWidth = mk_wcwidth_cjk(unicode) == 2 ? 2 : 1;
         } else {
             charWidth = mk_wcwidth(unicode) == 2 ? 2 : 1;
@@ -1678,8 +1678,8 @@ int TTextEdit::getRowCount()
 
 void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
 {
-    if (mIsAmbigousWidthGlyphsToBeWide != state) {
-        mIsAmbigousWidthGlyphsToBeWide = state;
+    if (mWideAmbigousWidthGlyphs != state) {
+        mWideAmbigousWidthGlyphs = state;
         update();
     }
 }
