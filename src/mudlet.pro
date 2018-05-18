@@ -626,6 +626,12 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
+TRANSLATIONS = ../translations/mudlet_fr.ts \
+               ../translations/mudlet_nl.ts \
+               ../translations/mudlet_de.ts \
+               ../translations/mudlet_ru.ts \
+               ../translations/mudlet_es.ts
+
 RESOURCES = mudlet.qrc
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += mudlet_fonts.qrc
