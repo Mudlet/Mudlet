@@ -135,7 +135,7 @@ after_success:
   - echo "build dir is ${TRAVIS_BUILD_DIR}"
   - ls -la "${TRAVIS_BUILD_DIR}"
   - cd "${TRAVIS_BUILD_DIR}"
-  - echo "After cd: $?"
+  - echo "After cd => $?"
   - bash CI/travis.after_success.sh
 notifications:
   webhooks:
