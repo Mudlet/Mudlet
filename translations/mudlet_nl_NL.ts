@@ -32,7 +32,7 @@ wacht aub...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>Start element niet gevonden!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
@@ -47,12 +47,12 @@ wacht aub...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 @ lijn %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>Geen gegevens gevonden!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -1845,12 +1845,12 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="43"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Naamloze Gebied</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="44"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Standaard Gebied</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="511"/>
@@ -1944,7 +1944,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="831"/>
       <location filename="../src/TRoomDB.cpp" line="834"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Area-id nummering is bevredigend.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="842"/>
@@ -1977,7 +1977,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="907"/>
       <location filename="../src/TRoomDB.cpp" line="910"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Kamer id nummering is bevredigend.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="927"/>
@@ -2184,7 +2184,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>U gebruikt maakt van versie %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
@@ -2204,22 +2204,22 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Update installeren</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Herinner mij later</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
@@ -2234,7 +2234,7 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="154"/>
       <location filename="../src/updater.cpp" line="216"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Updaten</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="308"/>
@@ -2283,17 +2283,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Over Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>Licentie</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
@@ -2306,7 +2306,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Naam:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
