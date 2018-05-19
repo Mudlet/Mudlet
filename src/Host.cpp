@@ -40,6 +40,7 @@
 #include <QtUiTools>
 #include <QApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QMessageBox>
 #include <QStringBuilder>
 #include "post_guard.h"
@@ -748,7 +749,7 @@ bool Host::installPackage(const QString& fileName, int module)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
-    // pointer just in case we accidently reenter this method in the future.
+    // pointer just in case we accidentally reenter this method in the future.
     QDialog* pUnzipDialog = Q_NULLPTR;
 
     //     Module notes:
@@ -919,6 +920,11 @@ bool Host::installPackage(const QString& fileName, int module)
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
+
+    // make any fonts in the package available to Mudlet for use
+    if (module != 2) {
+        installPackageFonts(packageName);
+    }
 
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the install event") and a more specific need
@@ -1185,4 +1191,32 @@ QString Host::readProfileData(const QString& item)
     }
 
     return ret;
+}
+
+// makes fonts in a given package/module be available for Mudlet scripting
+// does not install font system-wide
+void Host::installPackageFonts(const QString &packageName)
+{
+    auto packagePath = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+
+    QDirIterator it(packagePath, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        auto filePath = it.next();
+
+        if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
+            filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
+            if (QFontDatabase::addApplicationFont(filePath) == -1) {
+                qWarning() << "Warning, could not load font" << filePath;
+            }
+        }
+    }
+}
+
+// ensures fonts from all installed packages are loaded in Mudlet
+void Host::refreshPackageFonts()
+{
+    qDebug() << getName() << mInstalledPackages.count();
+    for (const auto& package : mInstalledPackages) {
+        installPackageFonts(package);
+    }
 }

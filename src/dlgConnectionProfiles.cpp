@@ -1505,6 +1505,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     } else {
         needsGenericPackagesInstall = true;
     }

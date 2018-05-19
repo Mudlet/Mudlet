@@ -136,6 +136,7 @@ public:
     void saveModules(int);
     void reloadModule(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
+    void refreshPackageFonts();
 
     void registerEventHandler(const QString&, TScript*);
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
@@ -393,6 +394,8 @@ private:
 
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
+
+    void installPackageFonts(const QString &packageName);
 };
 
 #endif // MUDLET_HOST_H

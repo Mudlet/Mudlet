@@ -71,6 +71,7 @@
 #include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
+#include <QFontDatabase>
 #include "post_guard.h"
 
 #include <zip.h>
@@ -2861,6 +2862,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     }
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
@@ -3691,4 +3693,11 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
             }
         }
     }
+}
+
+QStringList mudlet::getAvailableFonts()
+{
+    QFontDatabase database;
+
+    return database.families(QFontDatabase::Any);
 }

@@ -199,6 +199,7 @@ public:
     void playSound(QString s, int);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
+    QStringList getAvailableFonts();
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;

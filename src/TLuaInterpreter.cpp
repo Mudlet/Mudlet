@@ -11953,6 +11953,19 @@ double TLuaInterpreter::condenseMapLoad()
     return loadTime;
 }
 
+int TLuaInterpreter::getAvailableFonts(lua_State* L)
+{
+    auto fontList = mudlet::self()->getAvailableFonts();
+
+    lua_newtable(L);
+    for (auto& font : fontList) {
+        lua_pushstring(L, font.toUtf8().constData());
+        lua_pushboolean(L, true);
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
@@ -12392,6 +12405,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
