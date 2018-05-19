@@ -626,12 +626,7 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-TRANSLATIONS = ../translations/mudlet_fr.ts \
-               ../translations/mudlet_nl.ts \
-               ../translations/mudlet_de.ts \
-               ../translations/mudlet_ru.ts \
-               ../translations/mudlet_es.ts \
-               # source file for crowdin
+TRANSLATIONS = # source file for crowdin - we only need one; crowdin generates the rest
                ../translations/mudlet_en.ts
 
 RESOURCES = mudlet.qrc
