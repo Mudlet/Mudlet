@@ -8,19 +8,23 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Entpacke Modul:
+&quot;%1&quot;
+Bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="818"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Entpacke Paket:
+&quot;%1&quot;
+Bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="822"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Entpacke</translation>
     </message>
   </context>
   <context>
@@ -28,12 +32,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>Start-Element nicht gefunden!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>Zeile %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
