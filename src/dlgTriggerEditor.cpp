@@ -209,26 +209,45 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     edbee::StringTextAutoCompleteProvider* provider = new edbee::StringTextAutoCompleteProvider();
     //QListIterator<QString> i(mudlet::);
-    /*foreach(QString key, mudlet::mLuaFunctionNames.keys())
+    foreach(QString key, mudlet::mLuaFunctionNames.keys())
     {
         provider->add(key, mudlet::mLuaFunctionNames.value(key).toString());
-    }*/
-
-    provider->add("getAllMapUserData", "tbl <b>mapUserData</b> = <i><font color='blue'>getAllMapUserData</font>()</i>", "table");
-    provider->add("getAllRoomUserData", "tbl <b>roomUserData</b> = <i>getAllRoomUserData(num <b>roomID</b>)</i>", "table");
-    provider->add("getAreaExits", "tbl <b>exits</b> = <i>getAreaExits(num <b>areaID</b>, bool <b>showExits</b>)</i>", "table");
-    provider->add("getPath", "bool <b>pathFound</b> = <i>getPath(num <b>fromRoomID</b>, num <b>toRoomID</b>)</i>", "boolean");
-    provider->add("getRoomArea", "num <b>areaID</b> = <i>getRoomArea(num <b>roomID</b>)</i>", "number");
-    provider->add("getRoomAreaName", "str <b>areaName</b> = <i>getRoomAreaName(num <b>areaID</b>)</i>", "string");
-    provider->add("getRoomAreaName", "num <b>areaID</b> = <i>getRoomAreaName(str <b>areaName</b>)</i>", "number");
-    provider->add("getRoomChar", "str <b>roomChar</b> = <i>getRoomChar(num <b>roomID</b>)</i>", "string");
-    provider->add("getRoomCoordinates", "num <b>x</b>, num <b>y</b>, num <b>z</b> = <i>getRoomCoordinates(num <b>roomID</b>)</i>", "number");
-    provider->add("getRoomEnv", "num <b>roomEnv</b> = <i>getRoomEnv(num <b>id</b>)</i>", "number");
-    provider->add("getRoomIDbyHash", "num <b>roomID</b> = <i>getRoomIDbyHash(num <b>roomID</b>)</i>", "number");
-    provider->add("getRoomName", "str <b>roomName</b> = <i>getRoomName(num <b>roomID</b>)</i>", "string");
-    provider->add("getRooms", "tbl <b>rooms</b> = <i>getRooms()</i>", "table");
-    provider->add("gotoRoom", "<i>gotoRoom(num <b>roomID</b>)</i>", "void");
-
+    }
+    //and       break     do        else      elseif
+    //end       false     for       function  if
+    //in        local     nil       not       or
+    //repeat    return    then      true      until     while
+    provider->add("and");
+    provider->add("break");
+    provider->add("else");
+    provider->add("elseif");
+    provider->add("end");
+    provider->add("false");
+    provider->add("for");
+    provider->add("function");
+    provider->add("local");
+    provider->add("nil");
+    provider->add("not");
+    provider->add("repeat");
+    provider->add("return");
+    provider->add("then");
+    provider->add("true");
+    provider->add("until");
+    provider->add("while");
+    /*provider->add("getAllMapUserData", "tbl mapUserData</b> = <font color='blue'>getAllMapUserData</font>()", "table");
+    provider->add("getAllRoomUserData", "tbl <b>roomUserData</b> = getAllRoomUserData(num <b>roomID</b>)", "table");
+    provider->add("getAreaExits", "tbl <b>exits</b> = getAreaExits(num <b>areaID</b>, bool <b>showExits</b>)", "table");
+    provider->add("getPath", "bool <b>pathFound</b> = getPath(num <b>fromRoomID</b>, num <b>toRoomID</b>)", "boolean");
+    provider->add("getRoomArea", "num <b>areaID</b> = getRoomArea(num <b>roomID</b>)", "number");
+    provider->add("getRoomAreaName", "str <b>areaName</b> = getRoomAreaName(num <b>areaID</b>)", "string");
+    provider->add("getRoomAreaName", "num <b>areaID</b> = getRoomAreaName(str <b>areaName</b>)", "number");
+    provider->add("getRoomChar", "str <b>roomChar</b> = getRoomChar(num <b>roomID</b>)", "string");
+    provider->add("getRoomCoordinates", "num <b>x</b>, num <b>y</b>, num <b>z</b> = getRoomCoordinates(num <b>roomID</b>)", "number");
+    provider->add("getRoomEnv", "num <b>roomEnv</b> = getRoomEnv(num <b>id</b>)", "number");
+    provider->add("getRoomIDbyHash", "num <b>roomID</b> = getRoomIDbyHash(num <b>roomID</b>)", "number");
+    provider->add("getRoomName", "<dd>str</dd> <dt>roomName</dt> = <dt>getRoomName</dt>(<dd>num</dd> <dt>roomID</dt>)", "string");
+    provider->add("getRooms", "tbl <b>rooms</b> = getRooms()", "table");
+    provider->add("gotoRoom", "gotoRoom(num <b>roomID</b>)", "void");*/
 
     edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
 
