@@ -491,7 +491,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Change room colour</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2703"/>
@@ -2522,7 +2522,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
       <source>choose color to trigger on</source>
-      <translation type="unfinished"/>
+      <translation>choose colour to trigger on</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
@@ -2772,7 +2772,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>Select Style, Color and whether to end the line with an arrow head.</source>
-      <translation type="unfinished"/>
+      <translation>Select Style, Colour and whether to end the line with an arrow head.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
@@ -2782,7 +2782,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Colour:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="77"/>
@@ -2825,7 +2825,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>Choose line format, colour and arrow option and then select the exit to start drawing</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
@@ -2835,7 +2835,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...</source>
-      <translation type="unfinished"/>
+      <translation>Select Style, Colour and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
@@ -2855,7 +2855,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Colour:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
@@ -2972,7 +2972,8 @@ custom line?</source>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>To remove a custom line, cancel this dialog,
 select the line and right-click to obtain a &quot;delete&quot; option.</source>
-      <translation type="unfinished"/>
+      <translation>To remove a custom line, cancel this dialogue,
+select the line and right-click to obtain a &quot;delete&quot; option.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
@@ -3707,7 +3708,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2475"/>
       <source>Updating themes from colorsublime.com...</source>
-      <translation type="unfinished"/>
+      <translation>Updating themes from colorsublime.com...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2566"/>
@@ -3747,7 +3748,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2652"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2662"/>
@@ -6602,17 +6603,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1083"/>
       <source>Updating themes from colorsublime.com...</source>
-      <translation type="unfinished"/>
+      <translation>Updating themes from colorsublime.com...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1107"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>Colour view</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1113"/>
       <source>Select your color preferences</source>
-      <translation type="unfinished"/>
+      <translation>Select your colour preferences</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1119"/>
@@ -6647,7 +6648,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation type="unfinished"/>
+      <translation>These preferences set how you want a particular colour to be represented visually in the main display:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1234"/>
@@ -6749,7 +6750,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1506"/>
       <location filename="../src/ui/profile_preferences.ui" line="2143"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Reset all colours to default</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1530"/>
@@ -6916,22 +6917,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1822"/>
       <source>Mapper colors</source>
-      <translation type="unfinished"/>
+      <translation>Mapper colours</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1828"/>
       <source>Select your color preferences for the map display</source>
-      <translation type="unfinished"/>
+      <translation>Select your colour preferences for the map display</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1834"/>
       <source>Link color</source>
-      <translation type="unfinished"/>
+      <translation>Link colour</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1854"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Background colour:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2167"/>
@@ -7379,7 +7380,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
@@ -7888,12 +7889,12 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1537"/>
       <source>fg color</source>
-      <translation type="unfinished"/>
+      <translation>fg colour</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1583"/>
       <source>bg color</source>
-      <translation type="unfinished"/>
+      <translation>bg colour</translation>
     </message>
   </context>
   <context>
@@ -7901,12 +7902,12 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground Color</source>
-      <translation type="unfinished"/>
+      <translation>Foreground Colour</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background Color</source>
-      <translation type="unfinished"/>
+      <translation>Background Colour</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
