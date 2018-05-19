@@ -20,7 +20,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="822"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Descomprimir</translation>
     </message>
   </context>
   <context>
