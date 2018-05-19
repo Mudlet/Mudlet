@@ -8,19 +8,23 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Uitpakken module:
+&quot;%1&quot;
+wacht aub...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="818"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Uitpakken van pakket:
+&quot;%1&quot;
+wacht aub...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="822"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Uitpakken</translation>
     </message>
   </context>
   <context>
@@ -33,12 +37,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>lijn %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation type="unfinished"/>
+      <translation>Verwacht %1 tijdens het parseren</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
@@ -100,7 +104,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
       <source> (%1)</source>
-      <translation type="unfinished"/>
+      <translation> (%1)</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
@@ -110,7 +114,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>Fout, thema niet gevonden %1.</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
@@ -120,12 +124,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 is weg (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation type="unfinished"/>
+      <translation>! %1 is terug</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
@@ -185,7 +189,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 antwoordde in %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
