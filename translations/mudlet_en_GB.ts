@@ -5491,7 +5491,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</source>
-      <translation type="unfinished"/>
+      <translation>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
