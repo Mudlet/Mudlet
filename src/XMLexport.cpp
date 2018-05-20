@@ -203,7 +203,7 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
 
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { mpHost->xmlSaved(fileName); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -215,7 +215,7 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
 
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -630,7 +630,7 @@ bool XMLexport::exportGenericPackage(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
         watcher->setFuture(future);
         saveFutures.append(future);
 
