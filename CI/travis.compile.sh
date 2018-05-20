@@ -24,12 +24,11 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then # getting the number of processors is d
 else
   PROCS=$(nproc)
 fi
+"${Q_OR_C_MAKE}" --version
 echo "Compiling using ${PROCS} cores."
 if [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-  qmake -v
   qmake ${SPEC} ../src/mudlet.pro
 else
-  cmake --version
   cmake ..
 fi
 
