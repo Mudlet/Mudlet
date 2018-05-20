@@ -8,7 +8,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
     # instead of deployment, we upload to coverity for cron jobs
     cd build
-	  tar czf Mudlet.tgz cov-int
+    tar czf Mudlet.tgz cov-int
     ls -l Mudlet.tgz
     # we make this FAIL to not thrash our allowance if things go wrong!
     curl --form token="${COVERITY_SCAN_TOKEN}" \
@@ -20,10 +20,10 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
     CURL_RESULT=$?
     echo curl returned $CURL_RESULT
     if [ $CURL_RESULT -ne 0 ]; then
-	    echo Upload to Coverity failed, curl returned $CURL_RESULT
-	    exit 1
+      echo Upload to Coverity failed, curl returned $CURL_RESULT
+      exit 1
     fi
-	  exit
+    exit
   fi
 
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"

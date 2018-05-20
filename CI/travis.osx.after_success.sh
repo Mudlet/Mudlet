@@ -3,8 +3,8 @@
 set -e
 
 if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
-	echo Job not executed under cron run
-	exit
+  echo Job not executed under cron run
+  exit
 fi
 
 # we deploy only qmake and clang combination for macOS
