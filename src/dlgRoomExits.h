@@ -35,7 +35,33 @@ class TRoom;
 class TExit
 {
 public:
-    TExit(const QString& exitText, const bool hasExitStub, const bool hasNoRoute, const int weight, const int door) {
+    // Default constructor - we need this for the "empty" value() case in dlgRoomExits::originalExits
+    TExit()
+    : mHasNoRoute(false)
+    , mHasStub(false)
+    , mDestination(0)
+    , mDoor(0)
+    , mWeight(0)
+    {}
+
+    TExit(const QString& exitText, const bool hasExitStub, const bool hasNoRoute, const int weight, const int door)
+    : mHasNoRoute(hasNoRoute)
+    , mHasStub(hasExitStub)
+    , mDoor(door)
+    , mWeight(weight)
+    {
+        // Tempory test code to see if something has gone wrong with return
+        // value from QButtonGRoup::checkedId() - it is expected to be in range
+        // (-2 = "No door", -3 = "Open door", -4 = "Closed door" or
+        // -5 = "Locked door") and is part of an attemp to solve ISSUE #1665:
+        if (mDoor < 0 || mDoor > 3) {
+            // It has to be fatal so that a RELEASE (no debug code) build - which is
+            // where a problem with doors processing is happening
+            // - changes to door settings are not triggering a modification.
+            qFatal("dlgRoomExits::makeExitFromControls(...) - TExit::TExit(...) FATAL ERROR: Unhandled internal values outside of expected range for TExit::door, it is %i but it should have been between 0 to 3 (inclusive) for an exit",
+                   mDoor);
+        }
+
         bool isOk;
         if (exitText.toInt(&isOk) && isOk) {
             // Exit destination is convertable to a non-zero integer
@@ -46,8 +72,9 @@ public:
             mDestination = 0;
             mHasStub = true;
         } else {
-            // No exit so return null result:
-            return nullptr;
+            // Non-existant
+            mDestination = 0;
+            mHasStub = false;
         }
 
         // Fill in the remaining details:
@@ -56,29 +83,55 @@ public:
         mDoor = door;
     }
 
-    bool pHasNoRoute;
-    bool pHasStub;
-    int pDestination;
-    int pDoor;
-    int pWeight;
+    // Are all the details consistant
+//    bool isvalid() const
+//    {
+//        if (mDoor < 0 || mDoor > 3 || mWeight < 0) {
+//            // Are the door and weigth values within range
+//            return false;
+//        }
 
-    friend bool operator==( TExit &a, TExit &b )
+//        if ((mHasStub && mDestination > 0) || (!mHasStub && mDestination < 0)){
+//            // Is there a stub and a real exit
+//            // Is there no stub and a negative exit id
+//            // Both are invalid
+//            return false;
+//        }
+
+//        if (mHasStub && (mHasNoRoute || mWeight)) {
+//            // Is there a stub exit and (a no route or a weight)
+//            // Is invalid
+//            return false;
+//        }
+
+//        // Guess it is likely to be okay - assuming the destination room exists
+//        // if it is not a stub
+//        return true;
+//    }
+
+    friend bool operator==(TExit &a, TExit &b)
     {
-        return a.destination == b.destination
-                 && a.door == b.door
-                 && a.hasNoRoute == b.hasNoRoute
-                 && a.hasStub == b.hasStub
-                 && a.weight == b.weight ;
+        return a.mDestination == b.mDestination
+                 && a.mDoor == b.mDoor
+                 && a.mHasNoRoute == b.mHasNoRoute
+                 && a.mHasStub == b.mHasStub
+                 && a.mWeight == b.mWeight;
     }
 
-    friend bool operator!=( TExit &a, TExit &b )
+    friend bool operator!=(TExit &a, TExit &b)
     {
-        return a.destination != b.destination
-                 || a.door != b.door
-                 || a.hasNoRoute != b.hasNoRoute
-                 || a.hasStub != b.hasStub
-                 || a.weight != b.weight ;
+        return a.mDestination != b.mDestination
+                 || a.mDoor != b.mDoor
+                 || a.mHasNoRoute != b.mHasNoRoute
+                 || a.mHasStub != b.mHasStub
+                 || a.mWeight != b.mWeight;
     }
+
+    bool mHasNoRoute;
+    bool mHasStub;
+    int mDestination;
+    int mDoor;
+    int mWeight;
 };
 
 class dlgRoomExits : public QDialog, public Ui::room_exits
@@ -87,8 +140,9 @@ class dlgRoomExits : public QDialog, public Ui::room_exits
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
-    explicit dlgRoomExits(Host*, QWidget* parent = 0);
-    void init(int);
+    explicit dlgRoomExits(Host*, int, QWidget* parent = 0);
+    ~dlgRoomExits();
+
 
 public slots:
     void save();
@@ -135,8 +189,7 @@ private:
     // key = (special exit name/command), value = exit class instance
     QMap<QString, TExit*> originalSpecialExits;
 
-    void initExit(int roomId,
-                  int direction,
+    void initExit(int direction,
                   int exitId,
                   QLineEdit* exitLineEdit,
                   QCheckBox* noRoute,
