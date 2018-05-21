@@ -5792,11 +5792,11 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     } else if (!lua_isnumber(L, 8)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #8 type (match all flag as number expected, got %s!)", luaL_typename(L, 8));
         return lua_error(L);
-    } else if (!lua_isnumber(L, 11)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #11 type (fire length as number expected, got %s!)", luaL_typename(L, 11));
-        return lua_error(L);
     } else if (!lua_isnumber(L, 12)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #12 type (line delta as number expected, got %s!)", luaL_typename(L, 12));
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #12 type (fire length as number expected, got %s!)", luaL_typename(L, 12));
+        return lua_error(L);
+    } else if (!lua_isnumber(L, 13)) {
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #13 type (line delta as number expected, got %s!)", luaL_typename(L, 13));
         return lua_error(L);
     }
 
@@ -5831,24 +5831,24 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         hlFgColor.setNamedColor(lua_tostring(L, 9));
     }
     QColor hlBgColor;
-    if (lua_isnumber(L, 9)) {
+    if (lua_isnumber(L, 10)) {
         highlight = false;
     } else {
         highlight = true;
-        hlBgColor.setNamedColor(lua_tostring(L, 9));
+        hlBgColor.setNamedColor(lua_tostring(L, 10));
     }
 
     QString soundFile;
     bool playSound;
-    if (lua_isstring(L, 10)) {
+    if (lua_isstring(L, 11)) {
         playSound = true;
-        soundFile = QString::fromUtf8(lua_tostring(L, 10));
+        soundFile = QString::fromUtf8(lua_tostring(L, 11));
     } else {
         playSound = false;
     }
 
-    int fireLength = lua_tonumber(L, 11);
-    int lineDelta = lua_tonumber(L, 12);
+    int fireLength = lua_tonumber(L, 12);
+    int lineDelta = lua_tonumber(L, 13);
 
     QString pattern = QString::fromUtf8(lua_tostring(L, 2));
     QStringList regexList;
