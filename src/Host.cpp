@@ -1206,7 +1206,7 @@ void Host::installPackageFonts(const QString &packageName)
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
             filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
             if (QFontDatabase::addApplicationFont(filePath) == -1) {
-                qWarning() << "Warning, could not load font" << filePath;
+                qWarning() << "Host::installPackageFonts() warning - Could not load the font in the file: " << filePath;
             }
         }
     }

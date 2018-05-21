@@ -66,7 +66,7 @@ void FontManager::loadFonts(const QString& folder)
         if (QFontDatabase::addApplicationFont(fontFilePathName) == -1) {
             // At the point that addFonts() is called we have a GUI application
             // in the making and can use qDebug() and not rely on iostream class
-            qWarning() << "FontManager::loadFonts() ERROR - Could not load the font in the file: " << fontFilePathName;
+            qWarning() << "FontManager::loadFonts() warning - Could not load the font in the file: " << fontFilePathName;
         }
     }
 }
