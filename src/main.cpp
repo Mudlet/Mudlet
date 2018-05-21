@@ -425,8 +425,9 @@ int main(int argc, char* argv[])
         }
 
         // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar(169) % QString(" Mudlet makers 2008-") % QString(__DATE__).mid(7);
-        QFont font("DejaVu Serif", 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        // PLACEMARKER: Date-stamp needing annual update
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
+        QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -462,10 +463,10 @@ int main(int argc, char* argv[])
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
     // workaround latency spikes with wifi on Qt < 5.9.4, see https://github.com/Mudlet/Mudlet/issues/1587
-    // set the timeout to 5min
+    // set the timeout to infinite
 #if (QT_VERSION < QT_VERSION_CHECK(5, 9, 4))
     if (qgetenv("QT_BEARER_POLL_TIMEOUT").isEmpty()) {
-        qputenv("QT_BEARER_POLL_TIMEOUT", "300000");
+        qputenv("QT_BEARER_POLL_TIMEOUT", QByteArray::number(-1));
     }
 #endif
 

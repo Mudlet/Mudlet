@@ -123,51 +123,53 @@ set(mudlet_UIS
   ui/vars_main_area.ui)
 
 set(mudlet_MOC_HDRS
-  ctelnet.h
-  dlgAboutDialog.h
-  dlgActionMainArea.h
-  dlgAliasMainArea.h
-  dlgColorTrigger.h
-  dlgComposer.h
-  dlgConnectionProfiles.h
-  dlgIRC.h
-  dlgKeysMainArea.h
-  dlgMapper.h
-  dlgNotepad.h
-  dlgPackageExporter.h
-  dlgProfilePreferences.h
-  dlgRoomExits.h
-  dlgScriptsMainArea.h
-  dlgSourceEditorArea.h
-  dlgSystemMessageArea.h
-  dlgTimersMainArea.h
-  dlgTriggerEditor.h
-  dlgTriggerPatternEdit.h
-  dlgTriggersMainArea.h
-  dlgVarsMainArea.h
-  EAction.h
-  exitstreewidget.h
-  glwidget.h
-  mudlet.h
-  T2DMap.h
-  TCommandLine.h
-  TConsole.h
-  TEasyButtonBar.h
-  TForkedProcess.h
-  TLabel.h
-  TLuaInterpreter.h
-  TMap.h
-  TSplitter.h
-  TSplitterHandle.h
-  TTextEdit.h
-  TToolBar.h
-  TTreeWidget.h)
+    ctelnet.h
+    dlgAboutDialog.h
+    dlgActionMainArea.h
+    dlgAliasMainArea.h
+    dlgColorTrigger.h
+    dlgComposer.h
+    dlgConnectionProfiles.h
+    dlgIRC.h
+    dlgKeysMainArea.h
+    dlgMapper.h
+    dlgNotepad.h
+    dlgPackageExporter.h
+    dlgProfilePreferences.h
+    dlgRoomExits.h
+    dlgScriptsMainArea.h
+    dlgSourceEditorArea.h
+    dlgSystemMessageArea.h
+    dlgTimersMainArea.h
+    dlgTriggerEditor.h
+    dlgTriggerPatternEdit.h
+    dlgTriggersMainArea.h
+    dlgVarsMainArea.h
+    EAction.h
+    Host.h
+    exitstreewidget.h
+    glwidget.h
+    mudlet.h
+    T2DMap.h
+    TCommandLine.h
+    TConsole.h
+    TEasyButtonBar.h
+    TForkedProcess.h
+    TLabel.h
+    TLuaInterpreter.h
+    TMap.h
+    TSplitter.h
+    TSplitterHandle.h
+    TTextEdit.h
+    TToolBar.h
+    TTreeWidget.h
+    XMLexport.h
+)
 
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     FontManager.h
-    Host.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
@@ -199,7 +201,6 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
-    XMLexport.h
     XMLimport.h
 )
 
@@ -384,6 +385,7 @@ find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(YAJL REQUIRED)
+find_package(PUGIXML REQUIRED)
 
 # Fall back on original FIND_PACKAGE process on Apple if Package Config failed
 # Originally we did use that but it started to fail on Travis C.I. in June 2016
@@ -418,16 +420,18 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
-  ${Qt5Core_INCLUDE_DIRS}
-  ${Qt5Widgets_INCLUDE_DIRS}
-  ${Qt5Network_INCLUDE_DIRS}
-  ${Qt5OpenGL_INCLUDE_DIRS}
-  ${Qt5Multimedia_INCLUDE_DIRS}
-  ${Qt5UiTools_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
-  ${LUA_INCLUDE_DIR}
-  ${PCRE_INCLUDE_DIR}
-  ${YAJL_INCLUDE_DIR})
+    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5Network_INCLUDE_DIRS}
+    ${Qt5OpenGL_INCLUDE_DIRS}
+    ${Qt5Multimedia_INCLUDE_DIRS}
+    ${Qt5UiTools_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+    ${LUA_INCLUDE_DIR}
+    ${PCRE_INCLUDE_DIR}
+    ${YAJL_INCLUDE_DIR}
+    ${PUGIXML_INCLUDE_DIR}
+)
 
 if(Qt5TextToSpeech_FOUND)
   add_definitions(${Qt5TextToSpeech_DEFINITIONS})
@@ -479,22 +483,24 @@ else()
 endif()
 
 target_link_libraries(mudlet
-  ${Qt5Core_LIBRARIES}
-  ${Qt5Widgets_LIBRARIES}
-  ${Qt5Network_LIBRARIES}
-  ${Qt5Multimedia_LIBRARIES}
-  ${Qt5OpenGL_LIBRARIES}
-  ${Qt5UiTools_LIBRARIES}
-  ${Qt5Concurrent_LIBRARIES}
-  ${Boost_LIBRARIES}
-  ${LUA_LIBRARIES}
-  ${OPENGL_LIBRARIES}
-  ${PCRE_LIBRARIES}
-  ${YAJL_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  communi
-  lua_yajl
-  edbee-lib)
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Widgets_LIBRARIES}
+    ${Qt5Network_LIBRARIES}
+    ${Qt5Multimedia_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${Qt5UiTools_LIBRARIES}
+    ${Qt5Concurrent_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${LUA_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    ${PCRE_LIBRARIES}
+    ${YAJL_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ${PUGIXML_LIBRARIES}
+    communi
+    lua_yajl
+    edbee-lib
+)
 
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet ${Qt5TextToSpeech_LIBRARIES})

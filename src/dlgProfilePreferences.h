@@ -35,6 +35,7 @@
 #include <QtCore>
 #include <QDialog>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QMap>
 #include "post_guard.h"
 
@@ -110,6 +111,12 @@ public slots:
     void slot_showMapGlyphUsage();
 
 
+    // Log.
+    void slot_setLogDir();
+    void slot_resetLogDir();
+    void slot_logFileNameFormatChange(const int index);
+    void slot_changeLogFileAsHtml(const bool isHtml);
+
     // Save.
     void slot_save_and_exit();
 
@@ -158,6 +165,8 @@ private:
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+
+    QString mLogDirPath;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

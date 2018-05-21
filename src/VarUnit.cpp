@@ -51,8 +51,9 @@ void VarUnit::addPointer(const void* p)
 
 bool VarUnit::shouldSave(QTreeWidgetItem* p)
 {
-    TVar* var = getWVar(p);
-    if (var->getValueType() == 6 || var->isReference()) {
+    auto var = getWVar(p);
+
+    if (!var || var->getValueType() == 6 || var->isReference()) {
         return false;
     }
     return true;
