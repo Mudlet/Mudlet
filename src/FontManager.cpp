@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2014 by Vadim Peretokin - vperetokin@gmail.com     *
+ *   Copyright (C) 2009-2018 by Vadim Peretokin - vperetokin@gmail.com     *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Stephen Lyons - slysven@viginmedia.com          *
  *                                                                         *
@@ -21,13 +21,13 @@
 
 
 #include "FontManager.h"
-
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDir>
 #include <QDebug>
 #include <QFontDatabase>
+#include <QFileInfo>
 #include <QString>
 #include <QStringList>
 #include "post_guard.h"
@@ -61,12 +61,38 @@ void FontManager::loadFonts(const QString& folder)
     QDir dir = folder;
     dir.setNameFilters(filters);
 
-    foreach (QString fontfile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
-        QString fontFilePathName = QStringLiteral("%1/%2").arg(dir.absolutePath(), fontfile);
-        if (QFontDatabase::addApplicationFont(fontFilePathName) == -1) {
-            // At the point that addFonts() is called we have a GUI application
-            // in the making and can use qDebug() and not rely on iostream class
-            qWarning() << "FontManager::loadFonts() warning - Could not load the font in the file: " << fontFilePathName;
-        }
+    foreach (QString fontFile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
+        QString fontFilePathName = QStringLiteral("%1/%2").arg(dir.absolutePath(), fontFile);
+        loadFont(fontFilePathName);
     }
+}
+
+void FontManager::loadFont(const QString& filePath) {
+    if (fontAlreadyLoaded(filePath)) {
+        return;
+    }
+
+    auto fontID = QFontDatabase::addApplicationFont(filePath);
+
+    // remember even if the font failed to load so we don't spam messages on fonts that repeat
+    rememberFont(filePath, fontID);
+
+    if (fontID == -1) {
+        qWarning() << "FontManager::loadFonts() warning - Could not load the font in the file: " << filePath;
+    }
+}
+
+bool FontManager::fontAlreadyLoaded(const QString& filePath) {
+    QFileInfo fontFile(filePath);
+    auto fileName = fontFile.fileName();
+
+    return loadedFonts.contains(fileName);
+}
+
+void FontManager::rememberFont(const QString& filePath, int fontID) {
+    QFileInfo fontFile(filePath);
+    auto fileName = fontFile.fileName();
+
+    if (loadedFonts.contains(fileName)) { return; }
+    loadedFonts.insert(fileName, fontID);
 }

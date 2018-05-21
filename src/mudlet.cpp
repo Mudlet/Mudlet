@@ -168,6 +168,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+, mFontManager()
 
 {
     setupUi(this);
@@ -499,6 +500,9 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+
+    // load bundled fonts
+    mFontManager.addFonts();
 }
 
 QSettings* mudlet::getQSettings()

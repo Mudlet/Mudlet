@@ -27,6 +27,7 @@
 
 
 #include "HostManager.h"
+#include "FontManager.h"
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -315,6 +316,8 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+
+    FontManager mFontManager;
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;

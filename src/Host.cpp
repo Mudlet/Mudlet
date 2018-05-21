@@ -1205,9 +1205,8 @@ void Host::installPackageFonts(const QString &packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
             filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            if (QFontDatabase::addApplicationFont(filePath) == -1) {
-                qWarning() << "Host::installPackageFonts() warning - Could not load the font in the file: " << filePath;
-            }
+
+            mudlet::self()->mFontManager.loadFont(filePath);
         }
     }
 }
@@ -1215,7 +1214,6 @@ void Host::installPackageFonts(const QString &packageName)
 // ensures fonts from all installed packages are loaded in Mudlet
 void Host::refreshPackageFonts()
 {
-    qDebug() << getName() << mInstalledPackages.count();
     for (const auto& package : mInstalledPackages) {
         installPackageFonts(package);
     }
