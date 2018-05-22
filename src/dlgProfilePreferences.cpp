@@ -169,7 +169,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                               "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
                                                               "chose the right width automatically but you can override the setting for each profile.</p>"
                                                               "<p>This control has three settings:"
-                                                              "<ul><li><b>Unchecked</b> '<i>narror</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                              "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
                                                               "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
                                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
                                                               "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
