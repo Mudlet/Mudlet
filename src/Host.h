@@ -4,8 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -85,6 +86,14 @@ public:
     void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
+    bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
+    // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
+    void               setWideAmbiguousEAsianGlyphs( const Qt::CheckState state );
+    // Is used to set preference dialog control directly:
+    Qt::CheckState     getWideAmbiguousEAsianGlyphsControlState() { QMutexLocker locker(& mLock);
+                                                                       return mAutoAmbigousWidthGlyphsSetting
+                                                                               ? Qt::PartiallyChecked
+                                                                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
 
     void closingDown();
     bool isClosingDown();
@@ -335,7 +344,11 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
 
+
 signals:
+    // Tells TTextEdit instances for this profile how to draw the ambiguous
+    // width characters:
+    void signal_changeIsAmbigousWidthGlyphsToBeWide(const bool);
     void profileSaveStarted();
     void profileSaveFinished();
 
@@ -390,6 +403,16 @@ private:
     QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
+    // This option makes the control on the preferences tristated so the value
+    // used depends - currently - on what the MUD Server encoding is (only set
+    // true for GBK and GB18030 ones) - however this is likely to be due for
+    // revision once locale/language support is brought in - when it can be
+    // made dependent on that instead.
+    bool mAutoAmbigousWidthGlyphsSetting;
+    // If above is true is the value deduced from the MUD server encoding, if
+    // the above is false is the user's direct setting - this is so that changes
+    // in the TTextEdit classes are only made when necessary:
+    bool mWideAmbigousWidthGlyphs;
 
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
