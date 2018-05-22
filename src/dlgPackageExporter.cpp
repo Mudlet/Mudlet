@@ -85,7 +85,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     }
     packagePath.replace(R"(\)", "/");
 
-    tempDir = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("tmp/%1").arg(packageName));
+    tempDir = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("tmp/%1").arg(packageName), mpHost->mHomePath);
     QDir packageDir = QDir(tempDir);
     if (!packageDir.exists()) {
         packageDir.mkpath(tempDir);

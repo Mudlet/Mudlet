@@ -39,8 +39,8 @@ dlgNotepad::dlgNotepad(Host* pH) : mpHost(pH)
 
 void dlgNotepad::save()
 {
-    QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
-    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"));
+    QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName(), QString(), mpHost->mHomePath);
+    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"), mpHost->mHomePath);
     QDir dirFile;
     if (!dirFile.exists(directoryFile)) {
         dirFile.mkpath(directoryFile);
@@ -56,7 +56,7 @@ void dlgNotepad::save()
 
 void dlgNotepad::restore()
 {
-    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"));
+    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"), mpHost->mHomePath);
     QFile file;
     file.setFileName(fileName);
     file.open(QIODevice::ReadOnly);

@@ -981,7 +981,7 @@ void cTelnet::processTelnetCommand(const string& command)
                     return;
                 }
 
-                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
+                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName, mpHost->mHomePath);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
@@ -1201,7 +1201,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
             return;
         }
 
-        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
+        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName, mpHost->mHomePath);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);

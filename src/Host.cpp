@@ -172,10 +172,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mRetries(5)
 , mSaveProfileOnExit(false)
 , mHaveMapperScript(false)
+, mHomePath(QString())
 {
+    mHomePath = mudlet::getMudletPath(mudlet::mainPath);
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
-    QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("log"));
+    QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("log"), mHomePath);
     QString logFileName = QStringLiteral("%1/errors.txt").arg(directoryLogFile);
     QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
@@ -229,7 +231,7 @@ void Host::saveModules(int sync)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
-    QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
+    QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath, QString(), QString(), mHomePath);
     QDir savePath = QDir(dirName);
     if (!savePath.exists()) {
         savePath.mkpath(dirName);
@@ -244,8 +246,8 @@ void Host::saveModules(int sync)
         QString zipName;
         zip* zipFile = nullptr;
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
-            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName, mHomePath);
+            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName, mHomePath);
             int err;
             zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
             zipName = filename_xml;
@@ -382,7 +384,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     QString directory_xml;
     if (saveFolder.isEmpty()) {
-        directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
+        directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName(), QString(), mHomePath);
     } else {
         directory_xml = saveFolder;
     }
@@ -792,8 +794,8 @@ bool Host::installPackage(const QString& fileName, int module)
     }
     QFile file2;
     if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
-        QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
-        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+        QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName(), QString(), mHomePath);
+        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName, mHomePath);
         // home directory for the PROFILE
         QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -1078,7 +1080,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     getActionUnit()->updateToolbar();
 
-    QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+    QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName, mHomePath);
     removeDir(dest, dest);
     saveProfile();
     //NOW we reset if we're uninstalling a module
@@ -1158,7 +1160,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item, mHomePath));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;
@@ -1175,7 +1177,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item, mHomePath));
     bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {

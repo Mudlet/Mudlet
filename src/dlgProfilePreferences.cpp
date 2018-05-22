@@ -461,7 +461,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // pHost->mLogDir should be empty for the default location:
     mLogDirPath = pHost->mLogDir;
     lineEdit_logFileFolder->setText(mLogDirPath);
-    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName(), QString(), pHost->mHomePath));
     // set the cursor position to the end of the lineEdit's text property.
     lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
     // Enable the reset button if the current location is not the default one:
@@ -1491,7 +1491,7 @@ void dlgProfilePreferences::loadMap()
     QString fileName = QFileDialog::getOpenFileName(
                            this,
                            tr("Load Mudlet map"),
-                           mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
+                           mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName(), QString(), pHost->mHomePath),
                            tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
                               "Do not change extensions (in braces) they are used programmatically!"));
     if (fileName.isEmpty()) {
@@ -1599,7 +1599,7 @@ void dlgProfilePreferences::copyMap()
 
             // Check for the destination directory for the other profiles
             QDir toProfileDir;
-            QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName);
+            QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName, QString(), pHost->mHomePath);
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
@@ -1718,7 +1718,7 @@ void dlgProfilePreferences::copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()));
+    QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName(), QString(), pHost->mHomePath));
     QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -1748,7 +1748,7 @@ void dlgProfilePreferences::copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
+        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName, pHost->mHomePath))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
             continue; // Try again with next profile
@@ -1807,7 +1807,7 @@ void dlgProfilePreferences::slot_setLogDir()
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName())) {
+        if (currentLogDir == mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName(), QString(), pHost->mHomePath)) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -1977,8 +1977,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mLogDir = mLogDirPath;
         pHost->mLogFileName = lineEdit_logFileName->text();
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
-        mudlet::self()->mConfigDir = mConfigDirPath;
-        mudlet::self()->mConfigDirIndex = comboBox_selectConfigDir->currentIndex();
+
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
@@ -2134,6 +2133,12 @@ void dlgProfilePreferences::slot_save_and_exit()
     // they changed things at the same time:
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+    // Save the previous loaded configuration before setting mConfigDir to
+    // the changed path
+    // mudlet::self()->writeSettings();
+    mudlet::self()->mConfigDir = mConfigDirPath;
+    mudlet::self()->mConfigDirIndex = comboBox_selectConfigDir->currentIndex();
 
     close();
 }

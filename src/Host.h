@@ -179,6 +179,8 @@ public:
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
 
+    QString mHomePath;
+
     int commandLineMinimumHeight;
     bool mAlertOnNewData;
     bool mAllowToSendCommand;

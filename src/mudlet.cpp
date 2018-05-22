@@ -460,7 +460,7 @@ mudlet::mudlet()
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
     mpSettings = getQSettings();
-    readSettings(*mpSettings);
+    readSettings();
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
 
@@ -2341,8 +2341,9 @@ void mudlet::forceClose()
     close();
 }
 
-void mudlet::readSettings(const QSettings& settings)
+void mudlet::readSettings()
 {
+    QSettings& settings = *getQSettings();
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
@@ -2832,7 +2833,7 @@ void mudlet::slot_replay()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), getMudletPath(profileReplayAndLogFilesPath, pHost->getName()), tr("*.dat"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), getMudletPath(profileReplayAndLogFilesPath, pHost->getName(), QString(), pHost->mHomePath), tr("*.dat"));
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
@@ -3536,15 +3537,31 @@ void mudlet::slot_module_manager_destroyed()
 
 // Convenience helper - may aide things if we want to put files in a different
 // place...!
-QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
+QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2, const QString& homePath)
 {
-    QString configDir = (self() == nullptr ? self()->getQConfig()->value("configPath").toString() : self()->mConfigDir);
-    QString configPath;
-    if (!configDir.isEmpty()) {
-        configPath = configDir;
-    } else if (configDir == ".") {
-        configPath = QCoreApplication::applicationDirPath() + "/config";
+    QString configDir;
+    if (self()) {
+        configDir = self()->mConfigDir;
     } else {
+        configDir = mudlet::getQConfig()->value("configPath").toString();
+    }
+
+    QString configPath;
+    if (!homePath.isEmpty()) {
+        // If set, use the parameter homePath as the configPath.
+        configPath = homePath;
+    } else if (configDir == ".") {
+        // Otherwise, if configDir is set to a relative path, set
+        // configPath to the directory "/config" within the
+        // application directory path.
+        configPath = QCoreApplication::applicationDirPath() + "/config";
+    } else if (!configDir.isEmpty()) {
+        // Otherwise, if the variable configDir is not empty, use it
+        // as configPath.
+        configPath = configDir;
+    } else {
+        // Default to the .config directory in the user's home path if
+        // all else fails.
         configPath = QDir::homePath() + "/.config/mudlet";
     }
 
@@ -3555,7 +3572,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     case mainDataItemPath:
         // Takes one extra argument as a file (or directory) relating to
         // (profile independent) mudlet data - may end with a '/' if the extra
-        // argument does:I agree with Hauwke. It's not difficult (but not 100% fool proof). Rather than saying you aren't trying hard enough I might instead say you just aren't trying.
+        // argument does:
         return QStringLiteral("%1/%2").arg(configPath, extra1);
     case mainFontsPath:
         // (Added for 3.5.0) a revised location to store Mudlet provided fonts

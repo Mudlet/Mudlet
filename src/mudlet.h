@@ -153,7 +153,7 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings(const QSettings&);
+    void readSettings();
     void writeSettings();
     void writeConfigPath();
     QString mConfigDir;
@@ -312,7 +312,7 @@ public:
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath
     };
-    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString(), const QString& homePath = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
@@ -455,7 +455,7 @@ private:
     void slot_toggle_compact_input_line();
     void set_compact_input_line();
 
-    QPointer<QSettings> getQConfig();
+    static QPointer<QSettings> getQConfig();
     QSettings* getQSettings();
 
     // Argument to QDateTime::toString(...) to format the elapsed time display
