@@ -2354,6 +2354,9 @@ void dlgRoomExits::slot_checkModified()
         // There has been a change in the "are there changes?" state
         setWindowModified(isModified);
         button_save->setEnabled(isModified);
-        update();
+#if defined(Q_OS_MACOS)
+        // Attempt to fix: https://bugreports.qt.io/browse/QTBUG-68067
+        button_save->repaint();
+#endif
     }
 }
