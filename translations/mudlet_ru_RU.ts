@@ -17,7 +17,9 @@ please wait...</source>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Распаковка пакета:
+&quot;%1&quot;
+пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="822"/>
@@ -370,22 +372,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 дней</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 часов</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 мин</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 секунд</translation>
     </message>
   </context>
   <context>
@@ -1000,7 +1002,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="757"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить профиль?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="757"/>
