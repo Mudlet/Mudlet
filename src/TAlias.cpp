@@ -311,6 +311,7 @@ bool TAlias::compileScript()
 {
     QString code = QStringLiteral("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
     QString aliasName = QStringLiteral("Alias: %1").arg(getName());
+    mFuncName = QStringLiteral("Alias%1").arg(QString::number(mID));
     QString error;
 
     if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {
