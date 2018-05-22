@@ -50,18 +50,6 @@ public:
     , mDoor(door)
     , mWeight(weight)
     {
-        // Tempory test code to see if something has gone wrong with return
-        // value from QButtonGRoup::checkedId() - it is expected to be in range
-        // (-2 = "No door", -3 = "Open door", -4 = "Closed door" or
-        // -5 = "Locked door") and is part of an attemp to solve ISSUE #1665:
-        if (mDoor < 0 || mDoor > 3) {
-            // It has to be fatal so that a RELEASE (no debug code) build - which is
-            // where a problem with doors processing is happening
-            // - changes to door settings are not triggering a modification.
-            qFatal("dlgRoomExits::makeExitFromControls(...) - TExit::TExit(...) FATAL ERROR: Unhandled internal values outside of expected range for TExit::door, it is %i but it should have been between 0 to 3 (inclusive) for an exit",
-                   mDoor);
-        }
-
         bool isOk;
         if (exitText.toInt(&isOk) && isOk) {
             // Exit destination is convertable to a non-zero integer
@@ -69,47 +57,21 @@ public:
             mHasStub = false;
         } else if (hasExitStub) {
             // Exit is a stub
+            mHasNoRoute = false;
             mDestination = 0;
             mHasStub = true;
+            mWeight = 0;
         } else {
             // Non-existant
-            mDestination = 0;
+            mHasNoRoute = false;
             mHasStub = false;
+            mDestination = 0;
+            mDoor = 0;
+            mWeight = 0;
         }
-
-        // Fill in the remaining details:
-        mHasNoRoute = hasNoRoute;
-        mWeight = weight;
-        mDoor = door;
     }
 
-    // Are all the details consistant
-//    bool isvalid() const
-//    {
-//        if (mDoor < 0 || mDoor > 3 || mWeight < 0) {
-//            // Are the door and weigth values within range
-//            return false;
-//        }
-
-//        if ((mHasStub && mDestination > 0) || (!mHasStub && mDestination < 0)){
-//            // Is there a stub and a real exit
-//            // Is there no stub and a negative exit id
-//            // Both are invalid
-//            return false;
-//        }
-
-//        if (mHasStub && (mHasNoRoute || mWeight)) {
-//            // Is there a stub exit and (a no route or a weight)
-//            // Is invalid
-//            return false;
-//        }
-
-//        // Guess it is likely to be okay - assuming the destination room exists
-//        // if it is not a stub
-//        return true;
-//    }
-
-    friend bool operator==(TExit &a, TExit &b)
+    friend bool operator==( TExit &a, TExit &b )
     {
         return a.mDestination == b.mDestination
                  && a.mDoor == b.mDoor
@@ -118,7 +80,7 @@ public:
                  && a.mWeight == b.mWeight;
     }
 
-    friend bool operator!=(TExit &a, TExit &b)
+    friend bool operator!=( TExit &a, TExit &b )
     {
         return a.mDestination != b.mDestination
                  || a.mDoor != b.mDoor
@@ -184,6 +146,10 @@ private:
     int mRoomID;
     int mEditColumn;
 
+    // A dummy constructed NULL exit, the address of which is to be given as a
+    // second argument and returned by the use of QMap<T1,T2>::value() on the
+    // two QMaps following:
+    TExit* mpNullExit;
     // key = (normal) exit DIR_***, value = exit class instance
     QMap<int, TExit*> originalExits;
     // key = (special exit name/command), value = exit class instance

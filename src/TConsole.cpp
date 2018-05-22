@@ -570,16 +570,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         connect(this, SIGNAL(signal_newDataAlert(const QString&, const bool)), mudlet::self(), SLOT(slot_newDataOnHost(const QString&, const bool)), Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
-
-        QTimer::singleShot(5000, Qt::VeryCoarseTimer, this, SLOT(slot_dangerWarning()));
     }
-}
-
-void TConsole::slot_dangerWarning()
-{
-    mpHost->postMessage(tr("[ WARN ]  - ☠☢☣ THIS IS A SUICIDAL MUDLET VERSION ONLY INTENDED FOR TESTING.\n"
-                           "DO NOT USE IT FOR CONNECTING TO A REAL MUD AS IT WILL DIE INSTANTLY \n"
-                           "SHOULD A PARTICULAR COMBINATION OF CIRCUMSTANCES ARISE ☣☢☠... \n"));
 }
 
 Host* TConsole::getHost()

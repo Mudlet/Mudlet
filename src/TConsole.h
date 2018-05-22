@@ -281,9 +281,6 @@ public slots:
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
 
-    void slot_dangerWarning();
-
-
 private:
     void refreshMiniConsole() const;
 

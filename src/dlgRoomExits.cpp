@@ -51,6 +51,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int id, QWidget* pW)
 , pR()
 , mRoomID(id)
 , mEditColumn()
+, mpNullExit(new TExit)
 {
     setupUi(this);
 
@@ -286,6 +287,10 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int id, QWidget* pW)
 dlgRoomExits::~dlgRoomExits()
 {
     // Clean up the stored TExit instances:
+    if (mpNullExit) {
+        delete mpNullExit;
+    }
+
     QMapIterator<int, TExit*> itOriginalExit(originalExits);
     while (itOriginalExit.hasNext()) {
         delete itOriginalExit.next().value();
@@ -560,7 +565,7 @@ void dlgRoomExits::save()
         pR->setSpecialExit(-1, value);
     }
 
-    TExit* pOriginalExit = originalExits.value(DIR_NORTHWEST);
+    TExit* pOriginalExit = originalExits.value(DIR_NORTHWEST, mpNullExit);
     if (nw->isEnabled() && !nw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
         // There IS a valid exit on the dialogue in this direction
         if (pOriginalExit->mDestination != nw->text().toInt()) {
@@ -579,7 +584,7 @@ void dlgRoomExits::save()
         if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_NORTHWEST); // Destination has been deleted so ensure the value for no exit is stored
         }
-        if (stub_nw->isChecked() !=  pOriginalExit->mHasStub) {
+        if (stub_nw->isChecked() != pOriginalExit->mHasStub) {
             // Is there now a stub exit and was there no previous record or
             // does that previous record say there was no stub exit
             pR->setExitStub(DIR_NORTHWEST, stub_nw->isChecked()); // So change stored idea to match
@@ -591,7 +596,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NW")); // And remove any custom line stuff, which uses opposite case keys - *sigh*
     }
 
-    pOriginalExit = originalExits.value(DIR_NORTH);
+    pOriginalExit = originalExits.value(DIR_NORTH, mpNullExit);
     if (n->isEnabled() && !n->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != n->text().toInt()) {
             pR->setExit(n->text().toInt(), DIR_NORTH);
@@ -618,7 +623,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("N"));
     }
 
-    pOriginalExit = originalExits.value(DIR_NORTHEAST);
+    pOriginalExit = originalExits.value(DIR_NORTHEAST, mpNullExit);
     if (ne->isEnabled() && !ne->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != ne->text().toInt()) {
             pR->setExit(ne->text().toInt(), DIR_NORTHEAST);
@@ -645,7 +650,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NE"));
     }
 
-    pOriginalExit = originalExits.value(DIR_UP);
+    pOriginalExit = originalExits.value(DIR_UP, mpNullExit);
     if (up->isEnabled() && !up->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != up->text().toInt()) {
             pR->setExit(up->text().toInt(), DIR_UP);
@@ -672,7 +677,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("UP"));
     }
 
-    pOriginalExit = originalExits.value(DIR_WEST);
+    pOriginalExit = originalExits.value(DIR_WEST, mpNullExit);
     if (w->isEnabled() && !w->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != w->text().toInt()) {
             pR->setExit(w->text().toInt(), DIR_WEST);
@@ -699,7 +704,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("W"));
     }
 
-    pOriginalExit = originalExits.value(DIR_EAST);
+    pOriginalExit = originalExits.value(DIR_EAST, mpNullExit);
     if (e->isEnabled() && !e->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != e->text().toInt()) {
             pR->setExit(e->text().toInt(), DIR_EAST);
@@ -726,7 +731,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("E"));
     }
 
-    pOriginalExit = originalExits.value(DIR_DOWN);
+    pOriginalExit = originalExits.value(DIR_DOWN, mpNullExit);
     if (down->isEnabled() && !down->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != down->text().toInt()) {
             pR->setExit(down->text().toInt(), DIR_DOWN);
@@ -753,7 +758,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("DOWN"));
     }
 
-    pOriginalExit = originalExits.value(DIR_SOUTHWEST);
+    pOriginalExit = originalExits.value(DIR_SOUTHWEST, mpNullExit);
     if (sw->isEnabled() && !sw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != sw->text().toInt()) {
             pR->setExit(sw->text().toInt(), DIR_SOUTHWEST);
@@ -780,7 +785,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SW"));
     }
 
-    pOriginalExit = originalExits.value(DIR_SOUTH);
+    pOriginalExit = originalExits.value(DIR_SOUTH, mpNullExit);
     if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != s->text().toInt()) {
             pR->setExit(s->text().toInt(), DIR_SOUTH);
@@ -807,7 +812,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("S"));
     }
 
-    pOriginalExit = originalExits.value(DIR_SOUTHEAST);
+    pOriginalExit = originalExits.value(DIR_SOUTHEAST, mpNullExit);
     if (se->isEnabled() && !se->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != se->text().toInt()) {
             pR->setExit(se->text().toInt(), DIR_SOUTHEAST);
@@ -834,7 +839,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SE"));
     }
 
-    pOriginalExit = originalExits.value(DIR_IN);
+    pOriginalExit = originalExits.value(DIR_IN, mpNullExit);
     if (in->isEnabled() && !in->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != in->text().toInt()) {
             pR->setExit(in->text().toInt(), DIR_IN);
@@ -861,7 +866,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("IN"));
     }
 
-    pOriginalExit = originalExits.value(DIR_IN);
+    pOriginalExit = originalExits.value(DIR_OUT, mpNullExit);
     if (out->isEnabled() && !out->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
         if (pOriginalExit->mDestination != out->text().toInt()) {
             pR->setExit(out->text().toInt(), DIR_OUT);
@@ -1595,9 +1600,6 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 // These slots are called as the stub exit checkboxes are clicked
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_nw->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_nw_stateChanged(%d) does not match value expected from stub_nw->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
             nw->setText(QString());
@@ -1632,9 +1634,6 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_n_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_n->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_n_stateChanged(%d) does not match value expected from stub_n->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
             n->setText(QString());
@@ -1666,9 +1665,6 @@ void dlgRoomExits::slot_stub_n_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_ne_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_ne->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_ne_stateChanged(%d) does not match value expected from stub_ne->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
             ne->setText(QString());
@@ -1700,9 +1696,6 @@ void dlgRoomExits::slot_stub_ne_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_up_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_up->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_up_stateChanged(%d) does not match value expected from stub_up->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
             up->setText(QString());
@@ -1734,9 +1727,6 @@ void dlgRoomExits::slot_stub_up_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_w_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_w->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_w_stateChanged(%d) does not match value expected from stub_w->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
             w->setText(QString());
@@ -1768,9 +1758,6 @@ void dlgRoomExits::slot_stub_w_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_e_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_e->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_e_stateChanged(%d) does not match value expected from stub_e->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
             e->setText(QString());
@@ -1802,9 +1789,6 @@ void dlgRoomExits::slot_stub_e_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_down_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_down->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_down_stateChanged(%d) does not match value expected from stub_down->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
             down->setText(QString());
@@ -1836,9 +1820,6 @@ void dlgRoomExits::slot_stub_down_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_sw_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_sw->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_sw_stateChanged(%d) does not match value expected from stub_sw->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
             sw->setText(QString());
@@ -1870,9 +1851,6 @@ void dlgRoomExits::slot_stub_sw_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_s_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_s->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_s_stateChanged(%d) does not match value expected from stub_s->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
             s->setText(QString());
@@ -1904,9 +1882,6 @@ void dlgRoomExits::slot_stub_s_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_se_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_se->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_se_stateChanged(%d) does not match value expected from stub_se->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
             se->setText(QString());
@@ -1938,9 +1913,6 @@ void dlgRoomExits::slot_stub_se_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_in_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_in->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_in_stateChanged(%d) does not match value expected from stub_in->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
             in->setText(QString());
@@ -1972,9 +1944,6 @@ void dlgRoomExits::slot_stub_in_stateChanged(int state)
 
 void dlgRoomExits::slot_stub_out_stateChanged(int state)
 {
-    if ((state == Qt::Checked) != stub_out->isChecked()) {
-        qFatal("void dlgRoomExits::slot_stub_out_stateChanged(%d) does not match value expected from stub_out->isChecked() ...!", state);
-    }
     if (state == Qt::Checked) {
         if (mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
             out->setText(QString());
@@ -2116,7 +2085,6 @@ void dlgRoomExits::initExit(int direction,
             none->setChecked(true);
         }
     }
-qDebug() << "dlgRoomExits::initExit() INFO - calling makeExitFromControls for original exit in:" << direction << "direction code" << exitText << "direction.";
     originalExits[direction] = makeExitFromControls(direction);
 }
 
@@ -2152,8 +2120,11 @@ void dlgRoomExits::slot_checkModified()
     // exit doors
     // exit weights
 
-    TExit* pOriginalExit = originalExits.value(DIR_NORTHWEST);
-    qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_NORTHWEST << "code direction.";
+    // Ensure that if the value is not found the dummy TExit is always
+    // available:
+    TExit* pOriginalExit = originalExits.value(DIR_NORTHWEST, mpNullExit);
+    // TExit::makeExitFromControls() always returns a valid pointer to a
+    // short-lived TExit instance - which we despose off after use:
     TExit* pCurrentExit = makeExitFromControls(DIR_NORTHWEST);
 
     if (*pOriginalExit != *pCurrentExit) {
@@ -2163,8 +2134,7 @@ void dlgRoomExits::slot_checkModified()
     delete pCurrentExit;
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_NORTH);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_NORTH << "code direction.";
+        pOriginalExit = originalExits.value(DIR_NORTH, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_NORTH);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2174,8 +2144,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_NORTHEAST);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_NORTHEAST << "code direction.";
+        pOriginalExit = originalExits.value(DIR_NORTHEAST, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_NORTHEAST);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2185,8 +2154,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_UP);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_UP << "code direction.";
+        pOriginalExit = originalExits.value(DIR_UP, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_UP);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2196,8 +2164,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_WEST);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_WEST << "code direction.";
+        pOriginalExit = originalExits.value(DIR_WEST, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_WEST);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2207,8 +2174,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_EAST);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_EAST << "code direction.";
+        pOriginalExit = originalExits.value(DIR_EAST, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_EAST);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2218,8 +2184,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_DOWN);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_DOWN << "code direction.";
+        pOriginalExit = originalExits.value(DIR_DOWN, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_DOWN);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2229,8 +2194,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_SOUTHWEST);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_SOUTHWEST << "code direction.";
+        pOriginalExit = originalExits.value(DIR_SOUTHWEST, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_SOUTHWEST);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2240,8 +2204,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_SOUTH);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_SOUTH << "code direction.";
+        pOriginalExit = originalExits.value(DIR_SOUTH, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_SOUTH);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2251,8 +2214,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_SOUTHEAST);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_SOUTHEAST << "code direction.";
+        pOriginalExit = originalExits.value(DIR_SOUTHEAST, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_SOUTHEAST);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2262,8 +2224,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_IN);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_IN << "code direction.";
+        pOriginalExit = originalExits.value(DIR_IN, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_IN);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2273,8 +2234,7 @@ void dlgRoomExits::slot_checkModified()
     }
 
     if (!isModified) {
-        pOriginalExit = originalExits.value(DIR_OUT);
-        qDebug() << "dlgRoomExits::slot_checkModified() INFO - calling makeExitFromControls for current exit in:" << DIR_OUT << "code direction.";
+        pOriginalExit = originalExits.value(DIR_OUT, mpNullExit);
         pCurrentExit = makeExitFromControls(DIR_OUT);
         if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
@@ -2347,8 +2307,6 @@ void dlgRoomExits::slot_checkModified()
             }
         }
     }
-
-    qDebug() << "dlgRoomExits::slot_checkModified() INFO - result, isModified:" << isModified;
 
     if (isWindowModified() != isModified) {
         // There has been a change in the "are there changes?" state
