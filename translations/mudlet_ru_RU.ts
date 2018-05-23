@@ -2531,82 +2531,82 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Чёрный:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="57"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Красный:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="64"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Зеленый:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="71"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Синий:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Пурпурный:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Голубой:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Белый:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Желтый:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-черный:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-красный:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-зеленый:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-желтый:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-голубой:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-пурпурный:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-голубой:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-белый:</translation>
     </message>
   </context>
   <context>
@@ -2619,7 +2619,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="114"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="127"/>
@@ -2633,7 +2633,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/composer.ui" line="134"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить</translation>
     </message>
   </context>
   <context>
@@ -2641,22 +2641,22 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Выберите профиль для подключения</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2063"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2092"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Копировать</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2121"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Новый</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2195"/>
@@ -2683,62 +2683,62 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2228"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>Обязательно</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя профиля:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Адрес сервера:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2280"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Порт:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2321"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>История профиля:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>загрузить новейший профиль</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2346"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>загрузить старейший профиль</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2369"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>Дополнительно</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2375"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя персонажа:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2382"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Имя персонажа</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2392"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Пароль:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2399"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Пароль персонажа. Обратите внимание, что этот пароль не зашифрован в хранении</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2409"/>
@@ -2748,17 +2748,17 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Auto connect this profile on startup</source>
-      <translation type="unfinished"/>
+      <translation>Автоматически подключаться при запуске</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>Информация</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2455"/>
       <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>Сайт:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2517"/>
