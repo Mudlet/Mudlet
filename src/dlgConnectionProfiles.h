@@ -24,6 +24,8 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
+#include <QPointer>
+#include <QSettings>
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
@@ -34,8 +36,10 @@ public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
     dlgConnectionProfiles(QWidget* parent = 0);
     void fillout_form();
-    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    QPointer<QSettings> getProfileSettings(const QString& profile);
+    QPair<bool, QString> writeProfileData(const QString& profile);
     QString readProfileData(QString, QString);
+    void closeEvent(QCloseEvent* event) override;
     void accept() override;
 
 signals:
@@ -46,18 +50,13 @@ public slots:
     void slot_save_name();
     void slot_update_url(const QString &);
     void slot_update_port(const QString);
-    void slot_update_login(const QString &);
-    void slot_update_pass(const QString &);
-    void slot_update_website(const QString &);
     void slot_deleteprofile_check(const QString);
-    void slot_update_description();
 
     void slot_item_clicked(QListWidgetItem*);
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
 
-    void slot_update_autologin(int state);
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();
@@ -71,6 +70,7 @@ private:
     bool validPort;
     bool validateConnect();
 
+    QPointer<QSettings> mCurrentQSettings;
     QStringList mProfileList;
     QPalette mRegularPalette;
     QPalette mOKPalette;

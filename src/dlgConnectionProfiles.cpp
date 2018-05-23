@@ -39,15 +39,16 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
-dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
-: QDialog( parent )
-, mProfileList( QStringList() )
-, connect_button( Q_NULLPTR )
-, delete_profile_lineedit( Q_NULLPTR )
-, delete_button( Q_NULLPTR )
+dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
+: QDialog(parent)
+, mProfileList(QStringList())
+, connect_button(Q_NULLPTR)
+, delete_profile_lineedit(Q_NULLPTR)
+, delete_button(Q_NULLPTR)
 , validName()
 , validUrl()
 , validPort()
+, mCurrentQSettings(Q_NULLPTR)
 {
     setupUi(this);
 
@@ -71,15 +72,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_save_name);
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
-    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
-    connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
-    connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
-    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
     // website_entry atm is only a label
-    //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
+    //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -108,8 +105,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
-
-    qDebug() << "Loading configuration from: " << mudlet::getMudletPath(mudlet::mainPath);
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -122,47 +117,19 @@ void dlgConnectionProfiles::accept()
     }
 }
 
-void dlgConnectionProfiles::slot_update_description()
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-
-    if (pItem) {
-        QString profile = pItem->text();
-        QString description = mud_description_textedit->toPlainText();
-        writeProfileData(profile, QStringLiteral("description"), description);
-
-        // don't display custom profile descriptions as a tooltip, as passwords could be stored in there
-    }
-}
-
-void dlgConnectionProfiles::slot_update_website(const QString &url)
+void dlgConnectionProfiles::closeEvent(QCloseEvent* event)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("website"), url);
+        // Save the currently selected profile's data.
+        writeProfileData(profile);
     }
+
+    event->accept();
 }
 
-void dlgConnectionProfiles::slot_update_pass(const QString &pass)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (pItem) {
-        QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("password"), pass);
-    }
-}
-
-void dlgConnectionProfiles::slot_update_login(const QString &login)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (pItem) {
-        QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("login"), login);
-    }
-}
-
-void dlgConnectionProfiles::slot_update_url(const QString &url)
+void dlgConnectionProfiles::slot_update_url(const QString& url)
 {
     if (url.isEmpty()) {
         validUrl = false;
@@ -185,7 +152,6 @@ void dlgConnectionProfiles::slot_update_url(const QString &url)
             notificationAreaMessageBox->hide();
             validUrl = true;
             validateConnect();
-            writeProfileData(profile, QStringLiteral("url"), url);
         } else {
             host_name_entry->setPalette(mErrorPalette);
             notificationArea->show();
@@ -198,16 +164,6 @@ void dlgConnectionProfiles::slot_update_url(const QString &url)
             connect_button->setDisabled(true);
         }
     }
-}
-
-void dlgConnectionProfiles::slot_update_autologin(int state)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
 }
 
 void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
@@ -249,7 +205,6 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
             notificationAreaMessageBox->hide();
             validPort = true;
             validateConnect();
-            writeProfileData(profile, QStringLiteral("port"), port);
         } else {
             notificationArea->show();
             notificationAreaIconLabelWarning->hide();
@@ -320,6 +275,7 @@ void dlgConnectionProfiles::slot_save_name()
 
     validName = true;
     if (pItem) {
+        mCurrentQSettings = getProfileSettings(newProfileName);
         QString currentProfileEditName = pItem->text();
         int row = mProfileList.indexOf(currentProfileEditName); // This returns -1 if currentProfileEditName not present!
         if ((row >= 0) && (row < mProfileList.size())) {
@@ -359,7 +315,7 @@ void dlgConnectionProfiles::slot_save_name()
         }
 
         // if this was a previously deleted profile, restore it
-        auto &settings = *mudlet::self()->mpSettings;
+        auto& settings = *mudlet::self()->mpSettings;
         auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
         if (deletedDefaultMuds.contains(newProfileName)) {
             deletedDefaultMuds.removeOne(newProfileName);
@@ -451,12 +407,23 @@ void dlgConnectionProfiles::slot_addProfile()
     informationalArea->show();
     optionalArea->show();
 
+    if (mCurrentQSettings) {
+        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+        if (pItem) {
+            QString profile = pItem->text();
+            writeProfileData(profile);
+        }
+    }
+
     QString newname = tr("new profile name");
 
     auto pItem = new QListWidgetItem(newname);
     if (!pItem) {
         return;
     }
+
+    // Save the previously selected profile
+    mCurrentQSettings = getProfileSettings(newname);
 
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
     profiles_tree_widget->addItem(pItem);
@@ -554,14 +521,21 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->raise();
 }
 
+QPointer<QSettings> dlgConnectionProfiles::getProfileSettings(const QString& profile)
+{
+    return new QSettings(mudlet::getMudletPath(mudlet::profileHomePath, profile) + "/profile.ini", QSettings::IniFormat);
+}
+
 QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
 {
     // Read profile data from a config file in the INI format inside the
     // profile's home path.
-    QSettings profileData(mudlet::getMudletPath(mudlet::profileHomePath, profile) + "/profile.ini", QSettings::IniFormat);
+    if (!mCurrentQSettings) {
+        mCurrentQSettings = getProfileSettings(profile);
+    }
 
-    if (profileData.contains(item)) {
-        return profileData.value(item).toString();
+    if (mCurrentQSettings->contains(item)) {
+        return mCurrentQSettings->value(item).toString();
     } else {
         // For backwards compatibility's sake, if the INI file does not contain
         // the item, read the item from a separate item file in the profile's
@@ -581,17 +555,26 @@ QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
 }
 
 // Stores profile data in an INI file within the profile's home path.
-QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
+QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile)
 {
-    QSettings profileData(mudlet::getMudletPath(mudlet::profileHomePath, profile) + "/profile.ini", QSettings::IniFormat);
+    if (!mCurrentQSettings) {
+        mCurrentQSettings = getProfileSettings(profile);
+    }
 
-    profileData.setValue(item, what);
-    profileData.sync();
+    if (mCurrentQSettings) {
+        mCurrentQSettings->setValue(QStringLiteral("url"), host_name_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("port"), port_entry->text().trimmed());
+        mCurrentQSettings->setValue(QStringLiteral("login"), login_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("password"), character_password_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("autologin"), autologin_checkBox->isChecked() ? 1 : 0);
+        mCurrentQSettings->setValue(QStringLiteral("description"), mud_description_textedit->toPlainText());
+        mCurrentQSettings->setValue(QStringLiteral("website"), website_entry->text());
+    }
 
-    if (profileData.status() == QSettings::NoError) {
+    if (mCurrentQSettings->status() == QSettings::NoError) {
         return qMakePair(true, QString());
     } else {
-        return qMakePair(false, QString::number(profileData.status()));
+        return qMakePair(false, QString::number(mCurrentQSettings->status()));
     }
 }
 
@@ -684,8 +667,10 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                  * dar forma a tu legado, forjar maravillas olvidadas para ti -o tus aliados- y luchar por fe, gloria o dinero.
                  * -- end translation --
                  */
+    } else if (mCurrentQSettings) {
+        return readProfileData(profile_name, "description");
     } else {
-        return readProfileData(profile_name, QStringLiteral("description"));
+        return QString();
     }
 }
 
@@ -701,6 +686,15 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     profile_name_entry->setText(profile_name);
 
     QString profile = profile_name;
+
+    // Save the previously selected profile's data before setting
+    // mCurrentQSettings to the newly clicked profile's INI file.
+    if (mCurrentQSettings) {
+        writeProfileData(profile_name);
+    }
+
+    // Set mCurrentQSettings to the currently selected profile's INI file.
+    mCurrentQSettings = getProfileSettings(profile);
 
     QString host_url = readProfileData(profile, QStringLiteral("url"));
     if (host_url.isEmpty()) {
@@ -1421,6 +1415,12 @@ void dlgConnectionProfiles::slot_cancel()
 {
     // QDialog::Rejected is the enum value (= 0) return value for a "cancelled"
     // outcome...
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    if (pItem) {
+        QString profile = pItem->text();
+        // Save the currently selected profile's data.
+        writeProfileData(profile);
+    }
     QDialog::done(QDialog::Rejected);
 }
 
@@ -1525,40 +1525,40 @@ void dlgConnectionProfiles::slot_connectToServer()
     // overwrite the generic profile with user supplied name, url and login information
     if (pHost) {
         pHost->setName(profile_name);
+        mCurrentQSettings = getProfileSettings(profile_name);
 
         if (host_name_entry->text().trimmed().size() > 0) {
             pHost->setUrl(host_name_entry->text().trimmed());
         } else {
-            slot_update_url(pHost->getUrl());
+            mCurrentQSettings->setValue(QStringLiteral("url"), pHost->getUrl());
         }
 
         if (port_entry->text().trimmed().size() > 0) {
             pHost->setPort(port_entry->text().trimmed().toInt());
         } else {
-            slot_update_port(QString::number(pHost->getPort()));
+            mCurrentQSettings->setValue(QStringLiteral("port"), QString::number(pHost->getPort()));
         }
 
         if (character_password_entry->text().trimmed().size() > 0) {
             pHost->setPass(character_password_entry->text().trimmed());
         } else {
-            slot_update_pass(pHost->getPass());
+            mCurrentQSettings->setValue(QStringLiteral("password"), pHost->getPass());
         }
 
         if (login_entry->text().trimmed().size() > 0) {
             pHost->setLogin(login_entry->text().trimmed());
         } else {
-            slot_update_login(pHost->getLogin());
+            mCurrentQSettings->setValue(QStringLiteral("login"), pHost->getLogin());
         }
 
-        QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
+        QString encoding = readProfileData(profile_name, QStringLiteral("encoding"));
         pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
     }
 
     if (needsGenericPackagesInstall) {
         //install generic mapper script
         if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
+            || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
         } else if (pHost->getUrl().contains(QStringLiteral("3scapes.org"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("3k.org"), Qt::CaseInsensitive)) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/3k-mapper.xml"));
