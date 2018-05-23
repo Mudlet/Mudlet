@@ -119,7 +119,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     lineEdit_logFileName->setVisible(false);
 
     // groupBox_config:
-
+    comboBox_selectConfigDir->setToolTip(
+            tr("<html><head/><body>%1</body></html>")
+                    .arg("<p>Choose where Mudlet will read and store its configuration files. The profiles and settings in the selected directory will be read as soon as you press <i>Save</i>.</p>"
+                         "<p>Any running profile will continue to write its settings in the directory it was originally loaded from after this option is changed.</p>"));
+    lineEdit_configDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>The directory where Mudlet will store its configuration.</p>"));
+    toolButton_setConfigDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Choose a directory where Mudlet will store its configuration.</p>"));
 
     if (pHost) {
         initWithHost(pHost);
@@ -608,15 +613,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
-    // groupBox_config
+    // groupBox_config:
     comboBox_selectConfigDir->setCurrentIndex(mudlet::self()->mConfigDirIndex);
     // Set the text of lineEdit_configDir to the default .config
     // folder in the user's home directory if mConfigDir is empty
-    if (mudlet::self()->mConfigDir.isEmpty()) {
-        lineEdit_configDir->setText(QDir::homePath() + "/.config");
-    } else {
-        lineEdit_configDir->setText(mudlet::self()->mConfigDir);
-    }
+    lineEdit_configDir->setText(mudlet::getMudletPath(mudlet::mainPath));
     // Make options to set a config dir visible if the option "Select
     // a directory" is selected
     bool isShown = comboBox_selectConfigDir->currentIndex() == 1;
@@ -1889,6 +1890,7 @@ void dlgProfilePreferences::slot_configDirOptionChange(const int index)
     case 0:
         // Clear mConfigDirPath if 'Default' is selected
         mConfigDirPath.clear();
+        lineEdit_configDir->setText(QDir::homePath() + "/.config");
         break;
     case 1:
         // Set mConfigDirPath to the value of lineEdit_configDir if
@@ -1899,6 +1901,7 @@ void dlgProfilePreferences::slot_configDirOptionChange(const int index)
         // Set mConfigDirPath to a relative path if 'Relative to the
         // application file' is selected
         mConfigDirPath = ".";
+        lineEdit_configDir->setText(QCoreApplication::applicationDirPath() + "/config");
         break;
     }
 }
