@@ -956,7 +956,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 int newVersion = version.toInt();
                 if (mpHost->mServerGUI_Package_version != newVersion) {
                     QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
-                                            .arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
+                                            .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
                     mpHost->mpConsole->print(_smsg.toLatin1().data());
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
                     mpHost->mServerGUI_Package_version = newVersion;
@@ -1176,7 +1176,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
         int newVersion = version.toInt();
         if (mpHost->mServerGUI_Package_version != newVersion) {
             QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
-                                    .arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
+                                    .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
             mpHost->mpConsole->print(_smsg.toLatin1().data());
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;

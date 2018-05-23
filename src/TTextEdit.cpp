@@ -5,6 +5,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,6 +31,7 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "wcwidth.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -40,6 +42,7 @@
 #include <QPainter>
 #include <QScrollBar>
 #include <QString>
+#include <QTextBoundaryFinder>
 #include <QTextCursor>
 #include <QToolTip>
 #include "post_guard.h"
@@ -66,6 +69,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mpConsole(pC)
 , mpHost(pH)
 , mpScrollBar(nullptr)
+, mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -130,6 +134,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
+
+    connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
 }
 
 void TTextEdit::forceUpdate()
@@ -531,6 +537,118 @@ void TTextEdit::updateLastLine()
     update(r);
 }
 
+inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
+{
+    if (str.isEmpty()) {
+        return 0;
+    }
+    QChar first = str.at(0);
+    if (first.isSurrogate() && str.size() >= 2) {
+        QChar second = str.at(1);
+        if (first.isHighSurrogate() && second.isLowSurrogate()) {
+            return QChar::surrogateToUcs4(first, second);
+        } else if (first.isLowSurrogate() && second.isHighSurrogate()) {
+            return QChar::surrogateToUcs4(second, first);
+        } else {
+            // str format error
+            return first.unicode();
+        }
+    } else {
+        return first.unicode();
+    }
+}
+
+void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
+{
+    QPoint cursor(0, lineOfScreen);
+    QString lineText = mpBuffer->lineBuffer[lineNumber];
+    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+
+    if (mShowTimeStamps) {
+        TChar timeStampStyle;
+        timeStampStyle.bgR = 22;
+        timeStampStyle.bgG = 22;
+        timeStampStyle.bgB = 22;
+        timeStampStyle.fgR = 200;
+        timeStampStyle.fgG = 150;
+        timeStampStyle.fgB = 0;
+        QString timestamp = mpBuffer->timeBuffer[lineNumber];
+        for (QChar c : timestamp) {
+            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
+        }
+    }
+
+    int columnWithOutTimestamp = 0;
+    for (int indexOfChar = 0; indexOfChar < lineText.size();) {
+        int nextBoundary = boundaryFinder.toNextBoundary();
+
+        TChar &charStyle = mpBuffer->buffer[lineNumber][indexOfChar];
+        int graphemeWidth = drawGrapheme(painter, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
+        cursor.setX(cursor.x() + graphemeWidth);
+        indexOfChar = nextBoundary;
+        columnWithOutTimestamp += graphemeWidth;
+    }
+}
+
+/**
+ * @brief TTextEdit::drawGrapheme
+ * @param painter
+ * @param cursor
+ * @param grapheme
+ * @param column Used to calculate the width of Tab
+ * @param charStyle
+ * @return Return the display width of the grapheme
+ */
+int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle)
+{
+    uint unicode = getGraphemeBaseCharacter(grapheme);
+    int charWidth;
+    if (unicode == '\t') {
+        charWidth = column / 8 * 8 + 8;
+    } else {
+        if (mWideAmbigousWidthGlyphs) {
+            charWidth = mk_wcwidth_cjk(unicode) == 2 ? 2 : 1;
+        } else {
+            charWidth = mk_wcwidth(unicode) == 2 ? 2 : 1;
+        }
+    }
+
+    bool isBold = charStyle.flags & TCHAR_BOLD;
+    bool isUnderline = charStyle.flags & TCHAR_UNDERLINE;
+    bool isItalics = charStyle.flags & TCHAR_ITALICS;
+    bool isStrikeOut = charStyle.flags & TCHAR_STRIKEOUT;
+    if ((painter.font().bold() != isBold) || (painter.font().underline() != isUnderline) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut)) {
+        QFont font = painter.font();
+        font.setBold(isBold);
+        font.setUnderline(isUnderline);
+        font.setItalic(isItalics);
+        font.setStrikeOut(isStrikeOut);
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
+        font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
+#endif
+        painter.setFont(font);
+    }
+
+    QColor bgColor, fgColor;
+    if (charStyle.flags & TCHAR_INVERSE) {
+        bgColor = QColor(charStyle.fgR, charStyle.fgG, charStyle.fgB);
+        fgColor = QColor(charStyle.bgR, charStyle.bgG, charStyle.bgB);
+    } else {
+        fgColor = QColor(charStyle.fgR, charStyle.fgG, charStyle.fgB);
+        bgColor = QColor(charStyle.bgR, charStyle.bgG, charStyle.bgB);
+    }
+
+    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(),
+                          mFontWidth * charWidth, mFontHeight);
+    drawBackground(painter, textRect, bgColor);
+
+    if (painter.pen().color() != fgColor) {
+        painter.setPen(fgColor);
+    }
+
+    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
+    return charWidth;
+}
 
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
@@ -619,58 +737,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         mpBuffer->dirty[lineOffset + i] = false;
-        int timeOffset = 0;
-        if (mShowTimeStamps) {
-            timeOffset = 13;
-        }
-        int lineLength = mpBuffer->buffer[i + lineOffset].size() + timeOffset;
-        for (int i2 = x1; i2 < lineLength;) {
-            QString text;
-            if (i2 < timeOffset) {
-                text = mpBuffer->timeBuffer[i + lineOffset];
-                bool isBold = false;
-                bool isUnderline = false;
-                bool isItalics = false;
-                bool isStrikeOut = false;
-                QRect textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * timeOffset, mFontHeight);
-                auto bgTime = QColor(22, 22, 22);
-                auto fgTime = QColor(200, 150, 0);
-                drawBackground(p, textRect, bgTime);
-                drawCharacters(p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime);
-                i2 += timeOffset;
-            } else {
-                if (i2 >= x2) {
-                    break;
-                }
-                text = mpBuffer->lineBuffer[i + lineOffset].at(i2 - timeOffset);
-                TChar& f = mpBuffer->buffer[i + lineOffset][i2 - timeOffset];
-                int delta = 1;
-                QColor fgColor;
-                QColor bgColor;
-                if (f.flags & TCHAR_INVERSE) {
-                    bgColor = QColor(f.fgR, f.fgG, f.fgB);
-                    fgColor = QColor(f.bgR, f.bgG, f.bgB);
-                } else {
-                    fgColor = QColor(f.fgR, f.fgG, f.fgB);
-                    bgColor = QColor(f.bgR, f.bgG, f.bgB);
-                }
-                while (i2 + delta + timeOffset < lineLength) {
-                    if (mpBuffer->buffer[i + lineOffset][i2 + delta - timeOffset] == f) {
-                        text.append(mpBuffer->lineBuffer[i + lineOffset].at(i2 + delta - timeOffset));
-                        delta++;
-                    } else {
-                        break;
-                    }
-                }
-                QRect textRect;
-                textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * delta, mFontHeight);
-                if (f.flags & TCHAR_INVERSE || (bgColor != mBgColor)) {
-                    drawBackground(p, textRect, bgColor);
-                }
-                drawCharacters(p, textRect, text, f.flags & TCHAR_BOLD, f.flags & TCHAR_UNDERLINE, f.flags & TCHAR_ITALICS, f.flags & TCHAR_STRIKEOUT, fgColor, bgColor);
-                i2 += delta;
-            }
-        }
+        drawLine(p, i + lineOffset, i);
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -1607,4 +1674,12 @@ int TTextEdit::getRowCount()
     }
 
     return height() / rowHeight;
+}
+
+void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
+{
+    if (mWideAmbigousWidthGlyphs != state) {
+        mWideAmbigousWidthGlyphs = state;
+        update();
+    }
 }
