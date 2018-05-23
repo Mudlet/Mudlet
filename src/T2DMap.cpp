@@ -3697,13 +3697,12 @@ void T2DMap::slot_setExits()
         return;
     }
     if (mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId)) {
-        auto pD = new dlgRoomExits(mpHost, this);
-        pD->init(mMultiSelectionHighlightRoomId);
+        auto pD = new dlgRoomExits(mpHost, mMultiSelectionHighlightRoomId, this);
+        pD->setAttribute(Qt::WA_DeleteOnClose);
         pD->show();
         pD->raise();
     }
 }
-
 
 void T2DMap::slot_setUserData()
 {

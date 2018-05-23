@@ -35,29 +35,65 @@ class TRoom;
 class TExit
 {
 public:
-    bool hasNoRoute;
-    bool hasStub;
-    int destination;
-    int door;
-    int weight;
+    // Default constructor - we need this for the "empty" value() case in dlgRoomExits::originalExits
+    TExit()
+    : mHasNoRoute(false)
+    , mHasStub(false)
+    , mDestination(0)
+    , mDoor(0)
+    , mWeight(0)
+    {}
+
+    TExit(const QString& exitText, const bool hasExitStub, const bool hasNoRoute, const int weight, const int door)
+    : mHasNoRoute(hasNoRoute)
+    , mHasStub(hasExitStub)
+    , mDoor(door)
+    , mWeight(weight)
+    {
+        bool isOk;
+        if (exitText.toInt(&isOk) && isOk) {
+            // Exit destination is convertable to a non-zero integer
+            mDestination = exitText.toInt();
+            mHasStub = false;
+        } else if (hasExitStub) {
+            // Exit is a stub
+            mHasNoRoute = false;
+            mDestination = 0;
+            mHasStub = true;
+            mWeight = 0;
+        } else {
+            // Non-existant
+            mHasNoRoute = false;
+            mHasStub = false;
+            mDestination = 0;
+            mDoor = 0;
+            mWeight = 0;
+        }
+    }
 
     friend bool operator==( TExit &a, TExit &b )
     {
-        return a.destination == b.destination
-                 && a.door == b.door
-                 && a.hasNoRoute == b.hasNoRoute
-                 && a.hasStub == b.hasStub
-                 && a.weight == b.weight ;
+        return a.mDestination == b.mDestination
+                 && a.mDoor == b.mDoor
+                 && a.mHasNoRoute == b.mHasNoRoute
+                 && a.mHasStub == b.mHasStub
+                 && a.mWeight == b.mWeight;
     }
 
     friend bool operator!=( TExit &a, TExit &b )
     {
-        return a.destination != b.destination
-                 || a.door != b.door
-                 || a.hasNoRoute != b.hasNoRoute
-                 || a.hasStub != b.hasStub
-                 || a.weight != b.weight ;
+        return a.mDestination != b.mDestination
+                 || a.mDoor != b.mDoor
+                 || a.mHasNoRoute != b.mHasNoRoute
+                 || a.mHasStub != b.mHasStub
+                 || a.mWeight != b.mWeight;
     }
+
+    bool mHasNoRoute;
+    bool mHasStub;
+    int mDestination;
+    int mDoor;
+    int mWeight;
 };
 
 class dlgRoomExits : public QDialog, public Ui::room_exits
@@ -66,8 +102,9 @@ class dlgRoomExits : public QDialog, public Ui::room_exits
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
-    explicit dlgRoomExits(Host*, QWidget* parent = 0);
-    void init(int);
+    explicit dlgRoomExits(Host*, int, QWidget* parent = 0);
+    ~dlgRoomExits();
+
 
 public slots:
     void save();
@@ -109,12 +146,16 @@ private:
     int mRoomID;
     int mEditColumn;
 
+    // A dummy constructed NULL exit, the address of which is to be given as a
+    // second argument and returned by the use of QMap<T1,T2>::value() on the
+    // two QMaps following:
+    TExit* mpNullExit;
     // key = (normal) exit DIR_***, value = exit class instance
     QMap<int, TExit*> originalExits;
+    // key = (special exit name/command), value = exit class instance
     QMap<QString, TExit*> originalSpecialExits;
 
-    void initExit(int roomId,
-                  int direction,
+    void initExit(int direction,
                   int exitId,
                   QLineEdit* exitLineEdit,
                   QCheckBox* noRoute,

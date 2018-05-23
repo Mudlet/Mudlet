@@ -44,9 +44,262 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgRoomExits::dlgRoomExits(Host* pH, QWidget* pW) : QDialog(pW), mpHost(pH), mpEditItem(nullptr), pR(), mRoomID(), mEditColumn()
+dlgRoomExits::dlgRoomExits(Host* pH, const int id, QWidget* pW)
+: QDialog(pW)
+, mpHost(pH)
+, mpEditItem(nullptr)
+, pR()
+, mRoomID(id)
+, mEditColumn()
+, mpNullExit(new TExit)
 {
     setupUi(this);
+
+    pR = mpHost->mpMap->mpRoomDB->getRoom(mRoomID);
+    if (!pR) {
+        return;
+    }
+
+    roomID->setText(QString::number(mRoomID));
+    roomWeight->setText(QString::number(pR->getWeight()));
+    QString titleText;
+    if (pR->name.trimmed().length()) {
+        titleText = tr(R"(Exits for room: "%1" [*])").arg(pR->name);
+    } else {
+        titleText = tr("Exits for room Id: %1 [*]").arg(mRoomID);
+    }
+
+    this->setWindowTitle(titleText);
+
+    // Because we are manipulating the settings for the exit we need to know
+    // explicitly where the weight comes from, pR->getExitWeight() hides that
+    // detail deliberately for normal usage
+    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw);
+
+    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n);
+
+    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne);
+
+    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up);
+
+    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w);
+
+    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e);
+
+    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down);
+
+    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw);
+
+    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s);
+
+    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se);
+
+    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in);
+
+    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out);
+
+    QMapIterator<int, QString> it(pR->getOtherMap());
+    while (it.hasNext()) {
+        it.next();
+        int id_to = it.key();
+        QString dir = it.value();
+        if (dir.size() < 1) {
+            continue;
+        }
+        if (dir.startsWith(QStringLiteral("0")) || dir.startsWith(QStringLiteral("1"))) {
+            dir = dir.mid(1); // Not sure if this will be relevent here??
+        }
+        originalSpecialExits[dir] = new TExit();
+        auto pI = new QTreeWidgetItem(specialExits);
+        TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(id_to);
+        //0 is exit roomID
+        pI->setText(0, QString::number(id_to));
+        pI->setTextAlignment(0, Qt::AlignRight);
+        if (pExitToRoom) {
+            pI->setForeground(0, QColor(Qt::blue));
+            if (!pExitToRoom->name.isEmpty()) {
+                pI->setToolTip(0,
+                               QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
+                                       .arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
+                                            tr("<b>Room</b> Weight of destination: %1.",
+                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
+                                                    .arg(pExitToRoom->getWeight())));
+            } else {
+                pI->setToolTip(0,
+                               QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
+                                       .arg(tr("Exit to unnamed room is valid"),
+                                            tr("<b>Room</b> Weight of destination: %1.",
+                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
+                                                    .arg(pExitToRoom->getWeight())));
+            }
+        } else {
+            pI->setForeground(0, QColor(Qt::red));
+            pI->setToolTip(0,
+                           QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                   .arg(tr("Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.")));
+        }
+        originalSpecialExits.value(dir)->mDestination = id_to;
+        //1 is locked (or more properly "No route") - setCheckedState
+        //automagically makes it a CheckBox!!!
+        if (pR->hasSpecialExitLock(id_to, dir)) {
+            pI->setCheckState(1, Qt::Checked);
+            originalSpecialExits.value(dir)->mHasNoRoute = true;
+        } else {
+            pI->setCheckState(1, Qt::Unchecked);
+            originalSpecialExits.value(dir)->mHasNoRoute = false;
+        }
+        pI->setToolTip(1, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
+
+        //2 is exit weight - ideally want a spin box - but use a text edit for now
+        if (pR->hasExitWeight(dir)) {
+            pI->setText(2, QString::number(pR->getExitWeight(dir)));
+        } else {
+            pI->setText(2, QString::number(0));
+        }
+        pI->setTextAlignment(2, Qt::AlignRight);
+        pI->setToolTip(2,
+                       QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                               .arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+        originalSpecialExits.value(dir)->mWeight = pI->text(2).toInt();
+
+
+        //3-6 holds a buttongroup of 4, ideally QRadioButtons, to select a door type
+        pI->setCheckState(3, Qt::Unchecked);
+        pI->setTextAlignment(3, Qt::AlignCenter);
+        pI->setToolTip(3, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
+        pI->setCheckState(4, Qt::Unchecked);
+        pI->setTextAlignment(4, Qt::AlignCenter);
+        pI->setToolTip(
+                4, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setCheckState(5, Qt::Unchecked);
+        pI->setTextAlignment(5, Qt::AlignCenter);
+        pI->setToolTip(
+                5,
+                QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setTextAlignment(6, Qt::AlignCenter);
+        pI->setToolTip(
+                6, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setCheckState(6, Qt::Unchecked);
+        {
+            int specialDoor = pR->getDoor(dir);
+            switch (specialDoor) {
+            case 0:
+                pI->setCheckState(3, Qt::Checked);
+                break;
+            case 1:
+                pI->setCheckState(4, Qt::Checked);
+                break;
+            case 2:
+                pI->setCheckState(5, Qt::Checked);
+                break;
+            case 3:
+                pI->setCheckState(6, Qt::Checked);
+                break;
+            default:
+                qDebug() << "dlgRoomExits::init(" << mRoomID << ") unexpected (other exit) doors[" << dir << "] value:" << pR->doors[dir] << " found!";
+            }
+            originalSpecialExits.value(dir)->mDoor = specialDoor;
+        }
+
+        pI->setText(7, dir);
+        // Not relevant for special exits but better initialise it
+        auto exit = originalSpecialExits.value(dir);
+        if (exit) {
+            exit->mHasStub = false;
+        }
+    }
+
+    button_save->setEnabled( false );
+// We now do not connect up all these things until AFTER we have initialised
+// things as some controls will issue unwanted signals upon setting values into
+// them as we have above...
+    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
+    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
+    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(save()));
+    connect( button_addSpecialExit,SIGNAL(clicked()),                            this, SLOT(slot_addSpecialExit()));
+    connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_editSpecialExit(QTreeWidgetItem *, int)));
+    connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_checkModified()));
+    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
+    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
+    connect( nw,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_nw_textEdited(const QString &)));
+    connect( n,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_n_textEdited(const QString &)));
+    connect( ne,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_ne_textEdited(const QString &)));
+    connect( up,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_up_textEdited(const QString &)));
+    connect( w,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_w_textEdited(const QString &)));
+    connect( e,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_e_textEdited(const QString &)));
+    connect( down,                 SIGNAL(textEdited(const QString &)),          this, SLOT(slot_down_textEdited(const QString &)));
+    connect( sw,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_sw_textEdited(const QString &)));
+    connect( s,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_s_textEdited(const QString &)));
+    connect( se,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_se_textEdited(const QString &)));
+    connect( in,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_in_textEdited(const QString &)));
+    connect( out,                  SIGNAL(textEdited(const QString &)),          this, SLOT(slot_out_textEdited(const QString &)));
+    connect( stub_nw,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_nw_stateChanged(int)));
+    connect( stub_n,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_n_stateChanged(int)));
+    connect( stub_ne,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_ne_stateChanged(int)));
+    connect( stub_up,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_up_stateChanged(int)));
+    connect( stub_w,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_w_stateChanged(int)));
+    connect( stub_e,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_e_stateChanged(int)));
+    connect( stub_down,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_down_stateChanged(int)));
+    connect( stub_sw,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_sw_stateChanged(int)));
+    connect( stub_s,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_s_stateChanged(int)));
+    connect( stub_se,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_se_stateChanged(int)));
+    connect( stub_in,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_in_stateChanged(int)));
+    connect( stub_out,             SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_out_stateChanged(int)));
+    connect( noroute_nw,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_n,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_ne,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_up,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_w,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_e,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_down,         SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_sw,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_s,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_se,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_in,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( noroute_out,          SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_nw,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_n,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_ne,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_up,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_w,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_e,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_down,          SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_sw,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_s,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_se,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_in,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( weight_out,           SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
+    connect( doortype_nw,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_n,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_ne,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_up,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_w,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_e,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_sw,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_s,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_se,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_in,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( doortype_out,         SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+}
+
+dlgRoomExits::~dlgRoomExits()
+{
+    // Clean up the stored TExit instances:
+    if (mpNullExit) {
+        delete mpNullExit;
+    }
+
+    QMapIterator<int, TExit*> itOriginalExit(originalExits);
+    while (itOriginalExit.hasNext()) {
+        delete itOriginalExit.next().value();
+    }
+
+    QMapIterator<QString, TExit*> itSpecialExit(originalSpecialExits);
+    while (itSpecialExit.hasNext()) {
+        delete itSpecialExit.next().value();
+    }
 }
 
 void dlgRoomExits::slot_endEditSpecialExits()
@@ -312,12 +565,14 @@ void dlgRoomExits::save()
         pR->setSpecialExit(-1, value);
     }
 
+    TExit* pOriginalExit = originalExits.value(DIR_NORTHWEST, mpNullExit);
     if (nw->isEnabled() && !nw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
         // There IS a valid exit on the dialogue in this direction
-        if (originalExits.value(DIR_NORTHWEST)->destination != nw->text().toInt()) {
+        if (pOriginalExit->mDestination != nw->text().toInt()) {
+            // But there was no record of such a thing at the start or there was and it is different:
             pR->setExit(nw->text().toInt(), DIR_NORTHWEST); // Destination is different - so store it
         }
-        if (pR->hasExitStub(DIR_NORTHWEST)) { // And ensure that stub exit is cleared if set
+        if (pOriginalExit->mHasStub) { // And ensure that originally present stub exit is cleared if was set
             pR->setExitStub(DIR_NORTHWEST, false);
         }
         if (weight_nw->value()) { // And store any weighing specifed
@@ -325,12 +580,13 @@ void dlgRoomExits::save()
         } else {
             pR->setExitWeight(QStringLiteral("nw"), 0);
         }
-    } else { // No valid exit on the dialogue
-        if (originalExits.value(DIR_NORTHWEST)->destination > 0) {
-            pR->setExit(-1, DIR_NORTHWEST); // Destination has been deleted So ensure the value for no exit is stored
+    } else { // No valid exit on the dialogue, but there was one initially
+        if (pOriginalExit->mDestination > 0) {
+            pR->setExit(-1, DIR_NORTHWEST); // Destination has been deleted so ensure the value for no exit is stored
         }
-        if (stub_nw->isChecked() != pR->hasExitStub(DIR_NORTHWEST)) {
-            // Does the stub exit setting differ from what is stored
+        if (stub_nw->isChecked() != pOriginalExit->mHasStub) {
+            // Is there now a stub exit and was there no previous record or
+            // does that previous record say there was no stub exit
             pR->setExitStub(DIR_NORTHWEST, stub_nw->isChecked()); // So change stored idea to match
         }
         pR->setExitWeight(QStringLiteral("nw"), 0); // And clear any weighting that was stored
@@ -340,11 +596,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NW")); // And remove any custom line stuff, which uses opposite case keys - *sigh*
     }
 
+    pOriginalExit = originalExits.value(DIR_NORTH, mpNullExit);
     if (n->isEnabled() && !n->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_NORTH)->destination != n->text().toInt()) {
+        if (pOriginalExit->mDestination != n->text().toInt()) {
             pR->setExit(n->text().toInt(), DIR_NORTH);
         }
-        if (pR->hasExitStub(DIR_NORTH)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_NORTH, false);
         }
         if (weight_n->value()) {
@@ -353,10 +610,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("n"), 0);
         }
     } else {
-        if (originalExits.value(DIR_NORTH)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_NORTH);
         }
-        if (stub_n->isChecked() != pR->hasExitStub(DIR_NORTH)) {
+        if (stub_n->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_NORTH, stub_n->isChecked());
         }
         pR->setExitWeight(QStringLiteral("n"), 0);
@@ -366,11 +623,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("N"));
     }
 
+    pOriginalExit = originalExits.value(DIR_NORTHEAST, mpNullExit);
     if (ne->isEnabled() && !ne->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_NORTHEAST)->destination != ne->text().toInt()) {
+        if (pOriginalExit->mDestination != ne->text().toInt()) {
             pR->setExit(ne->text().toInt(), DIR_NORTHEAST);
         }
-        if (pR->hasExitStub(DIR_NORTHEAST)) {
+        if (pOriginalExit->mHasStub > 0) {
             pR->setExitStub(DIR_NORTHEAST, false);
         }
         if (weight_ne->value()) {
@@ -379,10 +637,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("ne"), 0);
         }
     } else {
-        if (originalExits.value(DIR_NORTHEAST)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_NORTHEAST);
         }
-        if (stub_ne->isChecked() != pR->hasExitStub(DIR_NORTHEAST)) {
+        if (stub_ne->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_NORTHEAST, stub_ne->isChecked());
         }
         pR->setExitWeight(QStringLiteral("ne"), 0);
@@ -392,11 +650,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NE"));
     }
 
+    pOriginalExit = originalExits.value(DIR_UP, mpNullExit);
     if (up->isEnabled() && !up->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_UP)->destination != up->text().toInt()) {
+        if (pOriginalExit->mDestination != up->text().toInt()) {
             pR->setExit(up->text().toInt(), DIR_UP);
         }
-        if (pR->hasExitStub(DIR_UP)) {
+        if (pOriginalExit->mHasStub > 0) {
             pR->setExitStub(DIR_UP, false);
         }
         if (weight_up->value()) {
@@ -405,10 +664,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("up"), 0);
         }
     } else {
-        if (originalExits.value(DIR_UP)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_UP);
         }
-        if (stub_up->isChecked() != pR->hasExitStub(DIR_UP)) {
+        if (stub_up->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_UP, stub_up->isChecked());
         }
         pR->setExitWeight(QStringLiteral("up"), 0);
@@ -418,11 +677,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("UP"));
     }
 
+    pOriginalExit = originalExits.value(DIR_WEST, mpNullExit);
     if (w->isEnabled() && !w->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_WEST)->destination != w->text().toInt()) {
+        if (pOriginalExit->mDestination != w->text().toInt()) {
             pR->setExit(w->text().toInt(), DIR_WEST);
         }
-        if (pR->hasExitStub(DIR_WEST)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_WEST, false);
         }
         if (weight_w->value()) {
@@ -431,10 +691,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("w"), 0);
         }
     } else {
-        if (originalExits.value(DIR_WEST)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_WEST);
         }
-        if (stub_w->isChecked() != pR->hasExitStub(DIR_WEST)) {
+        if (stub_w->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_WEST, stub_w->isChecked());
         }
         pR->setExitWeight(QStringLiteral("w"), 0);
@@ -444,11 +704,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("W"));
     }
 
+    pOriginalExit = originalExits.value(DIR_EAST, mpNullExit);
     if (e->isEnabled() && !e->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_EAST)->destination != e->text().toInt()) {
+        if (pOriginalExit->mDestination != e->text().toInt()) {
             pR->setExit(e->text().toInt(), DIR_EAST);
         }
-        if (pR->hasExitStub(DIR_EAST)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_EAST, false);
         }
         if (weight_e->value()) {
@@ -457,10 +718,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("e"), 0);
         }
     } else {
-        if (originalExits.value(DIR_EAST)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_EAST);
         }
-        if (stub_e->isChecked() != pR->hasExitStub(DIR_EAST)) {
+        if (stub_e->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_EAST, stub_e->isChecked());
         }
         pR->setExitWeight(QStringLiteral("e"), 0);
@@ -470,11 +731,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("E"));
     }
 
+    pOriginalExit = originalExits.value(DIR_DOWN, mpNullExit);
     if (down->isEnabled() && !down->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_DOWN)->destination != down->text().toInt()) {
+        if (pOriginalExit->mDestination != down->text().toInt()) {
             pR->setExit(down->text().toInt(), DIR_DOWN);
         }
-        if (pR->hasExitStub(DIR_DOWN)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_DOWN, false);
         }
         if (weight_down->value()) {
@@ -483,10 +745,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("down"), 0);
         }
     } else {
-        if (originalExits.value(DIR_DOWN)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_DOWN);
         }
-        if (stub_down->isChecked() != pR->hasExitStub(DIR_DOWN)) {
+        if (stub_down->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_DOWN, stub_down->isChecked());
         }
         pR->setExitWeight(QStringLiteral("down"), 0);
@@ -496,11 +758,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("DOWN"));
     }
 
+    pOriginalExit = originalExits.value(DIR_SOUTHWEST, mpNullExit);
     if (sw->isEnabled() && !sw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_SOUTHWEST)->destination != sw->text().toInt()) {
+        if (pOriginalExit->mDestination != sw->text().toInt()) {
             pR->setExit(sw->text().toInt(), DIR_SOUTHWEST);
         }
-        if (pR->hasExitStub(DIR_SOUTHWEST)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_SOUTHWEST, false);
         }
         if (weight_sw->value()) {
@@ -509,10 +772,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("sw"), 0);
         }
     } else {
-        if (originalExits.value(DIR_SOUTHWEST)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_SOUTHWEST);
         }
-        if (stub_sw->isChecked() != pR->hasExitStub(DIR_SOUTHWEST)) {
+        if (stub_sw->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_SOUTHWEST, stub_sw->isChecked());
         }
         pR->setExitWeight(QStringLiteral("sw"), 0);
@@ -522,11 +785,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SW"));
     }
 
+    pOriginalExit = originalExits.value(DIR_SOUTH, mpNullExit);
     if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_SOUTH)->destination != s->text().toInt()) {
+        if (pOriginalExit->mDestination != s->text().toInt()) {
             pR->setExit(s->text().toInt(), DIR_SOUTH);
         }
-        if (pR->hasExitStub(DIR_SOUTH)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_SOUTH, false);
         }
         if (weight_s->value()) {
@@ -535,10 +799,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("s"), 0);
         }
     } else {
-        if (originalExits.value(DIR_SOUTH)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_SOUTH);
         }
-        if (stub_s->isChecked() != pR->hasExitStub(DIR_SOUTH)) {
+        if (stub_s->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_SOUTH, stub_s->isChecked());
         }
         pR->setExitWeight(QStringLiteral("s"), 0);
@@ -548,11 +812,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("S"));
     }
 
+    pOriginalExit = originalExits.value(DIR_SOUTHEAST, mpNullExit);
     if (se->isEnabled() && !se->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_SOUTHEAST)->destination != se->text().toInt()) {
+        if (pOriginalExit->mDestination != se->text().toInt()) {
             pR->setExit(se->text().toInt(), DIR_SOUTHEAST);
         }
-        if (pR->hasExitStub(DIR_SOUTHEAST)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_SOUTHEAST, false);
         }
         if (weight_se->value()) {
@@ -561,10 +826,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("se"), 0);
         }
     } else {
-        if (originalExits.value(DIR_SOUTHEAST)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_SOUTHEAST);
         }
-        if (stub_se->isChecked() != pR->hasExitStub(DIR_SOUTHEAST)) {
+        if (stub_se->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_SOUTHEAST, stub_se->isChecked());
         }
         pR->setExitWeight(QStringLiteral("se"), 0);
@@ -574,11 +839,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SE"));
     }
 
+    pOriginalExit = originalExits.value(DIR_IN, mpNullExit);
     if (in->isEnabled() && !in->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_IN)->destination != in->text().toInt()) {
+        if (pOriginalExit->mDestination != in->text().toInt()) {
             pR->setExit(in->text().toInt(), DIR_IN);
         }
-        if (pR->hasExitStub(DIR_IN)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_IN, false);
         }
         if (weight_in->value()) {
@@ -587,10 +853,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("in"), 0);
         }
     } else {
-        if (originalExits.value(DIR_IN)->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_IN);
         }
-        if (stub_in->isChecked() != pR->hasExitStub(DIR_IN)) {
+        if (stub_in->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_IN, stub_in->isChecked());
         }
         pR->setExitWeight(QStringLiteral("in"), 0);
@@ -600,11 +866,12 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("IN"));
     }
 
+    pOriginalExit = originalExits.value(DIR_OUT, mpNullExit);
     if (out->isEnabled() && !out->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
-        if (originalExits.value(DIR_OUT)->destination != out->text().toInt()) {
+        if (pOriginalExit->mDestination != out->text().toInt()) {
             pR->setExit(out->text().toInt(), DIR_OUT);
         }
-        if (pR->hasExitStub(DIR_OUT)) {
+        if (pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_OUT, false);
         }
         if (weight_out->value()) {
@@ -613,11 +880,10 @@ void dlgRoomExits::save()
             pR->setExitWeight(QStringLiteral("out"), 0);
         }
     } else {
-        auto exit = originalExits.value(DIR_OUT);
-        if (exit && exit->destination > 0) {
+        if (pOriginalExit->mDestination > 0) {
             pR->setExit(-1, DIR_OUT);
         }
-        if (stub_out->isChecked() != pR->hasExitStub(DIR_OUT)) {
+        if (stub_out->isChecked() != pOriginalExit->mHasStub) {
             pR->setExitStub(DIR_OUT, stub_out->isChecked());
         }
         pR->setExitWeight(QStringLiteral("out"), 0);
@@ -1707,8 +1973,7 @@ void dlgRoomExits::slot_stub_out_stateChanged(int state)
     slot_checkModified();
 }
 
-void dlgRoomExits::initExit(int roomId,
-                            int direction,
+void dlgRoomExits::initExit(int direction,
                             int exitId,
                             QLineEdit* exitLineEdit,
                             QCheckBox* noRoute,
@@ -1753,7 +2018,7 @@ void dlgRoomExits::initExit(int roomId,
         locked->setChecked(true);
         break;
     default:
-        qWarning() << "dlgRoomExits::initExit(...) in room id(" << roomId << ") unexpected doors[" << doorAndWeightText << "] value:" << pR->getDoor(doorAndWeightText) << "found for room!";
+        qWarning() << "dlgRoomExits::initExit(...) in room id(" << mRoomID << ") unexpected doors[" << doorAndWeightText << "] value:" << pR->getDoor(doorAndWeightText) << "found for room!";
     }
 
     TRoom* pExitR;
@@ -1823,331 +2088,25 @@ void dlgRoomExits::initExit(int roomId,
     originalExits[direction] = makeExitFromControls(direction);
 }
 
-void dlgRoomExits::init(int id)
-{
-    pR = mpHost->mpMap->mpRoomDB->getRoom(id);
-    if (!pR) {
-        return;
-    }
-
-    roomID->setText(QString::number(id));
-    roomWeight->setText(QString::number(pR->getWeight()));
-    QString titleText;
-    if (pR->name.trimmed().length()) {
-        titleText = tr(R"(Exits for room: "%1" [*])").arg(pR->name);
-    } else {
-        titleText = tr("Exits for room Id: %1 [*]").arg(id);
-    }
-
-    this->setWindowTitle(titleText);
-
-    // Because we are manipulating the settings for the exit we need to know
-    // explicitly where the weight comes from, pR->getExitWeight() hides that
-    // detail deliberately for normal usage
-    initExit(id, DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw);
-
-    initExit(id, DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n);
-
-    initExit(id, DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne);
-
-    initExit(id, DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up);
-
-    initExit(id, DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w);
-
-    initExit(id, DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e);
-
-    initExit(id, DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down);
-
-    initExit(id, DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw);
-
-    initExit(id, DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s);
-
-    initExit(id, DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se);
-
-    initExit(id, DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in);
-
-    initExit(id, DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out);
-
-    QMapIterator<int, QString> it(pR->getOtherMap());
-    while (it.hasNext()) {
-        it.next();
-        int id_to = it.key();
-        QString dir = it.value();
-        if (dir.size() < 1) {
-            continue;
-        }
-        if (dir.startsWith(QStringLiteral("0")) || dir.startsWith(QStringLiteral("1"))) {
-            dir = dir.mid(1); // Not sure if this will be relevent here??
-        }
-        originalSpecialExits[dir] = new TExit();
-        auto pI = new QTreeWidgetItem(specialExits);
-        TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(id_to);
-        //0 was locked, now exit roomID
-        pI->setText(0, QString::number(id_to));
-        pI->setTextAlignment(0, Qt::AlignRight);
-        if (pExitToRoom) {
-            pI->setForeground(0, QColor(Qt::blue));
-            if (!pExitToRoom->name.isEmpty()) {
-                pI->setToolTip(0,
-                               QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
-                                       .arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
-                                            tr("<b>Room</b> Weight of destination: %1.",
-                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                    .arg(pExitToRoom->getWeight())));
-            } else {
-                pI->setToolTip(0,
-                               QStringLiteral("<html><head/><body><p>%1</p><p>%2</p></body></html>")
-                                       .arg(tr("Exit to unnamed room is valid"),
-                                            tr("<b>Room</b> Weight of destination: %1.",
-                                               "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                    .arg(pExitToRoom->getWeight())));
-            }
-        } else {
-            pI->setForeground(0, QColor(Qt::red));
-            pI->setToolTip(0,
-                           QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                   .arg(tr("Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.")));
-        }
-        originalSpecialExits.value(dir)->destination = id_to;
-        //1 was roomID, now locked (or more properly "No route") - setCheckedState
-        //automagically makes it a CheckBox!!!
-        if (pR->hasSpecialExitLock(id_to, dir)) {
-            pI->setCheckState(1, Qt::Checked);
-            originalSpecialExits.value(dir)->hasNoRoute = true;
-        } else {
-            pI->setCheckState(1, Qt::Unchecked);
-            originalSpecialExits.value(dir)->hasNoRoute = false;
-        }
-        pI->setToolTip(1, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
-
-        //2 was script, now exit weight - ideally want a spin box - but use a text edit for now
-        if (pR->hasExitWeight(dir)) {
-            pI->setText(2, QString::number(pR->getExitWeight(dir)));
-        } else {
-            pI->setText(2, QString::number(0));
-        }
-        pI->setTextAlignment(2, Qt::AlignRight);
-        pI->setToolTip(2,
-                       QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                               .arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
-        originalSpecialExits.value(dir)->weight = pI->text(2).toInt();
-
-
-        //3-6 are new, now holds a buttongroup of 4, ideally QRadioButtons, to select a door type
-        pI->setCheckState(3, Qt::Unchecked);
-        pI->setTextAlignment(3, Qt::AlignCenter);
-        pI->setToolTip(3, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
-        pI->setCheckState(4, Qt::Unchecked);
-        pI->setTextAlignment(4, Qt::AlignCenter);
-        pI->setToolTip(
-                4, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setCheckState(5, Qt::Unchecked);
-        pI->setTextAlignment(5, Qt::AlignCenter);
-        pI->setToolTip(
-                5,
-                QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setTextAlignment(6, Qt::AlignCenter);
-        pI->setToolTip(
-                6, QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setCheckState(6, Qt::Unchecked);
-        {
-            int specialDoor = pR->getDoor(dir);
-            switch (specialDoor) {
-            case 0:
-                pI->setCheckState(3, Qt::Checked);
-                break;
-            case 1:
-                pI->setCheckState(4, Qt::Checked);
-                break;
-            case 2:
-                pI->setCheckState(5, Qt::Checked);
-                break;
-            case 3:
-                pI->setCheckState(6, Qt::Checked);
-                break;
-            default:
-                qDebug() << "dlgRoomExits::init(" << id << ") unexpected (other exit) doors[" << dir << "] value:" << pR->doors[dir] << " found!";
-            }
-            originalSpecialExits.value(dir)->door = specialDoor;
-        }
-
-        //7 is new, but holds the script that was in 2
-        pI->setText(7, dir);
-        // Not relevant for special exits but better initialise it
-        auto exit = originalSpecialExits.value(dir);
-        if (exit) {
-            exit->hasStub = false;
-        }
-    }
-    mRoomID = id;
-    button_save->setEnabled( false );
-// We now do not connect up all these things until AFTER we have initialised
-// things as some controls will issue unwanted signals upon setting values into
-// them as we have above...
-    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
-    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
-    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(save()));
-    connect( button_addSpecialExit,SIGNAL(clicked()),                            this, SLOT(slot_addSpecialExit()));
-    connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_editSpecialExit(QTreeWidgetItem *, int)));
-    connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_checkModified()));
-    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
-    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
-    connect( nw,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_nw_textEdited(const QString &)));
-    connect( n,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_n_textEdited(const QString &)));
-    connect( ne,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_ne_textEdited(const QString &)));
-    connect( up,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_up_textEdited(const QString &)));
-    connect( w,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_w_textEdited(const QString &)));
-    connect( e,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_e_textEdited(const QString &)));
-    connect( down,                 SIGNAL(textEdited(const QString &)),          this, SLOT(slot_down_textEdited(const QString &)));
-    connect( sw,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_sw_textEdited(const QString &)));
-    connect( s,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_s_textEdited(const QString &)));
-    connect( se,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_se_textEdited(const QString &)));
-    connect( in,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_in_textEdited(const QString &)));
-    connect( out,                  SIGNAL(textEdited(const QString &)),          this, SLOT(slot_out_textEdited(const QString &)));
-    connect( stub_nw,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_nw_stateChanged(int)));
-    connect( stub_n,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_n_stateChanged(int)));
-    connect( stub_ne,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_ne_stateChanged(int)));
-    connect( stub_up,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_up_stateChanged(int)));
-    connect( stub_w,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_w_stateChanged(int)));
-    connect( stub_e,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_e_stateChanged(int)));
-    connect( stub_down,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_down_stateChanged(int)));
-    connect( stub_sw,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_sw_stateChanged(int)));
-    connect( stub_s,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_s_stateChanged(int)));
-    connect( stub_se,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_se_stateChanged(int)));
-    connect( stub_in,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_in_stateChanged(int)));
-    connect( stub_out,             SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_out_stateChanged(int)));
-    connect( noroute_nw,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_n,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_ne,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_up,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_w,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_e,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_down,         SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_sw,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_s,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_se,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_in,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_out,          SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_nw,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_n,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_ne,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_up,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_w,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_e,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_down,          SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_sw,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_s,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_se,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_in,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_out,           SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( doortype_nw,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_n,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_ne,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_up,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_w,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_e,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_sw,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_s,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_se,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_in,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_out,         SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-}
-
 TExit* dlgRoomExits::makeExitFromControls(int direction)
 {
-    auto exit = new TExit();
     switch (direction) {
-    case DIR_NORTHWEST:
-        exit->destination = nw->text().toInt();
-        exit->hasStub = stub_nw->isChecked();
-        exit->hasNoRoute = noroute_nw->isChecked();
-        exit->weight = weight_nw->value();
-        exit->door = -2 - doortype_nw->checkedId();
-        break;
-    case DIR_NORTH:
-        exit->destination = n->text().toInt();
-        exit->hasStub = stub_n->isChecked();
-        exit->hasNoRoute = noroute_n->isChecked();
-        exit->weight = weight_n->value();
-        exit->door = -2 - doortype_n->checkedId();
-        break;
-    case DIR_NORTHEAST:
-        exit->destination = ne->text().toInt();
-        exit->hasStub = stub_ne->isChecked();
-        exit->hasNoRoute = noroute_ne->isChecked();
-        exit->weight = weight_ne->value();
-        exit->door = -2 - doortype_ne->checkedId();
-        break;
-    case DIR_UP:
-        exit->destination = up->text().toInt();
-        exit->hasStub = stub_up->isChecked();
-        exit->hasNoRoute = noroute_up->isChecked();
-        exit->weight = weight_up->value();
-        exit->door = -2 - doortype_up->checkedId();
-        break;
-    case DIR_WEST:
-        exit->destination = w->text().toInt();
-        exit->hasStub = stub_w->isChecked();
-        exit->hasNoRoute = noroute_w->isChecked();
-        exit->weight = weight_w->value();
-        exit->door = -2 - doortype_w->checkedId();
-        break;
-    case DIR_EAST:
-        exit->destination = e->text().toInt();
-        exit->hasStub = stub_e->isChecked();
-        exit->hasNoRoute = noroute_e->isChecked();
-        exit->weight = weight_e->value();
-        exit->door = -2 - doortype_e->checkedId();
-        break;
-    case DIR_DOWN:
-        exit->destination = down->text().toInt();
-        exit->hasStub = stub_down->isChecked();
-        exit->hasNoRoute = noroute_down->isChecked();
-        exit->weight = weight_down->value();
-        exit->door = -2 - doortype_down->checkedId();
-        break;
-    case DIR_SOUTHWEST:
-        exit->destination = sw->text().toInt();
-        exit->hasStub = stub_sw->isChecked();
-        exit->hasNoRoute = noroute_sw->isChecked();
-        exit->weight = weight_sw->value();
-        exit->door = -2 - doortype_sw->checkedId();
-        break;
-    case DIR_SOUTH:
-        exit->destination = s->text().toInt();
-        exit->hasStub = stub_s->isChecked();
-        exit->hasNoRoute = noroute_s->isChecked();
-        exit->weight = weight_s->value();
-        exit->door = -2 - doortype_s->checkedId();
-        break;
-    case DIR_SOUTHEAST:
-        exit->destination = se->text().toInt();
-        exit->hasStub = stub_se->isChecked();
-        exit->hasNoRoute = noroute_se->isChecked();
-        exit->weight = weight_se->value();
-        exit->door = -2 - doortype_se->checkedId();
-        break;
-    case DIR_IN:
-        exit->destination = in->text().toInt();
-        exit->hasStub = stub_in->isChecked();
-        exit->hasNoRoute = noroute_in->isChecked();
-        exit->weight = weight_in->value();
-        exit->door = -2 - doortype_in->checkedId();
-        break;
-    case DIR_OUT:
-        exit->destination = out->text().toInt();
-        exit->hasStub = stub_out->isChecked();
-        exit->hasNoRoute = noroute_out->isChecked();
-        exit->weight = weight_out->value();
-        exit->door = -2 - doortype_out->checkedId();
-        break;
+    case DIR_NORTHWEST: return new TExit(nw->text(),    stub_nw->isChecked(),   noroute_nw->isChecked(),    weight_nw->value(),     -2 - doortype_nw->checkedId());
+    case DIR_NORTH:     return new TExit(n->text(),     stub_n->isChecked(),    noroute_n->isChecked(),     weight_n->value(),      -2 - doortype_n->checkedId());
+    case DIR_NORTHEAST: return new TExit(ne->text(),    stub_ne->isChecked(),   noroute_ne->isChecked(),    weight_ne->value(),     -2 - doortype_ne->checkedId());
+    case DIR_UP:        return new TExit(up->text(),    stub_up->isChecked(),   noroute_up->isChecked(),    weight_up->value(),     -2 - doortype_up->checkedId());
+    case DIR_WEST:      return new TExit(w->text(),     stub_w->isChecked(),    noroute_w->isChecked(),     weight_w->value(),      -2 - doortype_w->checkedId());
+    case DIR_EAST:      return new TExit(e->text(),     stub_e->isChecked(),    noroute_e->isChecked(),     weight_e->value(),      -2 - doortype_e->checkedId());
+    case DIR_DOWN:      return new TExit(down->text(),  stub_down->isChecked(), noroute_down->isChecked(),  weight_down->value(),   -2 - doortype_down->checkedId());
+    case DIR_SOUTHWEST: return new TExit(sw->text(),    stub_sw->isChecked(),   noroute_sw->isChecked(),    weight_sw->value(),     -2 - doortype_sw->checkedId());
+    case DIR_SOUTH:     return new TExit(s->text(),     stub_s->isChecked(),    noroute_s->isChecked(),     weight_s->value(),      -2 - doortype_s->checkedId());
+    case DIR_SOUTHEAST: return new TExit(se->text(),    stub_se->isChecked(),   noroute_se->isChecked(),    weight_se->value(),     -2 - doortype_se->checkedId());
+    case DIR_IN:        return new TExit(in->text(),    stub_in->isChecked(),   noroute_in->isChecked(),    weight_in->value(),     -2 - doortype_in->checkedId());
+    case DIR_OUT:       return new TExit(out->text(),   stub_out->isChecked(),  noroute_out->isChecked(),   weight_out->value(),    -2 - doortype_out->checkedId());
     default:
         Q_UNREACHABLE();
+        return new TExit();
     }
-
-    return exit;
 }
 
 // Check and set modified marking in dialog title as soon as a change is detected
@@ -2161,111 +2120,127 @@ void dlgRoomExits::slot_checkModified()
     // exit doors
     // exit weights
 
-    TExit* originalExit = originalExits.value(DIR_NORTHWEST);
-    TExit* currentExit = makeExitFromControls(DIR_NORTHWEST);
+    // Ensure that if the value is not found the dummy TExit is always
+    // available:
+    TExit* pOriginalExit = originalExits.value(DIR_NORTHWEST, mpNullExit);
+    // TExit::makeExitFromControls() always returns a valid pointer to a
+    // short-lived TExit instance - which we despose off after use:
+    TExit* pCurrentExit = makeExitFromControls(DIR_NORTHWEST);
 
-    if (originalExit && currentExit && *originalExit != *currentExit) {
+    if (*pOriginalExit != *pCurrentExit) {
         isModified = true;
     }
-    delete currentExit;
+
+    delete pCurrentExit;
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_NORTH);
-        currentExit = makeExitFromControls(DIR_NORTH);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_NORTH, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_NORTH);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_NORTHEAST);
-        currentExit = makeExitFromControls(DIR_NORTHEAST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_NORTHEAST, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_NORTHEAST);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_UP);
-        currentExit = makeExitFromControls(DIR_UP);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_UP, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_UP);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_WEST);
-        currentExit = makeExitFromControls(DIR_WEST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_WEST, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_WEST);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_EAST);
-        currentExit = makeExitFromControls(DIR_EAST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_EAST, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_EAST);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_DOWN);
-        currentExit = makeExitFromControls(DIR_DOWN);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_DOWN, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_DOWN);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTHWEST);
-        currentExit = makeExitFromControls(DIR_SOUTHWEST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_SOUTHWEST, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_SOUTHWEST);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTH);
-        currentExit = makeExitFromControls(DIR_SOUTH);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_SOUTH, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_SOUTH);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_SOUTHEAST);
-        currentExit = makeExitFromControls(DIR_SOUTHEAST);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_SOUTHEAST, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_SOUTHEAST);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_IN);
-        currentExit = makeExitFromControls(DIR_IN);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_IN, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_IN);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     if (!isModified) {
-        originalExit = originalExits.value(DIR_OUT);
-        currentExit = makeExitFromControls(DIR_OUT);
-        if (originalExit && currentExit && *originalExit != *currentExit) {
+        pOriginalExit = originalExits.value(DIR_OUT, mpNullExit);
+        pCurrentExit = makeExitFromControls(DIR_OUT);
+        if (*pOriginalExit != *pCurrentExit) {
             isModified = true;
         }
-        delete currentExit;
+
+        delete pCurrentExit;
     }
 
     // Detecting actual changes in the special exits is hard because of the
@@ -2279,17 +2254,19 @@ void dlgRoomExits::slot_checkModified()
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
             /*            qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 1) to:%i, command:%s",
- *                   i,
- *                   pI->text(0).toInt(),
- *                   qPrintable(pI->text(7)));
- */
-            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (4 of 5)") || pI->text(0).toInt() <= 0)
+             *                   i,
+             *                   pI->text(0).toInt(),
+             *                   qPrintable(pI->text(7)));
+             */
+            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (4 of 5)") || pI->text(0).toInt() <= 0) {
                 continue; // Ignore new or to be deleted entries
+            }
             currentCount++;
         }
-        if (originalCount != currentCount)
+
+        if (originalCount != currentCount) {
             isModified = true;
-        else {
+        } else {
             if (originalCount) {
                 QMap<QString, TExit*> foundMap = originalSpecialExits;
                 // Now make a TExit value for each current (valid) specialExit
@@ -2299,36 +2276,45 @@ void dlgRoomExits::slot_checkModified()
                 for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
                     QTreeWidgetItem* pI = specialExits->topLevelItem(i);
                     /*                    qDebug("dlgRoomExits::slot_checkModified() considering specialExit (item %i, pass 2) to:%i, command:%s",
- *                           i,
- *                           pI->text(0).toInt(),
- *                           qPrintable(pI->text(7)));
- */
-                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (5 of 5)") || pI->text(0).toInt() <= 0)
+                     *                           i,
+                     *                           pI->text(0).toInt(),
+                     *                           qPrintable(pI->text(7)));
+                     */
+                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (5 of 5)") || pI->text(0).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
+                    }
+
                     QString currentCmd = pI->text(7);
                     TExit currentExit;
-                    currentExit.destination = pI->text(0).toInt();
-                    currentExit.hasNoRoute = pI->checkState(1) == Qt::Checked;
-                    currentExit.door = pI->checkState(6) == Qt::Checked ? 3 : pI->checkState(5) == Qt::Checked ? 2 : pI->checkState(4) == Qt::Checked ? 1 : 0;
-                    currentExit.weight = pI->text(2).toInt();
-                    currentExit.hasStub = false;
-                    auto exit = foundMap.value(currentCmd);
-                    if (exit
-                        && exit->destination == currentExit.destination
-                        && exit->door        == currentExit.door
-                        && exit->hasNoRoute  == currentExit.hasNoRoute
-                        && exit->weight      == currentExit.weight      ) {
+                    currentExit.mDestination = pI->text(0).toInt();
+                    currentExit.mHasNoRoute = pI->checkState(1) == Qt::Checked;
+                    currentExit.mDoor = pI->checkState(6) == Qt::Checked ? 3 : pI->checkState(5) == Qt::Checked ? 2 : pI->checkState(4) == Qt::Checked ? 1 : 0;
+                    currentExit.mWeight = pI->text(2).toInt();
+                    currentExit.mHasStub = false;
+                    auto pExit = foundMap.value(currentCmd);
+                    if (pExit && *pExit == currentExit) {
                         foundMap.remove(currentCmd);
                     } else {
                         isModified = true;
                         break;
                     }
+
                 }
-                if (foundMap.count())
+
+                if (foundMap.count()) {
                     isModified = true;
+                }
             }
         }
     }
-    setWindowModified(isModified);
-    button_save->setEnabled(isModified);
+
+    if (isWindowModified() != isModified) {
+        // There has been a change in the "are there changes?" state
+        setWindowModified(isModified);
+        button_save->setEnabled(isModified);
+#if defined(Q_OS_MACOS)
+        // Attempt to fix: https://bugreports.qt.io/browse/QTBUG-68067
+        button_save->repaint();
+#endif
+    }
 }
