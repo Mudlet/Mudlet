@@ -2189,7 +2189,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>В настоящее время нет новых обновлений.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
@@ -2199,7 +2199,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="303"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>Автоматически загружать будущие обновления</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
@@ -2209,22 +2209,22 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Установить обновление</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Напомнить позже</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Пропустить эту версию</translation>
     </message>
   </context>
   <context>
@@ -2234,7 +2234,7 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="154"/>
       <location filename="../src/updater.cpp" line="216"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Обновить</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="308"/>
