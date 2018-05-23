@@ -556,31 +556,42 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
-    bool success = file.open(QIODevice::ReadOnly);
-    QString ret;
-    if (success) {
-        QDataStream ifs(&file);
-        ifs >> ret;
-        file.close();
-    }
+    // Read profile data from a config file in the INI format inside the
+    // profile's home path.
+    QSettings profileData(mudlet::getMudletPath(mudlet::profileHomePath, profile) + "/profile.ini", QSettings::IniFormat);
 
-    return ret;
+    if (profileData.contains(item)) {
+        return profileData.value(item).toString();
+    } else {
+        // For backwards compatibility's sake, if the INI file does not contain
+        // the item, read the item from a separate item file in the profile's
+        // data item path.
+        QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
+
+        bool success = file.open(QIODevice::ReadOnly);
+        QString ret;
+        if (success) {
+            QDataStream ifs(&file);
+            ifs >> ret;
+            file.close();
+        }
+
+        return ret;
+    }
 }
 
+// Stores profile data in an INI file within the profile's home path.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs << what;
-        file.close();
-    }
+    QSettings profileData(mudlet::getMudletPath(mudlet::profileHomePath, profile) + "/profile.ini", QSettings::IniFormat);
 
-    if (file.error() == QFile::NoError) {
+    profileData.setValue(item, what);
+    profileData.sync();
+
+    if (profileData.status() == QSettings::NoError) {
         return qMakePair(true, QString());
     } else {
-        return qMakePair(false, file.errorString());
+        return qMakePair(false, QString::number(profileData.status()));
     }
 }
 
