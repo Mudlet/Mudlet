@@ -25,12 +25,8 @@
 
 
 #include "pre_guard.h"
-#include <QApplication>
-#include <QBuffer>
 #include <QClipboard>
 #include <QPointer>
-#include <QXmlStreamWriter>
-#include <QObject>
 #include <QFuture>
 #include <pugiconfig.hpp>
 #include <pugixml.hpp>
