@@ -173,11 +173,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mRetries(5)
 , mSaveProfileOnExit(false)
 , mHaveMapperScript(false)
-, mHomePath(QString())
+, mHomePath(mudlet::getMudletPath(mudlet::mainPath))
 , mAutoAmbigousWidthGlyphsSetting(true)
 , mWideAmbigousWidthGlyphs(false)
 {
-    mHomePath = mudlet::getMudletPath(mudlet::mainPath);
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
     QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("log"), mHomePath);

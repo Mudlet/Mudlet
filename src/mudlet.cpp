@@ -503,36 +503,33 @@ mudlet::mudlet()
 QPointer<QSettings> mudlet::getQConfig()
 {
     QPointer<QSettings> config;
-    // Try for a mudlet config file, first, and check whether a custom
-    // path for the configuration is given
+    // Try for a config.ini file relative to the executable file,
+    // first, and check whether a custom path for the configuration is
+    // given.
     config = new QSettings(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
-    // if the settings file 'config.ini' (relative to the mudlet
-    // executable file) does not exist (read: it doesn't contain the
-    // setting "configPath"), try to load the config from the default
-    // paths
-    if (!config->contains("configPath")) {
+    // If a config.ini file does not exist relative to the executable, try to
+    // load one from the default paths
+    if (!config->contains(QStringLiteral("configPath"))) {
         config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
     }
-
-    if (config->contains("configPath")) {
-        return config;
-    }
+    return config;
 }
 
 QSettings* mudlet::getQSettings()
 {
     QPointer<QSettings> config = getQConfig();
-    // return the 'Mudlet.ini' config in the path stated in configPath
-    // if configPath exists
-    if (!config->value("configPath").toString().isEmpty()) {
-        QString configPath = config->value("configPath").toString();
+    QString configPath = config->value(QStringLiteral("configPath")).toString();
+    // Return the Mudlet settings file in the directory given by
+    // config if the value configPath exists.
+    if (config->contains(QStringLiteral("configPath")) && !configPath.isEmpty()) {
         mConfigDir = configPath;
         if (configPath == ".") {
             // Load config/Mudlet.ini from the same directory as the
             // application if configPath is set to a relative path
             return new QSettings(QCoreApplication::applicationDirPath() + "/config/Mudlet.ini", QSettings::IniFormat);
         }
-        // If configPath is not relative, load Mudlet.ini in configPath
+        // If configPath is not relative, load Mudlet.ini from the
+        // specified directory in configPath
         return new QSettings(configPath + "/Mudlet.ini", QSettings::IniFormat);
     }
 

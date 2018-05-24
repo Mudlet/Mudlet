@@ -523,7 +523,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QPointer<QSettings> dlgConnectionProfiles::getProfileSettings(const QString& profile)
 {
-    return new QSettings(mudlet::getMudletPath(mudlet::profileHomePath, profile) + "/profile.ini", QSettings::IniFormat);
+    return new QSettings(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, "profile.ini"), QSettings::IniFormat);
 }
 
 QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
