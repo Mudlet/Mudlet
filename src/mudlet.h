@@ -86,7 +86,8 @@ public:
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    HostManager& getHostManager() { return mHostManager; }
+    HostManager& getHostManager() { return mHostManager; }    
+    FontManager mFontManager;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
@@ -316,8 +317,6 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
-
-    FontManager mFontManager;
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;

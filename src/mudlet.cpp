@@ -140,6 +140,7 @@ mudlet* mudlet::self()
 
 mudlet::mudlet()
 : QMainWindow()
+, mFontManager()
 , mToolbarIconSize(0)
 , mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
@@ -168,7 +169,6 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-, mFontManager()
 
 {
     setupUi(this);

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009-2018 by Vadim Peretokin - vperetokin@gmail.com     *
+ *   Copyright (C) 2009, 2018 by Vadim Peretokin - vperetokin@gmail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Stephen Lyons - slysven@viginmedia.com          *
  *                                                                         *
@@ -24,10 +24,10 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDir>
 #include <QDebug>
-#include <QFontDatabase>
+#include <QDir>
 #include <QFileInfo>
+#include <QFontDatabase>
 #include <QString>
 #include <QStringList>
 #include "post_guard.h"
@@ -56,8 +56,7 @@ void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
     QStringList filters;
-    filters << QStringLiteral("*.ttf")
-            << QStringLiteral("*.otf");
+    filters << QStringLiteral("*.ttf") << QStringLiteral("*.otf");
     QDir dir = folder;
     dir.setNameFilters(filters);
 
@@ -67,7 +66,8 @@ void FontManager::loadFonts(const QString& folder)
     }
 }
 
-void FontManager::loadFont(const QString& filePath) {
+void FontManager::loadFont(const QString& filePath)
+{
     if (fontAlreadyLoaded(filePath)) {
         return;
     }
@@ -78,21 +78,26 @@ void FontManager::loadFont(const QString& filePath) {
     rememberFont(filePath, fontID);
 
     if (fontID == -1) {
-        qWarning() << "FontManager::loadFonts() warning - Could not load the font in the file: " << filePath;
+        qWarning() << "FontManager::loadFonts() warning - Could not load the font(s) in the file: " << filePath;
     }
 }
 
-bool FontManager::fontAlreadyLoaded(const QString& filePath) {
+bool FontManager::fontAlreadyLoaded(const QString& filePath)
+{
     QFileInfo fontFile(filePath);
     auto fileName = fontFile.fileName();
 
     return loadedFonts.contains(fileName);
 }
 
-void FontManager::rememberFont(const QString& filePath, int fontID) {
+void FontManager::rememberFont(const QString& filePath, int fontID)
+{
     QFileInfo fontFile(filePath);
     auto fileName = fontFile.fileName();
 
-    if (loadedFonts.contains(fileName)) { return; }
+    if (loadedFonts.contains(fileName)) {
+        return;
+    }
+
     loadedFonts.insert(fileName, fontID);
 }
