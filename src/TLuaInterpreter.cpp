@@ -3029,51 +3029,66 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 
 int TLuaInterpreter::setBackgroundColor(lua_State* L)
 {
-    string luaSendText = "";
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaSendText = lua_tostring(L, 1);
-    }
-    double x1;
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x1 = lua_tonumber(L, 2);
-    }
-    double y1;
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        y1 = lua_tonumber(L, 3);
-    }
-    double x2;
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x2 = lua_tonumber(L, 4);
-    }
-    double y2;
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        y2 = lua_tonumber(L, 5);
-    }
-    Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
-    mudlet::self()->setBackgroundColor(&host, text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2));
+    Host* pHost = &getHostFromLua(L);
+    QString windowName;
+    int r, g, b, alpha;
 
-    return 0;
+    int s = 1;
+    if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
+        windowName = QString::fromUtf8(lua_tostring(L, s));
+
+        if (!lua_isnumber(L, ++s)) {
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            r = static_cast<int>(lua_tonumber(L, s));
+        }
+    } else if (lua_isnumber(L, s)) {
+        r = static_cast<int>(lua_tonumber(L, s));
+    } else {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (green value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        g = static_cast<int>(lua_tonumber(L, s));
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (blue value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        b = static_cast<int>(lua_tonumber(L, s));
+    }
+
+    // if we get nothing, assuma alpha is 255. If we get a non-number value, complain.
+    if (lua_gettop(L) <= 4) {
+        alpha = 255;
+    } else if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        alpha = static_cast<int>(lua_tonumber(L, s));
+    }
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            pHost->mpConsole->setConsoleBgColor(r, g, b);
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "could not find the main window");
+            return 2;
+        }
+    } else if (!mudlet::self()->setBackgroundColor(pHost, windowName, r, g, b, alpha)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 int TLuaInterpreter::calcFontWidth(int size)
