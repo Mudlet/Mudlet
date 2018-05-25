@@ -211,29 +211,29 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     //QListIterator<QString> i(mudlet::);
     foreach(QString key, mudlet::mLuaFunctionNames.keys())
     {
-        provider->add(key, mudlet::mLuaFunctionNames.value(key).toString());
+        provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());//, mudlet::mLuaFunctionNames.value(key).toString());
     }
     //and       break     do        else      elseif
     //end       false     for       function  if
     //in        local     nil       not       or
     //repeat    return    then      true      until     while
-    provider->add("and");
-    provider->add("break");
-    provider->add("else");
-    provider->add("elseif");
-    provider->add("end");
-    provider->add("false");
-    provider->add("for");
-    provider->add("function");
-    provider->add("local");
-    provider->add("nil");
-    provider->add("not");
-    provider->add("repeat");
-    provider->add("return");
-    provider->add("then");
-    provider->add("true");
-    provider->add("until");
-    provider->add("while");
+    provider->add("and", 14);
+    provider->add("break", 14);
+    provider->add("else", 14);
+    provider->add("elseif", 14);
+    provider->add("end", 14);
+    provider->add("false", 14);
+    provider->add("for", 14);
+    provider->add("function", 14);
+    provider->add("local", 14);
+    provider->add("nil", 14);
+    provider->add("not", 14);
+    provider->add("repeat", 14);
+    provider->add("return", 14);
+    provider->add("then", 14);
+    provider->add("true", 14);
+    provider->add("until", 14);
+    provider->add("while", 14);
     /*provider->add("getAllMapUserData", "tbl mapUserData</b> = <font color='blue'>getAllMapUserData</font>()", "table");
     provider->add("getAllRoomUserData", "tbl <b>roomUserData</b> = getAllRoomUserData(num <b>roomID</b>)", "table");
     provider->add("getAreaExits", "tbl <b>exits</b> = getAreaExits(num <b>areaID</b>, bool <b>showExits</b>)", "table");
