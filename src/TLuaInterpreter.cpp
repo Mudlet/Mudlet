@@ -3033,6 +3033,10 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     QString windowName;
     int r, g, b, alpha;
 
+    auto validRange = [](int number) {
+        return (number >= 0 and number <= 255) ? true : false;
+    };
+
     int s = 1;
     if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
         windowName = QString::fromUtf8(lua_tostring(L, s));
@@ -3042,9 +3046,19 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
             return lua_error(L);
         } else {
             r = static_cast<int>(lua_tonumber(L, s));
+
+            if (!validRange(r)) {
+                lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value needs to be between 0-255, got %d!)", s, r);
+                return lua_error(L);
+            }
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(r)) {
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value needs to be between 0-255, got %d!)", s, r);
+            return lua_error(L);
+        }
     } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
@@ -3055,6 +3069,11 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         return lua_error(L);
     } else {
         g = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(g)) {
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (green value needs to be between 0-255, got %d!)", s, g);
+            return lua_error(L);
+        }
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -3062,9 +3081,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         return lua_error(L);
     } else {
         b = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(b)) {
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (blue value needs to be between 0-255, got %d!)", s, b);
+            return lua_error(L);
+        }
     }
 
-    // if we get nothing, assuma alpha is 255. If we get a non-number value, complain.
+    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
     if (lua_gettop(L) <= 4) {
         alpha = 255;
     } else if (!lua_isnumber(L, ++s)) {
@@ -3072,6 +3096,11 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         return lua_error(L);
     } else {
         alpha = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(alpha)) {
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (alpha value needs to be between 0-255, got %d!)", s, alpha);
+            return lua_error(L);
+        }
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
