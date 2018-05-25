@@ -3105,6 +3105,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            pHost->mBgColor.setRgb(r, g, b);
             pHost->mpConsole->setConsoleBgColor(r, g, b);
         } else {
             lua_pushnil(L);
