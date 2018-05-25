@@ -50,6 +50,7 @@ public:
     }
 
     TKey* getKey(int id);
+    void removeAllTempKeys();
     void compileAll();
     TKey* findKey(QString & name);
     bool enableKey(const QString& name);
@@ -67,6 +68,8 @@ public:
     bool processDataStream(int, int);
     void markCleanup( TKey * pT );
     void doCleanup();
+    void stopAllTriggers();
+    void reenableAllTriggers();
 
     QMultiMap<QString, TKey*> mLookupTable;
     std::list<TKey*> mCleanupList;

@@ -1,24 +1,16 @@
 language: cpp
-os:
-  - osx
-  - linux
+cache:
+  - ccache
 dist: trusty
 sudo: false
 addons:
   apt:
-    sources:
+    sources: &add-sources
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
     - sourceline: 'ppa:beineri/opt-qt593-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:jonathonf/php7'
-    packages:
-    - qt56base
-    - qt56multimedia
-    - qt56tools
-    - qt59base
-    - qt59multimedia
-    - qt59tools
-    - qt59gamepad
+    packages: &common-packages
     - libhunspell-dev
     - lua5.1
     - liblua5.1-0-dev
@@ -33,15 +25,9 @@ addons:
     - lua-filesystem
     - lua-zip
     - lua-sql-sqlite3
-compiler:
-  - gcc
-  - clang
+    - libpugixml-dev
 env:
-  matrix:
-  - Q_OR_C_MAKE=cmake
-    QT_VERSION=59 # actually Qt 5.9
-  - Q_OR_C_MAKE=qmake
-    QT_VERSION=59 # actually Qt 5.9
+#  matrix:
 #  - Q_OR_C_MAKE=cmake
 #    QT_VERSION=59
 #    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
@@ -57,39 +43,96 @@ env:
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
   - secure: XxdhHVraWpXpWo4tluD7NwJtqQT1b6LKoxX6QWKzR0fvcKgqBy2jlXMu0KVtTYtVI7M1wFdjtwSixK1UGFZyDgEYYUnDTufq7E81TWJSQ5ZhxNRaDAyO2vkLNFpH7LkwVrV/fWCPKE9t3/WiowwQnXesm9MMxAzbd2mIaeyiccY=
+  - secure: mi62VU0KxOahOaYulrqDiow3SscJPug842vhnuXzfjJ5AJU5V5gAcvECL85gQIPx5W3dXoNJnHdBUi9jOhnE3tuTML67oiieoVEmZfFF2pXtnHsdFlvzFtcGcmT+cVGF7GVyItlVLa5LcLJw6SNd3C3Dhib/Lu1cb/NdsFn0sZc=
 git:
-  submodules: false
-  # We selectively pull in the wanted submodules ourselves now
+  submodules: false # We selectively pull in the wanted submodules ourselves now
 matrix:
-  exclude:
-  - os: osx
-    compiler: gcc
   include:
+  - os: osx
+    osx_image: xcode8
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=qmake
+  - os: osx
+    osx_image: xcode8
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=cmake
+
   - os: linux
     compiler: gcc
-    env: 
+    env:
+    - Q_OR_C_MAKE=qmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages: &qt59-packages
+        - *common-packages
+        - qt59base
+        - qt59multimedia
+        - qt59tools
+        - qt59gamepad
+  - os: linux
+    compiler: gcc
+    env:
+    - Q_OR_C_MAKE=cmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+  - os: linux
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=qmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+  - os: linux
+    compiler: clang
+    env:
+    - Q_OR_C_MAKE=cmake
+    - QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+  - os: linux
+    compiler: gcc
+    env:
     - Q_OR_C_MAKE=cmake
     - QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
+    addons:
+      apt:
+        sources: *add-sources
+        packages: &qt56-packages
+        - *common-packages
+        - qt56base
+        - qt56multimedia
+        - qt56tools
 before_install:
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then `luarocks path`; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then $(luarocks path); fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/ccache/libexec:/usr/local/opt/qt5/bin:$PATH"; fi
   - ./CI/travis.before_install.sh
-install: ./CI/travis.install.sh
-before_script:
+install: source CI/travis.install.sh
+before_script: |
   # source the set-build-info as it exports some variables for us!
-  - source CI/travis.set-build-info.sh
-  - mkdir build
-  - cd src
+  source CI/travis.set-build-info.sh
+  mkdir -p build
 script:
-  - cd ../build
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
-  - if [ "${CC}" = "clang" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${Q_OR_C_MAKE}" = "qmake" ] ; then SPEC="-spec linux-clang"; fi
-  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ${SPEC} ../src/mudlet.pro && make -j `nproc`; else cmake --version; cmake .. && make -j `nproc` && make check; fi
+- ./CI/travis.compile.sh
 after_success:
-  - cd ${TRAVIS_BUILD_DIR}
+  - cd "${TRAVIS_BUILD_DIR}"
   - bash CI/travis.after_success.sh
 notifications:
   webhooks:

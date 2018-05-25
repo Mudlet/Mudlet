@@ -104,6 +104,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
+    // Set the properties of the log options
+    lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
+    pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Select a directory where logs will be saved.</p>"));
+    pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
+    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
+                                                   .arg("<p>This option sets the format of the log name.</p>"
+                                                        "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
+    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</p>"));
+    lineEdit_logFileName->setPlaceholderText(
+            tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
+    label_logFileNameExtension->setVisible(false);
+    label_logFileName->setVisible(false);
+    lineEdit_logFileName->setVisible(false);
+
     if (pHost) {
         initWithHost(pHost);
     } else {
@@ -133,27 +147,40 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
     pushButton_showGlyphUsage->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                          .arg("<p>This will bring up a display showing all the symbols used in the current "
-                                               "map and whether they can be drawn using just the specifed font, any other "
-                                               "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                               "that make up that symbol, so that they can be identified even if they "
-                                               "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                               "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+                                          .arg(tr("<p>This will bring up a display showing all the symbols used in the current "
+                                                  "map and whether they can be drawn using just the specifed font, any other "
+                                                  "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                                  "that make up that symbol, so that they can be identified even if they "
+                                                  "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                                  "that symbol are listed, which may help to identify any unexpected or odd cases.<p>")));
     fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                        .arg("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                             "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+                                        .arg(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                                "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                         .arg("<p>Using a single font is likely to produce a more consistent style but may "
                                              "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
                                              "does not have a needed glyph (a font's individual character/symbol) to represent "
                                              "the grapheme (what is to be represented).  Clearing this checkbox will allow "
                                              "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                         .arg("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                              "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                              "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                              "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                              "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                              "<p>This control has three settings:"
+                                                              "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                              "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                              "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                              "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
+                                                              "full support for languages other than English.</i></p>"));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
-    connect(mudlet::self(), SIGNAL(signal_hostCreated(Host*,quint8)), this, SLOT(slot_handleHostAddition(Host*,quint8)));
-    connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*,quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
+    connect(mudlet::self(), SIGNAL(signal_hostCreated(Host*, quint8)), this, SLOT(slot_handleHostAddition(Host*, quint8)));
+    connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*, quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
     connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
     connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
 }
@@ -182,6 +209,7 @@ void dlgProfilePreferences::disableHostDetails()
     // disable the others:
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -218,6 +246,12 @@ void dlgProfilePreferences::disableHostDetails()
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(false);
 
+    // on groupBox_logOptions:
+    groupBox_logOptions->setEnabled(false);
+    lineEdit_logFileName->setVisible(false);
+    label_logFileName->setVisible(false);
+    label_logFileNameExtension->setVisible(false);
+
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
     // it is possible to connect using the IRC client off of the
@@ -245,6 +279,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(true);
@@ -268,6 +303,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(true);
+
+    // on tab_logging:
+    groupBox_logOptions->setEnabled(true);
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(true);
@@ -300,6 +338,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     QString path;
     // This is duplicated (and should be the same as) the code in:
@@ -373,7 +412,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mFontSize = 10;
     }
     if (mFontSize < 40 && mFontSize > 0) {
-        fontSize->setCurrentIndex( (mFontSize - 1) );
+        fontSize->setCurrentIndex((mFontSize - 1));
     } else {
         // if the font size set for the main console is outside the pre-set range
         // this will unfortunately reset the font to default size.
@@ -401,8 +440,41 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
     rightBorderWidth->setValue(pHost->mBorderRightWidth);
-    mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+
+    // Set the properties in groupBox_logOptions
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
+    mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+
+    bool isLogFileNameEntryShown = pHost->mLogFileNameFormat.isEmpty();
+    QString logExtension = pHost->mIsNextLogFileInHtmlFormat ? ".html" : ".txt";
+    label_logFileNameExtension->setVisible(isLogFileNameEntryShown);
+    lineEdit_logFileName->setVisible(isLogFileNameEntryShown);
+    label_logFileName->setVisible(isLogFileNameEntryShown);
+    label_logFileNameExtension->setText(logExtension);
+
+    // This is the previous standard:
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
+    // The ISO standard for this uses T as the date/time separator
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd"));
+    // It might be possible to use QDateTime::weekNumber but that number is not
+    // available from the QDateTime::toString(...) method
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01%1)").arg(logExtension), QStringLiteral("yyyy-MM"));
+    comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
+    comboBox_logFileNameFormat->setCurrentIndex(comboBox_logFileNameFormat->findData(pHost->mLogFileNameFormat));
+
+    lineEdit_logFileName->setText(pHost->mLogFileName);
+
+    // pHost->mLogDir should be empty for the default location:
+    mLogDirPath = pHost->mLogDir;
+    lineEdit_logFileFolder->setText(mLogDirPath);
+    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    // set the cursor position to the end of the lineEdit's text property.
+    lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
+    // Enable the reset button if the current location is not the default one:
+    pushButton_resetLogDir->setEnabled(mLogDirPath.length() > 0);
+
+
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
     mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
@@ -419,7 +491,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
-    if (! mpMenu) {
+    if (!mpMenu) {
         mpMenu = new QMenu(tr("Other profiles to Map to:"));
     }
 
@@ -598,6 +670,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
     connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
     connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
+
+    connect(pushButton_whereToLog, SIGNAL(clicked()), this, SLOT(slot_setLogDir()));
+    connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
+    connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
+    connect(mIsToLogInHtml, SIGNAL(clicked(bool)), this, SLOT(slot_changeLogFileAsHtml(bool)));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -670,6 +747,10 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_saveMap, SIGNAL(clicked()));
 
     disconnect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)));
+    disconnect(pushButton_whereToLog, SIGNAL(clicked()));
+    disconnect(pushButton_resetLogDir, SIGNAL(clicked()));
+    disconnect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)));
+    disconnect(mIsToLogInHtml, SIGNAL(clicked(bool)));
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -737,7 +818,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
-    if (mpMenu ) {
+    if (mpMenu) {
         mpMenu->deleteLater();
         mpMenu = nullptr;
     }
@@ -1075,10 +1156,10 @@ void dlgProfilePreferences::setDisplayFont()
             mudlet::self()->mConsoleMap[pHost]->changeColors();
 
             // update the display properly when font or size selections change.
-            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
         }
         auto config = edbeePreviewWidget->config();
@@ -1681,6 +1762,92 @@ void dlgProfilePreferences::copyMap()
     mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
 
+void dlgProfilePreferences::slot_setLogDir()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    /*
+     * To show the files even though we are looking for a directory so that the
+     * user can see the files that may get appended to depending on the format
+     * selection, we need to use QFileDialog::DontUseNativeDialog because on
+     * Windows the native one does not show files when selecting a directory.
+     *
+     * Also from Qt Docs:
+     * "On Windows, the dialog will spin a blocking modal event loop that will
+     * not dispatch any QTimers, and if parent is not 0 then it will position
+     * the dialog just below the parent's title bar.
+     *
+     * Warning: Do not delete parent during the execution of the dialog. If you
+     * want to do this, you should create the dialog yourself using one of the
+     * QFileDialog constructors."
+     *
+     * That warning suggests *bad things* would happen if the "Save" button or
+     * the widget title bar close button was pressed on the Profile Preferrences
+     * dialog while the directory selector is open...!
+     */
+    // Seems to return "." when Cancel is hit:
+    QString currentLogDir = QFileDialog::getExistingDirectory(
+            this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lineEdit_logFileFolder->placeholderText() : mLogDirPath), QFileDialog::DontUseNativeDialog);
+
+    if (!currentLogDir.isEmpty() && currentLogDir != NULL) {
+        // Disable pushButton_resetLogDir and clear
+        // lineEdit_logFileFolder if the directory is set to the
+        // default path
+        if (currentLogDir == mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName())) {
+            // clear mLogDirPath, which sets the directory where logs are saved
+            // to Mudlet's default log path.
+            mLogDirPath.clear();
+            lineEdit_logFileFolder->clear();
+            pushButton_resetLogDir->setEnabled(false);
+        } else {
+            // set mLogDirPath to the selected directory
+            mLogDirPath = currentLogDir;
+            // If the directory is anything other than the default log
+            // directory, set the text of lineEdit_logFileFolder to the selected
+            // directory.
+            lineEdit_logFileFolder->setText(mLogDirPath);
+            // Set the cursor position to the end of the text.
+            lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
+            pushButton_resetLogDir->setEnabled(true);
+        }
+    }
+    // If 'Cancel' is pushed, do nothing and keep mLogDirPath as its current value.
+    return;
+}
+
+void dlgProfilePreferences::slot_resetLogDir()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    mLogDirPath.clear();
+    lineEdit_logFileFolder->clear();
+    lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->placeholderText().length());
+    pushButton_resetLogDir->setEnabled(false);
+
+    return;
+}
+
+void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
+{
+    Q_UNUSED(index);
+
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    bool isShown = comboBox_logFileNameFormat->currentData().toString().isEmpty();
+    lineEdit_logFileName->setVisible(isShown);
+    label_logFileName->setVisible(isShown);
+    label_logFileNameExtension->setVisible(isShown);
+}
+
 void dlgProfilePreferences::slot_save_and_exit()
 {
     if (mpDialogMapGlyphUsage) {
@@ -1740,6 +1907,9 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
+        pHost->mLogDir = mLogDirPath;
+        pHost->mLogFileName = lineEdit_logFileName->text();
+        pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
@@ -1839,6 +2009,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+        pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         if (pHost->mpEditorDialog) {
@@ -1926,6 +2097,15 @@ void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
     Host* pHost = mpHost;
     if (pHost) {
         pHost->mTelnet.setEncoding(pHost->mTelnet.getComputerEncoding(newEncoding));
+
+        if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting currently
+            // - eventually it would move to the locale/language control when it
+            // goes in, but we only need to change the setting for this if it is
+            // set to be automatic changed as necessary:
+
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        }
     }
 }
 
@@ -2145,9 +2325,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [this] {
-            slot_resetThemeUpdateLabel();
-        });
+        QTimer::singleShot(5000, theme_download_label, [this] { slot_resetThemeUpdateLabel(); });
         getReply->deleteLater();
     });
 
@@ -2396,7 +2574,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     selectedFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
     QFont anyFont = mpHost->mpMap->mMapSymbolFont;
     anyFont.setPointSize(16);
-    anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
+    anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
 
     int row = -1;
     QHashIterator<QString, QSet<int>> itUsedSymbol(roomSymbolsHash);
@@ -2626,5 +2804,22 @@ void dlgProfilePreferences::slot_changeShowToolBar(const int newIndex)
         // This control has been set to the "Never" setting but so is the other
         // control - so force it back to the "Only if no profile one
         comboBox_toolBarVisibility->setCurrentIndex(1);
+    }
+}
+
+void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
+{
+    if (isHtml) {
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.html)"));
+        label_logFileNameExtension->setText(QStringLiteral(".html"));
+    } else {
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
+        label_logFileNameExtension->setText(QStringLiteral(".txt"));
     }
 }

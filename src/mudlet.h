@@ -27,6 +27,7 @@
 
 
 #include "HostManager.h"
+#include "FontManager.h"
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -85,7 +86,8 @@ public:
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    HostManager& getHostManager() { return mHostManager; }
+    HostManager& getHostManager() { return mHostManager; }    
+    FontManager mFontManager;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
@@ -104,7 +106,9 @@ public:
     void setDockLayoutUpdated(Host*, const QString&);
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
-    bool setFontSize(Host*, const QString&, int);
+    bool setWindowFont(Host*, const QString&, const QString&);
+    QString getWindowFont(Host*, const QString&);
+    bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
@@ -197,6 +201,7 @@ public:
     void playSound(QString s, int);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
+    QStringList getAvailableFonts();
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;

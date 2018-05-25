@@ -2329,6 +2329,16 @@ void dlgRoomExits::slot_checkModified()
             }
         }
     }
-    setWindowModified(isModified);
-    button_save->setEnabled(isModified);
+
+    if (isWindowModified() != isModified) {
+        // There has been a change in the "are there changes?" state
+        setWindowModified(isModified);
+        button_save->setEnabled(isModified);
+#if defined(Q_OS_MACOS) && (QT_VERSION > 0x050903)
+        // Fix: https://bugreports.qt.io/browse/QTBUG-68067 which seems to
+        // effect macOs for Qt versions somewhere after Qt 5.9.3 and which we
+        // do not have a fix version - yet!
+        button_save->repaint();
+#endif
+    }
 }

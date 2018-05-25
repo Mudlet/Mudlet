@@ -62,21 +62,21 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
 
-    connect(connect_button, SIGNAL(clicked()), this, SLOT(accept()));
-    connect(abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
-    connect(new_profile_button, SIGNAL(clicked()), this, SLOT(slot_addProfile()));
-    connect(copy_profile_button, SIGNAL(clicked()), this, SLOT(slot_copy_profile()));
-    connect(remove_profile_button, SIGNAL(clicked()), this, SLOT(slot_deleteProfile()));
-    connect(profile_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_name(const QString)));
-    connect(profile_name_entry, SIGNAL(editingFinished()), this, SLOT(slot_save_name()));
-    connect(host_name_entry, SIGNAL(textChanged(const QString)), this, SLOT(slot_update_url(const QString)));
-    connect(port_entry, SIGNAL(textChanged(const QString)), this, SLOT(slot_update_port(const QString)));
-    connect(autologin_checkBox, SIGNAL(stateChanged(int)), this, SLOT(slot_update_autologin(int)));
-    connect(login_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_login(const QString)));
-    connect(character_password_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_pass(const QString)));
-    connect(mud_description_textedit, SIGNAL(textChanged()), this, SLOT(slot_update_description()));
-    connect(profiles_tree_widget, SIGNAL(currentItemChanged(QListWidgetItem*, QListWidgetItem*)), this, SLOT(slot_item_clicked(QListWidgetItem*)));
-    connect(profiles_tree_widget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(accept()));
+    connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
+    connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
+    connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
+    connect(copy_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
+    connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_name);
+    connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_save_name);
+    connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
+    connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
+    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
+    connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
+    connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
+    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
+    connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
+    connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
     // website_entry atm is only a label
     //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
@@ -133,7 +133,7 @@ void dlgConnectionProfiles::slot_update_description()
     }
 }
 
-void dlgConnectionProfiles::slot_update_website(const QString url)
+void dlgConnectionProfiles::slot_update_website(const QString &url)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
@@ -142,7 +142,7 @@ void dlgConnectionProfiles::slot_update_website(const QString url)
     }
 }
 
-void dlgConnectionProfiles::slot_update_pass(const QString pass)
+void dlgConnectionProfiles::slot_update_pass(const QString &pass)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
@@ -151,7 +151,7 @@ void dlgConnectionProfiles::slot_update_pass(const QString pass)
     }
 }
 
-void dlgConnectionProfiles::slot_update_login(const QString login)
+void dlgConnectionProfiles::slot_update_login(const QString &login)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
@@ -160,7 +160,7 @@ void dlgConnectionProfiles::slot_update_login(const QString login)
     }
 }
 
-void dlgConnectionProfiles::slot_update_url(const QString url)
+void dlgConnectionProfiles::slot_update_url(const QString &url)
 {
     if (url.isEmpty()) {
         validUrl = false;
@@ -212,7 +212,7 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
 {
     QString port = port_entry->text().trimmed();
 
-    if (ignoreBlank == "") {
+    if (ignoreBlank.isEmpty()) {
         validPort = false;
         connect_button->setDisabled(true);
         return;
@@ -540,8 +540,8 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    connect(delete_profile_lineedit, SIGNAL(textChanged(const QString)), this, SLOT(slot_deleteprofile_check(const QString)));
-    connect(delete_profile_dialog, SIGNAL(accepted()), this, SLOT(slot_reallyDeleteProfile()));
+    connect(delete_profile_lineedit, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_deleteprofile_check);
+    connect(delete_profile_dialog, &QDialog::accepted, this, &dlgConnectionProfiles::slot_reallyDeleteProfile);
 
     delete_profile_lineedit->setPlaceholderText(profile);
     delete_profile_lineedit->setFocus();
@@ -1505,6 +1505,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     } else {
         needsGenericPackagesInstall = true;
     }
@@ -1539,6 +1540,8 @@ void dlgConnectionProfiles::slot_connectToServer()
 
         QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
         pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
+        // Needed to ensure setting is correct on start-up:
+        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
     }
 
     if (needsGenericPackagesInstall) {
