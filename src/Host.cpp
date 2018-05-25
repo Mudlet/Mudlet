@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +41,7 @@
 #include <QtUiTools>
 #include <QApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QMessageBox>
 #include <QStringBuilder>
 #include "post_guard.h"
@@ -83,6 +85,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
+, mLogDir(QString())
+, mLogFileName(QString())
+, mLogFileNameFormat(QLatin1String("yyyy-MM-dd#hh-mm-ss"))
 , mResetProfile(false)
 , mScreenHeight(25)
 , mScreenWidth(90)
@@ -168,8 +173,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPort(port)
 , mRetries(5)
 , mSaveProfileOnExit(false)
-, mModuleSaveBlock(false)
 , mHaveMapperScript(false)
+, mAutoAmbigousWidthGlyphsSetting(true)
+, mWideAmbigousWidthGlyphs(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -225,10 +231,6 @@ Host::~Host()
 
 void Host::saveModules(int sync)
 {
-    if (mModuleSaveBlock) {
-        //FIXME: This should generate an error to the user
-        return;
-    }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
     QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
@@ -245,7 +247,6 @@ void Host::saveModules(int sync)
         QString moduleName = it.key();
         QString zipName;
         zip* zipFile = nullptr;
-        // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
             QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
@@ -259,22 +260,15 @@ void Host::saveModules(int sync)
         } else {
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
         }
-        QFile file_xml(filename_xml);
-        if (file_xml.open(QIODevice::WriteOnly)) {
-            XMLexport writer(this);
-            writer.writeModuleXML(&file_xml, it.key());
-            file_xml.close();
 
-            if (entry[1].toInt()) {
-                modulesToSync << it.key();
-            }
-        } else {
-            file_xml.close();
-            //FIXME: Should have an error reported to user
-            //qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
-            mModuleSaveBlock = true;
-            return;
+        auto writer = new XMLexport(this);
+        writers.insert(filename_xml, writer);
+        writer->writeModuleXML(moduleName, filename_xml);
+
+        if (entry[1].toInt()) {
+            modulesToSync << moduleName;
         }
+
         if (!zipName.isEmpty()) {
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
             QTime t;
@@ -299,7 +293,6 @@ void Host::saveModules(int sync)
             if (host->mHostName == mHostName) {
                 continue;
             }
-            QMap<QString, QStringList> installedModules = host->mInstalledModules;
             QMap<QString, int> modulePri = host->mModulePriorities;
             QMapIterator<QString, int> it3(modulePri);
             QMap<int, QStringList> moduleOrder;
@@ -352,10 +345,12 @@ void Host::resetProfile()
     mudlet::self()->mTimerMap.clear();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
+    getKeyUnit()->removeAllTempKeys();
 
 
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
     mEventMap.clear();
@@ -370,7 +365,7 @@ void Host::resetProfile()
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     getScriptUnit()->compileAll();
-    //getTimerUnit()->compileAll();
+    // All the Timers are NOT compiled here;
     mResetProfile = false;
 
     mTimerUnit.reenableAllTriggers();
@@ -386,13 +381,16 @@ void Host::resetProfile()
 // takes a directory to save in or an empty string for the default location
 // as well as a boolean whenever to sync the modules or not
 // returns true+filepath if successful or false+error message otherwise
-std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, bool syncModules)
 {
+    emit profileSaveStarted();
+    qApp->processEvents();
+
     QString directory_xml;
-    if (saveLocation.isEmpty()) {
+    if (saveFolder.isEmpty()) {
         directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
     } else {
-        directory_xml = saveLocation;
+        directory_xml = saveFolder;
     }
 
     // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
@@ -401,15 +399,57 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
     }
-    QFile file_xml(filename_xml);
-    if (file_xml.open(QIODevice::WriteOnly)) {
-        XMLexport writer(this);
-        writer.exportHost(&file_xml);
-        file_xml.close();
-        saveModules(syncModules ? 1 : 0);
-        return std::make_tuple(true, filename_xml, QString());
-    } else {
-        return std::make_tuple(false, filename_xml, file_xml.errorString());
+
+    if (currentlySavingProfile()) {
+        return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
+    }
+
+    auto writer = new XMLexport(this);
+    writers.insert(QStringLiteral("profile"), writer);
+    writer->exportHost(filename_xml);
+    saveModules(syncModules ? 1 : 0);
+    return std::make_tuple(true, filename_xml, QString());
+}
+
+// exports without the host settings for some reason
+std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
+{
+    emit profileSaveStarted();
+    qApp->processEvents();
+
+    if (currentlySavingProfile()) {
+        return std::make_tuple(false, QString(), QStringLiteral("a save is already in progress"));
+    }
+
+    auto writer = new XMLexport(this);
+    writers.insert(QStringLiteral("profile"), writer);
+    writer->exportGenericPackage(file);
+    return std::make_tuple(true, file, QString());
+}
+
+void Host::xmlSaved(const QString& xmlName)
+{
+    if (writers.contains(xmlName)) {
+        auto writer = writers.take(xmlName);
+        delete writer;
+    }
+
+    if (writers.empty()) {
+        emit profileSaveFinished();
+    }
+}
+
+bool Host::currentlySavingProfile()
+{
+    return !writers.empty();
+}
+
+void Host::waitForProfileSave()
+{
+    for (auto& writer : writers) {
+        for (auto& future: writer->saveFutures) {
+            future.waitForFinished();
+        }
     }
 }
 
@@ -467,6 +507,7 @@ void Host::stopAllTriggers()
     mTriggerUnit.stopAllTriggers();
     mAliasUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
+    mKeyUnit.stopAllTriggers();
 }
 
 void Host::reenableAllTriggers()
@@ -474,11 +515,12 @@ void Host::reenableAllTriggers()
     mTriggerUnit.reenableAllTriggers();
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
 }
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    if(mSearchEngineData.contains(mSearchEngineName))
+    if (mSearchEngineData.contains(mSearchEngineName))
         return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
     else
         return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
@@ -577,10 +619,6 @@ bool Host::resetStopWatch(int watchID)
     } else {
         return false;
     }
-}
-
-void Host::callEventHandlers()
-{
 }
 
 void Host::incomingStreamProcessor(const QString& data, int line)
@@ -718,7 +756,7 @@ bool Host::installPackage(const QString& fileName, int module)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
-    // pointer just in case we accidently reenter this method in the future.
+    // pointer just in case we accidentally reenter this method in the future.
     QDialog* pUnzipDialog = Q_NULLPTR;
 
     //     Module notes:
@@ -889,6 +927,11 @@ bool Host::installPackage(const QString& fileName, int module)
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
+
+    // make any fonts in the package available to Mudlet for use
+    if (module != 2) {
+        installPackageFonts(packageName);
+    }
 
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the install event") and a more specific need
@@ -1155,4 +1198,84 @@ QString Host::readProfileData(const QString& item)
     }
 
     return ret;
+}
+
+// makes fonts in a given package/module be available for Mudlet scripting
+// does not install font system-wide
+void Host::installPackageFonts(const QString &packageName)
+{
+    auto packagePath = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+
+    QDirIterator it(packagePath, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        auto filePath = it.next();
+
+        if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
+            filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
+
+            mudlet::self()->mFontManager.loadFont(filePath);
+        }
+    }
+}
+
+// ensures fonts from all installed packages are loaded in Mudlet
+void Host::refreshPackageFonts()
+{
+    for (const auto& package : mInstalledPackages) {
+        installPackageFonts(package);
+    }
+}
+
+void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
+{
+    bool localState = false;
+    bool needToEmit = false;
+    const QString encoding(mTelnet.getEncoding());
+
+    QMutexLocker locker(& mLock);
+    if (state == Qt::PartiallyChecked) {
+        // Set things automatically
+        mAutoAmbigousWidthGlyphsSetting = true;
+
+        if ( encoding == QLatin1String("GBK")
+           ||encoding == QLatin1String("GB18030")) {
+
+            // Need to use wide width for ambiguous characters
+            if (!mWideAmbigousWidthGlyphs) {
+                // But the last setting was narrow - so we need to change
+                mWideAmbigousWidthGlyphs = true;
+                localState = true;
+                needToEmit = true;
+            }
+
+        } else {
+            // Need to use narrow width for ambiguous characters
+            if (mWideAmbigousWidthGlyphs) {
+                // But the last setting was wide - so we need to change
+                mWideAmbigousWidthGlyphs = false;
+                localState = false;
+                needToEmit = true;
+            }
+
+        }
+
+    } else {
+        // Set things manually:
+        mAutoAmbigousWidthGlyphsSetting = false;
+        if (mWideAmbigousWidthGlyphs != (state == Qt::Checked)) {
+            // The last setting is the opposite to what we want:
+
+            mWideAmbigousWidthGlyphs = (state == Qt::Checked);
+            localState = (state == Qt::Checked);
+            needToEmit = true;
+        };
+
+    }
+
+    locker.unlock();
+    // We do not need to keep the mutex any longer as we have a local copy to
+    // work with whilst the connected methods react to the signal:
+    if (needToEmit) {
+        emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
+    }
 }

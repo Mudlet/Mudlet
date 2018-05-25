@@ -44,11 +44,11 @@ signals:
 public slots:
     void slot_update_name(const QString);
     void slot_save_name();
-    void slot_update_url(const QString);
+    void slot_update_url(const QString &);
     void slot_update_port(const QString);
-    void slot_update_login(const QString);
-    void slot_update_pass(const QString);
-    void slot_update_website(const QString);
+    void slot_update_login(const QString &);
+    void slot_update_pass(const QString &);
+    void slot_update_website(const QString &);
     void slot_deleteprofile_check(const QString);
     void slot_update_description();
 

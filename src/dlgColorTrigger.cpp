@@ -37,104 +37,104 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, int mode) : QDialog(
 {
     // init generated dialog
     setupUi(this);
-    connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
-    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
+    connect(closeButton, &QAbstractButton::pressed, this, &dlgColorTrigger::slot_save_and_exit);
+    connect(pushButton_black, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorBlack);
     QPalette palette;
     QString styleSheet;
     QColor color;
     color = mpTrigger->mpHost->mBlack;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_black->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
+    connect(pushButton_Lblack, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightBlack);
     color = mpTrigger->mpHost->mLightBlack;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lblack->setStyleSheet(styleSheet);
 
-    connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
+    connect(pushButton_green, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorGreen);
     color = mpTrigger->mpHost->mGreen;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_green->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
+    connect(pushButton_Lgreen, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightGreen);
     color = mpTrigger->mpHost->mLightGreen;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lgreen->setStyleSheet(styleSheet);
 
-    connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
+    connect(pushButton_red, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorRed);
     color = mpTrigger->mpHost->mRed;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_red->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
+    connect(pushButton_Lred, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightRed);
     color = mpTrigger->mpHost->mLightRed;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lred->setStyleSheet(styleSheet);
 
-    connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
+    connect(pushButton_blue, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorBlue);
     color = mpTrigger->mpHost->mBlue;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_blue->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
+    connect(pushButton_Lblue, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightBlue);
     color = mpTrigger->mpHost->mLightBlue;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lblue->setStyleSheet(styleSheet);
 
-    connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
+    connect(pushButton_yellow, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorYellow);
     color = mpTrigger->mpHost->mYellow;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_yellow->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
+    connect(pushButton_Lyellow, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightYellow);
     color = mpTrigger->mpHost->mLightYellow;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lyellow->setStyleSheet(styleSheet);
 
-    connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
+    connect(pushButton_cyan, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorCyan);
     color = mpTrigger->mpHost->mCyan;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_cyan->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
+    connect(pushButton_Lcyan, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightCyan);
     color = mpTrigger->mpHost->mLightCyan;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lcyan->setStyleSheet(styleSheet);
 
-    connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
+    connect(pushButton_magenta, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorMagenta);
     color = mpTrigger->mpHost->mMagenta;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_magenta->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+    connect(pushButton_Lmagenta, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightMagenta);
     color = mpTrigger->mpHost->mLightMagenta;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lmagenta->setStyleSheet(styleSheet);
 
-    connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
+    connect(pushButton_white, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorWhite);
     color = mpTrigger->mpHost->mWhite;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_white->setStyleSheet(styleSheet);
 
-    connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
+    connect(pushButton_Lwhite, &QAbstractButton::clicked, this, &dlgColorTrigger::setColorLightWhite);
     color = mpTrigger->mpHost->mLightWhite;
     palette.setColor(QPalette::Button, color);
-    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    styleSheet = QStringLiteral("QPushButton{background-color:") + color.name() + QStringLiteral(";}");
     pushButton_Lwhite->setStyleSheet(styleSheet);
 }
 

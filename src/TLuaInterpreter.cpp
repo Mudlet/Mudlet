@@ -883,25 +883,28 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         lua_pushnumber(L, -1);
         return 1;
     }
-    luaNumOfMatch--; //we want capture groups to start with 1 instead of 0
-    if (luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
+    // We want capture groups to start with 1 instead of 0 so predecrement
+    // luaNumOfMatch :
+    if (--luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
         TLuaInterpreter* pL = host.getLuaInterpreter();
         auto iti = pL->mCaptureGroupPosList.begin();
         auto its = pL->mCaptureGroupList.begin();
+        int begin = *iti;
+        std::string& s = *its;
 
         for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
+            begin = *iti;
             if (i >= luaNumOfMatch) {
                 break;
             }
         }
         for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
+            s = *its;
             if (i >= luaNumOfMatch) {
                 break;
             }
         }
 
-        int begin = *iti;
-        std::string& s = *its;
         int length = s.size();
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> 0;
@@ -1022,7 +1025,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
         size = lua_tointeger(L, 2);
     }
     Host* host = &getHostFromLua(L);
-    if (mudlet::self()->setFontSize(host, windowName, size)) {
+    if (mudlet::self()->setWindowFontSize(host, windowName, size)) {
         lua_pushboolean(L, true);
     } else {
         lua_pushnil(L);
@@ -2419,6 +2422,97 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFont
+int TLuaInterpreter::setFont(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName;
+    int s = 0;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L,
+                            "setFont: bad argument #%d type for the optional window name - expected string, got %s!",
+                            s,
+                            luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, s));
+        }
+    }
+
+    QString font;
+    if (!lua_isstring(L, ++s)) {
+        lua_pushfstring(L, "setFont: bad argument #%d type (name as string expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        font = QString::fromUtf8(lua_tostring(L, s));
+    }
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            // get host profile display font and alter it, since that is how it's done in Settings.
+            QFont displayFont = pHost->mDisplayFont;
+            displayFont.setFamily(font);
+            pHost->mDisplayFont = displayFont;
+            // apply changes to main console and its while-scrolling component too.
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->refresh();
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "could not find the main window");
+            return 2;
+        }
+    } else {
+        if (!mudlet::self()->setWindowFont(pHost, windowName, font)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+            return 2;
+        }
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFont
+int TLuaInterpreter::getFont(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName = QStringLiteral("main");
+    QString font;
+    if (lua_gettop(L) == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getFont: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+
+            if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+                font = pHost->mpConsole->mUpperPane->fontInfo().family();
+            } else {
+                font = mudlet::self()->getWindowFont(pHost, windowName);
+            }
+
+            if (font.isEmpty()) {
+                lua_pushnil(L);
+                lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+                return 2;
+            }
+        }
+    } else {
+        font = pHost->mpConsole->mUpperPane->fontInfo().family();
+    }
+
+    lua_pushstring(L, font.toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFontSize
 int TLuaInterpreter::setFontSize(lua_State* L)
 {
@@ -2460,10 +2554,10 @@ int TLuaInterpreter::setFontSize(lua_State* L)
             font.setPointSize(size);
             pHost->mDisplayFont = font;
             // apply changes to main console and its while-scrolling component too.
-            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
             lua_pushboolean(L, true);
         } else {
@@ -2472,11 +2566,12 @@ int TLuaInterpreter::setFontSize(lua_State* L)
             return 2;
         }
     } else {
-        if (mudlet::self()->setFontSize(pHost, windowName, size)) {
+        if (mudlet::self()->setWindowFontSize(pHost, windowName, size)) {
             lua_pushboolean(L, true);
         } else {
             lua_pushnil(L);
             lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+            return 2;
         }
     }
     return 1;
@@ -2753,7 +2848,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     if (!lua_isstring(L, 1)) {
         Host& host = getHostFromLua(L);
         host.mpConsole->buffer.clear();
-        host.mpConsole->console->forceUpdate();
+        host.mpConsole->mUpperPane->forceUpdate();
         return 0;
     } else {
         luaSendText = lua_tostring(L, 1);
@@ -3219,7 +3314,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     }
 
-    bool lua_result;
+    bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
         lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
@@ -3234,6 +3329,11 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
         lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event);
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
+        return 2;
+    }
 
     if (lua_result) {
         lua_pushboolean(L, true);
@@ -9117,7 +9217,6 @@ int TLuaInterpreter::downloadFile(lua_State* L)
 
     QNetworkRequest request = QNetworkRequest(url);
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
-    qDebug() << QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData());
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_OPENSSL
     if (url.scheme() == QStringLiteral("https")) {
@@ -10236,6 +10335,13 @@ int TLuaInterpreter::getTime(lua_State* L)
         lua_pushinteger(L, dt.day());
         lua_rawset(L, n + 1);
     }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getEpoch
+int TLuaInterpreter::getEpoch(lua_State *L)
+{
+    lua_pushnumber(L, static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0));
     return 1;
 }
 
@@ -11947,6 +12053,20 @@ double TLuaInterpreter::condenseMapLoad()
     return loadTime;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAvailableFonts
+int TLuaInterpreter::getAvailableFonts(lua_State* L)
+{
+    auto fontList = mudlet::self()->getAvailableFonts();
+
+    lua_newtable(L);
+    for (auto& font : fontList) {
+        lua_pushstring(L, font.toUtf8().constData());
+        lua_pushboolean(L, true);
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 // Documentation: ? - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
@@ -12101,6 +12221,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
     lua_register(pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout);
     lua_register(pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout);
+    lua_register(pGlobalLua, "setFont", TLuaInterpreter::setFont);
+    lua_register(pGlobalLua, "getFont", TLuaInterpreter::getFont);
     lua_register(pGlobalLua, "setFontSize", TLuaInterpreter::setFontSize);
     lua_register(pGlobalLua, "getFontSize", TLuaInterpreter::getFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);
@@ -12222,6 +12344,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killAlias", TLuaInterpreter::killAlias);
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
+    lua_register(pGlobalLua, "getEpoch", TLuaInterpreter::getEpoch);
     lua_register(pGlobalLua, "invokeFileDialog", TLuaInterpreter::invokeFileDialog);
     lua_register(pGlobalLua, "getTimestamp", TLuaInterpreter::getTimestamp);
     lua_register(pGlobalLua, "setLink", TLuaInterpreter::setLink);
@@ -12389,6 +12512,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
@@ -12426,6 +12550,10 @@ void TLuaInterpreter::initLuaGlobals()
     //macOS app bundle would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+#endif
+#ifdef Q_OS_WIN32
+    //Windows Qt Creator builds with our SDK install the library into a well known directory
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
 #endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
@@ -12578,12 +12706,18 @@ void TLuaInterpreter::initIndenterGlobals()
     luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
+#elif defined(Q_OS_WIN32)
+    // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
+    luaL_dostring(pIndenterState,
+                  QStringLiteral("package.path = [[%1\\?.lua;%2\\..\\3rdparty\\?.lua;%2\\..\\..\\3rdparty\\?.lua;]] .. package.path")
+                          .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
+                          .toUtf8().constData());
 #endif
 
     int error = luaL_dostring(pIndenterState, R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
-      get_formatted_code = request('!.formats.lua.save')
+      get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
         string e = "no error message available from Lua";
@@ -13109,7 +13243,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     Host* pHost = &getHostFromLua(L);
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        columns = pHost->mpConsole->console->getColumnCount();
+        columns = pHost->mpConsole->mUpperPane->getColumnCount();
     } else {
         columns = mudlet::self()->getColumnCount(pHost, windowName);
     }
@@ -13143,7 +13277,7 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     Host* pHost = &getHostFromLua(L);
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        rows = pHost->mpConsole->console->getRowCount();
+        rows = pHost->mpConsole->mUpperPane->getRowCount();
     } else {
         rows = mudlet::self()->getRowCount(pHost, windowName);
     }

@@ -5,6 +5,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,6 +31,7 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "wcwidth.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -40,12 +42,13 @@
 #include <QPainter>
 #include <QScrollBar>
 #include <QString>
+#include <QTextBoundaryFinder>
 #include <QTextCursor>
 #include <QToolTip>
 #include "post_guard.h"
 
 
-TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen)
+TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane)
 : QWidget(pW)
 , mCursorY(0)
 , mIsCommandPopup(false)
@@ -59,13 +62,14 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mInversOn(false)
 , mIsDebugConsole(isDebugConsole)
 , mIsMiniConsole(false)
-, mIsSplitScreen(isSplitScreen)
+, mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
 , mMouseTracking(false)
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
 , mpScrollBar(nullptr)
+, mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -130,6 +134,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
+
+    connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
 }
 
 void TTextEdit::forceUpdate()
@@ -303,31 +309,40 @@ void TTextEdit::updateScreenView()
 
 void TTextEdit::showNewLines()
 {
-    if (!mIsSplitScreen) {
-        if (!isTailMode()) {
-            return;
-        }
-    } else {
+    if (mIsLowerPane) {
         if (isHidden()) {
+            // If it is not showing there is no point in showing new lines in
+            // the lower pane - as it happens it being hidden should be the same
+            // as the upper pane having mIsTailMode set!
             return;
         }
+
+    } else {
+        if (!mIsTailMode) {
+            // If not in tail mode the upper pane is frozen
+            return;
+        }
+
     }
 
     mCursorY = mpBuffer->size();
-    if (!mIsSplitScreen) {
+    if (!mIsLowerPane) {
         mpBuffer->mCursorY = mpBuffer->size();
     }
+
     mOldScrollPos = mpBuffer->getLastLineNumber();
-    if (!mIsSplitScreen) {
+
+    if (!mIsLowerPane) {
+        // This is ONLY for the upper pane
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            disconnect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
+            disconnect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
             mpConsole->mpScrollBar->setRange(0, mpBuffer->getLastLineNumber());
             mpConsole->mpScrollBar->setSingleStep(1);
             mpConsole->mpScrollBar->setPageStep(mScreenHeight);
-            if (mpConsole->console->isTailMode()) {
+            if (mIsTailMode) {
                 mpConsole->mpScrollBar->setValue(mpBuffer->mCursorY);
             }
-            connect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
+            connect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
         }
     }
     update();
@@ -335,20 +350,23 @@ void TTextEdit::showNewLines()
 
 void TTextEdit::scrollTo(int line)
 {
+    // Protect against modifying mIsTailMode on the lower pane where it would
+    // be wrong:
+    Q_ASSERT_X(!mIsLowerPane, "Inappropriate use of method on lower pane which should only be used for the upper one" , "TTextEdit::scrollTo()");
+
     if ((line > -1) && (line < mpBuffer->size())) {
         if ((line < (mpBuffer->getLastLineNumber() - mScreenHeight) && mIsTailMode)) {
-            mpConsole->console2->mCursorY = mpBuffer->size();
-            mpConsole->console2->mIsTailMode = true;
             mIsTailMode = false;
-            mpConsole->console2->show();
-            mpConsole->console2->forceUpdate();
+            mpConsole->mLowerPane->mCursorY = mpBuffer->size();
+            mpConsole->mLowerPane->show();
+            mpConsole->mLowerPane->forceUpdate();
         } else if ((line > (mpBuffer->getLastLineNumber() - mScreenHeight)) && !mIsTailMode) {
-            mpConsole->console2->mCursorY = mpConsole->buffer.getLastLineNumber();
-            mpConsole->console2->hide();
-            mpConsole->console->mCursorY = mpConsole->buffer.getLastLineNumber();
-            mpConsole->console->mIsTailMode = true;
-            mpConsole->console->updateScreenView();
-            mpConsole->console->forceUpdate();
+            mpConsole->mLowerPane->mCursorY = mpConsole->buffer.getLastLineNumber();
+            mpConsole->mLowerPane->hide();
+            mIsTailMode = true;
+            mCursorY = mpConsole->buffer.getLastLineNumber();
+            updateScreenView();
+            forceUpdate();
         }
         mpBuffer->mCursorY = line;
 
@@ -359,15 +377,12 @@ void TTextEdit::scrollTo(int line)
 
 void TTextEdit::scrollUp(int lines)
 {
-    if (mIsSplitScreen) {
+    if (mIsLowerPane) {
         return;
     }
-    lines = bufferScrollUp(lines);
-    if (lines == 0) {
-        return;
-    } else {
+
+    if (bufferScrollUp(lines)) {
         mIsTailMode = false;
-        lines = mScreenHeight;
         mScrollVector = 0;
         update();
     }
@@ -375,13 +390,11 @@ void TTextEdit::scrollUp(int lines)
 
 void TTextEdit::scrollDown(int lines)
 {
-    if (mIsSplitScreen) {
+    if (mIsLowerPane) {
         return;
     }
-    lines = bufferScrollDown(lines);
-    if (lines == 0) {
-        return;
-    } else {
+
+    if (bufferScrollDown(lines)) {
         mScrollVector = 0;
         update();
     }
@@ -524,6 +537,118 @@ void TTextEdit::updateLastLine()
     update(r);
 }
 
+inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
+{
+    if (str.isEmpty()) {
+        return 0;
+    }
+    QChar first = str.at(0);
+    if (first.isSurrogate() && str.size() >= 2) {
+        QChar second = str.at(1);
+        if (first.isHighSurrogate() && second.isLowSurrogate()) {
+            return QChar::surrogateToUcs4(first, second);
+        } else if (first.isLowSurrogate() && second.isHighSurrogate()) {
+            return QChar::surrogateToUcs4(second, first);
+        } else {
+            // str format error
+            return first.unicode();
+        }
+    } else {
+        return first.unicode();
+    }
+}
+
+void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
+{
+    QPoint cursor(0, lineOfScreen);
+    QString lineText = mpBuffer->lineBuffer[lineNumber];
+    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+
+    if (mShowTimeStamps) {
+        TChar timeStampStyle;
+        timeStampStyle.bgR = 22;
+        timeStampStyle.bgG = 22;
+        timeStampStyle.bgB = 22;
+        timeStampStyle.fgR = 200;
+        timeStampStyle.fgG = 150;
+        timeStampStyle.fgB = 0;
+        QString timestamp = mpBuffer->timeBuffer[lineNumber];
+        for (QChar c : timestamp) {
+            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
+        }
+    }
+
+    int columnWithOutTimestamp = 0;
+    for (int indexOfChar = 0; indexOfChar < lineText.size();) {
+        int nextBoundary = boundaryFinder.toNextBoundary();
+
+        TChar &charStyle = mpBuffer->buffer[lineNumber][indexOfChar];
+        int graphemeWidth = drawGrapheme(painter, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
+        cursor.setX(cursor.x() + graphemeWidth);
+        indexOfChar = nextBoundary;
+        columnWithOutTimestamp += graphemeWidth;
+    }
+}
+
+/**
+ * @brief TTextEdit::drawGrapheme
+ * @param painter
+ * @param cursor
+ * @param grapheme
+ * @param column Used to calculate the width of Tab
+ * @param charStyle
+ * @return Return the display width of the grapheme
+ */
+int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle)
+{
+    uint unicode = getGraphemeBaseCharacter(grapheme);
+    int charWidth;
+    if (unicode == '\t') {
+        charWidth = column / 8 * 8 + 8;
+    } else {
+        if (mWideAmbigousWidthGlyphs) {
+            charWidth = mk_wcwidth_cjk(unicode) == 2 ? 2 : 1;
+        } else {
+            charWidth = mk_wcwidth(unicode) == 2 ? 2 : 1;
+        }
+    }
+
+    bool isBold = charStyle.flags & TCHAR_BOLD;
+    bool isUnderline = charStyle.flags & TCHAR_UNDERLINE;
+    bool isItalics = charStyle.flags & TCHAR_ITALICS;
+    bool isStrikeOut = charStyle.flags & TCHAR_STRIKEOUT;
+    if ((painter.font().bold() != isBold) || (painter.font().underline() != isUnderline) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut)) {
+        QFont font = painter.font();
+        font.setBold(isBold);
+        font.setUnderline(isUnderline);
+        font.setItalic(isItalics);
+        font.setStrikeOut(isStrikeOut);
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
+        font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
+#endif
+        painter.setFont(font);
+    }
+
+    QColor bgColor, fgColor;
+    if (charStyle.flags & TCHAR_INVERSE) {
+        bgColor = QColor(charStyle.fgR, charStyle.fgG, charStyle.fgB);
+        fgColor = QColor(charStyle.bgR, charStyle.bgG, charStyle.bgB);
+    } else {
+        fgColor = QColor(charStyle.fgR, charStyle.fgG, charStyle.fgB);
+        bgColor = QColor(charStyle.bgR, charStyle.bgG, charStyle.bgB);
+    }
+
+    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(),
+                          mFontWidth * charWidth, mFontHeight);
+    drawBackground(painter, textRect, bgColor);
+
+    if (painter.pen().color() != fgColor) {
+        painter.setPen(fgColor);
+    }
+
+    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
+    return charWidth;
+}
 
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
@@ -612,58 +737,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         mpBuffer->dirty[lineOffset + i] = false;
-        int timeOffset = 0;
-        if (mShowTimeStamps) {
-            timeOffset = 13;
-        }
-        int lineLength = mpBuffer->buffer[i + lineOffset].size() + timeOffset;
-        for (int i2 = x1; i2 < lineLength;) {
-            QString text;
-            if (i2 < timeOffset) {
-                text = mpBuffer->timeBuffer[i + lineOffset];
-                bool isBold = false;
-                bool isUnderline = false;
-                bool isItalics = false;
-                bool isStrikeOut = false;
-                QRect textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * timeOffset, mFontHeight);
-                auto bgTime = QColor(22, 22, 22);
-                auto fgTime = QColor(200, 150, 0);
-                drawBackground(p, textRect, bgTime);
-                drawCharacters(p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime);
-                i2 += timeOffset;
-            } else {
-                if (i2 >= x2) {
-                    break;
-                }
-                text = mpBuffer->lineBuffer[i + lineOffset].at(i2 - timeOffset);
-                TChar& f = mpBuffer->buffer[i + lineOffset][i2 - timeOffset];
-                int delta = 1;
-                QColor fgColor;
-                QColor bgColor;
-                if (f.flags & TCHAR_INVERSE) {
-                    bgColor = QColor(f.fgR, f.fgG, f.fgB);
-                    fgColor = QColor(f.bgR, f.bgG, f.bgB);
-                } else {
-                    fgColor = QColor(f.fgR, f.fgG, f.fgB);
-                    bgColor = QColor(f.bgR, f.bgG, f.bgB);
-                }
-                while (i2 + delta + timeOffset < lineLength) {
-                    if (mpBuffer->buffer[i + lineOffset][i2 + delta - timeOffset] == f) {
-                        text.append(mpBuffer->lineBuffer[i + lineOffset].at(i2 + delta - timeOffset));
-                        delta++;
-                    } else {
-                        break;
-                    }
-                }
-                QRect textRect;
-                textRect = QRect(mFontWidth * i2, mFontHeight * i, mFontWidth * delta, mFontHeight);
-                if (f.flags & TCHAR_INVERSE || (bgColor != mBgColor)) {
-                    drawBackground(p, textRect, bgColor);
-                }
-                drawCharacters(p, textRect, text, f.flags & TCHAR_BOLD, f.flags & TCHAR_UNDERLINE, f.flags & TCHAR_ITALICS, f.flags & TCHAR_STRIKEOUT, fgColor, bgColor);
-                i2 += delta;
-            }
-        }
+        drawLine(p, i + lineOffset, i);
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -1215,13 +1289,13 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::MidButton) {
-        mpConsole->console2->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->console2->hide();
+        mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size(); //
+        mpConsole->mLowerPane->hide();
         mpBuffer->mCursorY = mpBuffer->size();
-        mpConsole->console->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->console->mIsTailMode = true;
-        mpConsole->console->updateScreenView();
-        mpConsole->console->forceUpdate();
+        mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size(); //
+        mpConsole->mUpperPane->mIsTailMode = true;
+        mpConsole->mUpperPane->updateScreenView();
+        mpConsole->mUpperPane->forceUpdate();
         event->accept();
         return;
     }
@@ -1466,7 +1540,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
-    if (!mIsSplitScreen && !mIsDebugConsole) {
+    if (!mIsLowerPane && !mIsDebugConsole) {
         mpHost->adjustNAWS();
     }
 
@@ -1492,72 +1566,71 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
 
 int TTextEdit::imageTopLine()
 {
-    if (!mIsSplitScreen) {
+    if (!mIsLowerPane) {
         mCursorY = mpBuffer->mCursorY;
     }
+
     if (mCursorY > mScreenHeight) {
-        if (isTailMode()) {
-            if (mpBuffer->lineBuffer[mpBuffer->getLastLineNumber()] == "") {
-                return mCursorY - mScreenHeight - 1;
-            } else {
-                return mCursorY - mScreenHeight;
-            }
-        } else {
-            return mCursorY - mScreenHeight;
+        // mIsTailMode is alway true for lower pane and true for upper one when
+        // it is scrolled to the bottom and new text is to be appended and the
+        // older text is to scroll up:
+        if (mIsTailMode && (mpBuffer->lineBuffer.at(mpBuffer->getLastLineNumber()).isEmpty())) {
+            return mCursorY - mScreenHeight - 1;
         }
+
+        return mCursorY - mScreenHeight;
     } else {
         return 0;
     }
 }
 
-bool TTextEdit::isTailMode()
-{
-    if (mIsTailMode) {
-        mIsTailMode = true;
-        return true;
-    } else {
-        return false;
-    }
-}
-
+// Ensure we return 0 if the whole buffer fits within the space on-screen which
+// should stop the split appearing if there is nothing to scroll up/down.
+// This should only be used on the upper pane:
 int TTextEdit::bufferScrollUp(int lines)
 {
-    if ((mpBuffer->mCursorY - lines) >= mScreenHeight) {
+    if (Q_UNLIKELY((mpBuffer->mCursorY - lines) >= mScreenHeight)) {
         mpBuffer->mCursorY -= lines;
-        mIsTailMode = true;
         return lines;
+
     } else {
         mpBuffer->mCursorY -= lines;
         if (mCursorY < 0) {
             int delta = mCursorY;
             mpBuffer->mCursorY = 0;
             return delta;
+
         } else {
             return 0;
+
         }
     }
 }
 
+// This should only be used on the upper pane:
 int TTextEdit::bufferScrollDown(int lines)
 {
-    if ((mpBuffer->mCursorY + lines) < (int)(mpBuffer->size())) {
-        if (mpBuffer->mCursorY + lines < mScreenHeight + lines) {
+    if ((mpBuffer->mCursorY + lines) < static_cast<int>(mpBuffer->size())) {
+        if (mpBuffer->mCursorY < mScreenHeight) {
             mpBuffer->mCursorY = mScreenHeight + lines;
-            if (mpBuffer->mCursorY > (int)(mpBuffer->size() - 1)) {
+            if (mpBuffer->mCursorY > static_cast<int>(mpBuffer->size() - 1)) {
                 mpBuffer->mCursorY = mpBuffer->size() - 1;
                 mIsTailMode = true;
             }
+
         } else {
             mpBuffer->mCursorY += lines;
             mIsTailMode = false;
-        }
 
+        }
         return lines;
+
     } else if (mpBuffer->mCursorY >= (int)(mpBuffer->size() - 1)) {
         mIsTailMode = true;
         mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
         forceUpdate();
         return 0;
+
     } else {
         lines = (int)(mpBuffer->size() - 1) - mpBuffer->mCursorY;
         if (mpBuffer->mCursorY + lines < mScreenHeight + lines) {
@@ -1566,9 +1639,11 @@ int TTextEdit::bufferScrollDown(int lines)
                 mpBuffer->mCursorY = mpBuffer->size() - 1;
                 mIsTailMode = true;
             }
+
         } else {
             mpBuffer->mCursorY += lines;
             mIsTailMode = false;
+
         }
 
         return lines;
@@ -1599,4 +1674,12 @@ int TTextEdit::getRowCount()
     }
 
     return height() / rowHeight;
+}
+
+void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
+{
+    if (mWideAmbigousWidthGlyphs != state) {
+        mWideAmbigousWidthGlyphs = state;
+        update();
+    }
 }

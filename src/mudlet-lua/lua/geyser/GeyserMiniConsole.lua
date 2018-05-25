@@ -26,6 +26,18 @@ function Geyser.MiniConsole:setBufferSize (linesLimit, sizeOfBatchDeletion)
   setConsoleBufferSize(self.name, linesLimit, sizeOfBatchDeletion)
 end
 
+--- Sets the new font to use - use a monospaced font, non-monospaced fonts aren't supported by Mudlet
+-- and won't give the best results.
+-- @param font Font family name to use (see https://doc.qt.io/qt-5/qfont.html#setFamily for details)
+function Geyser.MiniConsole:setFont (font)
+  setFont(self.name, font)
+end
+
+--- Returns the font family in use by this miniconsole.
+function Geyser.MiniConsole:getFont()
+  return getFont(self.name)
+end
+
 --- Sets the point at which text is wrapped in this miniconsole
 -- @param wrapAt The number of characters to start wrapping.
 function Geyser.MiniConsole:setWrap (wrapAt)
@@ -171,6 +183,9 @@ function Geyser.MiniConsole:new (cons, container)
   end
   if cons.scrollBar then
     me:enableScrollBar()
+  end
+  if cons.font then
+    me:setFont(cons.font)
   end
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

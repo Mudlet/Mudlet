@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>744</width>
-    <height>668</height>
+    <width>730</width>
+    <height>611</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -214,23 +214,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="mIsToLogInHtml">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Save log files in HTML format instead of plain text</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="mIsLoggingTimestamps">
-            <property name="text">
-             <string>Add timestamps at the beginning of log lines</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QCheckBox" name="acceptServerGUI">
             <property name="text">
              <string>Allow server to install script packages</string>
@@ -294,17 +277,105 @@
         </widget>
        </item>
        <item row="4" column="0">
-        <spacer name="verticalSpacer_general">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+        <widget class="QGroupBox" name="groupBox_logOptions">
+         <property name="title">
+          <string>Log options</string>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
+         <layout class="QGridLayout" name="gridLayout_6">
+          <item row="0" column="0" colspan="4">
+           <widget class="QCheckBox" name="mIsToLogInHtml">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Save log files in HTML format instead of plain text</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="4">
+           <widget class="QCheckBox" name="mIsLoggingTimestamps">
+            <property name="text">
+             <string>Add timestamps at the beginning of log lines</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_whereToLog">
+            <property name="text">
+             <string>Save log files in:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_whereToLog</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEdit_logFileFolder">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QPushButton" name="pushButton_whereToLog">
+            <property name="text">
+             <string>Browse...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="pushButton_resetLogDir">
+            <property name="text">
+             <string>Reset</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileNameFormat">
+            <property name="text">
+             <string>Log format:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_logFileNameFormat</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="3">
+           <widget class="QComboBox" name="comboBox_logFileNameFormat">
+           </widget>
+          </item>
+          <item row="4" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileName">
+            <property name="text">
+             <string>Log name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">
+           <widget class="QLineEdit" name="lineEdit_logFileName">
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QLabel" name="label_logFileNameExtension">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>.txt</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -913,6 +984,16 @@
             </property>
             <property name="text">
              <string>Echo Lua errors to the main console</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
+            <property name="text">
+             <string>Make 'Ambiguous' E. Asian width characters wide</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -2232,7 +2313,7 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="2" column="0">
         <widget class="QGroupBox" name="groupbox_searchEngineSelection">
          <property name="title">
           <string>Search Engine</string>
@@ -2244,32 +2325,7 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
-        <widget class="QGroupBox" name="groupBox_debug">
-         <property name="title">
-          <string>Other Special options</string>
-         </property>
-         <layout class="QFormLayout" name="formLayout_Debug">
-          <property name="labelAlignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </layout>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <spacer name="verticalSpacer_specialOptions">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="4" column="0">
+       <item row="3" column="0">
         <widget class="QGroupBox" name="groupBox_updates">
          <property name="title">
           <string>Mudlet updates</string>
@@ -2284,6 +2340,31 @@
           </item>
          </layout>
         </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QGroupBox" name="groupBox_debug">
+         <property name="title">
+          <string>Other Special options</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_Debug">
+          <property name="labelAlignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </layout>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <spacer name="verticalSpacer_specialOptions">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>

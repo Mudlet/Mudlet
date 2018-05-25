@@ -279,7 +279,6 @@ void TriggerUnit::compileAll()
 void TriggerUnit::stopAllTriggers()
 {
     for (auto trigger : mTriggerRootNodeList) {
-        QString name = trigger->getName();
         trigger->disableFamily();
     }
 }

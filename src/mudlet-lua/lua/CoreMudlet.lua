@@ -418,7 +418,14 @@ if false then
   function getTime(returnType, format)
   end
 
-
+  --- Return seconds since unix epoch with milliseconds
+  ---
+  --- @usage Get seconds since unix epoch with milliseconds
+  ---   <pre>
+  ---   getEpoch()
+  ---   </pre>
+  function getEpoch()
+  end
 
   --- This function hides a mini console label. To show it again use showWindow.
   ---

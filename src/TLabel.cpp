@@ -37,8 +37,6 @@ TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(nullptr), mouseInside()
     setMouseTracking(true);
 }
 
-QString nothing = "";
-
 void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
 {
     releaseParams(pHost, mClickParams);
