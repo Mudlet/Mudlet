@@ -3034,7 +3034,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     int r, g, b, alpha;
 
     auto validRange = [](int number) {
-        return (number >= 0 and number <= 255) ? true : false;
+        return number >= 0 and number <= 255;
     };
 
     int s = 1;
