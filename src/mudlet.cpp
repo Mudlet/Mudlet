@@ -65,13 +65,15 @@
 #include <QDesktopWidget>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QFontDatabase>
+#include <QFontMetrics>
 #include <QMessageBox>
+#include <QPair>
 #include <QScrollBar>
 #include <QTabBar>
 #include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
-#include <QFontDatabase>
 #include "post_guard.h"
 
 #include <zip.h>
@@ -1426,6 +1428,30 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     } else {
         return -1;
     }
+}
+
+QPair<int, int> mudlet::calcFontSize(Host* pHost, const QString& windowName)
+{
+    if (!pHost) {
+        return QPair<int, int>(-1, -1);
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QFont font;
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        font = pHost->mDisplayFont;
+    } else if (dockWindowConsoleMap.contains(windowName)) {
+        font = dockWindowConsoleMap.value(windowName)->mUpperPane->mDisplayFont;
+    } else {
+        return QPair<int, int>(-1, -1);
+    }
+
+    auto fontMetrics = QFontMetrics(font);
+    auto width = fontMetrics.width(QChar('W'));
+    auto height = fontMetrics.ascent() + fontMetrics.descent();
+
+    return QPair<int, int>(width, height);
 }
 
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
