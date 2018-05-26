@@ -163,11 +163,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                                      "the grapheme (what is to be represented).  Clearing this checkbox will allow "
                                                                      "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
     checkBox_runAllKeyBindings->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                           .arg(tr("<p>Check all Key-bindings against key-presses.</p><p><i>Versions of Mudlet prior to <b>3.9.0</b> would "
-                                                   "stop checking after the first matching combination of</i> KeyCode <i>and</i> KeyModifier <i>was found "
-                                                   "and then send the command and/or run the script of that Key-binding only.  This</i> per-profile <i>"
-                                                   "option tells Mudlet to check and run the remaining matches; but, to retain compatibility with "
-                                                   "previous versions, defaults to the <b>un</b>-checked state.</i></p>")));
+                                           .arg(tr("<p>If <b>not</b> checked Mudlet will utilise only the first matching combination of key "
+                                                   "and modifier even if more than one of them is set to be active. This means that a "
+                                                   "temporary key binding (not visible in the Editor) created by a script or "
+                                                   "package may be used in preference to a permanent one that is shown and "
+                                                   "is set to be active. If checked then all matching keybinding will be run.</p>"
+                                                   "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
+                                                   "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>")));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));

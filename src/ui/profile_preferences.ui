@@ -341,8 +341,7 @@
            </widget>
           </item>
           <item row="3" column="1" colspan="3">
-           <widget class="QComboBox" name="comboBox_logFileNameFormat">
-           </widget>
+           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
           </item>
           <item row="4" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_logFileName">
@@ -432,7 +431,7 @@
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>Check all Key-bindings</string>
+             <string>Use all Key-bindings on same key</string>
             </property>
            </widget>
           </item>
