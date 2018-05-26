@@ -780,6 +780,22 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->getKeyUnit()->mRunAllKeyMatches = (attributes().value("runAllKeyMatches") == "yes");
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
+    if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
+        const QStringRef ambiguousWidthSetting(attributes().value("AmbigousWidthGlyphsToBeWide"));
+        if (ambiguousWidthSetting == QStringLiteral("yes")) {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
+        } else if (ambiguousWidthSetting == QStringLiteral("auto")) {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        } else {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
+        }
+    } else {
+        // The encoding setting is stored as part of the profile details and NOT
+        // in the save file - probably because it is needed before the
+        // connection to the Server is initiated so it will already be in place
+        // which is just as well as it is needed for the automatic case...
+        pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+    }
     pHost->mIsNextLogFileInHtmlFormat = (attributes().value("mRawStreamDump") == "yes");
     pHost->mIsLoggingTimestamps = (attributes().value("mIsLoggingTimestamps") == "yes");
     pHost->mLogDir = attributes().value("mLogDir").toString();

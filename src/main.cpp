@@ -21,7 +21,6 @@
  ***************************************************************************/
 
 
-#include "FontManager.h"
 #include "HostManager.h"
 #include "mudlet.h"
 
@@ -544,8 +543,6 @@ int main(int argc, char* argv[])
 #endif
 
     mudlet::debugMode = false;
-    FontManager fm;
-    fm.addFonts();
 
     if (show_splash) {
         splash_message.append("Done.\n\n"

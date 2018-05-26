@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +41,7 @@
 #include <QtUiTools>
 #include <QApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QMessageBox>
 #include <QStringBuilder>
 #include "post_guard.h"
@@ -172,6 +174,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mRetries(5)
 , mSaveProfileOnExit(false)
 , mHaveMapperScript(false)
+, mAutoAmbigousWidthGlyphsSetting(true)
+, mWideAmbigousWidthGlyphs(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -341,10 +345,12 @@ void Host::resetProfile()
     mudlet::self()->mTimerMap.clear();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
+    getKeyUnit()->removeAllTempKeys();
 
 
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
     mpConsole->resetMainConsole();
     mEventHandlerMap.clear();
     mEventMap.clear();
@@ -359,7 +365,7 @@ void Host::resetProfile()
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     getScriptUnit()->compileAll();
-    //getTimerUnit()->compileAll();
+    // All the Timers are NOT compiled here;
     mResetProfile = false;
 
     mTimerUnit.reenableAllTriggers();
@@ -501,6 +507,7 @@ void Host::stopAllTriggers()
     mTriggerUnit.stopAllTriggers();
     mAliasUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
+    mKeyUnit.stopAllTriggers();
 }
 
 void Host::reenableAllTriggers()
@@ -508,6 +515,7 @@ void Host::reenableAllTriggers()
     mTriggerUnit.reenableAllTriggers();
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
 }
 
 QPair<QString, QString> Host::getSearchEngine()
@@ -748,7 +756,7 @@ bool Host::installPackage(const QString& fileName, int module)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
-    // pointer just in case we accidently reenter this method in the future.
+    // pointer just in case we accidentally reenter this method in the future.
     QDialog* pUnzipDialog = Q_NULLPTR;
 
     //     Module notes:
@@ -919,6 +927,11 @@ bool Host::installPackage(const QString& fileName, int module)
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
+
+    // make any fonts in the package available to Mudlet for use
+    if (module != 2) {
+        installPackageFonts(packageName);
+    }
 
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the install event") and a more specific need
@@ -1185,4 +1198,84 @@ QString Host::readProfileData(const QString& item)
     }
 
     return ret;
+}
+
+// makes fonts in a given package/module be available for Mudlet scripting
+// does not install font system-wide
+void Host::installPackageFonts(const QString &packageName)
+{
+    auto packagePath = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+
+    QDirIterator it(packagePath, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        auto filePath = it.next();
+
+        if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
+            filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
+
+            mudlet::self()->mFontManager.loadFont(filePath);
+        }
+    }
+}
+
+// ensures fonts from all installed packages are loaded in Mudlet
+void Host::refreshPackageFonts()
+{
+    for (const auto& package : mInstalledPackages) {
+        installPackageFonts(package);
+    }
+}
+
+void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
+{
+    bool localState = false;
+    bool needToEmit = false;
+    const QString encoding(mTelnet.getEncoding());
+
+    QMutexLocker locker(& mLock);
+    if (state == Qt::PartiallyChecked) {
+        // Set things automatically
+        mAutoAmbigousWidthGlyphsSetting = true;
+
+        if ( encoding == QLatin1String("GBK")
+           ||encoding == QLatin1String("GB18030")) {
+
+            // Need to use wide width for ambiguous characters
+            if (!mWideAmbigousWidthGlyphs) {
+                // But the last setting was narrow - so we need to change
+                mWideAmbigousWidthGlyphs = true;
+                localState = true;
+                needToEmit = true;
+            }
+
+        } else {
+            // Need to use narrow width for ambiguous characters
+            if (mWideAmbigousWidthGlyphs) {
+                // But the last setting was wide - so we need to change
+                mWideAmbigousWidthGlyphs = false;
+                localState = false;
+                needToEmit = true;
+            }
+
+        }
+
+    } else {
+        // Set things manually:
+        mAutoAmbigousWidthGlyphsSetting = false;
+        if (mWideAmbigousWidthGlyphs != (state == Qt::Checked)) {
+            // The last setting is the opposite to what we want:
+
+            mWideAmbigousWidthGlyphs = (state == Qt::Checked);
+            localState = (state == Qt::Checked);
+            needToEmit = true;
+        };
+
+    }
+
+    locker.unlock();
+    // We do not need to keep the mutex any longer as we have a local copy to
+    // work with whilst the connected methods react to the signal:
+    if (needToEmit) {
+        emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
+    }
 }

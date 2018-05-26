@@ -1505,6 +1505,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     } else {
         needsGenericPackagesInstall = true;
     }
@@ -1539,6 +1540,8 @@ void dlgConnectionProfiles::slot_connectToServer()
 
         QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
         pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
+        // Needed to ensure setting is correct on start-up:
+        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
     }
 
     if (needsGenericPackagesInstall) {

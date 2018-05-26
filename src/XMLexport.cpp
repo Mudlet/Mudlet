@@ -203,7 +203,7 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
 
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { mpHost->xmlSaved(fileName); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -215,7 +215,7 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
 
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -360,6 +360,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mNoAntiAlias") = pHost->mNoAntiAlias ? "yes" : "no";
     host.append_attribute("mEchoLuaErrors") = pHost->mEchoLuaErrors ? "yes" : "no";
     host.append_attribute("runAllKeyMatches") = pHost->getKeyUnit()->mRunAllKeyMatches ? "yes" : "no";
+    host.append_attribute("AmbigousWidthGlyphsToBeWide") = pHost->mAutoAmbigousWidthGlyphsSetting ? "auto" : (pHost->mWideAmbigousWidthGlyphs ? "yes" : "no");
     // FIXME: Change to a string or integer property when possible to support more
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.
@@ -631,7 +632,7 @@ bool XMLexport::exportGenericPackage(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
         watcher->setFuture(future);
         saveFutures.append(future);
 

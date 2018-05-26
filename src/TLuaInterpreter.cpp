@@ -9122,7 +9122,6 @@ int TLuaInterpreter::downloadFile(lua_State* L)
 
     QNetworkRequest request = QNetworkRequest(url);
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
-    qDebug() << QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData());
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_OPENSSL
     if (url.scheme() == QStringLiteral("https")) {
@@ -11953,6 +11952,19 @@ double TLuaInterpreter::condenseMapLoad()
     return loadTime;
 }
 
+int TLuaInterpreter::getAvailableFonts(lua_State* L)
+{
+    auto fontList = mudlet::self()->getAvailableFonts();
+
+    lua_newtable(L);
+    for (auto& font : fontList) {
+        lua_pushstring(L, font.toUtf8().constData());
+        lua_pushboolean(L, true);
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
@@ -12392,6 +12404,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
