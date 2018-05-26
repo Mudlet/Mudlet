@@ -510,7 +510,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // see https://bugreports.qt.io/browse/QTBUG-36257 for problem
     // credit to Albert for the workaround
     for (int i(0); i < pLineEdit_searchTerm->children().size(); ++i) {
-        QAction *pAction_clear(qobject_cast<QAction *>(pLineEdit_searchTerm->children().at(i)));
+        auto *pAction_clear(qobject_cast<QAction *>(pLineEdit_searchTerm->children().at(i)));
 
         // The name was found by inspection - but as it is a QT internal it
         // might change in the future:
@@ -1755,7 +1755,7 @@ void dlgTriggerEditor::slot_searchMudletItems(const QString & s)
                             idString.append(QStringLiteral("[\"%1\"]").arg(intermediate));
                         }
                     }
-                } else if (idStringList.size()) {
+                } else if (!idStringList.empty()) {
                     idString = idStringList.at(0);
                 }
 
@@ -4472,7 +4472,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
     }
     if (newValueType == LUA_TTABLE && currentValueType != LUA_TTABLE) {
         //trying to change a table to something else
-        if (var->getChildren(false).size()) {
+        if (!var->getChildren(false).empty()) {
             return 0;
         }
         //no children, we can do this without bad things happening
@@ -4764,7 +4764,7 @@ void dlgTriggerEditor::saveKey()
 
 void dlgTriggerEditor::slot_set_pattern_type_color(int type)
 {
-    QComboBox* pBox = (QComboBox*)sender();
+    auto * pBox = (QComboBox*)sender();
     if (!pBox) {
         return;
     }
@@ -5492,7 +5492,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
 
 void dlgTriggerEditor::slot_tree_selection_changed()
 {
-    TTreeWidget* sender = qobject_cast<TTreeWidget*>(QObject::sender());
+    auto * sender = qobject_cast<TTreeWidget*>(QObject::sender());
     if (sender) {
         QList<QTreeWidgetItem*> items = sender->selectedItems();
         if (items.length()) {
@@ -7548,7 +7548,7 @@ void dlgTriggerEditor::slot_import()
         _filterList << "*.xml"
                     << "*.trigger";
         QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
-        if (entries.size() > 0) {
+        if (!entries.empty()) {
             file2.setFileName(entries[0].absoluteFilePath());
         }
     } else {
@@ -7658,7 +7658,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
 bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
 {
     if (event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
         switch (keyEvent->key())
         {
         case Qt::Key_Up:
@@ -7679,7 +7679,7 @@ bool dlgTriggerEditor::event(QEvent* event)
 {
     if (mIsGrabKey) {
         if (event->type() == QEvent::KeyPress) {
-            QKeyEvent* ke = static_cast<QKeyEvent*>(event);
+            auto * ke = static_cast<QKeyEvent*>(event);
             QList<QAction*> actionList = toolBar->actions();
             switch (ke->key()) {
             case 0x01000000:
@@ -7831,7 +7831,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
         return;
     }
 
-    QPushButton* pB = (QPushButton*)sender();
+    auto * pB = (QPushButton*)sender();
     if (!pB) {
         return;
     }
@@ -7886,7 +7886,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
         return;
     }
 
-    QPushButton* pB = (QPushButton*)sender();
+    auto * pB = (QPushButton*)sender();
     if (!pB) {
         return;
     }

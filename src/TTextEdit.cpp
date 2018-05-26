@@ -1057,7 +1057,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 
 void TTextEdit::slot_popupMenu()
 {
-    QAction* pA = (QAction*)sender();
+    auto * pA = (QAction*)sender();
     if (!pA) {
         return;
     }
@@ -1119,7 +1119,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer[y][x].link > 0) {
                     QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
                     QString func;
-                    if (command.size() > 0) {
+                    if (!command.empty()) {
                         func = command.at(0);
                         mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         return;

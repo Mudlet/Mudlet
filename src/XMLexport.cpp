@@ -406,7 +406,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mInstalledPackages.append_child("string").text().set(pHost->mInstalledPackages.at(i).toUtf8().constData());
         }
 
-        if (pHost->mInstalledModules.size()) {
+        if (!pHost->mInstalledModules.empty()) {
             auto mInstalledModules = host.append_child("mInstalledModules");
             QMapIterator<QString, QStringList> it(pHost->mInstalledModules);
             pHost->modulesToWrite.clear();

@@ -1085,7 +1085,7 @@ void TConsole::changeColors()
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
-        qreal letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
+        auto letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
@@ -1129,7 +1129,7 @@ void TConsole::changeColors()
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
-        qreal letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
+        auto letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
@@ -1399,7 +1399,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
         }
         return;
     } else {
-        if ((buffer.buffer.size() == 0 && buffer.buffer[0].size() == 0) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
             if (customFormat) {
                 buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
             } else {
@@ -1477,7 +1477,7 @@ void TConsole::insertText(const QString& text, QPoint P)
         }
         return;
     } else {
-        if ((buffer.buffer.size() == 0 && buffer.buffer[0].size() == 0) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
             buffer.append(text,
                           0,
                           text.size(),
@@ -2684,7 +2684,7 @@ void TConsole::slot_searchBufferUp()
         // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
         mCurrentSearchResult = std::min(mCurrentSearchResult, buffer.lineBuffer.size());
     }
-    if (buffer.lineBuffer.size() < 1) {
+    if (buffer.lineBuffer.empty()) {
         return;
     }
     bool _found = false;
@@ -2720,7 +2720,7 @@ void TConsole::slot_searchBufferDown()
         mSearchQuery = _txt;
         mCurrentSearchResult = buffer.lineBuffer.size();
     }
-    if (buffer.lineBuffer.size() < 1) {
+    if (buffer.lineBuffer.empty()) {
         return;
     }
     if (mCurrentSearchResult >= buffer.lineBuffer.size()) {

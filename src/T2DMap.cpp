@@ -823,7 +823,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 continue;
             }
 
-            if (pR->customLines.size() == 0) {
+            if (pR->customLines.empty()) {
                 if (rx < 0 || ry < 0 || rx > _w || ry > _h) {
                     continue;
                 }
@@ -854,7 +854,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
             exitList.clear();
             oneWayExits.clear();
-            if (pR->customLines.size() > 0) {
+            if (!pR->customLines.empty()) {
                 if (!pR->customLines.contains("N")) {
                     exitList.push_back(pR->getNorth());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getNorth());
@@ -1002,7 +1002,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
             }
 
-            if (pR->customLines.size() > 0) {
+            if (!pR->customLines.empty()) {
                 QPen oldPen = p.pen();
                 QMapIterator<QString, QList<QPointF>> itk(pR->customLines);
                 while (itk.hasNext()) {
@@ -1063,7 +1063,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     }
 
                     QList<QPointF> _pL = itk.value();
-                    if (_pL.size() > 0) {
+                    if (!_pL.empty()) {
                         p.setPen(customLinePen);
                         p.drawLine(ursprung, _cstartP);
                     }
@@ -1278,7 +1278,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     p.setPen(__pen);
                 }
                 // doors
-                if (pR->doors.size() > 0) {
+                if (!pR->doors.empty()) {
                     int doorStatus = 0;
                     if (pR->getSouth() == rID && pR->doors.contains("s")) {
                         doorStatus = pR->doors["s"];
@@ -2035,7 +2035,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     if (mShowInfo) {
         QString infoText;
         int __rid = mRID;
-        if (!isCenterViewCall && mMultiSelectionSet.size()) {
+        if (!isCenterViewCall && !mMultiSelectionSet.empty()) {
             if (mpMap->mpRoomDB->getRoom(*(mMultiSelectionSet.constBegin()))) {
                 __rid = mMultiSelectionHighlightRoomId;
             }
@@ -2336,7 +2336,7 @@ bool T2DMap::event(QEvent* event)
     // day the setFocusPolicy() calls in the constructor need to be uncommented
 
     if (event->type() == QEvent::KeyPress) {
-        QKeyEvent* ke = static_cast<QKeyEvent*>(event);
+        auto * ke = static_cast<QKeyEvent*>(event);
         //        if( ke->key() == Qt::Key_Delete )
         //        {
         //            if( mCustomLineSelectedRoom != 0  )
@@ -2409,7 +2409,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     while (it.hasNext()) {
                         it.next();
                         const QList<QPointF>& _pL = it.value();
-                        if (_pL.size()) {
+                        if (!_pL.empty()) {
                             // The way this code is structured means that EARLIER
                             // points are selected in preference to later ones!
                             // This might not be intuative to the users...
@@ -2528,7 +2528,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         mMultiSelectionSet.insert(currentAreaRoom);
                     }
 
-                    if (mMultiSelectionSet.size() > 0) {
+                    if (!mMultiSelectionSet.empty()) {
                         mMultiSelection = false;
                     }
                 }
@@ -2584,8 +2584,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mLabelHilite = false;
             update();
 
-            if (mMultiSelection && mMultiSelectionSet.size() > 0
-               && (event->modifiers().testFlag(Qt::ControlModifier))) {
+            if (mMultiSelection && !mMultiSelectionSet.empty()
+                                   && (event->modifiers().testFlag(Qt::ControlModifier))) {
 
                 // We were dagging multi-selection rectange, we had selected at
                 // least one room and the user has <CTRL>-clicked with the mouse
@@ -2928,16 +2928,16 @@ void T2DMap::slot_customLineProperties()
 
             QFile file(":/ui/custom_lines_properties.ui");
             file.open(QFile::ReadOnly);
-            QDialog* d = qobject_cast<QDialog*>(loader.load(&file, this));
+            auto * d = qobject_cast<QDialog*>(loader.load(&file, this));
             file.close();
             if (!d) {
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to create the dialog!");
                 return;
             }
             d->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_custom_exit_properties.png")));
-            QLineEdit* le_toId = d->findChild<QLineEdit*>("toId");
-            QLineEdit* le_fromId = d->findChild<QLineEdit*>("fromId");
-            QLineEdit* le_cmd = d->findChild<QLineEdit*>("cmd");
+            auto * le_toId = d->findChild<QLineEdit*>("toId");
+            auto * le_fromId = d->findChild<QLineEdit*>("fromId");
+            auto * le_cmd = d->findChild<QLineEdit*>("cmd");
 
             mpCurrentLineStyle = d->findChild<QComboBox*>("lineStyle");
             mpCurrentLineColor = d->findChild<QPushButton*>("lineColor");
@@ -3132,7 +3132,7 @@ void T2DMap::slot_doneCustomLine()
     mCustomLinesRoomFrom = 0;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit.clear();
-    if (mMultiSelectionSet.size() > 0) {
+    if (!mMultiSelectionSet.empty()) {
         TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
         if (pR) {
             pR->calcRoomDimensions();
@@ -3175,7 +3175,7 @@ void T2DMap::slot_deleteLabel()
         QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
         while (it.hasNext()) {
             it.next();
-            int _zlevel = static_cast<int>(it.value().pos.z());
+            auto _zlevel = static_cast<int>(it.value().pos.z());
             if (_zlevel != mOz) {
                 continue;
             }
@@ -3336,7 +3336,7 @@ void T2DMap::slot_setSymbol()
     // rooms if more than once (and sorts by their frequency)
     // Also allows the existing letters to be deleted (by clearing all the displayed
     // letters) as previous code DID NOT - and the Cancel option works as well!
-    if (mMultiSelectionSet.size() < 1) {
+    if (mMultiSelectionSet.empty()) {
         return;
     }
 
@@ -3693,7 +3693,7 @@ void T2DMap::slot_shrink()
 
 void T2DMap::slot_setExits()
 {
-    if (mMultiSelectionSet.size() < 1) {
+    if (mMultiSelectionSet.empty()) {
         return;
     }
     if (mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId)) {
@@ -3711,7 +3711,7 @@ void T2DMap::slot_setUserData()
 
 void T2DMap::slot_lockRoom()
 {
-    if (mMultiSelectionSet.size() < 1) {
+    if (mMultiSelectionSet.empty()) {
         return;
     }
 
@@ -3728,7 +3728,7 @@ void T2DMap::slot_lockRoom()
 
 void T2DMap::slot_unlockRoom()
 {
-    if (mMultiSelectionSet.size() < 1) {
+    if (mMultiSelectionSet.empty()) {
         return;
     }
 
@@ -3881,7 +3881,7 @@ void T2DMap::slot_setArea()
 
     QFile file(":/ui/set_room_area.ui");
     file.open(QFile::ReadOnly);
-    QDialog* set_room_area_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto * set_room_area_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!set_room_area_dialog) {
         return;
@@ -4319,7 +4319,7 @@ void T2DMap::slot_setCustomLine()
 
     QFile file(":/ui/custom_lines.ui");
     file.open(QFile::ReadOnly);
-    QDialog* d = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto * d = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!d) {
         return;
@@ -4328,8 +4328,8 @@ void T2DMap::slot_setCustomLine()
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit = "";
-    QPushButton* b_ = d->findChild<QPushButton*>("nw");
-    QTreeWidget* specialExits = d->findChild<QTreeWidget*>("specialExits");
+    auto * b_ = d->findChild<QPushButton*>("nw");
+    auto * specialExits = d->findChild<QTreeWidget*>("specialExits");
     mpCurrentLineStyle = d->findChild<QComboBox*>("lineStyle");
     mpCurrentLineColor = d->findChild<QPushButton*>("lineColor");
     mpCurrentLineArrow = d->findChild<QCheckBox*>("arrow");
@@ -4567,7 +4567,7 @@ void T2DMap::slot_cancelCustomLineDialog()
 
 void T2DMap::slot_setCustomLine2()
 {
-    QPushButton* pB = qobject_cast<QPushButton*>(sender());
+    auto * pB = qobject_cast<QPushButton*>(sender());
     if (!pB) {
         if (mpCustomLinesDialog) {
             mpCustomLinesDialog->reject();

@@ -185,7 +185,7 @@ void TToolBar::finalize()
 // now retrieve the button state to ensure the visible representation is used.
 void TToolBar::slot_pressed(const bool isChecked)
 {
-    TFlipButton* pB = dynamic_cast<TFlipButton*>(sender());
+    auto * pB = dynamic_cast<TFlipButton*>(sender());
     if (!pB) {
         return;
     }

@@ -558,7 +558,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
         mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
-        QFormLayout* pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
+        auto * pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
         if (pdebugLayout) {
             pdebugLayout->addRow(pLabel_mapSymbolFontFudge, mpDoubleSpinBox_mapSymbolFontFudge);
             groupBox_debug->show();
@@ -2585,13 +2585,13 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         if (roomsWithSymbol.count() > 1) {
             std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
         }
-        QTableWidgetItem* pSymbolInFont = new QTableWidgetItem();
+        auto * pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
         pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                   .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.</p>")));
         pSymbolInFont->setFont(selectedFont);
 
-        QTableWidgetItem* pSymbolAnyFont = new QTableWidgetItem();
+        auto * pSymbolAnyFont = new QTableWidgetItem();
         pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
         pSymbolAnyFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(tr("<p>The room symbol will appear like this if symbols (glyphs) from any font can be used.</p>")));
@@ -2658,7 +2658,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                  .arg(tr("<p>The rooms with this symbol, up to a maximum of thirty-two, if there are more "
                                          "than this, it is indicated but they are not shown.</p>")));
 
-        QToolButton * pDummyButton = new QToolButton();
+        auto * pDummyButton = new QToolButton();
         if (isSingleFontUsable) {
             pSymbolInFont->setText(symbol);
             pSymbolAnyFont->setText(symbol);

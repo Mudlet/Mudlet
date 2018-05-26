@@ -1793,7 +1793,7 @@ int TLuaInterpreter::deleteLine(lua_State* L)
     QString _name(name.c_str());
     Host& host = getHostFromLua(L);
 
-    if (name == "") {
+    if (name.empty()) {
         host.mpConsole->skipLine();
     } else {
         mudlet::self()->deleteLine(&host, _name);
@@ -1973,7 +1973,7 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
         return 2;
     } else {
         QList<int> stubs = pR->exitStubs;
-        if (stubs.size()) {
+        if (!stubs.empty()) {
             lua_newtable(L);
             for (int i = 0, total = stubs.size(); i < total; ++i) {
                 lua_pushnumber(L, i);
@@ -2015,7 +2015,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
         return 2;
     } else {
         QList<int> stubs = pR->exitStubs;
-        if (stubs.size()) {
+        if (!stubs.empty()) {
             lua_newtable(L);
             for (int i = 0, total = stubs.size(); i < total; ++i) {
                 lua_pushnumber(L, i + 1);
@@ -5147,7 +5147,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 1;
     }
 
-    if (a1 == "") {
+    if (a1.empty()) {
         host.mpConsole->setLink(txt, _commandList, _hintList);
     } else {
         mudlet::self()->setLink(&host, name, txt, _commandList, _hintList);
@@ -5382,7 +5382,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     _h += TN_SB;
     _h += static_cast<char>(200);
     _h += msg;
-    if (what != "") {
+    if (!what.empty()) {
         _h += " ";
         _h += what;
     }
@@ -5414,7 +5414,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     _h += TN_SB;
     _h += GMCP;
     _h += msg;
-    if (what != "") {
+    if (!what.empty()) {
         _h += " ";
         _h += what;
     }
@@ -6615,7 +6615,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         luaLine = lua_tointeger(L, n);
     }
     Host& host = getHostFromLua(L);
-    if (name == "") {
+    if (name.empty()) {
         if (luaLine > 0 && luaLine < host.mpConsole->buffer.timeBuffer.size()) {
             lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toLatin1().data());
         } else {
@@ -9635,7 +9635,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return 1;
     }
 
-    if (a1 == "") {
+    if (a1.empty()) {
         host.mpConsole->insertLink(txt, _commandList, _hintList, customFormat);
     } else {
         mudlet::self()->insertLink(&host, name, txt, _commandList, _hintList, customFormat);
@@ -9845,7 +9845,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return 1;
     }
 
-    if (a1 == "") {
+    if (a1.empty()) {
         host.mpConsole->echoLink(txt, _commandList, _hintList, customFormat);
     } else {
         mudlet::self()->echoLink(&host, name, txt, _commandList, _hintList, customFormat);
@@ -10029,7 +10029,7 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
 int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (host.mpMap->customEnvColors.size() > 0) {
+    if (!host.mpMap->customEnvColors.empty()) {
         lua_newtable(L);
         QList<int> colorList = host.mpMap->customEnvColors.keys();
         for (int& idx : colorList) {
@@ -11408,7 +11408,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
             } else {
                 script.append(QLatin1Char('"'));
 
-                if (varList.size()) {
+                if (!varList.empty()) {
                     script = script.replace(0, varList.front().size() + 3, QString());
                     QString token = varList.front();
                     token = token.replace(QLatin1Char('"'), QString());
@@ -11459,7 +11459,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
             script.prepend(QLatin1Char('"'));
         }
     }
-    if (varList.size()) {
+    if (!varList.empty()) {
         //qDebug()<<"<script>"<<script;
         // N/U:         int startVal = script.indexOf(":")+1;
         QString token = varList.front();
@@ -11549,7 +11549,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
         return false;
     }
 
-    if (mCaptureGroupList.size() > 0) {
+    if (!mCaptureGroupList.empty()) {
         lua_newtable(L);
 
         // set values
@@ -11672,7 +11672,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         return false;
     }
 
-    if (mMultiCaptureGroupList.size() > 0) {
+    if (!mMultiCaptureGroupList.empty()) {
         int k = 1;       // Lua indexes start with 1 as a general convention
         lua_newtable(L); //multimatches
         for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
@@ -12681,7 +12681,7 @@ void TLuaInterpreter::loadGlobal()
 int TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
     QTime time(0, 0, 0, 0);
-    int msec = static_cast<int>(timeout * 1000);
+    auto msec = static_cast<int>(timeout * 1000);
     QTime time2 = time.addMSecs(msec);
     TTimer* pT;
     if (parent.isEmpty()) {
@@ -12709,7 +12709,7 @@ int TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, 
 int TLuaInterpreter::startTempTimer(double timeout, const QString& function)
 {
     QTime time(0, 0, 0, 0);
-    int msec = static_cast<int>(timeout * 1000);
+    auto msec = static_cast<int>(timeout * 1000);
     QTime time2 = time.addMSecs(msec);
     TTimer* pT;
     pT = new TTimer("a", time2, mpHost);
@@ -12956,7 +12956,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.size() == 0));
+    pT->setIsFolder((regexList.empty()));
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -12986,7 +12986,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.size() == 0));
+    pT->setIsFolder((regexList.empty()));
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -13015,7 +13015,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.size() == 0));
+    pT->setIsFolder((regexList.empty()));
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -13092,7 +13092,7 @@ Host& getHostFromLua(lua_State* L)
 {
     lua_pushlightuserdata(L, &host_key);    // 1 - push unique key
     lua_rawget(L, LUA_REGISTRYINDEX);       // 1 - pop key, push host ptr
-    Host* h = (Host*)lua_touserdata(L, -1); // 1 - get host ptr
+    auto * h = (Host*)lua_touserdata(L, -1); // 1 - get host ptr
     lua_pop(L, 1);                          // 0 - pop host ptr
     assert(h);
     return *h;

@@ -157,7 +157,7 @@ void TEasyButtonBar::finalize()
 // button state to ensure the visible representation is used.
 void TEasyButtonBar::slot_pressed(const bool isChecked)
 {
-    TFlipButton* pB = dynamic_cast<TFlipButton*>(sender());
+    auto * pB = dynamic_cast<TFlipButton*>(sender());
     if (!pB) {
         return;
     }

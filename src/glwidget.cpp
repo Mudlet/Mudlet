@@ -530,9 +530,9 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            float rx = static_cast<float>(pR->x);
-            float ry = static_cast<float>(pR->y);
-            float rz = static_cast<float>(pR->z);
+            auto rx = static_cast<float>(pR->x);
+            auto ry = static_cast<float>(pR->y);
+            auto rz = static_cast<float>(pR->z);
             if (rz != zEbene) {
                 continue;
             }
@@ -594,9 +594,9 @@ void GLWidget::paintGL()
                     } else {
                         areaExit = false;
                     }
-                    float ex = static_cast<float>(pExit->x);
-                    float ey = static_cast<float>(pExit->y);
-                    float ez = static_cast<float>(pExit->z);
+                    auto ex = static_cast<float>(pExit->x);
+                    auto ey = static_cast<float>(pExit->y);
+                    auto ez = static_cast<float>(pExit->z);
                     QVector3D p1(ex, ey, ez);
                     QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
@@ -982,9 +982,9 @@ void GLWidget::paintGL()
                         areaExit = false;
                     }
 
-                    float ex = static_cast<float>(pExit->x);
-                    float ey = static_cast<float>(pExit->y);
-                    float ez = static_cast<float>(pExit->z);
+                    auto ex = static_cast<float>(pExit->x);
+                    auto ey = static_cast<float>(pExit->y);
+                    auto ez = static_cast<float>(pExit->z);
                     QVector3D p1(ex, ey, ez);
                     QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
@@ -1382,9 +1382,9 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            float rx = static_cast<float>(pR->x);
-            float ry = static_cast<float>(pR->y);
-            float rz = static_cast<float>(pR->z);
+            auto rx = static_cast<float>(pR->x);
+            auto ry = static_cast<float>(pR->y);
+            auto rz = static_cast<float>(pR->z);
             if (rz != zEbene) {
                 continue;
             }
