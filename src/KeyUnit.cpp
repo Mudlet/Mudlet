@@ -38,7 +38,7 @@ KeyUnit::KeyUnit(Host* pHost)
 , statsActiveKeysAverage(0)
 , statsTempKeysCreated(0)
 , statsTempKeysKilled(0)
-, mIsToProcessAllMatches(false)
+, mRunAllKeyMatches(false)
 , mpHost(pHost)
 , mMaxID(0)
 , mModuleMember(false)
@@ -75,8 +75,8 @@ bool KeyUnit::processDataStream(int key, int modifier)
 {
     bool isMatchFound = false;
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifier, mIsToProcessAllMatches)) {
-            if (!mIsToProcessAllMatches) {
+        if (keyObject->match(key, modifier, mRunAllKeyMatches)) {
+            if (!mRunAllKeyMatches) {
                 return true;
             } else {
                 isMatchFound = true;

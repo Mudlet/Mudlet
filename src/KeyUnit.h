@@ -84,7 +84,7 @@ public:
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
     // could break things - so only do it if this flag is set:
-    bool mIsToProcessAllMatches;
+    bool mRunAllKeyMatches;
 
 private:
     KeyUnit() {}

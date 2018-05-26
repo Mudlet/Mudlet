@@ -428,7 +428,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
-    checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mIsToProcessAllMatches);
+    checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
     topBorderHeight->setValue(pHost->mBorderTopHeight);
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
@@ -1865,7 +1865,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
-        pHost->getKeyUnit()->mIsToProcessAllMatches = checkBox_runAllKeyBindings->isChecked();
+        pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();
         pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
