@@ -3048,7 +3048,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
             r = static_cast<int>(lua_tonumber(L, s));
 
             if (!validRange(r)) {
-                lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value needs to be between 0-255, got %d!)", s, r);
+                lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
                 return lua_error(L);
             }
         }
@@ -3056,7 +3056,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value needs to be between 0-255, got %d!)", s, r);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
             return lua_error(L);
         }
     } else {
@@ -3071,7 +3071,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         g = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(g)) {
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (green value needs to be between 0-255, got %d!)", s, g);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
             return lua_error(L);
         }
     }
@@ -3083,7 +3083,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         b = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(b)) {
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (blue value needs to be between 0-255, got %d!)", s, b);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
             return lua_error(L);
         }
     }
@@ -3098,7 +3098,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         alpha = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(alpha)) {
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (alpha value needs to be between 0-255, got %d!)", s, alpha);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
             return lua_error(L);
         }
     }
