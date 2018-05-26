@@ -791,7 +791,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 } else if (mCustomLineSelectedExit == "OUT" || mCustomLineSelectedExit == "out") {
                     customLineDestinationTarget = pSR->getOut();
                 } else {
-                    QMultiMap<int, QString> otherExits = pSR->getOtherMap();
+                    const QMultiMap<int, QString> &otherExits = pSR->getOtherMap();
                     QMapIterator<int, QString> otherExitIt = otherExits;
                     while (otherExitIt.hasNext()) {
                         otherExitIt.next();
@@ -2974,7 +2974,7 @@ void T2DMap::slot_customLineProperties()
                 le_toId->setText(QString::number(pR->getOut()));
             } else {
                 bool isFound = false;
-                QMultiMap<int, QString> otherExits = pR->getOtherMap();
+                const QMultiMap<int, QString> &otherExits = pR->getOtherMap();
                 QMapIterator<int, QString> otherExitIt = otherExits;
                 while (otherExitIt.hasNext()) {
                     otherExitIt.next();
