@@ -30,10 +30,6 @@
 #include "TMatchState.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QRegularExpression>
-#include "post_guard.h"
-
 #include <assert.h>
 
 #include <sstream>

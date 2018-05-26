@@ -26,18 +26,12 @@
 #include "dlgTriggerEditor.h"
 
 #include "Host.h"
-#include "HostManager.h"
 #include "LuaInterface.h"
-#include "TAction.h"
 #include "TConsole.h"
 #include "TEasyButtonBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
-#include "TTreeWidget.h"
-#include "TTrigger.h"
-#include "TriggerUnit.h"
 #include "VarUnit.h"
-#include "XMLexport.h"
 #include "XMLimport.h"
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
@@ -45,20 +39,11 @@
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
-#include "dlgTriggersMainArea.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
 #include <QFileDialog>
-#include <QHeaderView>
-#include <QListWidget>
-#include <QMainWindow>
-#include <QMessageBox>
-#include <QSettings>
-#include <QTextCursor>
-#include <QTextDocument>
-#include <QTextOption>
 #include <QToolBar>
 #include "post_guard.h"
 

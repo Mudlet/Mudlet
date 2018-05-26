@@ -28,7 +28,6 @@
 #include "TFlipButton.h"
 
 #include "pre_guard.h"
-#include <QDebug>
 #include <QGridLayout>
 #include "post_guard.h"
 

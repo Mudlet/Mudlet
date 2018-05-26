@@ -30,10 +30,6 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-#include <queue>
-
-#include <assert.h>
-
 // Define this to get qDebug() messages about the decoding of UTF-8 data when it
 // is not the single bytes of pure ASCII text:
 // #define DEBUG_UTF8_PROCESSING

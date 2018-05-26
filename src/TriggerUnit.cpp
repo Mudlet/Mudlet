@@ -24,11 +24,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
-#include "TLuaInterpreter.h"
 #include "TTrigger.h"
-
-#include <iostream>
-#include <ostream>
 
 
 using namespace std;

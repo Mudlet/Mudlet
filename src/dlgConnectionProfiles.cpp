@@ -27,16 +27,10 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "XMLimport.h"
-#include "ctelnet.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtUiTools>
-#include <QFileDialog>
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QPainter>
-#include <QStringBuilder>
 #include "post_guard.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)

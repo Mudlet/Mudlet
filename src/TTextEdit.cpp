@@ -26,24 +26,14 @@
 
 #include "TTextEdit.h"
 
-
 #include "mudlet.h"
-#include "Host.h"
 #include "TConsole.h"
 #include "TEvent.h"
 #include "wcwidth.h"
 
 #include "pre_guard.h"
-#include <QtEvents>
-#include <QApplication>
-#include <QClipboard>
-#include <QDesktopServices>
-#include <QMenu>
 #include <QPainter>
 #include <QScrollBar>
-#include <QString>
-#include <QTextBoundaryFinder>
-#include <QTextCursor>
 #include <QToolTip>
 #include "post_guard.h"
 

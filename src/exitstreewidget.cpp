@@ -21,10 +21,8 @@
 
 #include "exitstreewidget.h"
 
-
 #include "pre_guard.h"
 #include <QtEvents>
-#include <QTreeWidget>
 #include "post_guard.h"
 
 

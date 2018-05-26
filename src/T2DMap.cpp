@@ -28,8 +28,6 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
@@ -37,26 +35,6 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
-#include <QAction>
-#include <QCheckBox>
-#include <QColorDialog>
-#include <QComboBox>
-#include <QDir>
-#include <QElapsedTimer>
-#include <QFileDialog>
-#include <QFontDialog>
-#include <QHBoxLayout>
-#include <QInputDialog>
-#include <QLabel>
-#include <QListWidget>
-#include <QMenu>
-#include <QMessageBox>
-#include <QPainter>
-#include <QPixmap>
-#include <QPushButton>
-#include <QSignalMapper>
-#include <QTreeWidget>
-#include <QTreeWidgetItem>
 #include "post_guard.h"
 
 T2DMap::T2DMap(QWidget* parent)

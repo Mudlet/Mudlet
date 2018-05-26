@@ -46,7 +46,6 @@
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
-
 #include "pre_guard.h"
 #include <QFileDialog>
 #include "post_guard.h"

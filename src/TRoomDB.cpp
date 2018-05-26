@@ -23,18 +23,7 @@
 
 #include "Host.h"
 #include "TArea.h"
-#include "TMap.h"
-#include "TRoom.h"
 #include "mudlet.h"
-
-
-#include "pre_guard.h"
-#include <QApplication>
-#include <QDebug>
-#include <QElapsedTimer>
-#include <QRegularExpression>
-#include <QStringBuilder>
-#include "post_guard.h"
 
 
 TRoomDB::TRoomDB( TMap * pMap )

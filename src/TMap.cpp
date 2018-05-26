@@ -27,7 +27,6 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -35,17 +34,9 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDir>
-#include <QElapsedTimer>
 #include <QFileDialog>
-#include <QMainWindow>
-#include <QMessageBox>
-#include <QNetworkAccessManager>
 #include <QProgressDialog>
-#include <QSslConfiguration>
 #include "post_guard.h"
-
 
 TMap::TMap(Host* pH)
 : mpRoomDB(new TRoomDB(this))

@@ -23,11 +23,6 @@
 #include "TForkedProcess.h"
 
 
-#include "pre_guard.h"
-#include <QPointer>
-#include "post_guard.h"
-
-
 TForkedProcess::~TForkedProcess()
 {
     if (callBackFunctionRef != -1) {

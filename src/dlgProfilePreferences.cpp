@@ -30,7 +30,6 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
-#include "ctelnet.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -42,16 +41,9 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
-#include <QMainWindow>
-#include <QNetworkDiskCache>
-#include <QPalette>
-#include <QRegularExpression>
-#include <QStandardPaths>
 #include <QTableWidget>
-#include <QTextOption>
 #include <QToolBar>
 #include <QUiLoader>
-#include <QVariant>
 #include "post_guard.h"
 
 

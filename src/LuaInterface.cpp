@@ -25,10 +25,6 @@
 #include "Host.h"
 #include "VarUnit.h"
 
-#include "pre_guard.h"
-#include <QTime>
-#include "post_guard.h"
-
 #include <setjmp.h>
 
 

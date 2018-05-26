@@ -25,15 +25,9 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
 #include <QDesktopWidget>
-#include <QDir>
-#include <QFile>
-#include <QMessageBox>
 #include <QPainter>
 #include <QSplashScreen>
-#include <QStringBuilder>
-#include <QTextLayout>
 #include "post_guard.h"
 
 /*
@@ -49,8 +43,6 @@
 #include <Windows.h>
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
-
-#include <iostream>
 
 
 using namespace std;

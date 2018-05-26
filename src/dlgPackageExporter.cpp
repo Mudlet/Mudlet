@@ -21,28 +21,21 @@
 
 
 #include "dlgPackageExporter.h"
-
+#include "ui_dlgPackageExporter.h"
 
 #include "mudlet.h"
-#include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
-#include "XMLexport.h"
 
 #include "pre_guard.h"
-#include "ui_dlgPackageExporter.h"
-#include <QDesktopServices>
 #include <QFileDialog>
 #include <QInputDialog>
-#include "post_guard.h"
-
 #include <zip.h>
-
-#include <errno.h>
+#include "post_guard.h"
 
 
 using namespace std;
