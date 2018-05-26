@@ -710,7 +710,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
     disconnect(reset_colors_button, &QAbstractButton::clicked, 0, 0);
-    disconnect(reset_colors_button_2, &QAbstractButton::clicked, 0, 0);
+    disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)));
     disconnect(fontSize, SIGNAL(currentIndexChanged(int)));
@@ -1792,7 +1792,7 @@ void dlgProfilePreferences::slot_setLogDir()
     QString currentLogDir = QFileDialog::getExistingDirectory(
             this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lineEdit_logFileFolder->placeholderText() : mLogDirPath), QFileDialog::DontUseNativeDialog);
 
-    if (!currentLogDir.isEmpty() && currentLogDir != NULL) {
+    if (!currentLogDir.isEmpty() && currentLogDir != nullptr) {
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path

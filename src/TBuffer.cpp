@@ -4363,7 +4363,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         QString codePoint;
         if (mMainIncomingCodec) {
             // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength), 0);
+            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength),
+                                                      nullptr);
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()

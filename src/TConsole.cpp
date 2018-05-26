@@ -830,7 +830,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         QString directoryLogFile;
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
-        if (mpHost->mLogDir.isEmpty() || mpHost->mLogDir == NULL) {
+        if (mpHost->mLogDir.isEmpty() || mpHost->mLogDir == nullptr) {
             directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         } else {
             directoryLogFile = mpHost->mLogDir;
