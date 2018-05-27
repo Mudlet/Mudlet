@@ -12956,7 +12956,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.empty()));
+    pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -12986,7 +12986,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.empty()));
+    pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -13015,7 +13015,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.empty()));
+    pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -13092,7 +13092,7 @@ Host& getHostFromLua(lua_State* L)
 {
     lua_pushlightuserdata(L, &host_key);    // 1 - push unique key
     lua_rawget(L, LUA_REGISTRYINDEX);       // 1 - pop key, push host ptr
-    auto * h = (Host*)lua_touserdata(L, -1); // 1 - get host ptr
+    auto* h = static_cast<Host*>(lua_touserdata(L, -1)); // 1 - get host ptr
     lua_pop(L, 1);                          // 0 - pop host ptr
     assert(h);
     return *h;

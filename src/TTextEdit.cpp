@@ -1057,7 +1057,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 
 void TTextEdit::slot_popupMenu()
 {
-    auto * pA = (QAction*)sender();
+    auto * pA = qobject_cast<QAction*>(sender());
     if (!pA) {
         return;
     }

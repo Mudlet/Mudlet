@@ -159,7 +159,7 @@ bool TCommandLine::event(QEvent* event)
 {
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
-        auto * ke = static_cast<QKeyEvent*>(event);
+        auto * ke = dynamic_cast<QKeyEvent*>(event);
 
         // Shortcut for keypad keys
         if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
@@ -583,7 +583,7 @@ void TCommandLine::spellCheck()
 
 void TCommandLine::slot_popupMenu()
 {
-    auto * pA = (QAction*)sender();
+    auto* pA = qobject_cast<QAction*>(sender());
     if (!pA) {
         return;
     }

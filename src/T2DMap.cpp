@@ -3881,7 +3881,7 @@ void T2DMap::slot_setArea()
 
     QFile file(":/ui/set_room_area.ui");
     file.open(QFile::ReadOnly);
-    auto * set_room_area_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto* set_room_area_dialog = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!set_room_area_dialog) {
         return;
@@ -4319,7 +4319,7 @@ void T2DMap::slot_setCustomLine()
 
     QFile file(":/ui/custom_lines.ui");
     file.open(QFile::ReadOnly);
-    auto * d = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto* d = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
     if (!d) {
         return;
