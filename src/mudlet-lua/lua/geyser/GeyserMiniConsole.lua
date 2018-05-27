@@ -12,6 +12,14 @@ Geyser.MiniConsole = Geyser.Window:new({
   name = "MiniConsoleClass",
   wrapAt = 300, })
 
+--- Override reposition to reset autowrap
+function Geyser.MiniConsole:reposition()
+  Geyser.Window.reposition(self)
+  if self.autoWrap then
+    self:resetAutoWrap()
+  end
+end
+
 --- Replaces the currently selected text.
 -- @param with The text to use as a replacement.
 function Geyser.MiniConsole:replace (with)
@@ -145,6 +153,21 @@ end
 --- Returns the number of simultaneous columns (characters) that this miniconsole can show at once on a single row
 function Geyser.MiniConsole:getColumnCount()
     return getColumnCount(self.name)
+end
+
+--- Set auto wrap on for the miniconsole
+function Geyser.MiniConsole:setAutoWrap()
+  self.autoWrap = true
+  self:resetAutoWrap()
+end
+
+--- Set the wrap based on how wide the console is
+function Geyser.MiniConsole:resetAutoWrap()
+  local fontWidth, fontHeight = calcFontSize(self.fontSize)
+  local consoleWidth = self.get_width()
+  local charactersWidth = math.floor(consoleWidth / fontWidth)
+
+  self:setWrap(charactersWidth)
 end
 
 -- Save a reference to our parent constructor
