@@ -117,6 +117,7 @@ TLuaInterpreter::~TLuaInterpreter()
     lua_close(pGlobalLua);
 }
 
+// No documentation available in wiki - internal function
 // Previous code didn't tell the Qt libraries when we had finished with a
 // QNetworkReply so all the data downloaded would be held in memory until the
 // profile was closed - importantly the documentation for the signal
@@ -133,7 +134,6 @@ TLuaInterpreter::~TLuaInterpreter()
 // or a QFile::errorString() for the issue at hand
 // Upon success we now give an additional (third value) which gives the number
 // of bytes written into the downloaded file.
-// Documentation: ? - internal function
 void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
 {
     Host* pHost = mpHost;
@@ -223,13 +223,13 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::slotDeleteSender()
 {
     objectsToDelete.append(sender());
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::slotPurge()
 {
     while (!objectsToDelete.isEmpty()) {
@@ -237,7 +237,7 @@ void TLuaInterpreter::slotPurge()
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::Wait(lua_State* L)
 {
     int n = lua_gettop(L);
@@ -259,7 +259,7 @@ int TLuaInterpreter::Wait(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 QString TLuaInterpreter::dirToString(lua_State* L, int position)
 {
     QString dir;
@@ -313,7 +313,7 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
     return QString();
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::dirToNumber(lua_State* L, int position)
 {
     QString dir;
@@ -950,10 +950,10 @@ int TLuaInterpreter::getLines(lua_State* L)
 }
 
 
-// Documentation: ? - public function missing documentation
-int TLuaInterpreter::loadRawFile(lua_State* L)
+// Documentation: ? - public function missing documentation in wiki
 // Should have been called loadReplay(...) but this name is already in the
 // published Lua API
+int TLuaInterpreter::loadRawFile(lua_State* L)
 {
     QString replayFileName;
     if (!lua_isstring(L, 1)) {
@@ -1102,7 +1102,7 @@ int TLuaInterpreter::addMapMenu(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::removeMapMenu(lua_State* L)
 {
     QString uniqueName;
@@ -1157,7 +1157,7 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::getMapMenus(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -1352,7 +1352,7 @@ int TLuaInterpreter::copy(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::cut(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -1448,7 +1448,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 {
     string luaSendText = "";
@@ -3129,14 +3129,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::calcFontWidth(int size)
 {
     QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
     return QFontMetrics(font).width(QChar('W'));
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::calcFontHeight(int size)
 {
     QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
@@ -3625,7 +3625,7 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
 }
 
 // xRot, yRot, zRot, zoom
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::setMapperView(lua_State* L)
 {
     float x, y, z, zoom;
@@ -4685,7 +4685,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     return 1;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 // Now audits the whole map
 int TLuaInterpreter::auditAreas(lua_State* L)
 {
@@ -7726,29 +7726,6 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     return 1;
 }
 
-//SYNTAX: setDoor( roomId, exitCommand, doorStatus )
-// doorStatus: 0=no door, 1=open, 2=closed, 3=locked
-//        { to remove a door set doorStatus to 0 }
-// Directions for NORMAL exits:
-// * "n"
-// * "ne"
-// * "e"
-// * "se"
-// * "s"
-// * "sw"
-// * "w"
-// * "nw"
-// * "up"
-// * "down"
-// * "in"
-// * "out"
-// The command is now validated against normal exits and stub exits and special
-// exits and returns a nil + error message if there is not a valid thing for
-// given exit command.
-// Returns:
-// * nil + (string) message on run-time (value type errors)
-// * true if a change was made
-// * false if valid but ineffective (door status unchanged)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDoor
 int TLuaInterpreter::setDoor(lua_State* L)
 {
@@ -9119,7 +9096,7 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::getAllAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -9393,7 +9370,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::getRoomChar(lua_State* L)
 {
     int id;
@@ -9467,7 +9444,6 @@ int TLuaInterpreter::getRoomsByPosition(lua_State* L)
     }
     return 1;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setGridMode
 int TLuaInterpreter::setGridMode(lua_State* L)
@@ -9779,7 +9755,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
     string luaSendText;
@@ -10040,7 +10016,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::setMergeTables(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -10062,7 +10038,7 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::pasteWindow(lua_State* L)
 {
     string luaName;
@@ -10489,6 +10465,7 @@ int TLuaInterpreter::reloadModule(lua_State* L)
     return 0;
 }
 
+// Documentation: ? - public function missing documentation in wiki
 // Once a mapper has been created it will, by default, include the "Default
 // Area" associated with the reserved area Id -1 in the list of Areas shown in
 // the area selection widget.  This function will immediately hide that entry
@@ -10498,12 +10475,9 @@ int TLuaInterpreter::reloadModule(lua_State* L)
 // hide rooms until they have been "explored".  This setting is ALSO present on
 // the last "Special Options" tab of the "Profile Preferences" - although it is
 // hidden until there IS a mapper to apply the setting to.
-
 // Returns true on successfully setting the desired value or false if there is
 // (not yet) a map display to apply it to.  Also throws an Error or returned a
 // nil value - both with an accompied error string - if there are problems.
-
-// Documentation: ? - public function missing documentation
 int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -10546,10 +10520,10 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerAnonymousEventHandler
-int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 // The function below is mostly unused now as it is overwritten in lua.
 // The overwriting function poses as a transperant proxy and internally uses
 // this function to get called events.
+int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 {
     string event;
     if (!lua_isstring(L, 1)) {
@@ -11019,7 +10993,7 @@ int TLuaInterpreter::getOS(lua_State* L)
     return 1;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
     if (code.size() < 1) {
@@ -11055,10 +11029,10 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
     }
 }
 
-// Documentation: ? - internal function
-QString TLuaInterpreter::formatLuaCode(const QString &code)
+// No documentation available in wiki - internal function
 // reformats given Lua code. In case of any issues, returns the original code as-is
 // issues could be invalid Lua code or the formatter code bugging out
+QString TLuaInterpreter::formatLuaCode(const QString &code)
 {
     if (code.isEmpty()) {
         return code;
@@ -11105,7 +11079,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
     return result;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::compileScript(const QString& code)
 {
     lua_State* L = pGlobalLua;
@@ -11138,7 +11112,7 @@ bool TLuaInterpreter::compileScript(const QString& code)
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QString& name)
 {
     lua_State* L = pGlobalLua;
@@ -11177,9 +11151,9 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     }
 }
 
-// Documentation: ? - internal function
-bool TLuaInterpreter::validLuaCode(const QString &code)
+// No documentation available in wiki - internal function
 // returns true if the given Lua code is valid, false otherwise
+bool TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
     if (!L) {
@@ -11193,7 +11167,7 @@ bool TLuaInterpreter::validLuaCode(const QString &code)
     return error == 0;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList)
 {
     mMultiCaptureGroupList = captureList;
@@ -11214,7 +11188,7 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 	   }*/
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
     mCaptureGroupList = captureList;
@@ -11229,7 +11203,7 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
 	   } */
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::clearCaptureGroups()
 {
     mCaptureGroupList.clear();
@@ -11250,7 +11224,7 @@ void TLuaInterpreter::clearCaptureGroups()
     lua_pop(L, lua_gettop(L));
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::adjustCaptureGroups(int x, int a)
 {
     // adjust all capture group positions in line if data has been inserted by the user
@@ -11261,7 +11235,7 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
@@ -11280,7 +11254,7 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 {
     lua_State* L = pGlobalLua;
@@ -11297,7 +11271,7 @@ void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
     parseJSON(key, string_data, "gmcp");
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
 {
     lua_State* L = pGlobalLua;
@@ -11315,7 +11289,7 @@ void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
     parseJSON(key, string_data, "msdp");
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
@@ -11445,7 +11419,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     lua_pop(L, lua_gettop(L));
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 #define BUFFER_SIZE 20000
 void TLuaInterpreter::msdp2Lua(char* src, int srclen)
 {
@@ -11570,7 +11544,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 {
     lua_State* L = pGlobalLua;
@@ -11591,7 +11565,7 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
     host.raiseEvent(event);
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::call_luafunction(void* pT)
 {
     lua_State* L = pGlobalLua;
@@ -11636,7 +11610,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
     return false;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::call(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
@@ -11687,7 +11661,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::logError(std::string& e, const QString& name, const QString& function)
 {
     auto blue = QColor(Qt::blue);
@@ -11717,7 +11691,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::callConditionFunction(std::string& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
@@ -11762,7 +11736,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
@@ -11817,7 +11791,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE)
 {
     if (function.isEmpty()) {
@@ -12012,7 +11986,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     return !error;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 double TLuaInterpreter::condenseMapLoad()
 {
     QString luaFunction = QStringLiteral("condenseMapLoad");
@@ -12067,7 +12041,7 @@ int TLuaInterpreter::getAvailableFonts(lua_State* L)
     return 1;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
@@ -12085,7 +12059,7 @@ void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& varia
     lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varValue)
 {
     lua_State* L = pGlobalLua;
@@ -12099,7 +12073,7 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 QString TLuaInterpreter::get_lua_string(const QString& stringName)
 {
     lua_State* L = pGlobalLua;
@@ -12121,7 +12095,7 @@ int TLuaInterpreter::noop(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::check_for_mappingscript()
 {
     lua_State* L = pGlobalLua;
@@ -12185,10 +12159,10 @@ static lua_State* newstate()
 
 static void storeHostInLua(lua_State* L, Host* h);
 
-// Documentation: ? - internal function
-void TLuaInterpreter::initLuaGlobals()
+// No documentation available in wiki - internal function
 // This function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
+void TLuaInterpreter::initLuaGlobals()
 {
     pGlobalLua = newstate();
     storeHostInLua(pGlobalLua, mpHost);
@@ -12648,11 +12622,11 @@ void TLuaInterpreter::initLuaGlobals()
     //FIXME make function call in destructor lua_close(L);
 }
 
-// Documentation: ? - internal function
-void TLuaInterpreter::initIndenterGlobals()
+// No documentation available in wiki - internal function
 // Initialised a slimmed-down Lua state just to run the indenter in a separate sandbox.
 // The indenter by default pollutes the global environment with some utility functions
 // and we don't want to tie ourselves to it by exposing them for scripting.
+void TLuaInterpreter::initIndenterGlobals()
 {
     pIndenterState = newstate();
     storeHostInLua(pIndenterState, mpHost);
@@ -12736,7 +12710,7 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_pop(pIndenterState, lua_gettop(pIndenterState));
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 void TLuaInterpreter::loadGlobal()
 {
 #if defined(Q_OS_MACOS)
@@ -12787,7 +12761,7 @@ void TLuaInterpreter::loadGlobal()
     }
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
     QTime time(0, 0, 0, 0);
@@ -12816,7 +12790,7 @@ int TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, 
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempTimer(double timeout, const QString& function)
 {
     QTime time(0, 0, 0, 0);
@@ -12836,7 +12810,7 @@ int TLuaInterpreter::startTempTimer(double timeout, const QString& function)
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function)
 {
     TAlias* pT;
@@ -12862,7 +12836,7 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempAlias(const QString& regex, const QString& function)
 {
     TAlias* pT;
@@ -12878,7 +12852,7 @@ int TLuaInterpreter::startTempAlias(const QString& regex, const QString& functio
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function)
 {
     TKey* pT;
@@ -12906,7 +12880,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempKey(int& modifier, int& keycode, QString& function)
 {
     TKey* pT;
@@ -12923,7 +12897,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, QString& function
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function)
 {
     TTrigger* pT;
@@ -12942,7 +12916,7 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function)
 {
     TTrigger* pT;
@@ -12961,7 +12935,7 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function)
 {
     TTrigger* pT;
@@ -12980,7 +12954,7 @@ int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& funct
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempPromptTrigger(const QString& function)
 {
     TTrigger* pT;
@@ -12997,7 +12971,7 @@ int TLuaInterpreter::startTempPromptTrigger(const QString& function)
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& function)
 {
     TTrigger* pT;
@@ -13019,7 +12993,7 @@ int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& 
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& function)
 {
     TTrigger* pT;
@@ -13040,7 +13014,7 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function)
 {
     TTrigger* pT;
@@ -13060,7 +13034,7 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
@@ -13091,7 +13065,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
@@ -13121,7 +13095,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
@@ -13151,7 +13125,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
     return id;
 }
 
-// Documentation: ? - internal function
+// No documentation available in wiki - internal function
 int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& parent, const QString& function)
 {
     TTrigger* pT;
@@ -13292,6 +13266,7 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     return 1;
 }
 
+// No documentation available in wiki - internal function
 // Used to unref lua objects in the registry to avoid memory leaks
 // i.e. Unrefing tables passed into TLabel's event parameters.
 void TLuaInterpreter::freeLuaRegistryIndex(int index) {
