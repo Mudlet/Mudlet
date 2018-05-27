@@ -194,9 +194,6 @@ function Geyser.MiniConsole:new (cons, container)
   -- Set any defined colors
   Geyser.Color.applyColors(me)
 
-  if cons.wrapAt then
-    me:setWrap(cons.wrapAt)
-  end
   if cons.fontSize then
     me:setFontSize(cons.fontSize)
   elseif container then
@@ -209,6 +206,11 @@ function Geyser.MiniConsole:new (cons, container)
   end
   if cons.font then
     me:setFont(cons.font)
+  end
+  if cons.wrapAt == "auto" then
+    me:setAutoWrap()
+  elseif cons.wrapAt then
+    me:setWrap(cons.wrapAt)
   end
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
