@@ -17,7 +17,12 @@ public:
     explicit Discord(QObject *parent = nullptr);    
     ~Discord() override;
 
+    void setGameName(const QString &name);
+    void setStatus(const QString &status);
+
 private:
+    DiscordRichPresence mDiscordPresence;
+
     static void handleDiscordReady(const DiscordUser* request);
     static void handleDiscordDisconnected(int errorCode, const char* message);
     static void handleDiscordError(int errorCode, const char* message);

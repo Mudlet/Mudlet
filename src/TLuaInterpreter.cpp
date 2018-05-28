@@ -10190,6 +10190,29 @@ int TLuaInterpreter::openWebPage(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setDiscordGameName(lua_State* L)
+{
+    if (lua_isstring(L, 1)) {
+        QString gameName = QString::fromUtf8(lua_tostring(L, 1));
+        mudlet::self()->mDiscord.setGameName(gameName);
+    } else {
+        lua_pushfstring(L, "setDiscordGameName: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
+        lua_error(L);
+    }
+    return 0;
+}
+
+int TLuaInterpreter::setDiscordStatus(lua_State* L)
+{
+    if (lua_isstring(L, 1)) {
+        QString status = QString::fromUtf8(lua_tostring(L, 1));
+        mudlet::self()->mDiscord.setStatus(status);
+    } else {
+        lua_pushfstring(L, "setDiscordStatus: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
+        lua_error(L);
+    }
+    return 0;
+}
 
 //syntax: getTime( bool return_string, string time_format ) with return_string == false -> return table
 int TLuaInterpreter::getTime(lua_State* L)
@@ -12405,6 +12428,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
+    lua_register(pGlobalLua, "setDiscordGameName", TLuaInterpreter::setDiscordGameName);
+    lua_register(pGlobalLua, "setDiscordStatus", TLuaInterpreter::setDiscordStatus);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 

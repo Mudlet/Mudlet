@@ -8,6 +8,7 @@
 static const char* APPLICATION_ID = "450571881909583884";
 
 Discord::Discord(QObject *parent) : QObject(parent)
+, mDiscordPresence()
 {
     DiscordEventHandlers handlers;
     memset(&handlers, 0, sizeof(handlers));
@@ -28,6 +29,25 @@ Discord::Discord(QObject *parent) : QObject(parent)
 Discord::~Discord()
 {
     Discord_Shutdown();
+}
+
+void Discord::setGameName(const QString& name)
+{
+    char buffer[256];
+    sprintf(buffer, "Playing %s", name.toUtf8().constData());
+    mDiscordPresence.details = buffer;
+    mDiscordPresence.largeImageKey = name.toLower().toUtf8().constData();
+
+    Discord_UpdatePresence(&mDiscordPresence);
+}
+
+void Discord::setStatus(const QString& status)
+{
+    char buffer[256];
+    sprintf(buffer, "%s", status.toUtf8().constData());
+    mDiscordPresence.state = buffer;
+
+    Discord_UpdatePresence(&mDiscordPresence);
 }
 
 void Discord::timerEvent(QTimerEvent *event)
