@@ -1173,5 +1173,4 @@ if false then
   function wrapLine()
   end
 
-
 end
