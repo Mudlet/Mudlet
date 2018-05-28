@@ -671,12 +671,12 @@ linux {
 
 macx {
     HEADERS += ../3rdparty/discord-rpc-osx/discord-rpc/osx-dynamic/include
-    LIBS += ../3rdparty/discord-rpc-osx/discord-rpc/osx-dynamic/lib/libdiscord-rpc.dylib
+    LIBS += ../3rdparty/discord/discord-rpc-osx/discord-rpc/osx-dynamic/lib/libdiscord-rpc.dylib
 }
 
 win32 {
     HEADERS += ../3rdparty/discord-rpc-win/discord-rpc/win32-dynamic/include
-    LIBS += ../3rdparty/discord-rpc-win/discord-rpc/win32-dynamic/lib/discord-rpc.lib
+    LIBS += ../3rdparty/discord/discord-rpc-win/discord-rpc/win32-dynamic/lib/discord-rpc.lib
 }
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
