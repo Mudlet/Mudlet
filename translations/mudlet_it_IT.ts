@@ -391,12 +391,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="124"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>Stanza Id</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="124"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="127"/>
@@ -413,7 +413,8 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2066"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nome Stanza : %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2080"/>
@@ -441,22 +442,22 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2228"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Etichetta di Testo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2229"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Etichetta Immagine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2254"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Sfondo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2255"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Colore carattere</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2501"/>
@@ -481,12 +482,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2691"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Muovi Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2695"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Cancella Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2699"/>
@@ -521,7 +522,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2723"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Imposta uscite Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2727"/>
@@ -1246,61 +1247,61 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1010"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1011"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1012"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1013"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1014"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1015"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>alto</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1016"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>basso</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1017"/>
