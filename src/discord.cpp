@@ -5,8 +5,6 @@
 #include "../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include/discord_rpc.h"
 #include "post_guard.h"
 
-using namespace std::chrono;
-
 static const char* APPLICATION_ID = "450571881909583884";
 
 Discord::Discord(QObject *parent) : QObject(parent)
@@ -22,8 +20,8 @@ Discord::Discord(QObject *parent) : QObject(parent)
 
     Discord_Initialize(APPLICATION_ID, &handlers, 1, "1234");
 
-    // start Discord's event loop
-    startTimer(milliseconds(50));
+    // start Discord's event loop at 50ms
+    startTimer(50);
 }
 
 
