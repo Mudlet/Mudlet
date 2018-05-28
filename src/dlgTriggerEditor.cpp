@@ -1772,8 +1772,6 @@ void dlgTriggerEditor::slot_searchMudletItems(const QString & s)
 
     // Need to highlight the contents if something is already showing in the editor:
     mpSourceEditorEdbee->controller()->update();
-
-    cout << chrono::duration <double, milli> (chrono::steady_clock::now() - start).count() << " ms for " << s.toLocal8Bit().constData() << endl;
 }
 
 void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const QString& s)
