@@ -1307,13 +1307,13 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="1017"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>dentro</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1018"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>fuori</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1037"/>
