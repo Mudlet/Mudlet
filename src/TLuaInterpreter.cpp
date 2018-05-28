@@ -53,13 +53,14 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
-#include <QTimer>
 #include <QFileDialog>
+#include <QFont>
 #include <QRegularExpression>
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
 #include <QStringBuilder>
+#include <QTimer>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -3076,33 +3077,36 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     return 0;
 }
 
-int TLuaInterpreter::calcFontWidth(int size)
-{
-    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-    return QFontMetrics(font).width(QChar('W'));
-}
-
-int TLuaInterpreter::calcFontHeight(int size)
-{
-    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-    int fontDescent = QFontMetrics(font).descent();
-    int fontAscent = QFontMetrics(font).ascent();
-    return fontAscent + fontDescent;
-}
-
 int TLuaInterpreter::calcFontSize(lua_State* L)
 {
-    int x = 0;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "calcFontSize: wrong argument type");
-        lua_error(L);
-        return 1;
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName = QStringLiteral("main");
+    QSize size;
+
+    // pre- setFont(), miniconsoles were fixed to the Bitsteam font and so calcFontSize was fixed to it as well
+    // the only parameter it took in was a font size
+    if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
+        auto fontSize = lua_tonumber(L, 1);
+        auto font = QFont(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
+
+        auto fontMetrics = QFontMetrics(font);
+        size = QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+    } else if (lua_gettop(L) && !lua_isstring(L, 1)) {
+        lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        x = lua_tonumber(L, 1);
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        size = mudlet::self()->calcFontSize(pHost, windowName);
     }
 
-    lua_pushnumber(L, calcFontWidth(x));
-    lua_pushnumber(L, calcFontHeight(x));
+    if (size.width() <= -1) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, size.width());
+    lua_pushnumber(L, size.height());
     return 2;
 }
 
