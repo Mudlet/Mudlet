@@ -118,6 +118,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 // TODO: Implement other searchOptions:
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
+, mCleanResetQueued(false)
 {
     // init generated dialog
     setupUi(this);
@@ -7590,6 +7591,21 @@ void dlgTriggerEditor::slot_import()
 }
 
 void dlgTriggerEditor::doCleanReset()
+{
+    if (mCleanResetQueued) {
+        return;
+    }
+
+    mCleanResetQueued = true;
+
+    QTimer::singleShot(0, [=]() {
+        mCleanResetQueued = false;
+
+        runScheduledCleanReset();
+    });
+}
+
+void dlgTriggerEditor::runScheduledCleanReset()
 {
     if (mCurrentView) {
         switch (mCurrentView) {
