@@ -12089,7 +12089,7 @@ QString TLuaInterpreter::get_lua_string(const QString& stringName)
 
 // check for <whitespace><no_valid_representation> as output
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#handleWindowResizeEvent -- not #noop - compare initLuaGlobals()
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#handleWindowResizeEvent is using noop function publicly - compare initLuaGlobals()
 int TLuaInterpreter::noop(lua_State* L)
 {
     return 0;
