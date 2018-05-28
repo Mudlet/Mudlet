@@ -65,7 +65,10 @@
 #include <QDesktopWidget>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QFontDatabase>
+#include <QFontMetrics>
 #include <QMessageBox>
+#include <QPair>
 #include <QScrollBar>
 #include <QTabBar>
 #include <QTableWidget>
@@ -139,6 +142,7 @@ mudlet* mudlet::self()
 
 mudlet::mudlet()
 : QMainWindow()
+, mFontManager()
 , mToolbarIconSize(0)
 , mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
@@ -498,6 +502,9 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+
+    // load bundled fonts
+    mFontManager.addFonts();
 }
 
 QSettings* mudlet::getQSettings()
@@ -1041,7 +1048,7 @@ void mudlet::slot_tab_changed(int tabID)
             return;
         }
     } else {
-        if (mTabMap.size() > 0) {
+        if (!mTabMap.empty()) {
             mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
         } else {
             mpCurrentActiveHost = nullptr;
@@ -1421,6 +1428,27 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     } else {
         return -1;
     }
+}
+
+QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
+{
+    if (!pHost) {
+        return QSize(-1, -1);
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QFont font;
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        font = pHost->mDisplayFont;
+    } else if (dockWindowConsoleMap.contains(windowName)) {
+        font = dockWindowConsoleMap.value(windowName)->mUpperPane->mDisplayFont;
+    } else {
+        return QSize(-1, -1);
+    }
+
+    auto fontMetrics = QFontMetrics(font);
+    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
 }
 
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
@@ -2861,6 +2889,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     }
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
@@ -3691,4 +3720,11 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
             }
         }
     }
+}
+
+QStringList mudlet::getAvailableFonts()
+{
+    QFontDatabase database;
+
+    return database.families(QFontDatabase::Any);
 }

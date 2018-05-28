@@ -32,7 +32,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
-    dlgConnectionProfiles(QWidget* parent = 0);
+    dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(QString, QString);
