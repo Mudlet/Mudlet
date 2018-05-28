@@ -110,7 +110,7 @@ public:
     QString getWindowFont(Host*, const QString&);
     bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
-    QPair<int, int> calcFontSize(Host *pHost, const QString &windowName);
+    QSize calcFontSize(Host* pHost, const QString& windowName);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);

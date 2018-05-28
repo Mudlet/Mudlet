@@ -3082,18 +3082,17 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     Host* pHost = &getHostFromLua(L);
 
     QString windowName = QStringLiteral("main");
-    QPair<int, int> size;
+    QSize size;
 
     // pre- setFont(), miniconsoles were fixed to the Bitsteam font and so calcFontSize was fixed to it as well
-    if (lua_gettop(L) == 1 && !lua_isnumber(L, 1)) {
+    // the only parameter it took in was a font size
+    if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
         auto fontSize = lua_tonumber(L, 1);
         auto font = QFont(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
 
         auto fontMetrics = QFontMetrics(font);
-        auto width = fontMetrics.width(QChar('W'));
-        auto height = fontMetrics.ascent() + fontMetrics.descent();
-        size = QPair<int, int>(width, height);
-    } else if (lua_gettop(L) >= 1 && !lua_isstring(L, 1)) {
+        size = QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+    } else if (lua_gettop(L) && !lua_isstring(L, 1)) {
         lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -3101,13 +3100,13 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         size = mudlet::self()->calcFontSize(pHost, windowName);
     }
 
-    if (size.first <= -1) {
+    if (size.width() <= -1) {
         lua_pushnil(L);
         return 1;
     }
 
-    lua_pushnumber(L, size.first);
-    lua_pushnumber(L, size.second);
+    lua_pushnumber(L, size.width());
+    lua_pushnumber(L, size.height());
     return 2;
 }
 

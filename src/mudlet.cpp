@@ -1430,10 +1430,10 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     }
 }
 
-QPair<int, int> mudlet::calcFontSize(Host* pHost, const QString& windowName)
+QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
 {
     if (!pHost) {
-        return QPair<int, int>(-1, -1);
+        return QSize(-1, -1);
     }
 
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
@@ -1444,14 +1444,11 @@ QPair<int, int> mudlet::calcFontSize(Host* pHost, const QString& windowName)
     } else if (dockWindowConsoleMap.contains(windowName)) {
         font = dockWindowConsoleMap.value(windowName)->mUpperPane->mDisplayFont;
     } else {
-        return QPair<int, int>(-1, -1);
+        return QSize(-1, -1);
     }
 
     auto fontMetrics = QFontMetrics(font);
-    auto width = fontMetrics.width(QChar('W'));
-    auto height = fontMetrics.ascent() + fontMetrics.descent();
-
-    return QPair<int, int>(width, height);
+    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
 }
 
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
