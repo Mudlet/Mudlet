@@ -4,6 +4,7 @@
 #include "pre_guard.h"
 #include <QDebug>
 #include <QTimer>
+#include <QTimerEvent>
 #include "../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include/discord_register.h"
 #include "../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include/discord_rpc.h"
 #include "post_guard.h"
@@ -23,7 +24,7 @@ private:
     static void handleDiscordJoinGame(const char* joinSecret);
     static void handleDiscordSpectateGame(const char* spectateSecret);
     static void handleDiscordJoinRequest(const DiscordUser* request);
-//    QTimer* mpCallbackLoop;
+    void timerEvent(QTimerEvent *event) override;
 
 signals:
 
