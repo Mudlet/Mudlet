@@ -40,6 +40,7 @@ void Discord::timerEvent(QTimerEvent *event)
 void Discord::handleDiscordReady(const DiscordUser* request)
 {
     qDebug() << "Discord handleDiscordReady!";
+    UpdatePresence();
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
@@ -50,8 +51,7 @@ void Discord::handleDiscordDisconnected(int errorCode, const char* message)
 
 void Discord::handleDiscordError(int errorCode, const char* message)
 {
-
-    qDebug() << "Discord handleDiscordError!";
+    qWarning() << "Discord error:" << errorCode << message;
 }
 
 void Discord::handleDiscordJoinGame(const char* joinSecret)
@@ -70,4 +70,33 @@ void Discord::handleDiscordJoinRequest(const DiscordUser* request)
 {
 
     qDebug() << "Discord handleDiscordJoinRequest!";
+}
+
+void Discord::UpdatePresence()
+{
+    char buffer[256];
+    DiscordRichPresence discordPresence;
+    memset(&discordPresence, 0, sizeof(discordPresence));
+//    discordPresence.state = "In a raiding party";
+//    sprintf(buffer, "Playing Achaea");
+//    discordPresence.details = buffer;
+//    discordPresence.startTimestamp = time(0);
+////    discordPresence.smallImageKey = "achaea";
+//    discordPresence.largeImageKey = "achaea";
+//    discordPresence.largeImageText = "Dragon (level 100)";
+
+    discordPresence.state = "Raiding party";
+    sprintf(buffer, "Playing Luminari");
+    discordPresence.details = buffer;
+    discordPresence.startTimestamp = time(0);
+//    discordPresence.smallImageKey = "achaea";
+    discordPresence.largeImageKey = "luminari";
+    discordPresence.largeImageText = "Dragon (level 100)";
+
+    discordPresence.partySize = 5;
+    discordPresence.partyMax = 6;
+    discordPresence.matchSecret = "zdgfghrfsyheqrwqgshbfxdq35 4 5";
+    discordPresence.joinSecret = "ASFDFSHR512345 RASGSADWr";
+    discordPresence.instance = 1;
+    Discord_UpdatePresence(&discordPresence);
 }

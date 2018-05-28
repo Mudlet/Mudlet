@@ -24,6 +24,8 @@ private:
     static void handleDiscordJoinGame(const char* joinSecret);
     static void handleDiscordSpectateGame(const char* spectateSecret);
     static void handleDiscordJoinRequest(const DiscordUser* request);
+    static void UpdatePresence();
+
     void timerEvent(QTimerEvent *event) override;
 
 signals:
