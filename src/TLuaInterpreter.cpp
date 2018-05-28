@@ -105,6 +105,7 @@ using namespace std;
 QPointer<QTextToSpeech> speechUnit;
 QVector<QString> speechQueue;
 bool bSpeechBuilt;
+int speechState QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
 
@@ -11136,29 +11137,32 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
  */
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
-    TEvent event;
-    switch (state) {
-    case QTextToSpeech::Paused:
-        event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
-        break;
-    case QTextToSpeech::Speaking:
-        event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
-        break;
-    case QTextToSpeech::BackendError:
-        event.mArgumentList.append(QLatin1String("ttsSpeechError"));
-        break;
-    case QTextToSpeech::Ready:
-        event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
-        break;
-    }
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-
-    if (state == QTextToSpeech::Speaking) {
-        event.mArgumentList.append(speechCurrent);
+    if (state != speechState)
+        speechState = state;
+        TEvent event;
+        switch (state) {
+        case QTextToSpeech::Paused:
+            event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
+            break;
+        case QTextToSpeech::Speaking:
+            event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
+            break;
+        case QTextToSpeech::BackendError:
+            event.mArgumentList.append(QLatin1String("ttsSpeechError"));
+            break;
+        case QTextToSpeech::Ready:
+            event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
+            break;
+        }
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    }
+ 
+        if (state == QTextToSpeech::Speaking) {
+            event.mArgumentList.append(speechCurrent);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        }
 
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+        mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    }
 
     if (state != QTextToSpeech::Ready || speechQueue.empty()) {
         return;
