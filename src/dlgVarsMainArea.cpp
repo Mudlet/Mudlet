@@ -41,7 +41,7 @@ dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
     // Key type widget:
 
     // Magic - part 1 set up a replacement data model:
-    QListWidget *contents = new QListWidget(comboBox_variable_key_type);
+    auto *contents = new QListWidget(comboBox_variable_key_type);
     contents->hide();
     comboBox_variable_key_type->setModel(contents->model());
 

@@ -1048,7 +1048,7 @@ void mudlet::slot_tab_changed(int tabID)
             return;
         }
     } else {
-        if (mTabMap.size() > 0) {
+        if (!mTabMap.empty()) {
             mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
         } else {
             mpCurrentActiveHost = nullptr;

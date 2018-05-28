@@ -50,7 +50,7 @@ class T2DMap : public QWidget
 
 public:
     Q_DISABLE_COPY(T2DMap)
-    explicit T2DMap(QWidget* parent = 0);
+    explicit T2DMap(QWidget* parent = nullptr);
     void paintMap();
     void setMapZoom(int zoom);
     QColor getColor(int id);

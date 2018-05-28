@@ -42,7 +42,7 @@ class dlgPackageExporter : public QDialog
 
 public:
     Q_DISABLE_COPY(dlgPackageExporter)
-    explicit dlgPackageExporter(QWidget* parent = 0);
+    explicit dlgPackageExporter(QWidget* parent = nullptr);
     explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
     void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
