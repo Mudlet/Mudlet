@@ -448,8 +448,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
-    emergencyStop->setToolTip(
-            tr("<html><head/><body><p>Emergency Stop. Stops all timers and triggers.</p></body></html>"));
+    emergencyStop->setToolTip(tr("<html><head/><body><p>Emergency Stop. Stops all timers and triggers.</p></body></html>"));
     connect(emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers(bool)));
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
