@@ -522,7 +522,8 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp \
-    wcwidth.cpp
+    wcwidth.cpp \
+    discord.cpp
 
 
 HEADERS += \
@@ -600,7 +601,8 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h \
-    wcwidth.h
+    wcwidth.h \
+    discord.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -660,6 +662,21 @@ linux|macx|win32 {
     !build_pass{
         message("The Updater code is excluded as on-line updating is not available on this platform")
     }
+}
+
+linux {
+    HEADERS += ../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include
+    LIBS += ../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/lib/libdiscord-rpc.so
+}
+
+macx {
+    HEADERS += ../3rdparty/discord-rpc-osx/discord-rpc/osx-dynamic/include
+    LIBS += ../3rdparty/discord-rpc-osx/discord-rpc/osx-dynamic/lib/libdiscord-rpc.dylib
+}
+
+win32 {
+    HEADERS += ../3rdparty/discord-rpc-win/discord-rpc/win32-dynamic/include
+    LIBS += ../3rdparty/discord-rpc-win/discord-rpc/win32-dynamic/lib/discord-rpc.lib
 }
 
 # To use QtCreator as a Unix installer the generated Makefile must have the

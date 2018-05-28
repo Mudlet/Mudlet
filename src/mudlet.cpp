@@ -53,6 +53,7 @@
 #include "edbee/models/textgrammar.h"
 #include "edbee/texteditorwidget.h"
 #include "edbee/views/texttheme.h"
+#include "discord.h"
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
@@ -169,6 +170,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+, mDiscord(this)
 
 {
     setupUi(this);

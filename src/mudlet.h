@@ -31,6 +31,7 @@
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
+#include "discord.h"
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
@@ -88,6 +89,7 @@ public:
     static void start();
     HostManager& getHostManager() { return mHostManager; }    
     FontManager mFontManager;
+    Discord mDiscord;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
