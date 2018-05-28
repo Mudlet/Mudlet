@@ -107,7 +107,7 @@ using namespace std;
 QPointer<QTextToSpeech> speechUnit;
 QVector<QString> speechQueue;
 bool bSpeechBuilt;
-int speechState QTextToSpeech::Ready;
+int speechState = QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
 
