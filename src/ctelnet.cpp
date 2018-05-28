@@ -1074,8 +1074,8 @@ void cTelnet::processTelnetCommand(const string& command)
     }
     }; //end switch 1
        // raise sysTelnetEvent for all unhandled protocols
-       // EXCEPT TN_GA (performance)
-    if (command[1] != TN_GA) {
+       // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+    if (command[1] != TN_GA && command[1] != TN_EOR) {
         unsigned char type = static_cast<unsigned char>(command[1]);
         unsigned char telnetOption = static_cast<unsigned char>(command[2]);
         QString msg = command.c_str();
