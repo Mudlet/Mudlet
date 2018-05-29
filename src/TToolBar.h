@@ -59,7 +59,7 @@ private:
     int mItemCount;
 
 public slots:
-    void slot_pressed(const bool);
+    void slot_pressed(bool);
     void slot_topLevelChanged(bool);
     void slot_dockLocationChanged(Qt::DockWidgetArea);
 };

@@ -39,7 +39,7 @@ class TDebug
 public:
     TDebug(QColor, QColor);
     ~TDebug();
-    TDebug& operator>>(const int);
+    TDebug& operator>>(int);
     TDebug& operator<<(const QString& t);
     TDebug& operator<<(const int& t);
     TDebug& operator<<(const QMap<QString, QString>& map);

@@ -44,7 +44,7 @@ public:
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
     void setID(const int id) { mID = id; }
-    void addChild(T* newChild, const int parentPostion = -1, const int parentPosition = -1);
+    void addChild(T* newChild, int parentPostion = -1, int parentPosition = -1);
     bool popChild(T* removeChild);
     void setParent(T* parent);
     void enableFamily();
@@ -52,15 +52,15 @@ public:
     bool isActive() const;
     bool activate();
     void deactivate();
-    bool setIsActive(const bool);
+    bool setIsActive(bool);
     bool shouldBeActive() const;
-    void setShouldBeActive(const bool b);
+    void setShouldBeActive(bool b);
     bool isTemporary() const;
-    void setTemporary(const bool state);
+    void setTemporary(bool state);
     // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive() const;
     QString& getError();
-    void setError(const QString);
+    void setError(QString);
     bool state() const;
     QString getPackageName() const { return mPackageName; }
     void setPackageName(const QString& n) { mPackageName = n; }
