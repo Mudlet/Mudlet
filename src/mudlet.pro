@@ -670,12 +670,12 @@ linux {
 }
 
 macx {
-    HEADERS += ../3rdparty/discord-rpc-osx/discord-rpc/osx-dynamic/include
+    HEADERS += ../3rdparty/discord/discord-rpc-osx/discord-rpc/osx-dynamic/include
     LIBS += ../3rdparty/discord/discord-rpc-osx/discord-rpc/osx-dynamic/lib/libdiscord-rpc.dylib
 }
 
 win32 {
-    HEADERS += ../3rdparty/discord-rpc-win/discord-rpc/win32-dynamic/include
+    HEADERS += ../3rdparty/discord/discord-rpc-win/discord-rpc/win32-dynamic/include
     LIBS += ../3rdparty/discord/discord-rpc-win/discord-rpc/win32-dynamic/lib/discord-rpc.lib
 }
 
