@@ -116,9 +116,7 @@ GLWidget::GLWidget(TMap* pM, QWidget* parent)
 }
 
 
-GLWidget::~GLWidget()
-{
-}
+GLWidget::~GLWidget() = default;
 
 QSize GLWidget::minimumSizeHint() const
 {

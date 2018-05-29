@@ -85,7 +85,8 @@ public:
 
 
 private:
-    TRoomDB() {}
+    TRoomDB() = default;
+
     int createNewAreaID();
     bool __removeRoom(int id);
     void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import

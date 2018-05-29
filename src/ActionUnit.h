@@ -77,7 +77,8 @@ public:
     QList<TAction*> uninstallList;
 
 private:
-    ActionUnit() {}
+    ActionUnit() = default;
+
     TAction* getActionPrivate(int id);
     void addActionRootNode(TAction* pT, int parentPosition = -1, int childPosition = -1);
     void addAction(TAction* pT);

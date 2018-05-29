@@ -149,7 +149,8 @@ public slots:
 
 
 private:
-    cTelnet() {}
+    cTelnet() = default;
+
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
