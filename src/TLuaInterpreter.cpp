@@ -53,13 +53,14 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
-#include <QTimer>
 #include <QFileDialog>
+#include <QFont>
 #include <QRegularExpression>
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
 #include <QStringBuilder>
+#include <QTimer>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -1820,7 +1821,7 @@ int TLuaInterpreter::deleteLine(lua_State* L)
     QString _name(name.c_str());
     Host& host = getHostFromLua(L);
 
-    if (name == "") {
+    if (name.empty()) {
         host.mpConsole->skipLine();
     } else {
         mudlet::self()->deleteLine(&host, _name);
@@ -1994,7 +1995,7 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
         return 2;
     } else {
         QList<int> stubs = pR->exitStubs;
-        if (stubs.size()) {
+        if (!stubs.empty()) {
             lua_newtable(L);
             for (int i = 0, total = stubs.size(); i < total; ++i) {
                 lua_pushnumber(L, i);
@@ -2037,7 +2038,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
         return 2;
     } else {
         QList<int> stubs = pR->exitStubs;
-        if (stubs.size()) {
+        if (!stubs.empty()) {
             lua_newtable(L);
             for (int i = 0, total = stubs.size(); i < total; ++i) {
                 lua_pushnumber(L, i + 1);
@@ -3129,36 +3130,37 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     return 0;
 }
 
-// No documentation available in wiki - internal function
-int TLuaInterpreter::calcFontWidth(int size)
-{
-    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-    return QFontMetrics(font).width(QChar('W'));
-}
-
-// No documentation available in wiki - internal function
-int TLuaInterpreter::calcFontHeight(int size)
-{
-    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
-    int fontDescent = QFontMetrics(font).descent();
-    int fontAscent = QFontMetrics(font).ascent();
-    return fontAscent + fontDescent;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#calcFontSize
 int TLuaInterpreter::calcFontSize(lua_State* L)
 {
-    int x = 0;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "calcFontSize: wrong argument type");
-        lua_error(L);
-        return 1;
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName = QStringLiteral("main");
+    QSize size;
+
+    // pre- setFont(), miniconsoles were fixed to the Bitsteam font and so calcFontSize was fixed to it as well
+    // the only parameter it took in was a font size
+    if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
+        auto fontSize = lua_tonumber(L, 1);
+        auto font = QFont(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
+
+        auto fontMetrics = QFontMetrics(font);
+        size = QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+    } else if (lua_gettop(L) && !lua_isstring(L, 1)) {
+        lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        x = lua_tonumber(L, 1);
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        size = mudlet::self()->calcFontSize(pHost, windowName);
     }
 
-    lua_pushnumber(L, calcFontWidth(x));
-    lua_pushnumber(L, calcFontHeight(x));
+    if (size.width() <= -1) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, size.width());
+    lua_pushnumber(L, size.height());
     return 2;
 }
 
@@ -5212,7 +5214,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 1;
     }
 
-    if (a1 == "") {
+    if (a1.empty()) {
         host.mpConsole->setLink(txt, _commandList, _hintList);
     } else {
         mudlet::self()->setLink(&host, name, txt, _commandList, _hintList);
@@ -5455,7 +5457,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     _h += TN_SB;
     _h += static_cast<char>(200);
     _h += msg;
-    if (what != "") {
+    if (!what.empty()) {
         _h += " ";
         _h += what;
     }
@@ -5488,7 +5490,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     _h += TN_SB;
     _h += GMCP;
     _h += msg;
-    if (what != "") {
+    if (!what.empty()) {
         _h += " ";
         _h += what;
     }
@@ -5879,11 +5881,11 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     } else if (!lua_isnumber(L, 8)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #8 type (match all flag as number expected, got %s!)", luaL_typename(L, 8));
         return lua_error(L);
-    } else if (!lua_isnumber(L, 11)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #11 type (fire length as number expected, got %s!)", luaL_typename(L, 11));
-        return lua_error(L);
     } else if (!lua_isnumber(L, 12)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #12 type (line delta as number expected, got %s!)", luaL_typename(L, 12));
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #12 type (fire length as number expected, got %s!)", luaL_typename(L, 12));
+        return lua_error(L);
+    } else if (!lua_isnumber(L, 13)) {
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #13 type (line delta as number expected, got %s!)", luaL_typename(L, 13));
         return lua_error(L);
     }
 
@@ -5918,24 +5920,24 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         hlFgColor.setNamedColor(lua_tostring(L, 9));
     }
     QColor hlBgColor;
-    if (lua_isnumber(L, 9)) {
+    if (lua_isnumber(L, 10)) {
         highlight = false;
     } else {
         highlight = true;
-        hlBgColor.setNamedColor(lua_tostring(L, 9));
+        hlBgColor.setNamedColor(lua_tostring(L, 10));
     }
 
     QString soundFile;
     bool playSound;
-    if (lua_isstring(L, 10)) {
+    if (lua_isstring(L, 11)) {
         playSound = true;
-        soundFile = QString::fromUtf8(lua_tostring(L, 10));
+        soundFile = QString::fromUtf8(lua_tostring(L, 11));
     } else {
         playSound = false;
     }
 
-    int fireLength = lua_tonumber(L, 11);
-    int lineDelta = lua_tonumber(L, 12);
+    int fireLength = lua_tonumber(L, 12);
+    int lineDelta = lua_tonumber(L, 13);
 
     QString pattern = QString::fromUtf8(lua_tostring(L, 2));
     QStringList regexList;
@@ -6718,7 +6720,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         luaLine = lua_tointeger(L, n);
     }
     Host& host = getHostFromLua(L);
-    if (name == "") {
+    if (name.empty()) {
         if (luaLine > 0 && luaLine < host.mpConsole->buffer.timeBuffer.size()) {
             lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toLatin1().data());
         } else {
@@ -9711,7 +9713,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return 1;
     }
 
-    if (a1 == "") {
+    if (a1.empty()) {
         host.mpConsole->insertLink(txt, _commandList, _hintList, customFormat);
     } else {
         mudlet::self()->insertLink(&host, name, txt, _commandList, _hintList, customFormat);
@@ -9924,7 +9926,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return 1;
     }
 
-    if (a1 == "") {
+    if (a1.empty()) {
         host.mpConsole->echoLink(txt, _commandList, _hintList, customFormat);
     } else {
         mudlet::self()->echoLink(&host, name, txt, _commandList, _hintList, customFormat);
@@ -10114,7 +10116,7 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
 int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (host.mpMap->customEnvColors.size() > 0) {
+    if (!host.mpMap->customEnvColors.empty()) {
         lua_newtable(L);
         QList<int> colorList = host.mpMap->customEnvColors.keys();
         for (int& idx : colorList) {
@@ -11476,7 +11478,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
             } else {
                 script.append(QLatin1Char('"'));
 
-                if (varList.size()) {
+                if (!varList.empty()) {
                     script = script.replace(0, varList.front().size() + 3, QString());
                     QString token = varList.front();
                     token = token.replace(QLatin1Char('"'), QString());
@@ -11527,7 +11529,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
             script.prepend(QLatin1Char('"'));
         }
     }
-    if (varList.size()) {
+    if (!varList.empty()) {
         //qDebug()<<"<script>"<<script;
         // N/U:         int startVal = script.indexOf(":")+1;
         QString token = varList.front();
@@ -11619,7 +11621,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
         return false;
     }
 
-    if (mCaptureGroupList.size() > 0) {
+    if (!mCaptureGroupList.empty()) {
         lua_newtable(L);
 
         // set values
@@ -11745,7 +11747,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         return false;
     }
 
-    if (mMultiCaptureGroupList.size() > 0) {
+    if (!mMultiCaptureGroupList.empty()) {
         int k = 1;       // Lua indexes start with 1 as a general convention
         lua_newtable(L); //multimatches
         for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
@@ -12765,7 +12767,7 @@ void TLuaInterpreter::loadGlobal()
 int TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
     QTime time(0, 0, 0, 0);
-    int msec = static_cast<int>(timeout * 1000);
+    auto msec = static_cast<int>(timeout * 1000);
     QTime time2 = time.addMSecs(msec);
     TTimer* pT;
     if (parent.isEmpty()) {
@@ -12794,7 +12796,7 @@ int TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, 
 int TLuaInterpreter::startTempTimer(double timeout, const QString& function)
 {
     QTime time(0, 0, 0, 0);
-    int msec = static_cast<int>(timeout * 1000);
+    auto msec = static_cast<int>(timeout * 1000);
     QTime time2 = time.addMSecs(msec);
     TTimer* pT;
     pT = new TTimer("a", time2, mpHost);
@@ -13052,7 +13054,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.size() == 0));
+    pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -13083,7 +13085,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.size() == 0));
+    pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -13113,7 +13115,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
     }
-    pT->setIsFolder((regexList.size() == 0));
+    pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -13192,7 +13194,7 @@ Host& getHostFromLua(lua_State* L)
 {
     lua_pushlightuserdata(L, &host_key);    // 1 - push unique key
     lua_rawget(L, LUA_REGISTRYINDEX);       // 1 - pop key, push host ptr
-    Host* h = (Host*)lua_touserdata(L, -1); // 1 - get host ptr
+    auto* h = static_cast<Host*>(lua_touserdata(L, -1)); // 1 - get host ptr
     lua_pop(L, 1);                          // 0 - pop host ptr
     assert(h);
     return *h;

@@ -159,7 +159,7 @@ bool TCommandLine::event(QEvent* event)
 {
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
-        QKeyEvent* ke = static_cast<QKeyEvent*>(event);
+        auto * ke = dynamic_cast<QKeyEvent*>(event);
 
         // Shortcut for keypad keys
         if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
@@ -583,7 +583,7 @@ void TCommandLine::spellCheck()
 
 void TCommandLine::slot_popupMenu()
 {
-    QAction* pA = (QAction*)sender();
+    auto* pA = qobject_cast<QAction*>(sender());
     if (!pA) {
         return;
     }
@@ -690,7 +690,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     } else {
         mTabCompletionCount--;
     }
-    if (wordList.size() > 0) {
+    if (!wordList.empty()) {
         if (mTabCompletionTyped.endsWith(" ")) {
             return;
         }
@@ -706,7 +706,7 @@ void TCommandLine::handleTabCompletion(bool direction)
 
         QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral("^") + lastWord + QStringLiteral(R"(\w+)"),
                                                                     QRegularExpression::CaseInsensitiveOption));
-        if (filterList.size() < 1) {
+        if (filterList.empty()) {
             return;
         }
         int offset = 0;
@@ -720,7 +720,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             }
         }
 
-        if (filterList.size() > 0) {
+        if (!filterList.empty()) {
             if (mTabCompletionCount >= filterList.size()) {
                 mTabCompletionCount = filterList.size() - 1;
             }
@@ -778,7 +778,7 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyDown(QKeyEvent* event)
 {
-    if (mHistoryList.size() < 1) {
+    if (mHistoryList.empty()) {
         return;
     }
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
@@ -804,7 +804,7 @@ void TCommandLine::historyDown(QKeyEvent* event)
 
 void TCommandLine::historyUp(QKeyEvent* event)
 {
-    if (mHistoryList.size() < 1) {
+    if (mHistoryList.empty()) {
         return;
     }
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
