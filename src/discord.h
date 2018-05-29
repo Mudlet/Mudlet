@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QTimer>
 #include <QTimerEvent>
+#include <QLibrary>
 #include "../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include/discord_register.h"
 #include "../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include/discord_rpc.h"
 #include "post_guard.h"
@@ -21,7 +22,13 @@ public:
     void setStatus(const QString &status);
 
 private:
+    std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
+    std::function<void(const DiscordRichPresence* presence)> Discord_UpdatePresence;
+    std::function<void(void)> Discord_RunCallbacks;
+
     DiscordRichPresence mDiscordPresence;
+    QScopedPointer<QLibrary> mpLibrary;
+    bool mLoaded;
 
     static void handleDiscordReady(const DiscordUser* request);
     static void handleDiscordDisconnected(int errorCode, const char* message);
@@ -29,7 +36,7 @@ private:
     static void handleDiscordJoinGame(const char* joinSecret);
     static void handleDiscordSpectateGame(const char* spectateSecret);
     static void handleDiscordJoinRequest(const DiscordUser* request);
-    static void UpdatePresence();
+    void UpdatePresence();
 
     void timerEvent(QTimerEvent *event) override;
 

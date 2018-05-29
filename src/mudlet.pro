@@ -666,7 +666,7 @@ linux|macx|win32 {
 
 linux {
     HEADERS += ../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include
-    LIBS += ../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/lib/libdiscord-rpc.so
+#    LIBS += ../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/lib/libdiscord-rpc.so
 }
 
 macx {
