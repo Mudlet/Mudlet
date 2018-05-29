@@ -9,7 +9,14 @@ BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo "Upgrading ${i}"
-    brew outdated | grep -q $i && brew upgrade $i
+    brew outdated | grep -q $i
+    STATUS="$?"
+    if [ "${STATUS}" -ne 0 ]; then
+      echo "Already up to date or not installed."
+      continue
+    fi
+
+    brew upgrade $i
     STATUS="$?"
     if [ "${STATUS}" -eq 0 ]; then
       break
