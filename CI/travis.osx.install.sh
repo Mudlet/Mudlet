@@ -13,7 +13,7 @@ for i in $BREWS; do
     STATUS="$?"
     if [ "${STATUS}" -ne 0 ]; then
       echo "Already up to date or not installed."
-      continue
+      break
     fi
 
     brew upgrade $i
