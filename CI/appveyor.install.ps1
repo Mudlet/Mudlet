@@ -117,7 +117,7 @@ function RunMake([string] $makefile = "Makefile"){
     }Catch{
       Write-Output "Attempt $retries failed." | Tee-Object -File "$logFile" -Append
       if ($retries -lt 3) {
-        WriteOutput "Retrying..." | Tee-Object -File "$logFile" -Append
+        Write-Output "Retrying..." | Tee-Object -File "$logFile" -Append
       }else{
         throw $_.Exception
       }
