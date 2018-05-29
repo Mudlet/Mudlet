@@ -746,8 +746,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeTrigger(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeTrigger(it, xmlParent);
     }
 }
 
@@ -799,8 +799,8 @@ void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeAlias(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeAlias(it, xmlParent);
     }
 }
 
@@ -869,8 +869,8 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeAction(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeAction(it, xmlParent);
     }
 }
 
@@ -925,8 +925,8 @@ void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeTimer(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeTimer(it, xmlParent);
     }
 }
 
@@ -980,8 +980,8 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++) {
-        writeScript(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeScript(it, xmlParent);
     }
 }
 
@@ -1034,8 +1034,8 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeKey(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeKey(it, xmlParent);
     }
 }
 

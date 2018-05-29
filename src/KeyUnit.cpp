@@ -138,8 +138,7 @@ bool KeyUnit::disableKey(const QString& name)
 
 bool KeyUnit::killKey(QString& name)
 {
-    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
-        TKey* pChild = *it;
+    for (auto pChild : mKeyRootNodeList) {
         if (pChild->getName() == name) {
             // only temporary Keys can be killed
             if (!pChild->isTemporary()) {
@@ -371,8 +370,7 @@ void KeyUnit::initStats()
 void KeyUnit::_assembleReport(TKey* pChild)
 {
     list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
-        TKey* pT = *it2;
+    for (auto pT : *childrenList) {
         _assembleReport(pT);
         if (pT->isActive()) {
             statsActiveKeys++;
@@ -389,8 +387,7 @@ QString KeyUnit::assembleReport()
     statsActiveKeys = 0;
     statsKeyTotal = 0;
     statsTempKeys = 0;
-    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
-        TKey* pChild = *it;
+    for (auto pChild : mKeyRootNodeList) {
         if (pChild->isActive()) {
             statsActiveKeys++;
         }
@@ -399,8 +396,7 @@ QString KeyUnit::assembleReport()
         }
         statsKeyTotal++;
         list<TKey*>* childrenList = pChild->mpMyChildrenList;
-        for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
-            TKey* pT = *it2;
+        for (auto pT : *childrenList) {
             _assembleReport(pT);
             if (pT->isActive()) {
                 statsActiveKeys++;
