@@ -13,6 +13,13 @@ for i in $BREWS; do
     if [ "${STATUS}" -eq 0 ]; then
       break
     fi
+    echo "Attempt ${RETRIES} failed."
+    if [ "${RETRIES}" -eq 3 ]; then
+      echo "Too many retries. Aborting."
+      exit 1
+    else
+      echo "Retrying..."
+    fi
   done
 done
 for i in $BREWS; do
@@ -21,6 +28,13 @@ for i in $BREWS; do
     STATUS="$?"
     if [ "${STATUS}" -eq 0 ]; then
       break
+    fi
+    echo "Attempt ${RETRIES} failed."
+    if [ "${RETRIES}" -eq 3 ]; then
+      echo "Too many retries. Aborting."
+      exit 1
+    else
+      echo "Retrying..."
     fi
   done
 done
