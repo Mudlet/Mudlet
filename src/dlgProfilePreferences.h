@@ -141,7 +141,8 @@ private slots:
 private:
     void setColors();
     void setColors2();
-    void setColor(QPushButton* b, QColor& c);
+    void setColor(QPushButton*, QColor&);
+    void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();

@@ -1124,7 +1124,7 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_21">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_22">
+           <widget class="QLabel" name="label_foreground_color">
             <property name="text">
              <string>Foreground:</string>
             </property>
@@ -1144,7 +1144,7 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QLabel" name="label_21">
+           <widget class="QLabel" name="label_background_color">
             <property name="text">
              <string>Background:</string>
             </property>
@@ -1161,7 +1161,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_31">
+           <widget class="QLabel" name="label_command_line_foreground_color">
             <property name="text">
              <string>Command line foreground:</string>
             </property>
@@ -1175,7 +1175,7 @@
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QLabel" name="label_59">
+           <widget class="QLabel" name="label_command_line_background_color">
             <property name="text">
              <string>Command line background:</string>
             </property>
@@ -1189,7 +1189,7 @@
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="label_32">
+           <widget class="QLabel" name="label_command_foreground_color">
             <property name="text">
              <string>Command foreground:</string>
             </property>
@@ -1206,7 +1206,7 @@
            </widget>
           </item>
           <item row="2" column="2">
-           <widget class="QLabel" name="label_37">
+           <widget class="QLabel" name="label_command_background_color">
             <property name="text">
              <string>Command background:</string>
             </property>
@@ -1223,7 +1223,7 @@
            </widget>
           </item>
           <item row="3" column="0" colspan="4">
-           <widget class="QLabel" name="label_19">
+           <widget class="QLabel" name="label_ANSI_color_buttons_introduction">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -1239,7 +1239,7 @@
            </widget>
           </item>
           <item row="4" column="0">
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="label_black">
             <property name="text">
              <string>Black:</string>
             </property>
@@ -1251,29 +1251,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [0]</string>
             </property>
            </widget>
           </item>
           <item row="4" column="2">
-           <widget class="QLabel" name="label_68">
+           <widget class="QLabel" name="label_lBlack">
             <property name="text">
              <string>Light black:</string>
             </property>
            </widget>
           </item>
           <item row="4" column="3">
-           <widget class="QPushButton" name="pushButton_Lblack">
+           <widget class="QPushButton" name="pushButton_lBlack">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [8]</string>
             </property>
            </widget>
           </item>
           <item row="5" column="0">
-           <widget class="QLabel" name="label_2">
+           <widget class="QLabel" name="label_red">
             <property name="text">
              <string>Red:</string>
             </property>
@@ -1285,29 +1285,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [1]</string>
             </property>
            </widget>
           </item>
           <item row="5" column="2">
-           <widget class="QLabel" name="label_69">
+           <widget class="QLabel" name="label_lRed">
             <property name="text">
              <string>Light red:</string>
             </property>
            </widget>
           </item>
           <item row="5" column="3">
-           <widget class="QPushButton" name="pushButton_Lred">
+           <widget class="QPushButton" name="pushButton_lRed">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [9]</string>
             </property>
            </widget>
           </item>
           <item row="6" column="0">
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="label_green">
             <property name="text">
              <string>Green:</string>
             </property>
@@ -1319,29 +1319,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [2]</string>
             </property>
            </widget>
           </item>
           <item row="6" column="2">
-           <widget class="QLabel" name="label_70">
+           <widget class="QLabel" name="label_lGreen">
             <property name="text">
              <string>Light green:</string>
             </property>
            </widget>
           </item>
           <item row="6" column="3">
-           <widget class="QPushButton" name="pushButton_Lgreen">
+           <widget class="QPushButton" name="pushButton_lGreen">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [10]</string>
             </property>
            </widget>
           </item>
           <item row="7" column="0">
-           <widget class="QLabel" name="label_4">
+           <widget class="QLabel" name="label_yellow">
             <property name="text">
              <string>Yellow:</string>
             </property>
@@ -1353,29 +1353,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [3]</string>
             </property>
            </widget>
           </item>
           <item row="7" column="2">
-           <widget class="QLabel" name="label_71">
+           <widget class="QLabel" name="label_lYellow">
             <property name="text">
              <string>Light yellow:</string>
             </property>
            </widget>
           </item>
           <item row="7" column="3">
-           <widget class="QPushButton" name="pushButton_Lyellow">
+           <widget class="QPushButton" name="pushButton_lYellow">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [11]</string>
             </property>
            </widget>
           </item>
           <item row="8" column="0">
-           <widget class="QLabel" name="label_5">
+           <widget class="QLabel" name="label_blue">
             <property name="text">
              <string>Blue:</string>
             </property>
@@ -1387,29 +1387,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [4]</string>
             </property>
            </widget>
           </item>
           <item row="8" column="2">
-           <widget class="QLabel" name="label_72">
+           <widget class="QLabel" name="label_lBlue">
             <property name="text">
              <string>Light blue:</string>
             </property>
            </widget>
           </item>
           <item row="8" column="3">
-           <widget class="QPushButton" name="pushButton_Lblue">
+           <widget class="QPushButton" name="pushButton_lBlue">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [12]</string>
             </property>
            </widget>
           </item>
           <item row="9" column="0">
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="label_magenta">
             <property name="text">
              <string>Magenta:</string>
             </property>
@@ -1421,29 +1421,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [5]</string>
             </property>
            </widget>
           </item>
           <item row="9" column="2">
-           <widget class="QLabel" name="label_73">
+           <widget class="QLabel" name="label_lMagenta">
             <property name="text">
              <string>Light magenta:</string>
             </property>
            </widget>
           </item>
           <item row="9" column="3">
-           <widget class="QPushButton" name="pushButton_Lmagenta">
+           <widget class="QPushButton" name="pushButton_lMagenta">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [13]</string>
             </property>
            </widget>
           </item>
           <item row="10" column="0">
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="label_cyan">
             <property name="text">
              <string>Cyan:</string>
             </property>
@@ -1455,29 +1455,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [6]</string>
             </property>
            </widget>
           </item>
           <item row="10" column="2">
-           <widget class="QLabel" name="label_74">
+           <widget class="QLabel" name="label_lCyan">
             <property name="text">
              <string>Light cyan:</string>
             </property>
            </widget>
           </item>
           <item row="10" column="3">
-           <widget class="QPushButton" name="pushButton_Lcyan">
+           <widget class="QPushButton" name="pushButton_lCyan">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [14]</string>
             </property>
            </widget>
           </item>
           <item row="11" column="0">
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="label_white">
             <property name="text">
              <string>White:</string>
             </property>
@@ -1489,29 +1489,29 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [7]</string>
             </property>
            </widget>
           </item>
           <item row="11" column="2">
-           <widget class="QLabel" name="label_75">
+           <widget class="QLabel" name="label_lWhite">
             <property name="text">
              <string>Light white:</string>
             </property>
            </widget>
           </item>
           <item row="11" column="3">
-           <widget class="QPushButton" name="pushButton_Lwhite">
+           <widget class="QPushButton" name="pushButton_lWhite">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
-             <string/>
+             <string>ANSI [15]</string>
             </property>
            </widget>
           </item>
           <item row="12" column="2" colspan="2">
-           <widget class="QPushButton" name="reset_colors_button">
+           <widget class="QPushButton" name="pushButton_resetColors">
             <property name="text">
              <string>Reset all colors to default</string>
             </property>

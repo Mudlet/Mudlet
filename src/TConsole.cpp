@@ -1184,15 +1184,18 @@ void TConsole::setConsoleBgColor(int r, int g, int b)
 {
     mBgColor = QColor(r, g, b);
     mUpperPane->setConsoleBgColor(r, g, b);
+    mLowerPane->setConsoleBgColor(r, g, b);
     changeColors();
 }
 
-void TConsole::setConsoleFgColor(int r, int g, int b)
-{
-    mFgColor = QColor(r, g, b);
-    mUpperPane->setConsoleFgColor(r, g, b);
-    changeColors();
-}
+// Not used:
+//void TConsole::setConsoleFgColor(int r, int g, int b)
+//{
+//    mFgColor = QColor(r, g, b);
+//    mUpperPane->setConsoleFgColor(r, g, b);
+//    mLowerPane->setConsoleFgColor(r, g, b);
+//    changeColors();
+//}
 
 /*std::string TConsole::getCurrentTime()
    {
@@ -2428,6 +2431,14 @@ bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int 
         mSubConsoleMap[key]->setPalette(mainPalette);
         mSubConsoleMap[key]->mUpperPane->mBgColor = QColor(r, g, b, alpha);
         mSubConsoleMap[key]->mLowerPane->mBgColor = QColor(r, g, b, alpha);
+        // update the display properly when color selections change.
+        mSubConsoleMap[key]->mUpperPane->updateScreenView();
+        mSubConsoleMap[key]->mUpperPane->forceUpdate();
+        if (!mSubConsoleMap[key]->mUpperPane->mIsTailMode) {
+            // The upper pane having mIsTailMode true means lower pane is hidden
+            mSubConsoleMap[key]->mLowerPane->updateScreenView();
+            mSubConsoleMap[key]->mLowerPane->forceUpdate();
+        }
         return true;
     } else if (mLabelMap.find(key) != mLabelMap.end()) {
         QPalette mainPalette;
