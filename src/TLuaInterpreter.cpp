@@ -11141,7 +11141,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
  */
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
-    if (state != speechState)
+    if (state != speechState) {
         speechState = state;
         TEvent event;
         switch (state) {
