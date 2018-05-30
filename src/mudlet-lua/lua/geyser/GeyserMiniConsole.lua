@@ -155,10 +155,15 @@ function Geyser.MiniConsole:getColumnCount()
     return getColumnCount(self.name)
 end
 
---- Set auto wrap on for the miniconsole
-function Geyser.MiniConsole:setAutoWrap()
+--- Turn on auto wrap for the miniconsole
+function Geyser.MiniConsole:enableAutoWrap()
   self.autoWrap = true
   self:resetAutoWrap()
+end
+
+--- Turn off auto wrap for the miniconsole
+function Geyser.MiniConsole:disableAutoWrap()
+  self.autoWrap = false
 end
 
 --- Set the wrap based on how wide the console is
