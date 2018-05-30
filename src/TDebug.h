@@ -50,7 +50,7 @@ public:
     TDebug& operator<<(const QList<int>& list);
 
 private:
-    TDebug() = default;;
+    TDebug() = default;
 };
 
 #endif // MUDLET_TDEBUG_H
