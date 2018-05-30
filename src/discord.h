@@ -18,8 +18,10 @@ public:
     explicit Discord(QObject *parent = nullptr);    
     ~Discord() override;
 
-    void setGame(const QString& name);
+    bool setGame(const QString& name);
     void setStatus(const QString& status);
+    bool setSmallIcon(const QString& icon);
+    bool setSmallIconText(const QString& icon);
 
 private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -29,6 +31,8 @@ private:
 
     QString mGameName;
     QString mStatus;
+    QString mSmallIcon;
+    QString mSmallIconText;
     QScopedPointer<QLibrary> mpLibrary;
     bool mLoaded;
 
@@ -45,6 +49,7 @@ private:
 signals:
 
 public slots:
+
 };
 
 #endif // DISCORD_H

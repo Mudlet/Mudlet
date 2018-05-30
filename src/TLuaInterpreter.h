@@ -429,7 +429,9 @@ public:
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
     static int getAvailableFonts(lua_State* L);
-    static int setDiscordGameName(lua_State *L);
+    static int setDiscordGame(lua_State* L);
+    static int setDiscordSmallIcon(lua_State* L);
+    static int setDiscordSmallIconText(lua_State* L);
     static int setDiscordStatus(lua_State *L);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;

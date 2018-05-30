@@ -12,6 +12,8 @@ static const char* APPLICATION_ID = "450571881909583884";
 Discord::Discord(QObject* parent) : QObject(parent)
   , mGameName{}
   , mStatus{}
+  , mSmallIcon{}
+  , mSmallIconText{}
   , mLoaded{}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("libdiscord-rpc")));
@@ -27,7 +29,7 @@ Discord::Discord(QObject* parent) : QObject(parent)
     Discord_Shutdown = reinterpret_cast<Discord_ShutdownPrototype>(mpLibrary->resolve("Discord_Shutdown"));
 
     if (!Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks) {
-        qWarning() << "Discord integration failed to load.";
+        qWarning() << "Discord integration is unavailable.";
         return;
     }
 
@@ -57,12 +59,15 @@ Discord::~Discord()
     }
 }
 
-void Discord::setGame(const QString& name)
+bool Discord::setGame(const QString& name)
 {
     if (mLoaded) {
         mGameName = name;
         UpdatePresence();
+        return true;
     }
+
+    return false;
 }
 
 void Discord::setStatus(const QString& status)
@@ -71,6 +76,28 @@ void Discord::setStatus(const QString& status)
         mStatus = status;
         UpdatePresence();
     }
+}
+
+bool Discord::setSmallIcon(const QString& icon)
+{
+    if (mLoaded) {
+        mSmallIcon = icon;
+        UpdatePresence();
+        return true;
+    }
+
+    return false;
+}
+
+bool Discord::setSmallIconText(const QString& iconText)
+{
+    if (mLoaded) {
+        mSmallIconText = iconText;
+        UpdatePresence();
+        return true;
+    }
+
+    return false;
 }
 
 void Discord::timerEvent(QTimerEvent* event)
@@ -131,5 +158,14 @@ void Discord::UpdatePresence()
         discordPresence.state = mStatus.toUtf8().constData();
     }
 
+    if (!mSmallIcon.isEmpty()) {
+        discordPresence.smallImageKey = mSmallIcon.toLower().toUtf8().constData();
+    }
+
+    if (!mSmallIconText.isEmpty()) {
+        discordPresence.smallImageText = mSmallIconText.toUtf8().constData();
+    }
+
+    discordPresence.instance = 1;
     Discord_UpdatePresence(&discordPresence);
 }
