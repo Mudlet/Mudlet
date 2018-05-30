@@ -14,7 +14,7 @@ Geyser.MiniConsole = Geyser.Window:new({
 
 --- Override reposition to reset autowrap
 function Geyser.MiniConsole:reposition()
-  Geyser.Window.reposition(self)
+  self.parent.reposition(self)
   if self.autoWrap then
     self:resetAutoWrap()
   end
@@ -163,7 +163,7 @@ end
 
 --- Set the wrap based on how wide the console is
 function Geyser.MiniConsole:resetAutoWrap()
-  local fontWidth, fontHeight = calcFontSize(self.fontSize)
+  local fontWidth, fontHeight = calcFontSize(self.name)
   local consoleWidth = self.get_width()
   local charactersWidth = math.floor(consoleWidth / fontWidth)
 
