@@ -25,6 +25,7 @@ private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
     std::function<void(const DiscordRichPresence* presence)> Discord_UpdatePresence;
     std::function<void(void)> Discord_RunCallbacks;
+    std::function<void(void)> Discord_Shutdown;
 
     DiscordRichPresence mDiscordPresence;
     QScopedPointer<QLibrary> mpLibrary;
