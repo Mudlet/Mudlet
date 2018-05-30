@@ -3,6 +3,7 @@
 
 #include "pre_guard.h"
 #include <functional>
+#include <utility>
 #include "post_guard.h"
 
 
@@ -34,6 +35,7 @@ Discord::Discord(QObject* parent) : QObject(parent)
     }
 
     mLoaded = true;
+    qWarning() << "Discord integration loaded.";
 
     DiscordEventHandlers handlers;
     memset(&handlers, 0, sizeof(handlers));
@@ -151,20 +153,36 @@ void Discord::UpdatePresence()
         char buffer[256];
         sprintf(buffer, "Playing %s", mGameName.toUtf8().constData());
         discordPresence.details = buffer;
-        discordPresence.largeImageKey = mGameName.toLower().toUtf8().constData();
+
+        char largeImageKeyBuffer[32];
+        auto gameName = mGameName.toLower().toUtf8();
+        strncpy(largeImageKeyBuffer, gameName.constData(), gameName.length());
+        discordPresence.largeImageKey = largeImageKeyBuffer;
     }
 
     if (!mStatus.isEmpty()) {
-        discordPresence.state = mStatus.toUtf8().constData();
+        char buffer[128];
+        auto status = mStatus.toUtf8();
+        strncpy(buffer, status.constData(), status.length());
+        discordPresence.state = status.constData();
     }
 
     if (!mSmallIcon.isEmpty()) {
-        discordPresence.smallImageKey = mSmallIcon.toLower().toUtf8().constData();
+        char buffer[32];
+        auto gameName = mSmallIcon.toLower().toUtf8();
+        strncpy(buffer, gameName.constData(), gameName.length());
+        discordPresence.smallImageKey = buffer;
     }
 
     if (!mSmallIconText.isEmpty()) {
-        discordPresence.smallImageText = mSmallIconText.toUtf8().constData();
+        char buffer[128];
+        auto smallIconText = mSmallIconText.toUtf8();
+        strncpy(buffer, smallIconText.constData(), smallIconText.length());
+        discordPresence.smallImageText = buffer;
     }
+
+    auto timestamp = static_cast<int64_t>(std::time(nullptr));
+    discordPresence.startTimestamp = timestamp;
 
     discordPresence.instance = 1;
     Discord_UpdatePresence(&discordPresence);
