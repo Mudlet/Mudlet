@@ -9,7 +9,10 @@
 // Mudlet's applicationID on Discord: https://discordapp.com/developers/docs/rich-presence/how-to#initialization
 static const char* APPLICATION_ID = "450571881909583884";
 
-Discord::Discord(QObject* parent) : QObject(parent), mDiscordPresence(), mLoaded(false)
+Discord::Discord(QObject* parent) : QObject(parent)
+  , mGameName{}
+  , mStatus{}
+  , mLoaded{}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("libdiscord-rpc")));
 
@@ -24,11 +27,11 @@ Discord::Discord(QObject* parent) : QObject(parent), mDiscordPresence(), mLoaded
     Discord_Shutdown = reinterpret_cast<Discord_ShutdownPrototype>(mpLibrary->resolve("Discord_Shutdown"));
 
     if (!Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks) {
+        qWarning() << "Discord integration failed to load.";
         return;
     }
 
     mLoaded = true;
-    qDebug() << "Discord integration loaded.";
 
     DiscordEventHandlers handlers;
     memset(&handlers, 0, sizeof(handlers));
@@ -54,31 +57,20 @@ Discord::~Discord()
     }
 }
 
-void Discord::setGameName(const QString& name)
+void Discord::setGame(const QString& name)
 {
-    if (!mLoaded) {
-        return;
+    if (mLoaded) {
+        mGameName = name;
+        UpdatePresence();
     }
-
-    char buffer[256];
-    sprintf(buffer, "Playing %s", name.toUtf8().constData());
-    mDiscordPresence.details = buffer;
-    mDiscordPresence.largeImageKey = name.toLower().toUtf8().constData();
-
-    Discord_UpdatePresence(&mDiscordPresence);
 }
 
 void Discord::setStatus(const QString& status)
 {
-    if (!mLoaded) {
-        return;
+    if (mLoaded) {
+        mStatus = status;
+        UpdatePresence();
     }
-
-    char buffer[256];
-    sprintf(buffer, "%s", status.toUtf8().constData());
-    mDiscordPresence.state = buffer;
-
-    Discord_UpdatePresence(&mDiscordPresence);
 }
 
 void Discord::timerEvent(QTimerEvent* event)
@@ -124,28 +116,20 @@ void Discord::handleDiscordJoinRequest(const DiscordUser* request)
 
 void Discord::UpdatePresence()
 {
-    char buffer[256];
-    memset(&mDiscordPresence, 0, sizeof(mDiscordPresence));
-    //    mDiscordPresence.state = "In a raiding party";
-    //    sprintf(buffer, "Playing Achaea");
-    //    mDiscordPresence.details = buffer;
-    //    mDiscordPresence.startTimestamp = time(0);
-    ////    mDiscordPresence.smallImageKey = "achaea";
-    //    mDiscordPresence.largeImageKey = "achaea";
-    //    mDiscordPresence.largeImageText = "Dragon (level 100)";
 
-    mDiscordPresence.state = "Raiding party";
-    sprintf(buffer, "Playing Luminari");
-    mDiscordPresence.details = buffer;
-    mDiscordPresence.startTimestamp = time(0);
-    //    mDiscordPresence.smallImageKey = "achaea";
-    mDiscordPresence.largeImageKey = "luminari";
-    mDiscordPresence.largeImageText = "Dragon (level 100)";
+    DiscordRichPresence discordPresence;
+    memset(&discordPresence, 0, sizeof(discordPresence));
 
-    mDiscordPresence.partySize = 5;
-    mDiscordPresence.partyMax = 6;
-    mDiscordPresence.matchSecret = "zdgfghrfsyheqrwqgshbfxdq35 4 5";
-    mDiscordPresence.joinSecret = "ASFDFSHR512345 RASGSADWr";
-    mDiscordPresence.instance = 1;
-    Discord_UpdatePresence(&mDiscordPresence);
+    if (!mGameName.isEmpty()) {
+        char buffer[256];
+        sprintf(buffer, "Playing %s", mGameName.toUtf8().constData());
+        discordPresence.details = buffer;
+        discordPresence.largeImageKey = mGameName.toLower().toUtf8().constData();
+    }
+
+    if (!mStatus.isEmpty()) {
+        discordPresence.state = mStatus.toUtf8().constData();
+    }
+
+    Discord_UpdatePresence(&discordPresence);
 }

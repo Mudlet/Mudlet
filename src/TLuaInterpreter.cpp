@@ -10194,7 +10194,7 @@ int TLuaInterpreter::setDiscordGameName(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
         QString gameName = QString::fromUtf8(lua_tostring(L, 1));
-        mudlet::self()->mDiscord.setGameName(gameName);
+        mudlet::self()->mDiscord.setGame(gameName);
     } else {
         lua_pushfstring(L, "setDiscordGameName: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
         lua_error(L);

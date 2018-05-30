@@ -18,8 +18,8 @@ public:
     explicit Discord(QObject *parent = nullptr);    
     ~Discord() override;
 
-    void setGameName(const QString &name);
-    void setStatus(const QString &status);
+    void setGame(const QString& name);
+    void setStatus(const QString& status);
 
 private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -27,7 +27,8 @@ private:
     std::function<void(void)> Discord_RunCallbacks;
     std::function<void(void)> Discord_Shutdown;
 
-    DiscordRichPresence mDiscordPresence;
+    QString mGameName;
+    QString mStatus;
     QScopedPointer<QLibrary> mpLibrary;
     bool mLoaded;
 
