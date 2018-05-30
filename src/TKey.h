@@ -67,7 +67,7 @@ public:
     bool mModuleMasterFolder;
 
 private:
-    TKey() = default;;
+    TKey() = default;
     QString mName;
     QString mCommand;
 
