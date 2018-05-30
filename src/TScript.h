@@ -59,7 +59,7 @@ public:
     bool mModuleMasterFolder;
 
 private:
-    TScript() = default;;
+    TScript() = default;
     QString mName;
     QString mScript;
     QString mFuncName;
