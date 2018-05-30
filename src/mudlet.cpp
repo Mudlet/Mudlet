@@ -1441,10 +1441,14 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         font = pHost->mDisplayFont;
-    } else if (dockWindowConsoleMap.contains(windowName)) {
-        font = dockWindowConsoleMap.value(windowName)->mUpperPane->mDisplayFont;
     } else {
-        return QSize(-1, -1);
+        const auto window = dockWindowConsoleMap.constFind(windowName);
+        if (window != dockWindowConsoleMap.cend()) {
+            Q_ASSERT(window.value()->mUpperPane);
+            font = window.value()->mUpperPane->mDisplayFont;
+        } else {
+            return QSize(-1, -1);
+        }
     }
 
     auto fontMetrics = QFontMetrics(font);
