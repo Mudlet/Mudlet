@@ -47,8 +47,12 @@ Discord::Discord(QObject* parent) : QObject(parent)
     // 1234 is an optional Steam ID - we're not in Steam yet, so this value is fake one
     Discord_Initialize(APPLICATION_ID, &handlers, 1, "1234");
 
-//    connect(this, SIGNAL(signal_tabChanged(QString)), mudlet::self(), SLOT(UpdatePresence()));
-    connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
+    // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
+    QTimer::singleShot(0, [this]() {
+        Q_ASSERT(mudlet::self());
+        connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
+    });
+
 
     // process Discord callbacks every 50ms
     startTimer(50);
@@ -153,8 +157,8 @@ void Discord::UpdatePresence()
     auto gameName = mGamesNames[mudlet::self()->getActiveHost()].toUtf8();
     auto gameNameLowercase = mGamesNames[mudlet::self()->getActiveHost()].toLower().toUtf8();
     auto area = mAreas[mudlet::self()->getActiveHost()].toUtf8();
-    auto smallIcon = mCharacterIcons[mudlet::self()->getActiveHost()].toLower().toUtf8();
-    auto smallIconText = mCharacterTexts[mudlet::self()->getActiveHost()].toUtf8();
+    auto characterIcon = mCharacterIcons[mudlet::self()->getActiveHost()].toLower().toUtf8();
+    auto characterText = mCharacterTexts[mudlet::self()->getActiveHost()].toUtf8();
 
     if (!gameName.isEmpty()) {
         sprintf(buffer, "Playing %s", gameName.constData());
@@ -166,12 +170,12 @@ void Discord::UpdatePresence()
         discordPresence.state = area.constData();
     }
 
-    if (!smallIcon.isEmpty()) {
-        discordPresence.smallImageKey = smallIcon.constData();
+    if (!characterIcon.isEmpty()) {
+        discordPresence.smallImageKey = characterIcon.constData();
     }
 
-    if (!smallIconText.isEmpty()) {
-        discordPresence.smallImageText = smallIconText.constData();
+    if (!characterText.isEmpty()) {
+        discordPresence.smallImageText = characterText.constData();
     }
 
     auto timestamp = static_cast<int64_t>(std::time(nullptr));
