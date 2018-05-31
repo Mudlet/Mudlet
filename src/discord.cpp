@@ -12,7 +12,7 @@ static const char* APPLICATION_ID = "450571881909583884";
 
 Discord::Discord(QObject* parent) : QObject(parent)
   , mGameName{}
-  , mStatus{}
+  , mArea{}
   , mSmallIcon{}
   , mSmallIconText{}
   , mLoaded{}
@@ -72,10 +72,10 @@ bool Discord::setGame(const QString& name)
     return false;
 }
 
-void Discord::setStatus(const QString& status)
+void Discord::setArea(const QString& area)
 {
     if (mLoaded) {
-        mStatus = status;
+        mArea = area;
         UpdatePresence();
     }
 }
@@ -152,7 +152,7 @@ void Discord::UpdatePresence()
     char buffer[256];
     buffer[0] = '\0';
     auto gameName = mGameName.toLower().toUtf8();
-    auto status = mStatus.toUtf8();
+    auto area = mArea.toUtf8();
     auto smallIcon = mSmallIcon.toLower().toUtf8();
     auto smallIconText = mSmallIconText.toUtf8();
     if (!mGameName.isEmpty()) {
@@ -161,8 +161,8 @@ void Discord::UpdatePresence()
         discordPresence.largeImageKey = gameName.constData();
     }
 
-    if (!status.isEmpty()) {
-        discordPresence.state = status.constData();
+    if (!area.isEmpty()) {
+        discordPresence.state = area.constData();
     }
 
     if (!smallIcon.isEmpty()) {

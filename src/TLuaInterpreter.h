@@ -432,7 +432,7 @@ public:
     static int setDiscordGame(lua_State* L);
     static int setDiscordSmallIcon(lua_State* L);
     static int setDiscordSmallIconText(lua_State* L);
-    static int setDiscordStatus(lua_State *L);
+    static int setDiscordArea(lua_State *L);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);

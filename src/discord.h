@@ -19,7 +19,7 @@ public:
     ~Discord() override;
 
     bool setGame(const QString& name);
-    void setStatus(const QString& status);
+    void setArea(const QString &area);
     bool setSmallIcon(const QString& icon);
     bool setSmallIconText(const QString& icon);
 
@@ -30,7 +30,7 @@ private:
     std::function<void(void)> Discord_Shutdown;
 
     QString mGameName;
-    QString mStatus;
+    QString mArea;
     QString mSmallIcon;
     QString mSmallIconText;
     QScopedPointer<QLibrary> mpLibrary;

@@ -10247,13 +10247,13 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
     return 0;
 }
 
-int TLuaInterpreter::setDiscordStatus(lua_State* L)
+int TLuaInterpreter::setDiscordArea(lua_State *L)
 {
     if (lua_isstring(L, 1)) {
         QString status = QString::fromUtf8(lua_tostring(L, 1));
-        mudlet::self()->mDiscord.setStatus(status);
+        mudlet::self()->mDiscord.setArea(status);
     } else {
-        lua_pushfstring(L, "setDiscordStatus: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
+        lua_pushfstring(L, "setDiscordArea: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
         lua_error(L);
     }
     return 0;
@@ -12476,7 +12476,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setDiscordGame", TLuaInterpreter::setDiscordGame);
     lua_register(pGlobalLua, "setDiscordSmallIcon", TLuaInterpreter::setDiscordSmallIcon);
     lua_register(pGlobalLua, "setDiscordSmallIconText", TLuaInterpreter::setDiscordSmallIconText);
-    lua_register(pGlobalLua, "setDiscordStatus", TLuaInterpreter::setDiscordStatus);
+    lua_register(pGlobalLua, "setDiscordArea", TLuaInterpreter::setDiscordArea);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
