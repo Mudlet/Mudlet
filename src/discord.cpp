@@ -11,10 +11,10 @@
 static const char* APPLICATION_ID = "450571881909583884";
 
 Discord::Discord(QObject* parent) : QObject(parent)
-  , mGameName{}
-  , mArea{}
-  , mCharacterIcon{}
-  , mCharacterText{}
+  , mGamesNames{}
+  , mAreas{}
+  , mCharacterIcons{}
+  , mCharacterTexts{}
   , mLoaded{}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("libdiscord-rpc")));
@@ -61,40 +61,40 @@ Discord::~Discord()
     }
 }
 
-bool Discord::setGame(const QString& name)
+bool Discord::setGame(Host* pHost, const QString& name)
 {
     if (mLoaded) {
-        mGameName = name;
+        mGamesNames[pHost] = name;
         UpdatePresence();
         return true;
     }
     return false;
 }
 
-bool Discord::setArea(const QString& area)
+bool Discord::setArea(Host* pHost, const QString& area)
 {
     if (mLoaded) {
-        mArea = area;
+        mAreas[pHost] = area;
         UpdatePresence();
         return true;
     }
     return false;
 }
 
-bool Discord::setCharacterIcon(const QString& icon)
+bool Discord::setCharacterIcon(Host* pHost, const QString& icon)
 {
     if (mLoaded) {
-        mCharacterIcon = icon;
+        mCharacterIcons[pHost] = icon;
         UpdatePresence();
         return true;
     }
     return false;
 }
 
-bool Discord::setCharacterText(const QString& text)
+bool Discord::setCharacterText(Host* pHost, const QString& text)
 {
     if (mLoaded) {
-        mCharacterText = text;
+        mCharacterTexts[pHost] = text;
         UpdatePresence();
         return true;
     }
@@ -150,12 +150,13 @@ void Discord::UpdatePresence()
 
     char buffer[256];
     buffer[0] = '\0';
-    auto gameName = mGameName.toLower().toUtf8();
-    auto area = mArea.toUtf8();
-    auto smallIcon = mCharacterIcon.toLower().toUtf8();
-    auto smallIconText = mCharacterText.toUtf8();
-    if (!mGameName.isEmpty()) {
-        sprintf(buffer, "Playing %s", mGameName.toUtf8().constData());
+    auto gameName = mGamesNames[mudlet::self()->getActiveHost()].toLower().toUtf8();
+    auto area = mAreas[mudlet::self()->getActiveHost()].toUtf8();
+    auto smallIcon = mCharacterIcons[mudlet::self()->getActiveHost()].toLower().toUtf8();
+    auto smallIconText = mCharacterTexts[mudlet::self()->getActiveHost()].toUtf8();
+
+    if (!gameName.isEmpty()) {
+        sprintf(buffer, "Playing %s", gameName.constData());
         discordPresence.details = buffer;
         discordPresence.largeImageKey = gameName.constData();
     }

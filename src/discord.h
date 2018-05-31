@@ -1,6 +1,8 @@
 #ifndef DISCORD_H
 #define DISCORD_H
 
+#include "Host.h"
+
 #include "pre_guard.h"
 #include <QDebug>
 #include <QTimer>
@@ -18,10 +20,10 @@ public:
     explicit Discord(QObject *parent = nullptr);    
     ~Discord() override;
 
-    bool setGame(const QString& name);
-    bool setArea(const QString& area);
-    bool setCharacterIcon(const QString& icon);
-    bool setCharacterText(const QString& text);
+    bool setGame(Host* pHost, const QString& name);
+    bool setArea(Host* pHost, const QString& area);
+    bool setCharacterIcon(Host* pHost, const QString& icon);
+    bool setCharacterText(Host* pHost, const QString& text);
 
 private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -29,10 +31,11 @@ private:
     std::function<void(void)> Discord_RunCallbacks;
     std::function<void(void)> Discord_Shutdown;
 
-    QString mGameName;
-    QString mArea;
-    QString mCharacterIcon;
-    QString mCharacterText;
+    QMap<Host*, QString>mGamesNames;
+    QMap<Host*, QString>mAreas;
+    QMap<Host*, QString>mCharacterIcons;
+    QMap<Host*, QString>mCharacterTexts;
+
     QScopedPointer<QLibrary> mpLibrary;
     bool mLoaded;
 
