@@ -2465,10 +2465,7 @@ p, li { white-space: pre-wrap; }
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton">
-                <property name="styleSheet">
-                 <string notr="true"/>
-                </property>
+               <widget class="QPushButton" name="discord_optin_pushbutton">
                 <property name="text">
                  <string/>
                 </property>
@@ -2484,12 +2481,6 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <property name="checkable">
                  <bool>true</bool>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-                <property name="flat">
-                 <bool>false</bool>
                 </property>
                </widget>
               </item>
