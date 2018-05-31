@@ -13,8 +13,8 @@ static const char* APPLICATION_ID = "450571881909583884";
 Discord::Discord(QObject* parent) : QObject(parent)
   , mGameName{}
   , mArea{}
-  , mSmallIcon{}
-  , mSmallIconText{}
+  , mCharacterIcon{}
+  , mCharacterText{}
   , mLoaded{}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("libdiscord-rpc")));
@@ -80,10 +80,10 @@ void Discord::setArea(const QString& area)
     }
 }
 
-bool Discord::setSmallIcon(const QString& icon)
+bool Discord::setCharacterIcon(const QString& icon)
 {
     if (mLoaded) {
-        mSmallIcon = icon;
+        mCharacterIcon = icon;
         UpdatePresence();
         return true;
     }
@@ -91,10 +91,10 @@ bool Discord::setSmallIcon(const QString& icon)
     return false;
 }
 
-bool Discord::setSmallIconText(const QString& iconText)
+bool Discord::setCharacterText(const QString& text)
 {
     if (mLoaded) {
-        mSmallIconText = iconText;
+        mCharacterText = text;
         UpdatePresence();
         return true;
     }
@@ -153,8 +153,8 @@ void Discord::UpdatePresence()
     buffer[0] = '\0';
     auto gameName = mGameName.toLower().toUtf8();
     auto area = mArea.toUtf8();
-    auto smallIcon = mSmallIcon.toLower().toUtf8();
-    auto smallIconText = mSmallIconText.toUtf8();
+    auto smallIcon = mCharacterIcon.toLower().toUtf8();
+    auto smallIconText = mCharacterText.toUtf8();
     if (!mGameName.isEmpty()) {
         sprintf(buffer, "Playing %s", mGameName.toUtf8().constData());
         discordPresence.details = buffer;

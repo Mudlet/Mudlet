@@ -20,8 +20,8 @@ public:
 
     bool setGame(const QString& name);
     void setArea(const QString &area);
-    bool setSmallIcon(const QString& icon);
-    bool setSmallIconText(const QString& icon);
+    bool setCharacterIcon(const QString& icon);
+    bool setCharacterText(const QString& text);
 
 private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -31,8 +31,8 @@ private:
 
     QString mGameName;
     QString mArea;
-    QString mSmallIcon;
-    QString mSmallIconText;
+    QString mCharacterIcon;
+    QString mCharacterText;
     QScopedPointer<QLibrary> mpLibrary;
     bool mLoaded;
 
