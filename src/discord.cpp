@@ -29,7 +29,7 @@ Discord::Discord(QObject* parent) : QObject(parent)
     Discord_RunCallbacks = reinterpret_cast<Discord_RunCallbacksPrototype>(mpLibrary->resolve("Discord_RunCallbacks"));
     Discord_Shutdown = reinterpret_cast<Discord_ShutdownPrototype>(mpLibrary->resolve("Discord_Shutdown"));
 
-    if (!Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks) {
+    if (!Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks || !Discord_Shutdown) {
         qWarning() << "Discord integration is unavailable.";
         return;
     }
