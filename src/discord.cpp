@@ -30,12 +30,10 @@ Discord::Discord(QObject* parent) : QObject(parent)
     Discord_Shutdown = reinterpret_cast<Discord_ShutdownPrototype>(mpLibrary->resolve("Discord_Shutdown"));
 
     if (!Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks || !Discord_Shutdown) {
-        qWarning() << "Discord integration is unavailable.";
         return;
     }
 
     mLoaded = true;
-    qWarning() << "Discord integration loaded.";
 
     DiscordEventHandlers handlers;
     memset(&handlers, 0, sizeof(handlers));
@@ -48,6 +46,9 @@ Discord::Discord(QObject* parent) : QObject(parent)
 
     // 1234 is an optional Steam ID - we're not in Steam yet, so this value is fake one
     Discord_Initialize(APPLICATION_ID, &handlers, 1, "1234");
+
+//    connect(this, SIGNAL(signal_tabChanged(QString)), mudlet::self(), SLOT(UpdatePresence()));
+    connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
 
     // process Discord callbacks every 50ms
     startTimer(50);
@@ -144,13 +145,13 @@ void Discord::handleDiscordJoinRequest(const DiscordUser* request)
 
 void Discord::UpdatePresence()
 {
-
     DiscordRichPresence discordPresence;
     memset(&discordPresence, 0, sizeof(discordPresence));
 
     char buffer[256];
     buffer[0] = '\0';
-    auto gameName = mGamesNames[mudlet::self()->getActiveHost()].toLower().toUtf8();
+    auto gameName = mGamesNames[mudlet::self()->getActiveHost()].toUtf8();
+    auto gameNameLowercase = mGamesNames[mudlet::self()->getActiveHost()].toLower().toUtf8();
     auto area = mAreas[mudlet::self()->getActiveHost()].toUtf8();
     auto smallIcon = mCharacterIcons[mudlet::self()->getActiveHost()].toLower().toUtf8();
     auto smallIconText = mCharacterTexts[mudlet::self()->getActiveHost()].toUtf8();
@@ -158,7 +159,7 @@ void Discord::UpdatePresence()
     if (!gameName.isEmpty()) {
         sprintf(buffer, "Playing %s", gameName.constData());
         discordPresence.details = buffer;
-        discordPresence.largeImageKey = gameName.constData();
+        discordPresence.largeImageKey = gameNameLowercase.constData();
     }
 
     if (!area.isEmpty()) {

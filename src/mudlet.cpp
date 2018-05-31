@@ -1079,6 +1079,8 @@ void mudlet::slot_tab_changed(int tabID)
 
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
+
+    emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
 
 void mudlet::addConsoleForNewHost(Host* pH)

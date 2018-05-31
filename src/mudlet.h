@@ -380,6 +380,7 @@ signals:
     void signal_setTreeIconSize(const int);
     void signal_hostCreated(Host*, const quint8);
     void signal_hostDestroyed(Host*, const quint8);
+    void signal_tabChanged(const QString& hostName);
 
 private slots:
     void slot_close_profile();
