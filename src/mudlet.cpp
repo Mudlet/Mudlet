@@ -3396,7 +3396,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 bool mudlet::loadLuaFunctionList()
 {
     qDebug() << "Loading the luaFunctionList via loadLuaFunctionList()...";
-    QFile* jsonFile = new QFile(getMudletPath(mainDataItemPath, QStringLiteral("luaFunctionList.json")));
+    QFile* jsonFile = new QFile(QStringLiteral(":/luaFunctionList.json"));
     if (!jsonFile->open(QFile::ReadOnly)) {
         qDebug() << "Failed to open luaFunctionList.txt";
         return false;
