@@ -2396,23 +2396,6 @@ p, li { white-space: pre-wrap; }
             <string>Optional</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="text">
-               <string>Character name:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="login_entry">
-              <property name="toolTip">
-               <string>The characters name</string>
-              </property>
-              <property name="echoMode">
-               <enum>QLineEdit::Normal</enum>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_5">
               <property name="text">
@@ -2427,6 +2410,23 @@ p, li { white-space: pre-wrap; }
               </property>
               <property name="echoMode">
                <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Character name:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="login_entry">
+              <property name="toolTip">
+               <string>The characters name</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::Normal</enum>
               </property>
              </widget>
             </item>
@@ -2466,8 +2466,8 @@ p, li { white-space: pre-wrap; }
               </item>
               <item>
                <widget class="QPushButton" name="discord_optin_pushbutton">
-                <property name="text">
-                 <string/>
+                <property name="toolTip">
+                 <string>Enable to show off your character on Discord</string>
                 </property>
                 <property name="icon">
                  <iconset resource="../mudlet.qrc">
