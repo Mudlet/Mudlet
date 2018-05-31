@@ -68,16 +68,17 @@ bool Discord::setGame(const QString& name)
         UpdatePresence();
         return true;
     }
-
     return false;
 }
 
-void Discord::setArea(const QString& area)
+bool Discord::setArea(const QString& area)
 {
     if (mLoaded) {
         mArea = area;
         UpdatePresence();
+        return true;
     }
+    return false;
 }
 
 bool Discord::setCharacterIcon(const QString& icon)
@@ -87,7 +88,6 @@ bool Discord::setCharacterIcon(const QString& icon)
         UpdatePresence();
         return true;
     }
-
     return false;
 }
 
@@ -98,7 +98,6 @@ bool Discord::setCharacterText(const QString& text)
         UpdatePresence();
         return true;
     }
-
     return false;
 }
 

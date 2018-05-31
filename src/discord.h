@@ -19,7 +19,7 @@ public:
     ~Discord() override;
 
     bool setGame(const QString& name);
-    void setArea(const QString &area);
+    bool setArea(const QString& area);
     bool setCharacterIcon(const QString& icon);
     bool setCharacterText(const QString& text);
 
