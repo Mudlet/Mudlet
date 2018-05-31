@@ -26,6 +26,22 @@ function Geyser.MiniConsole:setBufferSize (linesLimit, sizeOfBatchDeletion)
   setConsoleBufferSize(self.name, linesLimit, sizeOfBatchDeletion)
 end
 
+--- Sets the new font to use - use a monospaced font, non-monospaced fonts aren't supported by Mudlet
+-- and won't give the best results.
+-- @param font Font family name to use (see https://doc.qt.io/qt-5/qfont.html#setFamily for details)
+function Geyser.MiniConsole:setFont (font)
+  if font then
+    self.font = font
+  end
+  setFont(self.name, font)
+end
+
+--- Returns the font family in use by this miniconsole.
+function Geyser.MiniConsole:getFont()
+  self.font = getFont(self.name)
+  return self.font
+end
+
 --- Sets the point at which text is wrapped in this miniconsole
 -- @param wrapAt The number of characters to start wrapping.
 function Geyser.MiniConsole:setWrap (wrapAt)
@@ -52,6 +68,10 @@ end
 -- @param italics The italicized status. 1 is italicized, 0 is normal.
 function Geyser.MiniConsole:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underline, italics)
   setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
+end
+
+function Geyser.MiniConsole:calcFontSize()
+  return calcFontSize(self.name)
 end
 
 -- Enables the scroll bar for this window
@@ -87,7 +107,10 @@ end
 --- Sets the font size for this miniconsole.
 -- @param size The font size.
 function Geyser.MiniConsole:setFontSize(size)
-  self.parent.setFontSize(self, size)
+  if size then
+    self.parent.setFontSize(self, size)
+  end
+
   setMiniConsoleFontSize(self.name, size)
 end
 
@@ -166,11 +189,18 @@ function Geyser.MiniConsole:new (cons, container)
     me:setFontSize(cons.fontSize)
   elseif container then
     me:setFontSize(container.fontSize)
+    cons.fontSize = container.fontSize
   else
     me:setFontSize(8)
+    cons.fontSize = 8
   end
   if cons.scrollBar then
     me:enableScrollBar()
+  else
+    me:disableScrollbar()
+  end
+  if cons.font then
+    me:setFont(cons.font)
   end
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

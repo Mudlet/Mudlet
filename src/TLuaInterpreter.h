@@ -99,7 +99,7 @@ public:
 
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
-    bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = 0);
+    bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
 
@@ -246,6 +246,8 @@ public:
     static int loadWindowLayout(lua_State* L);
     static int saveWindowLayout(lua_State* L);
     static int saveProfile(lua_State* L);
+    static int setFont(lua_State* L);
+    static int getFont(lua_State* L);
     static int setFontSize(lua_State* L);
     static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
@@ -427,6 +429,7 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getAvailableFonts(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);

@@ -28,14 +28,6 @@
 #include "TRoomDB.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QApplication>
-#include <QDataStream>
-#include <QDebug>
-#include <QElapsedTimer>
-#include <QStringBuilder>
-#include "post_guard.h"
-
 
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)
@@ -608,7 +600,7 @@ void TRoom::removeAllSpecialExitsToRoom(int _id)
 
 void TRoom::calcRoomDimensions()
 {
-    if (customLines.size() < 1) {
+    if (customLines.empty()) {
         return;
     }
     min_x = 0.0;
@@ -621,7 +613,7 @@ void TRoom::calcRoomDimensions()
     while (it.hasNext()) {
         it.next();
         const QList<QPointF>& _pL = it.value();
-        if (_pL.size() < 1) {
+        if (_pL.empty()) {
             continue;
         }
         if (needInit) {

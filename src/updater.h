@@ -63,6 +63,8 @@ private:
 #endif
 
     void recordUpdateTime() const;
+    void recordUpdatedVersion() const;
+    QString getPreviousVersion() const;
     void finishSetup();
 
 #if defined(Q_OS_LINUX)
@@ -76,7 +78,7 @@ signals:
     void updateInstalled();
 
 public slots:
-    void installOrRestartClicked(QAbstractButton* button, QString filePath);
+    void installOrRestartClicked(QAbstractButton* button, const QString& filePath);
 #if defined(Q_OS_LINUX)
     // might want to make these private
     void updateBinaryOnLinux();

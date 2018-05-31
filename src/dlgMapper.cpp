@@ -26,14 +26,11 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
 #include <QListWidget>
 #include <QMessageBox>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QProgressDialog>
 #include "post_guard.h"
 
@@ -229,8 +226,7 @@ void dlgMapper::choseRoom(QListWidgetItem* pT)
             qDebug() << "found room id=" << i;
             mpMap->mTargetID = i;
             if (!mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mpHost->getName()), i)) {
-                QString msg = "Cannot find a path to this room.\n";
-                mpHost->mpConsole->printSystemMessage(msg);
+                mpHost->mpConsole->printSystemMessage(tr("Cannot find a path to this room.\n"));
             } else {
                 mpMap->mpHost->startSpeedWalk();
             }

@@ -57,7 +57,7 @@ class TConsole : public QWidget
 
 public:
     Q_DISABLE_COPY(TConsole)
-    TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
+    TConsole(Host*, bool isDebugConsole, QWidget* parent = nullptr);
     void reset();
     void resetMainConsole();
     void echoUserWindow(const QString&);
@@ -140,7 +140,8 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(int);
+    bool setMiniConsoleFontSize(int);    
+    bool setMiniConsoleFont(const QString& font);
     void setBold(bool);
     void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
     void setItalics(bool);
@@ -188,6 +189,8 @@ public:
     QString mConsoleName;
     QString mCurrentLine;
     int mDeletedLines;
+    QString mDisplayFontName;
+    int mDisplayFontSize;
     QFont mDisplayFont;
     int mEngineCursor;
     QColor mFgColor;
@@ -277,6 +280,10 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+
+private:
+    void refreshMiniConsole() const;
+
 };
 
 #endif // MUDLET_TCONSOLE_H

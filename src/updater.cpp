@@ -27,7 +27,6 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
-#include <QProcessEnvironment>
 #include "post_guard.h"
 
 // update flows:
@@ -90,17 +89,19 @@ void Updater::manuallyCheckUpdates()
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
 }
 
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().constFirst().getVersion();
 #elif defined(Q_OS_WIN32)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
+    recordUpdatedVersion();
     mUpdateInstalled = true;
     emit updateInstalled();
 }
@@ -224,7 +225,7 @@ void Updater::untarOnLinux(const QString& fileName)
     tar.setProcessChannelMode(QProcess::MergedChannels);
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
     // tar output folder has to end with a slash
-    tar.start("tar", QStringList() << "-xvf" << fileName << "-C" << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QStringLiteral("/"));
+    tar.start(QStringLiteral("tar"), QStringList() << QStringLiteral("-xvf") << fileName << QStringLiteral("-C") << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QStringLiteral("/"));
     if (!tar.waitForFinished()) {
         qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
@@ -263,12 +264,13 @@ void Updater::updateBinaryOnLinux()
 }
 #endif // Q_OS_LINUX
 
-void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
+void Updater::installOrRestartClicked(QAbstractButton* button, const QString& filePath)
 {
+    Q_UNUSED(button)
+
     // moc, when used with cmake on macos bugs out if the entire function declaration and definition is entirely
     // commented out so we leave a stub in
 #if !defined(Q_OS_MACOS)
-    Q_UNUSED(button)
 
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
@@ -328,6 +330,22 @@ void Updater::recordUpdateTime() const
     file.close();
 }
 
+// records the previous version of Mudlet that we updated from, so we can show
+// the changelog on next startup for the latest version only
+void Updater::recordUpdatedVersion() const
+{
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_from")));
+    bool opened = file.open(QIODevice::WriteOnly);
+    if (!opened) {
+        qWarning() << "Couldn't open update version file for writing.";
+        return;
+    }
+
+    QDataStream ifs(&file);
+    ifs << APP_VERSION;
+    file.close();
+}
+
 // returns true if Mudlet was updated automatically and a changelog should be shown
 // now that the user is on the new version. If the user updated manually, then there
 // is no need as they would have seen the changelog while updating
@@ -361,4 +379,23 @@ bool Updater::shouldShowChangelog()
     file.remove();
 
     return minsSinceUpdate >= 5;
+}
+
+// return the previous version of Mudlet that we updated from
+// return a null QString on failure
+QString Updater::getPreviousVersion() const
+{
+    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_from")));
+    bool opened = file.open(QIODevice::ReadOnly);
+    QString previousVersion;
+    if (!opened) {
+        file.remove();
+        return QString();
+    }
+    QDataStream ifs(&file);
+    ifs >> previousVersion;
+    file.close();
+    file.remove();
+
+    return previousVersion;
 }

@@ -309,10 +309,12 @@ bool TAlias::setScript(const QString& script)
 
 bool TAlias::compileScript()
 {
-    mFuncName = QString("Alias") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString code = QStringLiteral("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
+    QString aliasName = QStringLiteral("Alias: %1").arg(getName());
+    mFuncName = QStringLiteral("Alias%1").arg(QString::number(mID));
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, QString("Alias: ") + getName())) {
+
+    if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;

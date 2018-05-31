@@ -1,6 +1,8 @@
+#ifndef WCWIDTH_H
+#define WCWIDTH_H
+
 /***************************************************************************
- *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,18 +20,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QtGlobal>
 
-#include "TSplitter.h"
+int mk_wcwidth_cjk(uint ucs);
+int mk_wcwidth(uint ucs);
 
-
-#include "TSplitterHandle.h"
-
-
-TSplitter::TSplitter(Qt::Orientation o, QWidget* p) : QSplitter(o, p), mpSplitterHandle()
-{
-}
-
-QSplitterHandle* TSplitter::createHandle()
-{
-    return new TSplitterHandle(orientation(), this);
-}
+#endif // WCWIDTH_H

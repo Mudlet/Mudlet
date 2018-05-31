@@ -30,10 +30,10 @@ dlgComposer::dlgComposer(Host* pH) : mpHost(pH)
 
 {
     setupUi(this);
-    QFont f = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
+    QFont f = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 10, QFont::Normal);
     edit->setFont(f);
-    connect(saveButton, SIGNAL(pressed()), this, SLOT(save()));
-    connect(cancelButton, SIGNAL(pressed()), this, SLOT(cancel()));
+    connect(saveButton, &QAbstractButton::pressed, this, &dlgComposer::save);
+    connect(cancelButton, &QAbstractButton::pressed, this, &dlgComposer::cancel);
 }
 
 void dlgComposer::cancel()
@@ -48,8 +48,8 @@ void dlgComposer::save()
     this->hide();
 }
 
-void dlgComposer::init(QString t, QString txt)
+void dlgComposer::init(const QString &newTitle, const QString &newText)
 {
-    titel->setText(t);
-    edit->setPlainText(txt);
+    title->setText(newTitle);
+    edit->setPlainText(newText);
 }

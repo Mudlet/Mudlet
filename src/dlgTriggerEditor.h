@@ -271,8 +271,9 @@ public slots:
     void slot_setTreeWidgetIconSize(const int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
-
-    void slot_updateStatusBar( const QString statusText); // For the source code editor
+    void slot_updateStatusBar(const QString statusText); // For the source code editor
+    void slot_profileSaveStarted();
+    void slot_profileSaveFinished();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -316,12 +317,12 @@ private:
     void expand_child_action(TAction*, QTreeWidgetItem*);
     void expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
 
-    void exportTrigger(QFile&);
-    void exportTimer(QFile&);
-    void exportAlias(QFile&);
-    void exportAction(QFile&);
-    void exportScript(QFile&);
-    void exportKey(QFile&);
+    void exportTrigger(const QString &fileName);
+    void exportTimer(const QString &fileName);
+    void exportAlias(const QString &fileName);
+    void exportAction(const QString &fileName);
+    void exportScript(const QString &fileName);
+    void exportKey(const QString &fileName);
 
     void exportTriggerToClipboard();
     void exportTimerToClipboard();
@@ -445,6 +446,13 @@ private:
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
     void clearEditorNotification() const;
+
+    QAction* mProfileSaveAction;
+    QAction* mProfileSaveAsAction;
+
+    // keeps track of the dialog reset being queued
+    bool mCleanResetQueued;
+    void runScheduledCleanReset();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

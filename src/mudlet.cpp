@@ -26,8 +26,6 @@
 #include "mudlet.h"
 
 #include "EAction.h"
-#include "Host.h"
-#include "HostManager.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -49,36 +47,25 @@
 #include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
-#include "edbee/edbee.h"
-#include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
-#include "edbee/views/texttheme.h"
+
 #if defined(INCLUDE_UPDATER)
-#include "updater.h"
 #endif
 
 #include "pre_guard.h"
-#include <QtEvents>
 #include <QtUiTools/quiloader.h>
-#include <QApplication>
-#include <QDesktopServices>
 #include <QDesktopWidget>
-#include <QDockWidget>
 #include <QFileDialog>
-#include <QMessageBox>
 #include <QScrollBar>
-#include <QTabBar>
 #include <QTableWidget>
-#include <QTextCharFormat>
 #include <QToolBar>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QVariantHash>
-#include "post_guard.h"
 
 #include <zip.h>
+#include "post_guard.h"
 
 using namespace std;
 
@@ -145,6 +132,7 @@ mudlet* mudlet::self()
 
 mudlet::mudlet()
 : QMainWindow()
+, mFontManager()
 , mToolbarIconSize(0)
 , mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
@@ -504,6 +492,9 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+
+    // load bundled fonts
+    mFontManager.addFonts();
 }
 
 QSettings* mudlet::getQSettings()
@@ -1053,7 +1044,7 @@ void mudlet::slot_tab_changed(int tabID)
             return;
         }
     } else {
-        if (mTabMap.size() > 0) {
+        if (!mTabMap.empty()) {
             mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
         } else {
             mpCurrentActiveHost = nullptr;
@@ -1125,6 +1116,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     auto pEditor = new dlgTriggerEditor(pH);
     pH->mpEditorDialog = pEditor;
+    connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
     pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
@@ -1367,7 +1360,40 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
-bool mudlet::setFontSize(Host* pHost, const QString& name, int size)
+bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& font)
+{
+    if (!pHost) {
+        return false;
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(window)) {
+        TConsole* pC = dockWindowConsoleMap.value(window);
+        pC->setMiniConsoleFont(font);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+QString mudlet::getWindowFont(Host* pHost, const QString& name)
+{
+    if (!pHost) {
+        return QString();
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if (dockWindowConsoleMap.contains(name)) {
+        return dockWindowConsoleMap.value(name)->mUpperPane->fontInfo().family();
+    } else {
+        return QString();
+    }
+}
+
+bool mudlet::setWindowFontSize(Host *pHost, const QString &name, int size)
 {
     if (!pHost) {
         return false;
@@ -1400,6 +1426,27 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     }
 }
 
+QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
+{
+    if (!pHost) {
+        return QSize(-1, -1);
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QFont font;
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        font = pHost->mDisplayFont;
+    } else if (dockWindowConsoleMap.contains(windowName)) {
+        font = dockWindowConsoleMap.value(windowName)->mUpperPane->mDisplayFont;
+    } else {
+        return QSize(-1, -1);
+    }
+
+    auto fontMetrics = QFontMetrics(font);
+    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+}
+
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
 {
     if (!pHost) {
@@ -1428,7 +1475,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
 
-        setFontSize(pHost, name, 10);
+        setWindowFontSize(pHost, name, 10);
 
         if (loadLayout && !dockWindowMap[name]->hasLayoutAlready) {
             loadWindowLayout();
@@ -2168,9 +2215,7 @@ void mudlet::slot_userToolBar_hovered(QAction* pA)
     }
 }
 
-void mudlet::slot_userToolBar_orientation_changed(Qt::Orientation dir)
-{
-}
+void mudlet::slot_userToolBar_orientation_changed(Qt::Orientation dir) {}
 
 Host* mudlet::getActiveHost()
 {
@@ -2206,7 +2251,7 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
     foreach (TConsole* pC, mConsoleMap) {
-        if (pC->mpHost->getName() != "default_host") {
+        if (pC->mpHost->getName() != QStringLiteral("default_host")) {
             // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
             pC->mpHost->mTelnet.disconnect();
 
@@ -2226,6 +2271,16 @@ void mudlet::closeEvent(QCloseEvent* event)
         }
     }
 
+    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
+    hide();
+
+    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
+        auto host = mHostManager.getHost(hostName);
+        if (host->currentlySavingProfile()) {
+            host->waitForProfileSave();
+        }
+    }
+
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
     event->accept();
@@ -2233,7 +2288,7 @@ void mudlet::closeEvent(QCloseEvent* event)
 
 void mudlet::forceClose()
 {
-    for (auto console : mConsoleMap) {
+    for (auto& console : mConsoleMap) {
         auto host = console->getHost();
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
@@ -2257,6 +2312,16 @@ void mudlet::forceClose()
         }
 
         console->close();
+    }    
+
+    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
+    hide();
+
+    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
+        auto host = mHostManager.getHost(hostName);
+        if (host->currentlySavingProfile()) {
+            host->waitForProfileSave();
+        }
     }
 
     writeSettings();
@@ -2358,12 +2423,10 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
 // profile loaded so no TConsoles with a "rescue" context menu):
 void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
-    if (! isVisible && mMenuBarVisibility == visibleNever) {
+    if (!isVisible && mMenuBarVisibility == visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
         int hostCount = mHostManager.getHostCount();
-        if ( (hostCount < 2 && (mToolbarVisibility & visibleAlways))
-           ||(hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
-
+        if ((hostCount < 2 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
             mpMainToolBar->show();
         }
     }
@@ -2373,9 +2436,7 @@ void mudlet::adjustToolBarVisibility()
 {
     // Are there any profiles loaded - note that the dummy "default_host" counts
     // as the first one
-    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways)
-       ||(mToolbarVisibility & visibleMaskNormally)) {
-
+    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways) || (mToolbarVisibility & visibleMaskNormally)) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -2775,7 +2836,7 @@ void mudlet::startAutoLogin()
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
-    for (auto host : hostList) {
+    for (auto& host : hostList) {
         QString val = readProfileData(host, QStringLiteral("autologin"));
         if (val.toInt() == Qt::Checked) {
             doAutoLogin(host);
@@ -2824,6 +2885,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     }
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
@@ -2982,7 +3044,7 @@ mudlet::~mudlet()
     // There may be a corner case if a replay is running AND the application is
     // closing down AND the updater on a particular platform pauses the
     // application destruction...?
-    delete(mpTimerReplay);
+    delete (mpTimerReplay);
     mpTimerReplay = nullptr;
 
     mudlet::_self = nullptr;
@@ -3111,14 +3173,13 @@ void mudlet::replayOver()
     mpActionReplay->setCheckable(false);
     mpActionReplay->setEnabled(true);
     dactionReplay->setEnabled(true);
-    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                               .arg(tr("<p>Load a Mudlet replay.</p>")));
+    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Load a Mudlet replay.</p>")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 }
 
 void mudlet::slot_replaySpeedUp()
 {
-    if(mpLabelReplaySpeedDisplay) {
+    if (mpLabelReplaySpeedDisplay) {
         mReplaySpeed = mReplaySpeed * 2;
         mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
@@ -3128,7 +3189,7 @@ void mudlet::slot_replaySpeedUp()
 
 void mudlet::slot_replaySpeedDown()
 {
-    if(mpLabelReplaySpeedDisplay) {
+    if (mpLabelReplaySpeedDisplay) {
         mReplaySpeed = mReplaySpeed / 2;
         if (mReplaySpeed < 1) {
             mReplaySpeed = 1;
@@ -3699,4 +3760,11 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
             }
         }
     }
+}
+
+QStringList mudlet::getAvailableFonts()
+{
+    QFontDatabase database;
+
+    return database.families(QFontDatabase::Any);
 }

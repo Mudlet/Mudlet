@@ -4,8 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,6 +32,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TriggerUnit.h"
+#include "XMLexport.h"
 #include "ctelnet.h"
 
 #include "pre_guard.h"
@@ -59,6 +61,8 @@ class TMap;
 
 class Host : public QObject
 {
+    Q_OBJECT
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -82,6 +86,14 @@ public:
     void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
+    bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
+    // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
+    void               setWideAmbiguousEAsianGlyphs( const Qt::CheckState state );
+    // Is used to set preference dialog control directly:
+    Qt::CheckState     getWideAmbiguousEAsianGlyphsControlState() { QMutexLocker locker(& mLock);
+                                                                       return mAutoAmbigousWidthGlyphsSetting
+                                                                               ? Qt::PartiallyChecked
+                                                                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
 
     void closingDown();
     bool isClosingDown();
@@ -133,6 +145,7 @@ public:
     void saveModules(int);
     void reloadModule(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
+    void refreshPackageFonts();
 
     void registerEventHandler(const QString&, TScript*);
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
@@ -140,7 +153,7 @@ public:
     void raiseEvent(const TEvent& event);
     void resetProfile();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), bool syncModules = false);
-    void callEventHandlers();
+    std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();
     void reenableAllTriggers();
 
@@ -168,8 +181,10 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
+    void xmlSaved(const QString &xmlName);
+    bool currentlySavingProfile();
+    void waitForProfileSave();
 
-public:
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
@@ -220,6 +235,18 @@ public:
     bool mIsNextLogFileInHtmlFormat;
 
     bool mIsLoggingTimestamps;
+
+    // Where to put HTML/text logfile (default is the "Logs" under the profile's
+    // one):
+    QString mLogDir;
+    // A user entered name - if blank a language specific default is used:
+    QString mLogFileName;
+    // The first argument to QDateTime::toString(...) to generate a date/time
+    // dependent filename unless it is empty in which case the above value is
+    // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" is set as a
+    // default in the constructor:
+    QString mLogFileNameFormat;
+
     bool mResetProfile;
     int mScreenHeight;
     int mScreenWidth;
@@ -318,6 +345,14 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
 
+
+signals:
+    // Tells TTextEdit instances for this profile how to draw the ambiguous
+    // width characters:
+    void signal_changeIsAmbigousWidthGlyphsToBeWide(const bool);
+    void profileSaveStarted();
+    void profileSaveFinished();
+
 private:
     QScopedPointer<LuaInterface> mLuaInterface;
 
@@ -361,7 +396,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-    bool mModuleSaveBlock;
 
     QPushButton* uninstallButton;
     QListWidget* packageList;
@@ -370,6 +404,21 @@ private:
     QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
+    // This option makes the control on the preferences tristated so the value
+    // used depends - currently - on what the MUD Server encoding is (only set
+    // true for GBK and GB18030 ones) - however this is likely to be due for
+    // revision once locale/language support is brought in - when it can be
+    // made dependent on that instead.
+    bool mAutoAmbigousWidthGlyphsSetting;
+    // If above is true is the value deduced from the MUD server encoding, if
+    // the above is false is the user's direct setting - this is so that changes
+    // in the TTextEdit classes are only made when necessary:
+    bool mWideAmbigousWidthGlyphs;
+
+    // keeps track of all of the array writers we're currently operating with
+    QHash<QString, XMLexport*> writers;
+
+    void installPackageFonts(const QString &packageName);
 };
 
 #endif // MUDLET_HOST_H
