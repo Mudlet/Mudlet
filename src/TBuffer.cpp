@@ -1903,7 +1903,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             if (ch == '<') {
                 if (!mParsingVar) {
                     openT++;
-                    if (currentToken.size() > 0) {
+                    if (!currentToken.empty()) {
                         currentToken += ch;
                     }
                     mAssemblingToken = true;
@@ -2117,7 +2117,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             match = _rex.match(_tp, _rpos);
                         }
 
-                        if ((_rl1.size() == _rl2.size()) && (_rl1.size() > 0)) {
+                        if ((_rl1.size() == _rl2.size()) && (!_rl1.empty())) {
                             for (int i = 0; i < _rl1.size(); i++) {
                                 QString _var = _rl1[i];
                                 _var.prepend('&');
@@ -2197,7 +2197,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (ch == '&' || mIgnoreTag) {
-                if ((localBufferPosition + 4 < localBufferLength) && (mSkip.size() == 0)) {
+                if ((localBufferPosition + 4 < localBufferLength) && (mSkip.empty())) {
                     if (localBuffer.substr(localBufferPosition, 4) == "&gt;") {
                         localBufferPosition += 3;
                         ch = '>';
@@ -2335,7 +2335,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         bool isTwoTCharsNeeded = false;
 
         if (!encodingLookupTable.isEmpty()) {
-            quint8 index = static_cast<quint8>(ch);
+            auto index = static_cast<quint8>(ch);
             if (index < 128) {
                 mMudLine.append(QChar::fromLatin1(ch));
             } else {
@@ -2714,7 +2714,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
     bool hasAppended = false;
     int y = P.y();
     int x = P.x();
-    if (chunk.buffer.size() < 1) {
+    if (chunk.buffer.empty()) {
         return;
     }
     if (y < 0 || y > getLastLineNumber()) {
@@ -2762,7 +2762,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
 
 void TBuffer::appendBuffer(const TBuffer& chunk)
 {
-    if (chunk.buffer.size() < 1) {
+    if (chunk.buffer.empty()) {
         return;
     }
     for (int cx = 0; cx < static_cast<int>(chunk.buffer[0].size()); cx++) {
@@ -2880,7 +2880,7 @@ inline int TBuffer::wrap(int startLine)
                 lineText.append(lineBuffer[i].at(i2));
                 i2++;
             }
-            if (newLine.size() == 0) {
+            if (newLine.empty()) {
                 tempList.append(QString());
                 std::deque<TChar> emptyLine;
                 queue.push(emptyLine);
@@ -3010,7 +3010,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
         }
         int lastSpace = -1;
         int wrapPos = -1;
-        int length = static_cast<int>(buffer[i].size());
+        auto length = static_cast<int>(buffer[i].size());
 
         for (int i2 = 0; i2 < static_cast<int>(buffer[i].size());) {
             if (length - i2 > screenWidth - indent) {
@@ -3032,7 +3032,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
                 if (lineBuffer[i][i2] == QChar('\n')) {
                     i2++;
 
-                    if (newLine.size() == 0) {
+                    if (newLine.empty()) {
                         tempList.append(QString());
                         std::deque<TChar> emptyLine;
                         queue.push(emptyLine);
@@ -3212,7 +3212,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
-    while (buffer.size() > 0) {
+    while (!buffer.empty()) {
         if (!deleteLines(0, 0)) {
             break;
         }
@@ -4359,7 +4359,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         QString codePoint;
         if (mMainIncomingCodec) {
             // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength), 0);
+            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength),
+                                                      nullptr);
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()

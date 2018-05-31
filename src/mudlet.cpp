@@ -1031,7 +1031,7 @@ void mudlet::slot_tab_changed(int tabID)
             return;
         }
     } else {
-        if (mTabMap.size() > 0) {
+        if (!mTabMap.empty()) {
             mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
         } else {
             mpCurrentActiveHost = nullptr;
@@ -1411,6 +1411,27 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     } else {
         return -1;
     }
+}
+
+QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
+{
+    if (!pHost) {
+        return QSize(-1, -1);
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QFont font;
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        font = pHost->mDisplayFont;
+    } else if (dockWindowConsoleMap.contains(windowName)) {
+        font = dockWindowConsoleMap.value(windowName)->mUpperPane->mDisplayFont;
+    } else {
+        return QSize(-1, -1);
+    }
+
+    auto fontMetrics = QFontMetrics(font);
+    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
 }
 
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)

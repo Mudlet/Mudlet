@@ -312,7 +312,7 @@ void dlgPackageExporter::slot_addFiles()
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
 {
     list<TTrigger*>* childList = trig->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TTrigger*>::iterator it;
@@ -357,7 +357,7 @@ void dlgPackageExporter::listTriggers()
 void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
 {
     list<TAlias*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TAlias*>::iterator it;
@@ -403,7 +403,7 @@ void dlgPackageExporter::listAliases()
 void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
 {
     list<TScript*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TScript*>::iterator it;
@@ -443,7 +443,7 @@ void dlgPackageExporter::listScripts()
 void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
 {
     list<TKey*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TKey*>::iterator it;
@@ -487,7 +487,7 @@ void dlgPackageExporter::listKeys()
 void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
 {
     list<TAction*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TAction*>::iterator it;
@@ -527,7 +527,7 @@ void dlgPackageExporter::listActions()
 void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
 {
     list<TTimer*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TTimer*>::iterator it;

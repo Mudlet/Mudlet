@@ -41,7 +41,7 @@ class TEasyButtonBar : public QWidget
 
 public:
     Q_DISABLE_COPY(TEasyButtonBar)
-    TEasyButtonBar(TAction*, QString, QWidget* pW = 0);
+    TEasyButtonBar(TAction*, QString, QWidget* pW = nullptr);
     void addButton(TFlipButton* pW);
     void setVerticalOrientation() { mVerticalOrientation = true; }
     void setHorizontalOrientation() { mVerticalOrientation = false; }

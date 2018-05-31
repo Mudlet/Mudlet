@@ -144,7 +144,7 @@ int TForkedProcess::startProcess(TLuaInterpreter* interpreter, lua_State* L)
     auto process = new TForkedProcess(interpreter, L);
 
     // The userdata for the closures.
-    QPointer<TForkedProcess>** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));
+    auto ** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));
     int userDataIndex = lua_gettop(L);
     if (lua_getmetatable(L, userDataIndex) != 0) {
         lua_pushstring(L, "Error: new user data should not have any metatable.");

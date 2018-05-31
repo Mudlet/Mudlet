@@ -38,8 +38,8 @@ class GLWidget : public QGLWidget
 
 public:
     Q_DISABLE_COPY(GLWidget)
-    GLWidget(QWidget* parent = 0);
-    GLWidget(TMap* pM, QWidget* parent = 0);
+    GLWidget(QWidget* parent = nullptr);
+    GLWidget(TMap* pM, QWidget* parent = nullptr);
     ~GLWidget();
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);

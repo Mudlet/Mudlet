@@ -539,7 +539,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
     if (!dontExpandAliases) {
         // allow sending blank commands
-        if (commandList.size() == 0) {
+        if (commandList.empty()) {
             sendRaw("\n");
             return;
         }
@@ -808,7 +808,7 @@ bool Host::installPackage(const QString& fileName, int module)
             return false;
         }
 
-        QLabel* pLabel = pUnzipDialog->findChild<QLabel*>(QStringLiteral("label"));
+        auto * pLabel = pUnzipDialog->findChild<QLabel*>(QStringLiteral("label"));
         if (pLabel) {
             if (module) {
                 pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));

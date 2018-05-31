@@ -66,7 +66,7 @@ class dlgRoomExits : public QDialog, public Ui::room_exits
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
-    explicit dlgRoomExits(Host*, QWidget* parent = 0);
+    explicit dlgRoomExits(Host*, QWidget* parent = nullptr);
     void init(int);
 
 public slots:
