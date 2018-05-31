@@ -149,36 +149,28 @@ void Discord::UpdatePresence()
     DiscordRichPresence discordPresence;
     memset(&discordPresence, 0, sizeof(discordPresence));
 
+    char buffer[256];
+    buffer[0] = '\0';
+    auto gameName = mGameName.toLower().toUtf8();
+    auto status = mStatus.toUtf8();
+    auto smallIcon = mSmallIcon.toLower().toUtf8();
+    auto smallIconText = mSmallIconText.toUtf8();
     if (!mGameName.isEmpty()) {
-        char buffer[256];
         sprintf(buffer, "Playing %s", mGameName.toUtf8().constData());
         discordPresence.details = buffer;
-
-        char largeImageKeyBuffer[32];
-        auto gameName = mGameName.toLower().toUtf8();
-        strncpy(largeImageKeyBuffer, gameName.constData(), gameName.length());
-        discordPresence.largeImageKey = largeImageKeyBuffer;
+        discordPresence.largeImageKey = gameName.constData();
     }
 
-    if (!mStatus.isEmpty()) {
-        char buffer[128];
-        auto status = mStatus.toUtf8();
-        strncpy(buffer, status.constData(), status.length());
+    if (!status.isEmpty()) {
         discordPresence.state = status.constData();
     }
 
-    if (!mSmallIcon.isEmpty()) {
-        char buffer[32];
-        auto gameName = mSmallIcon.toLower().toUtf8();
-        strncpy(buffer, gameName.constData(), gameName.length());
-        discordPresence.smallImageKey = buffer;
+    if (!smallIcon.isEmpty()) {
+        discordPresence.smallImageKey = smallIcon.constData();
     }
 
-    if (!mSmallIconText.isEmpty()) {
-        char buffer[128];
-        auto smallIconText = mSmallIconText.toUtf8();
-        strncpy(buffer, smallIconText.constData(), smallIconText.length());
-        discordPresence.smallImageText = buffer;
+    if (!smallIconText.isEmpty()) {
+        discordPresence.smallImageText = smallIconText.constData();
     }
 
     auto timestamp = static_cast<int64_t>(std::time(nullptr));
