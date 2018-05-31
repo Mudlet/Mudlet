@@ -449,6 +449,10 @@ private:
 
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
+
+    // keeps track of the dialog reset being queued
+    bool mCleanResetQueued;
+    void runScheduledCleanReset();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

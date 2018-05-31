@@ -58,6 +58,7 @@ const QString TConsole::cmLuaLineVariable("line");
 
 TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 : QWidget(parent)
+, mpCommandLine(nullptr)
 , mpHost(pH)
 , buffer(pH)
 , emergencyStop(new QToolButton)
@@ -284,10 +285,12 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     baseHFrameLayout->setMargin(0);
     centralLayout->setMargin(0);
 
-    mpCommandLine = new TCommandLine(pH, this, mpMainDisplay);
-    mpCommandLine->setContentsMargins(0, 0, 0, 0);
-    mpCommandLine->setSizePolicy(sizePolicy);
-    mpCommandLine->setFocusPolicy(Qt::StrongFocus);
+    if (!mIsDebugConsole && !mIsSubConsole) {
+        mpCommandLine = new TCommandLine(pH, this, mpMainDisplay);
+        mpCommandLine->setContentsMargins(0, 0, 0, 0);
+        mpCommandLine->setSizePolicy(sizePolicy);
+        mpCommandLine->setFocusPolicy(Qt::StrongFocus);
+    }
 
     layer = new QWidget(mpMainDisplay);
     layer->setContentsMargins(0, 0, 0, 0);
@@ -310,7 +313,9 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     splitter->setHandleWidth(3);
     splitter->setPalette(splitterPalette);
     splitter->setParent(layer);
-    setFocusProxy(mpCommandLine);
+    if (mpCommandLine) {
+        setFocusProxy(mpCommandLine);
+    }
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, isDebugConsole, false);
     mUpperPane->setContentsMargins(0, 0, 0, 0);
@@ -405,8 +410,9 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     networkLatency->setReadOnly(true);
     networkLatency->setSizePolicy(sizePolicy4);
     networkLatency->setFocusPolicy(Qt::NoFocus);
-    networkLatency->setToolTip(tr("<html><head/><body><p><i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your "
-                                  "triggers took to process the last line(s).</p></body></html>"));
+    networkLatency->setToolTip(
+            tr("<html><head/><body><p><i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your "
+               "triggers took to process the last line(s).</p></body></html>"));
     networkLatency->setMaximumSize(120, 30);
     networkLatency->setMinimumSize(120, 30);
     networkLatency->setAutoFillBackground(true);
@@ -479,7 +485,10 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
-    layoutLayer2->addWidget(mpCommandLine);
+    if (mpCommandLine) {
+        layoutLayer2->addWidget(mpCommandLine);
+    }
+
     layoutLayer2->addWidget(mpButtonMainLayer);
     layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
     layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
@@ -506,9 +515,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mUpperPane->show();
     mLowerPane->show();
     mLowerPane->hide();
-    if (mIsDebugConsole) {
-        mpCommandLine->hide();
-    }
 
     isUserScrollBack = false;
 
@@ -542,11 +548,13 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpButtonMainLayer->setMinimumWidth(400);
     mpButtonMainLayer->setMaximumWidth(400);
     setFocusPolicy(Qt::ClickFocus);
-    setFocusProxy(mpCommandLine);
     mUpperPane->setFocusPolicy(Qt::ClickFocus);
-    mUpperPane->setFocusProxy(mpCommandLine);
     mLowerPane->setFocusPolicy(Qt::ClickFocus);
-    mLowerPane->setFocusProxy(mpCommandLine);
+    if (mpCommandLine) {
+        setFocusProxy(mpCommandLine);
+        mUpperPane->setFocusProxy(mpCommandLine);
+        mLowerPane->setFocusProxy(mpCommandLine);
+    }
 
     buttonLayerSpacer->setAutoFillBackground(true);
     buttonLayerSpacer->setPalette(__pal);
@@ -620,7 +628,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     if (mIsSubConsole || mIsDebugConsole) {
         layerCommandLine->hide();
-        mpCommandLine->hide();
     } else {
         //layerCommandLine->move(0,mpMainFrame->height()-layerCommandLine->height());
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
@@ -830,7 +837,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         QString directoryLogFile;
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
-        if (mpHost->mLogDir.isEmpty() || mpHost->mLogDir == NULL) {
+        if (mpHost->mLogDir == nullptr || mpHost->mLogDir.isEmpty()) {
             directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         } else {
             directoryLogFile = mpHost->mLogDir;
@@ -1085,7 +1092,7 @@ void TConsole::changeColors()
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
-        qreal letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
+        auto letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
@@ -1129,7 +1136,7 @@ void TConsole::changeColors()
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
-        qreal letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
+        auto letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
@@ -1399,7 +1406,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
         }
         return;
     } else {
-        if ((buffer.buffer.size() == 0 && buffer.buffer[0].size() == 0) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
             if (customFormat) {
                 buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
             } else {
@@ -1477,7 +1484,7 @@ void TConsole::insertText(const QString& text, QPoint P)
         }
         return;
     } else {
-        if ((buffer.buffer.size() == 0 && buffer.buffer[0].size() == 0) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
             buffer.append(text,
                           0,
                           text.size(),
@@ -2684,7 +2691,7 @@ void TConsole::slot_searchBufferUp()
         // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
         mCurrentSearchResult = std::min(mCurrentSearchResult, buffer.lineBuffer.size());
     }
-    if (buffer.lineBuffer.size() < 1) {
+    if (buffer.lineBuffer.empty()) {
         return;
     }
     bool _found = false;
@@ -2720,7 +2727,7 @@ void TConsole::slot_searchBufferDown()
         mSearchQuery = _txt;
         mCurrentSearchResult = buffer.lineBuffer.size();
     }
-    if (buffer.lineBuffer.size() < 1) {
+    if (buffer.lineBuffer.empty()) {
         return;
     }
     if (mCurrentSearchResult >= buffer.lineBuffer.size()) {
