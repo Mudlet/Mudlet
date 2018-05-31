@@ -26,14 +26,11 @@
 #include "Host.h"
 #include "TConsole.h"
 #include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
 #include <QListWidget>
 #include <QMessageBox>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QProgressDialog>
 #include "post_guard.h"
 

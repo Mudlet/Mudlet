@@ -23,11 +23,6 @@
 #include "dlgNotepad.h"
 
 #include "mudlet.h"
-#include "Host.h"
-
-#include "pre_guard.h"
-#include <QDir>
-#include "post_guard.h"
 
 
 dlgNotepad::dlgNotepad(Host* pH) : mpHost(pH)

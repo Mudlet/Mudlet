@@ -23,11 +23,6 @@
 
 #include "Host.h"
 #include "TAlias.h"
-#include "TLuaInterpreter.h"
-
-#include "pre_guard.h"
-#include <QStringList>
-#include "post_guard.h"
 
 
 using namespace std;

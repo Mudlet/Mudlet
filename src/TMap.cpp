@@ -27,7 +27,6 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -35,17 +34,9 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDir>
-#include <QElapsedTimer>
 #include <QFileDialog>
-#include <QMainWindow>
-#include <QMessageBox>
-#include <QNetworkAccessManager>
 #include <QProgressDialog>
-#include <QSslConfiguration>
 #include "post_guard.h"
-
 
 TMap::TMap(Host* pH)
 : mpRoomDB(new TRoomDB(this))
@@ -1290,7 +1281,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     }
 
     bool canRestore = true;
-    if (entries.size() || !location.isEmpty()) {
+    if (!entries.empty() || !location.isEmpty()) {
         QFile file(location.isEmpty() ? QStringLiteral("%1/%2").arg(folder, entries.at(0)) : location);
 
         if (!file.open(QFile::ReadOnly)) {
@@ -1536,7 +1527,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
     }
 
-    if ((!canRestore || entries.size() == 0) && downloadIfNotFound) {
+    if ((!canRestore || entries.empty()) && downloadIfNotFound) {
         QMessageBox msgBox;
 
         if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)

@@ -28,10 +28,6 @@
 #include "TTrigger.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QPalette>
-#include "post_guard.h"
-
 
 dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, int mode) : QDialog(pF), mpTrigger(pT), mMode(mode)
 {

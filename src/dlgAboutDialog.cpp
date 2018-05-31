@@ -27,13 +27,10 @@
 
 #include "dlgAboutDialog.h"
 
-
 #include "pre_guard.h"
 #include <QPainter>
-#include <QStringBuilder>
 #include <QTextLayout>
 #include "post_guard.h"
-
 
 dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 {
