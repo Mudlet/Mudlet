@@ -36,8 +36,6 @@
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TForkedProcess.h"
-#include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
@@ -46,26 +44,11 @@
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
-#include "glwidget.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDesktopServices>
-#include <QDir>
 #include <QFileDialog>
-#include <QFont>
-#include <QRegularExpression>
-#include <QSound>
-#include <QSslConfiguration>
-#include <QString>
-#include <QStringBuilder>
-#include <QTimer>
 #include "post_guard.h"
-
-#include <assert.h>
-#include <list>
-#include <string>
 
 // Provides the lua zip module for MacOs platform that does not have an easy way
 // to provide it as a prebuilt library module (unlike Windows/Linux) - was

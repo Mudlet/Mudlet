@@ -26,8 +26,6 @@
 #include "mudlet.h"
 
 #include "EAction.h"
-#include "Host.h"
-#include "HostManager.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -49,34 +47,19 @@
 #include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
-#include "edbee/edbee.h"
-#include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
-#include "edbee/views/texttheme.h"
+
 #if defined(INCLUDE_UPDATER)
-#include "updater.h"
 #endif
 
 #include "pre_guard.h"
-#include <QtEvents>
 #include <QtUiTools/quiloader.h>
-#include <QApplication>
-#include <QDesktopServices>
 #include <QDesktopWidget>
-#include <QDockWidget>
 #include <QFileDialog>
-#include <QFontDatabase>
-#include <QFontMetrics>
-#include <QMessageBox>
-#include <QPair>
 #include <QScrollBar>
-#include <QTabBar>
 #include <QTableWidget>
-#include <QTextCharFormat>
 #include <QToolBar>
-#include "post_guard.h"
-
 #include <zip.h>
+#include "post_guard.h"
 
 using namespace std;
 

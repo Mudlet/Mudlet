@@ -29,15 +29,8 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QtEvents>
-#include <QDebug>
-#include <QDesktopServices>
-#include <QDir>
 #include <QScrollBar>
 #include <QShortcut>
-#include <QString>
-#include <QTextDocument>
-#include <QTime>
 #include "post_guard.h"
 
 

@@ -32,18 +32,12 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
-#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtConcurrent>
-#include <QMap>
-#include <QMutableMapIterator>
-#include <QMapIterator>
-#include <chrono>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include "post_guard.h"
 

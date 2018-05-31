@@ -32,31 +32,15 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
-#include "TDebug.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
-#include "glwidget.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDir>
-#include <QNetworkAccessManager>
 #include <QProgressDialog>
-#include <QStringBuilder>
-#include <QTextCodec>
-#include <QTimer>
 #include "post_guard.h"
-
-#include <iostream>
-#include <memory>
-#include <sstream>
-
-#include <stdio.h>
-#include <sys/types.h>
-#include <time.h>
 
 #define DEBUG
 
