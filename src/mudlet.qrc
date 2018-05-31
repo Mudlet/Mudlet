@@ -159,5 +159,6 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>icons/Discord-Logo+Wordmark-Color.png</file>
     </qresource>
 </RCC>
