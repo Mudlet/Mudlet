@@ -161,7 +161,8 @@ function Geyser.MiniConsole:enableAutoWrap()
   self:resetAutoWrap()
 end
 
---- Turn off auto wrap for the miniconsole
+--- Turn off auto wrap for the miniconsole, after disabling you should immediately
+-- call setWrap with your desired wrap
 function Geyser.MiniConsole:disableAutoWrap()
   self.autoWrap = false
 end
