@@ -3396,13 +3396,13 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 bool mudlet::loadLuaFunctionList()
 {
     qDebug() << "Loading the luaFunctionList via loadLuaFunctionList()...";
-    QFile* jsonFile = new QFile(QStringLiteral(":/luaFunctionList.json"));
+    QFile* jsonFile = new QFile(QStringLiteral(":/lua-function-list.json"));
     if (!jsonFile->open(QFile::ReadOnly)) {
-        qDebug() << "Failed to open luaFunctionList.txt";
+        qDebug() << "Failed to open lua-function-list.json";
         return false;
     }
 
-    qDebug() << "Successfully opened luaFunctionList.txt";
+    qDebug() << "Successfully opened lua-function-list.json";
 
     const QByteArray data = jsonFile->readAll();
 
