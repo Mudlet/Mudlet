@@ -374,8 +374,8 @@ void TTextEdit::scrollUp(int lines)
     if (bufferScrollUp(lines)) {
         mIsTailMode = false;
         mScrollVector = 0;
-        update();
     }
+    update();
 }
 
 void TTextEdit::scrollDown(int lines)
