@@ -10283,10 +10283,10 @@ int TLuaInterpreter::setDiscordCharacterIcon(lua_State* L)
     return 0;
 }
 
-int TLuaInterpreter::setDiscordCharacterText(lua_State* L)
+int TLuaInterpreter::setDiscordCharacter(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
-        if (mudlet::self()->mDiscord.setCharacterText(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)))) {
+        if (mudlet::self()->mDiscord.setCharacter(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)))) {
             lua_pushboolean(L, true);
             return 1;
         } else {
@@ -10295,7 +10295,7 @@ int TLuaInterpreter::setDiscordCharacterText(lua_State* L)
             return 2;
         }
     } else {
-        lua_pushfstring(L, "setDiscordCharacterText: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
+        lua_pushfstring(L, "setDiscordCharacter: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
         lua_error(L);
     }
     return 0;
@@ -12539,7 +12539,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     lua_register(pGlobalLua, "setDiscordGame", TLuaInterpreter::setDiscordGame);
     lua_register(pGlobalLua, "setDiscordCharacterIcon", TLuaInterpreter::setDiscordCharacterIcon);
-    lua_register(pGlobalLua, "setDiscordCharacterText", TLuaInterpreter::setDiscordCharacterText);
+    lua_register(pGlobalLua, "setDiscordCharacter", TLuaInterpreter::setDiscordCharacter);
     lua_register(pGlobalLua, "setDiscordArea", TLuaInterpreter::setDiscordArea);
     // PLACEMARKER: End of main Lua interpreter functions registration
 

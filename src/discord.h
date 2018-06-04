@@ -23,7 +23,7 @@ public:
     bool setGame(Host* pHost, const QString& name);
     bool setArea(Host* pHost, const QString& area);
     bool setCharacterIcon(Host* pHost, const QString& icon);
-    bool setCharacterText(Host* pHost, const QString& text);
+    bool setCharacter(Host* pHost, const QString& text);
 
 private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -34,7 +34,7 @@ private:
     QMap<Host*, QString>mGamesNames;
     QMap<Host*, QString>mAreas;
     QMap<Host*, QString>mCharacterIcons;
-    QMap<Host*, QString>mCharacterTexts;
+    QMap<Host*, QString>mCharacters;
 
     QScopedPointer<QLibrary> mpLibrary;
     bool mLoaded;

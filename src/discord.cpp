@@ -14,7 +14,7 @@ Discord::Discord(QObject* parent) : QObject(parent)
   , mGamesNames{}
   , mAreas{}
   , mCharacterIcons{}
-  , mCharacterTexts{}
+  , mCharacters{}
   , mLoaded{}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("libdiscord-rpc")));
@@ -96,10 +96,10 @@ bool Discord::setCharacterIcon(Host* pHost, const QString& icon)
     return false;
 }
 
-bool Discord::setCharacterText(Host* pHost, const QString& text)
+bool Discord::setCharacter(Host* pHost, const QString& text)
 {
     if (mLoaded) {
-        mCharacterTexts[pHost] = text;
+        mCharacters[pHost] = text;
         UpdatePresence();
         return true;
     }
@@ -124,7 +124,7 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
 {
-    qDebug() << "Discord handleDiscordDisconnected!";
+    qWarning() << "Discord disconnected:" << errorCode << message;
 }
 
 void Discord::handleDiscordError(int errorCode, const char* message)
@@ -134,17 +134,17 @@ void Discord::handleDiscordError(int errorCode, const char* message)
 
 void Discord::handleDiscordJoinGame(const char* joinSecret)
 {
-    qDebug() << "Discord handleDiscordJoinGame!";
+    Q_UNUSED(joinSecret);
 }
 
 void Discord::handleDiscordSpectateGame(const char* spectateSecret)
 {
-    qDebug() << "Discord handleDiscordSpectateGame!";
+    Q_UNUSED(spectateSecret);
 }
 
 void Discord::handleDiscordJoinRequest(const DiscordUser* request)
 {
-    qDebug() << "Discord handleDiscordJoinRequest!";
+    Q_UNUSED(request);
 }
 
 void Discord::UpdatePresence()
@@ -158,7 +158,7 @@ void Discord::UpdatePresence()
     auto gameNameLowercase = mGamesNames[mudlet::self()->getActiveHost()].toLower().toUtf8();
     auto area = mAreas[mudlet::self()->getActiveHost()].toUtf8();
     auto characterIcon = mCharacterIcons[mudlet::self()->getActiveHost()].toLower().toUtf8();
-    auto characterText = mCharacterTexts[mudlet::self()->getActiveHost()].toUtf8();
+    auto characterText = mCharacters[mudlet::self()->getActiveHost()].toUtf8();
 
     if (!gameName.isEmpty()) {
         sprintf(buffer, "Playing %s", gameName.constData());
