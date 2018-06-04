@@ -10,6 +10,8 @@
 # But the lua interface has additional reviewers
 /src/LuaInterface.cpp           @Mudlet/core-cpp @Mudlet/lua-interface
 /src/LuaInterface.h             @Mudlet/core-cpp @Mudlet/lua-interface
+/src/TLuaInterpreter.cpp        @Mudlet/core-cpp @Mudlet/lua-interface
+/src/TLuaInterpreter.h          @Mudlet/core-cpp @Mudlet/lua-interface
 
 # The lua-interface team is also reviewing everything below the mudlet-lua
 # folder and some pre-installed packages
