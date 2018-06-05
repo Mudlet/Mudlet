@@ -10949,13 +10949,12 @@ int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
 
     speechUnit->setRate(fRate);
 
-    Host& host = getHostFromLua(L);
     TEvent event;
     event.mArgumentList.append(QLatin1String("ttsRateChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(fRate));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    host.raiseEvent(event);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
 
     return 0;
 }
@@ -10988,12 +10987,11 @@ int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
     speechUnit->setPitch(fPitch);
 
     TEvent event;
-    Host& host = getHostFromLua(L);
     event.mArgumentList.append(QLatin1String("ttsPitchChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(fPitch));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    host.raiseEvent(event);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
 
     return 0;
 }
@@ -11025,13 +11023,12 @@ int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
 
     speechUnit->setVolume(fVol);
 
-    Host& host = getHostFromLua(L);
     TEvent event;
     event.mArgumentList.append(QLatin1String("ttsVolumeChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(fVol));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    host.raiseEvent(event);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
 
     return 0;
 }
@@ -11094,6 +11091,14 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);
             lua_pushboolean(L, true);
+            
+            TEvent event;
+            event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(voice.name());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+            
             return 1;
         }
     }
@@ -11132,6 +11137,15 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 
     speechUnit->setVoice(speechVoices.at(index));
 
+    
+            
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(speechVoices[index].name());
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    
     lua_pushboolean(L, true);
     return 1;
 }
