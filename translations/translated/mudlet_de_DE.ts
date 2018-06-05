@@ -324,7 +324,8 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2029"/>
       <source>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </source>
-      <translation type="unfinished"/>
+      <translation>Gebiet: %1 ID: %2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2043"/>
@@ -373,7 +374,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2232"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrund</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
