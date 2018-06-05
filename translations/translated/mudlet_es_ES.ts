@@ -20,7 +20,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="820"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Descomprimir</translation>
     </message>
   </context>
   <context>
@@ -28,7 +28,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation type="unfinished"/>
+      <translation>! %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
@@ -63,7 +63,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 patadas %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
@@ -83,12 +83,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
       <source>! %1 has %2 users: %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha %2 usuarios: %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha %2 usuarios</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
@@ -146,7 +146,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha dejado %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
