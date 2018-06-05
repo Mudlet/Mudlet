@@ -497,37 +497,37 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Teile das Segment, indem ein neuer Punkt in der Mitte ergänzt wird</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Wähle zuerst einen Punkt, dann ergänze einen neuen Punkt in der Mitte des Segments zum Raum</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2806"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Vereinige zwei Segmente, indem dieser Punkt entfernt wird</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Entferne das letzte Segment, indem dieser Punkt entfernt wird</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2816"/>
       <source>Select a point first, then remove it</source>
-      <translation type="unfinished"/>
+      <translation>Wähle zuerst einen Punkt, dann entferne ihn</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2821"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Ändere die Eigenschaften dieser benutzerdefinierten Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Lösche diese benutzerdefinierte Linie ganz</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3250"/>
