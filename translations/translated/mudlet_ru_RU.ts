@@ -8,19 +8,23 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Распаковка модуля:
+&quot;%1&quot;
+пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="816"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Распаковка пакета:
+&quot;%1&quot;
+пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="820"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Распаковка</translation>
     </message>
   </context>
   <context>
@@ -28,7 +32,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation type="unfinished"/>
+      <translation>! %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
@@ -286,17 +290,17 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 часов</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 мин</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 секунд</translation>
     </message>
   </context>
   <context>
@@ -304,12 +308,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>Номер комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Название комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="105"/>
@@ -326,7 +330,8 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2043"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Название комнаты: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2057"/>
@@ -379,17 +384,17 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2637"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Отменить последний пункт</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Изменить свойства этой линии</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2650"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Закончить рисование</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2668"/>
@@ -399,12 +404,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2672"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Удалить комнату</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2676"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Изменить цвет</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
@@ -911,7 +916,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить профиль?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
@@ -949,7 +954,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="931"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet MUD client версия: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="933"/>
