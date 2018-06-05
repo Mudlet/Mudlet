@@ -25,25 +25,10 @@
 
 #include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
 #include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
-#include "TScript.h"
-#include "TTimer.h"
-#include "TTrigger.h"
-#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
-
-#include "pre_guard.h"
-#include <QtMath>
-#include <QDebug>
-#include <QBuffer>
-#include <QStringList>
-#include "post_guard.h"
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)

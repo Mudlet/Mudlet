@@ -25,7 +25,6 @@
 #include "edbee/models/textdocument.h"
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/views/textrenderer.h"
 #include "edbee/views/texttheme.h"

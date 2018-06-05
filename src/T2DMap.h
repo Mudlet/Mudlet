@@ -76,7 +76,7 @@ public:
     void createLabel(QRectF labelRect);
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
-    void addSymbolToPixmapCache(const QString, const bool);
+    void addSymbolToPixmapCache(QString, bool);
 
 
     TMap* mpMap;

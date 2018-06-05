@@ -33,23 +33,14 @@
 #include "TRoomDB.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
-#include "XMLexport.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDateTime>
-#include <QDir>
 #include <QLineEdit>
-#include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
-#include <QTextCodec>
-#include <QToolButton>
-#include <QVBoxLayout>
 #include "post_guard.h"
-
-#include <assert.h>
 
 
 using namespace std;

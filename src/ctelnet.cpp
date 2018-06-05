@@ -32,31 +32,15 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
-#include "TDebug.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
-#include "glwidget.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDir>
-#include <QNetworkAccessManager>
 #include <QProgressDialog>
-#include <QStringBuilder>
-#include <QTextCodec>
-#include <QTimer>
 #include "post_guard.h"
-
-#include <iostream>
-#include <memory>
-#include <sstream>
-
-#include <stdio.h>
-#include <sys/types.h>
-#include <time.h>
 
 #define DEBUG
 
@@ -1074,8 +1058,8 @@ void cTelnet::processTelnetCommand(const string& command)
     }
     }; //end switch 1
        // raise sysTelnetEvent for all unhandled protocols
-       // EXCEPT TN_GA (performance)
-    if (command[1] != TN_GA) {
+       // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+    if (command[1] != TN_GA && command[1] != TN_EOR) {
         auto type = static_cast<unsigned char>(command[1]);
         auto telnetOption = static_cast<unsigned char>(command[2]);
         QString msg = command.c_str();

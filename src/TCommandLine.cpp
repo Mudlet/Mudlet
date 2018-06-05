@@ -30,13 +30,6 @@
 #include "TTextEdit.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QAction>
-#include <QApplication>
-#include <QMenu>
-#include <QRegularExpression>
-#include "post_guard.h"
-
 
 TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)

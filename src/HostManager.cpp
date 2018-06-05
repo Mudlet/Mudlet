@@ -33,10 +33,6 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QDebug>
-#include "post_guard.h"
-
 
 bool HostManager::deleteHost(QString hostname)
 {

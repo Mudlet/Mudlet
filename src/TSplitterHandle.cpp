@@ -20,14 +20,12 @@
 
 
 #include "TSplitterHandle.h"
-
 #include "TSplitter.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QPainter>
 #include "post_guard.h"
-
 
 TSplitterHandle::TSplitterHandle(Qt::Orientation orientation, TSplitter* parent)
 : QSplitterHandle(orientation, (QSplitter*)parent)

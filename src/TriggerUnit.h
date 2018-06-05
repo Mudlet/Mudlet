@@ -90,7 +90,8 @@ public:
     QList<TTrigger*> uninstallList;
 
 private:
-    TriggerUnit() {}
+    TriggerUnit() = default;
+
     void initStats();
     void _assembleReport(TTrigger*);
     TTrigger* getTriggerPrivate(int id);
