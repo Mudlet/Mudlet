@@ -362,17 +362,17 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Textmarke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2206"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Bildmarke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2232"/>
