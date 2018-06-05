@@ -47,7 +47,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! Du hast %1 zu %2 eingeladen</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
@@ -57,17 +57,17 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
       <source>! You have joined %1 as %2</source>
-      <translation type="unfinished"/>
+      <translation>! Du bist %1 als %2 beigetreten</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="160"/>
       <source>! %1 has joined %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ist %2 beigetreten</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 hat %2 gekickt</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
