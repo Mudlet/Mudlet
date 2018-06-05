@@ -3048,7 +3048,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="250"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>Номер порта должен быть выше нуля и ниже 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="280"/>
@@ -3060,7 +3060,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="291"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Профиль с таким названием уже существует.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="342"/>
@@ -3075,7 +3075,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="446"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>Введите имя нового профиля</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="543"/>
@@ -3241,7 +3241,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="51"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Кнопки</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="62"/>
@@ -3287,7 +3287,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="103"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="106"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;%1&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;%1&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="108"/>
