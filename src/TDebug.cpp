@@ -38,9 +38,7 @@ TDebug& TDebug::operator>>(const int code)
     return *this;
 }
 
-TDebug::~TDebug()
-{
-}
+TDebug::~TDebug() = default;
 
 TDebug& TDebug::operator<<(const QString& t)
 {

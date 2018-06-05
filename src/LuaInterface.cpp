@@ -39,9 +39,7 @@ LuaInterface::LuaInterface(Host* pH) : mpHost(pH), L(), depth()
     lua_atpanic(interpreter->pGlobalLua, &onPanic);
 }
 
-LuaInterface::~LuaInterface()
-{
-}
+LuaInterface::~LuaInterface() = default;
 
 int LuaInterface::onPanic(lua_State* L)
 {

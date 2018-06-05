@@ -115,7 +115,7 @@ public:
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, const bool isToStore = true);
+    QPair<bool, QString> setEncoding(const QString &, bool isToStore = true);
     void postMessage(QString);
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
@@ -149,7 +149,8 @@ public slots:
 
 
 private:
-    cTelnet() {}
+    cTelnet() = default;
+
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
