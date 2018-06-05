@@ -916,7 +916,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Profiel opslaan?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
