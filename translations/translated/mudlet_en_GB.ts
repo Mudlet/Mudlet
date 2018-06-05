@@ -2385,72 +2385,72 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="64"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Green:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="71"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blue:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Cyan:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>White:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Yellow:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Light black:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Light red:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Light green:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Light yellow:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Light blue:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Light magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Light cyan:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Light white:</translation>
     </message>
   </context>
   <context>
@@ -6621,7 +6621,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1616"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1619"/>
