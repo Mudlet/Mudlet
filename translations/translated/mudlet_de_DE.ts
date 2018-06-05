@@ -382,47 +382,47 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Ziehen zum Auswählen mehrerer Räume oder Marken, loslassen zum Beenden...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2637"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Letzten Punkt rückgängig machen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Ändere die Eigenschaften dieser Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2650"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Zeichnen der Linie beenden</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2668"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Raum verschieben</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2672"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Raum löschen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2676"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Ändern der Raumfarbe</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Erhöhe den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2684"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Vermindere den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2688"/>
