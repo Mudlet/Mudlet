@@ -4110,7 +4110,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="7611"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7630"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="343"/>
@@ -4127,7 +4127,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="348"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8013"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Скопировать</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="353"/>
@@ -4139,7 +4139,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="363"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8014"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Вставить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="368"/>
@@ -4161,7 +4161,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7883"/>
       <source>Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить профиль</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="388"/>
@@ -4219,7 +4219,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="518"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>С учетом регистра</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="521"/>
@@ -4371,7 +4371,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2067"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2072"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>Команда (вниз)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1429"/>
@@ -4379,7 +4379,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2086"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2091"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>Команда (вверх)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1458"/>
@@ -4403,7 +4403,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2191"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2221"/>
       <source>Timer</source>
-      <translation type="unfinished"/>
+      <translation>Таймер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1590"/>
@@ -4459,7 +4459,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5324"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7694"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Команда:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5363"/>
@@ -4637,12 +4637,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>Изображения (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7690"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Команда (вниз):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7740"/>
@@ -4667,12 +4667,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8016"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать все</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8018"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Форматировать все</translation>
     </message>
   </context>
   <context>
@@ -4821,7 +4821,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="111"/>
       <source>Grab New Key</source>
-      <translation type="unfinished"/>
+      <translation>Создать ключ</translation>
     </message>
   </context>
   <context>
@@ -4871,7 +4871,8 @@ p, li { white-space: pre-wrap; }
       <location filename="../src/main.cpp" line="206"/>
       <source>Copyright © 2008-%1  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Авторское право © 2008 -%1 разработчики Mudlet
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="209"/>
@@ -5123,17 +5124,17 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="129"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Справка</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="138"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>О программе</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="145"/>
       <source>Games</source>
-      <translation type="unfinished"/>
+      <translation>Игры</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="160"/>
@@ -5148,7 +5149,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
       <source>Alt+C</source>
-      <translation type="unfinished"/>
+      <translation>Alt+C</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="171"/>
@@ -5183,7 +5184,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Настройки</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="196"/>
@@ -5193,12 +5194,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="199"/>
       <source>Alt+P</source>
-      <translation type="unfinished"/>
+      <translation>Alt+P</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="204"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Редактор скриптов</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="207"/>
@@ -5213,12 +5214,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="213"/>
       <source>Alt+E</source>
-      <translation type="unfinished"/>
+      <translation>Alt+E</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="218"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Блокнот</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
@@ -5233,7 +5234,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>Справочник по API</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="232"/>
@@ -5249,7 +5250,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>О Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
@@ -5315,7 +5316,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="303"/>
       <source>Show map</source>
-      <translation type="unfinished"/>
+      <translation>Показать карту</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
@@ -5325,12 +5326,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="309"/>
       <source>Alt+M</source>
-      <translation type="unfinished"/>
+      <translation>Alt+M</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Управление пакетами</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
@@ -5340,7 +5341,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="320"/>
       <source>Alt+O</source>
-      <translation type="unfinished"/>
+      <translation>Alt+O</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
@@ -5385,7 +5386,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="357"/>
       <source>Alt+V</source>
-      <translation type="unfinished"/>
+      <translation>Alt+V</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="362"/>
@@ -5395,7 +5396,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
       <source>Alt+L</source>
-      <translation type="unfinished"/>
+      <translation>Alt+L</translation>
     </message>
   </context>
   <context>
@@ -5403,52 +5404,52 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="143"/>
       <source>^</source>
-      <translation type="unfinished"/>
+      <translation>^</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
       <source>◀</source>
-      <translation type="unfinished"/>
+      <translation>◀</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="298"/>
       <source>▼</source>
-      <translation type="unfinished"/>
+      <translation>▼</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="338"/>
       <source>▲</source>
-      <translation type="unfinished"/>
+      <translation>▲</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="378"/>
       <source>►</source>
-      <translation type="unfinished"/>
+      <translation>►</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="424"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="461"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
       <source>2D/3D</source>
-      <translation type="unfinished"/>
+      <translation>2D/3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>Область:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="571"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Комнаты</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
@@ -5458,12 +5459,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
       <source>Round</source>
-      <translation type="unfinished"/>
+      <translation>Круглые</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="648"/>
       <source>Info</source>
-      <translation type="unfinished"/>
+      <translation>Инфо</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
@@ -5513,7 +5514,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="926"/>
       <source>all levels</source>
-      <translation type="unfinished"/>
+      <translation>все уровни</translation>
     </message>
   </context>
   <context>
@@ -5531,12 +5532,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="141"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Установить</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="148"/>
@@ -5555,13 +5556,13 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="169"/>
       <source>Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Главная панель</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="206"/>
       <location filename="../src/mudlet.cpp" line="394"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Подключится</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="207"/>
