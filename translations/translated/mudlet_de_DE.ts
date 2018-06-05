@@ -427,72 +427,72 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2688"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Sperre den Raum für Schnellgänge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Entsperre den Raum für Schnellgänge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2696"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Setze Raumgewicht</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Setze Raumausgänge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Markiere spezielle Räume mit einem oder mehreren Symbolen oder Buchstaben</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Verschiebe die gewählte Gruppe an eine bestimmte Position</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Setze die Regions-ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerdefinierte Ausgangslinien werden im Rastermodus nicht angezeigt und sind nicht bearbeitbar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Ersetze eine Ausgangslinie mit einer eigenen Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2730"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Erstelle Marken und Text oder Bilder anzuzeigen.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Setze die aktuelle Spielerposition hierher</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Kann die Position nicht setzen, wenn nicht genau ein Raum gewählt ist</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Verschiebe Marke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2770"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Lösche Marke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
