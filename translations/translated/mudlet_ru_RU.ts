@@ -5709,7 +5709,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="296"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Управление модулями</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="297"/>
@@ -5756,12 +5756,12 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="322"/>
       <location filename="../src/mudlet.cpp" line="405"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>О программе</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="323"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>О Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="340"/>
@@ -5782,32 +5782,32 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="402"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Справка</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="403"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Настройки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Закрыть</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Название модуля</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Приоритет</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Синхр.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
@@ -5822,7 +5822,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="636"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Управление модулями - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="745"/>
@@ -5865,7 +5865,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2641"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Карта - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2649"/>
@@ -5890,7 +5890,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2784"/>
       <source>*.dat</source>
-      <translation type="unfinished"/>
+      <translation>*.dat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3003"/>
@@ -5912,7 +5912,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="3082"/>
       <source>Faster</source>
-      <translation type="unfinished"/>
+      <translation>Быстрее</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3085"/>
@@ -5922,7 +5922,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="3089"/>
       <source>Slower</source>
-      <translation type="unfinished"/>
+      <translation>Медленнее</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3092"/>
@@ -5934,13 +5934,13 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="3171"/>
       <location filename="../src/mudlet.cpp" line="3184"/>
       <source>Speed: X%1</source>
-      <translation type="unfinished"/>
+      <translation>Скорость: Х%1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3109"/>
       <location filename="../src/mudlet.cpp" line="3126"/>
       <source>Time: %1</source>
-      <translation type="unfinished"/>
+      <translation>Время: %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3671"/>
@@ -5954,12 +5954,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="44"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Установить</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="57"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
   </context>
   <context>
@@ -5967,7 +5967,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager_unpack.ui" line="24"/>
       <source>unpacking please wait ...</source>
-      <translation type="unfinished"/>
+      <translation>распаковка, пожалуйста подождите...</translation>
     </message>
   </context>
   <context>
@@ -6078,7 +6078,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="248"/>
       <source>Enable MSDP</source>
-      <translation type="unfinished"/>
+      <translation>Включить MSDP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
@@ -6134,12 +6134,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="370"/>
       <source>.txt</source>
-      <translation type="unfinished"/>
+      <translation>.txt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="390"/>
       <source>Input line</source>
-      <translation type="unfinished"/>
+      <translation>Строка ввода</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="399"/>
@@ -6189,37 +6189,37 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="490"/>
       <source>Spell check</source>
-      <translation type="unfinished"/>
+      <translation>Проверка орфографии</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="496"/>
       <source>Choose spell check dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Выберите словарь:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="506"/>
       <source>Enable spell check</source>
-      <translation type="unfinished"/>
+      <translation>Включить проверку правописания</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="539"/>
       <source>Main display</source>
-      <translation type="unfinished"/>
+      <translation>Главная панель</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
       <source>Font</source>
-      <translation type="unfinished"/>
+      <translation>Шрифт</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="557"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Шрифт:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="580"/>
       <source>Size:</source>
-      <translation type="unfinished"/>
+      <translation>Размер:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="590"/>
@@ -6229,7 +6229,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="593"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>Включить сглаживание</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="609"/>
@@ -6324,7 +6324,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="927"/>
       <source>&lt;characters to ignore in selection, for example &apos; or &quot;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;characters to ignore in selection, for example &apos; or &quot;&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="937"/>
@@ -6389,12 +6389,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1020"/>
       <source>Editor</source>
-      <translation type="unfinished"/>
+      <translation>Редактор</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1026"/>
       <source>Theme</source>
-      <translation type="unfinished"/>
+      <translation>Тема</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1093"/>
@@ -6450,103 +6450,103 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1244"/>
       <location filename="../src/ui/profile_preferences.ui" line="1881"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Чёрный:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1261"/>
       <location filename="../src/ui/profile_preferences.ui" line="1898"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-черный:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1278"/>
       <location filename="../src/ui/profile_preferences.ui" line="1915"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Красный:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1295"/>
       <location filename="../src/ui/profile_preferences.ui" line="1932"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-красный:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1312"/>
       <location filename="../src/ui/profile_preferences.ui" line="1949"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Зеленый:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1329"/>
       <location filename="../src/ui/profile_preferences.ui" line="1966"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-зеленый:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1346"/>
       <location filename="../src/ui/profile_preferences.ui" line="1983"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Желтый:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1363"/>
       <location filename="../src/ui/profile_preferences.ui" line="2000"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-желтый:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1380"/>
       <location filename="../src/ui/profile_preferences.ui" line="2017"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Синий:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1397"/>
       <location filename="../src/ui/profile_preferences.ui" line="2034"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-голубой:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1414"/>
       <location filename="../src/ui/profile_preferences.ui" line="2051"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Пурпурный:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1431"/>
       <location filename="../src/ui/profile_preferences.ui" line="2068"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-пурпурный:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1448"/>
       <location filename="../src/ui/profile_preferences.ui" line="2085"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Голубой:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1465"/>
       <location filename="../src/ui/profile_preferences.ui" line="2102"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-голубой:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1482"/>
       <location filename="../src/ui/profile_preferences.ui" line="2119"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Белый:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1499"/>
       <location filename="../src/ui/profile_preferences.ui" line="2136"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Светло-белый:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1516"/>
       <location filename="../src/ui/profile_preferences.ui" line="2153"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Сбросить цвета по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1540"/>
@@ -6648,12 +6648,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1700"/>
       <source>Download latest map provided by your MUD:</source>
-      <translation type="unfinished"/>
+      <translation>Скачать последнюю карту, предоставленную вашей игрой:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1713"/>
       <source>Download</source>
-      <translation type="unfinished"/>
+      <translation>Скачать</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1726"/>
@@ -6779,7 +6779,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2264"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Порт:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2271"/>
@@ -6794,7 +6794,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2285"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Адрес сервера:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2292"/>
@@ -6804,7 +6804,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2299"/>
       <source>Nickname:</source>
-      <translation type="unfinished"/>
+      <translation>Ник:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2309"/>
@@ -6834,7 +6834,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2404"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить</translation>
     </message>
   </context>
   <context>
@@ -7146,12 +7146,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>No door</source>
-      <translation type="unfinished"/>
+      <translation>Нет двери</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>Открытая дверь</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
@@ -7171,7 +7171,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Сохранить</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
@@ -7181,7 +7181,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Отменить</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -7302,7 +7302,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
@@ -7322,7 +7322,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
@@ -7337,7 +7337,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -7366,7 +7366,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/system_message_area.ui" line="2401"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
   </context>
   <context>
@@ -7374,7 +7374,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="33"/>
