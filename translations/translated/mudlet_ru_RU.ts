@@ -337,19 +337,22 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2057"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>Комната: %1 (теперешняя) положение на карте: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2068"/>
       <source>Room ID: %1 (Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>Комната: %1 (выбрана) положение на карте: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2079"/>
       <source>Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>Комната: %1 (%5 выбрано) положение на карте: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2093"/>
@@ -535,17 +538,17 @@ the highlighted room (%1) to:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3252"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>x-координат (был %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3253"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>y-координат (был %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3254"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>z-координат (был %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3358"/>
@@ -695,7 +698,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="63"/>
       <source>ISO 8859-2 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-2 (Центральная Европа/Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="82"/>
