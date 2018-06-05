@@ -280,12 +280,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 Tage</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
@@ -295,12 +295,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 Minuten</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 Sekunden</translation>
     </message>
   </context>
   <context>
@@ -308,12 +308,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>Raum-Id</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Raumname</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="105"/>
