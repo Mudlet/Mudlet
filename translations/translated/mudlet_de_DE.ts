@@ -308,7 +308,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Id</source>
-      <translation>Raum-Id</translation>
+      <translation>Raum-ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
