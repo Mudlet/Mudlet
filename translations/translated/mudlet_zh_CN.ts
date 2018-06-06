@@ -280,7 +280,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1 秒</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
@@ -742,7 +742,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="196"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-9 (土耳其)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="215"/>
@@ -844,7 +844,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="538"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (希伯来)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="557"/>
@@ -862,7 +862,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="595"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (越南)</translation>
     </message>
   </context>
   <context>
@@ -1335,12 +1335,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1537"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>下载地图</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1538"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>建立我的地图</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2001"/>
@@ -1405,7 +1405,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>中止</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
@@ -1437,19 +1437,21 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2272"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 根据用户请求取消下载地图</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2291"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[错误] - 下载地图出错
+%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2305"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 下载地图失败。报错：
+%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2313"/>
@@ -1763,17 +1765,17 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="32"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>未命名的地区</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="33"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>默认地区</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="500"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>已存在ID为%1的地区！</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="519"/>
