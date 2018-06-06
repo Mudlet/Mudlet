@@ -3902,47 +3902,47 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1720"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>nord</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1721"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>nord-est</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>alto</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>ovest</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1724"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>est</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>basso</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>sud-ovest</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1727"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>sud</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1728"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>sud-est</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
@@ -3988,7 +3988,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="283"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5531"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="284"/>
@@ -4009,7 +4009,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="292"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="293"/>
