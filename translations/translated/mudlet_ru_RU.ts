@@ -3219,7 +3219,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Триггеры</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
@@ -3994,7 +3994,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="283"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5531"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Триггеры</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="284"/>
@@ -4242,7 +4242,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1813"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1848"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1128"/>
@@ -4658,7 +4658,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7740"/>
       <source>*</source>
-      <translation type="unfinished"/>
+      <translation>*</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7876"/>
@@ -4752,7 +4752,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/ui/irc.ui" line="163"/>
       <location filename="../src/ui/irc.ui" line="178"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Триггер</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="168"/>
@@ -4774,7 +4774,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="209"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Триггеры</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="217"/>
@@ -5579,7 +5579,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="215"/>
       <location filename="../src/mudlet.cpp" line="395"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Триггеры</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
@@ -7523,7 +7523,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="1003"/>
       <location filename="../src/ui/trigger_editor.ui" line="1018"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Триггер</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1008"/>
@@ -7545,7 +7545,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1049"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Триггеры</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1057"/>
