@@ -47,27 +47,27 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! 邀请%1加入%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation type="unfinished"/>
+      <translation>! %2被邀请加入%3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
       <source>! You have joined %1 as %2</source>
-      <translation type="unfinished"/>
+      <translation>! 你作为%1加入了%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="160"/>
       <source>! %1 has joined %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1已加入%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1把%2踢出了队伍</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
@@ -102,7 +102,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1在%2内回复了</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
@@ -160,7 +160,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1在%2秒内回复了</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
@@ -195,12 +195,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2清空了主题</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
       <source>! %2 changed topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2变更了主题</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
@@ -270,7 +270,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - 离开</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
@@ -539,17 +539,17 @@ the highlighted room (%1) to:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3252"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>x轴坐标(之前为%1)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3253"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>y轴坐标(之前为%1)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3254"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>z轴坐标(之前为%1)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3358"/>
