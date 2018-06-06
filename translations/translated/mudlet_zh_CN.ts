@@ -175,22 +175,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>! %1 已退出</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 已退出 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! 没有主题</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
       <source>[TOPIC] %1</source>
-      <translation type="unfinished"/>
+      <translation>[TOPIC] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
@@ -205,12 +205,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
       <source>[WHOIS] %1 is %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 is %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
@@ -285,22 +285,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 天</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 小时</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 分钟</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 秒</translation>
     </message>
   </context>
   <context>
@@ -308,12 +308,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>房间ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>房间名</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="105"/>
@@ -324,7 +324,8 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2029"/>
       <source>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </source>
-      <translation type="unfinished"/>
+      <translation>区域: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2043"/>
