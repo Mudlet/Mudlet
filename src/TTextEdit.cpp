@@ -32,9 +32,11 @@
 #include "wcwidth.h"
 
 #include "pre_guard.h"
+#include <QDesktopServices>
 #include <QPainter>
 #include <QScrollBar>
 #include <QToolTip>
+#include <QTextBoundaryFinder>
 #include "post_guard.h"
 
 

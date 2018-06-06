@@ -30,6 +30,12 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QBuffer>
+#include <QtMath>
+#include "post_guard.h"
+
+
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 , mPackageName(QString())

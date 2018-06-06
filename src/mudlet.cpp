@@ -53,8 +53,10 @@
 
 #include "pre_guard.h"
 #include <QtUiTools/quiloader.h>
+#include <QDesktopServices>
 #include <QDesktopWidget>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QToolBar>

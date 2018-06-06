@@ -28,6 +28,10 @@
 #include "TRoomDB.h"
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QString>
+#include <QStringBuilder>
+#include "post_guard.h"
 
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)

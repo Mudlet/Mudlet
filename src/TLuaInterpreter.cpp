@@ -47,6 +47,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QDesktopServices>
 #include <QFileDialog>
 #include "post_guard.h"
 
