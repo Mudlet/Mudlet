@@ -480,7 +480,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>No se puede establecer la ubicación cuando no se selecciona exactamente una habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
@@ -525,7 +525,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar todo de esta línea personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3250"/>
