@@ -5259,7 +5259,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>Referencia de la API</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="232"/>
@@ -5270,22 +5270,22 @@ less likely to be useful for normal use of this application:
       <location filename="../src/ui/main_window.ui" line="237"/>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Foro en línea</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Acerca De Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</source>
-      <translation type="unfinished"/>
+      <translation>infórmese acerca de esta versión de Mudlet, la gente que lo hizo y la licencia bajo la que se puede compartir</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
       <source>IRC help channel</source>
-      <translation type="unfinished"/>
+      <translation>Canal de ayuda IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="253"/>
@@ -5296,7 +5296,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
       <source>Video tutorials</source>
-      <translation type="unfinished"/>
+      <translation>Videotutoriales</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="261"/>
@@ -5306,17 +5306,17 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
       <source>Load replay</source>
-      <translation type="unfinished"/>
+      <translation>Cargar reproducción</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="269"/>
       <source>load a previous saved MUD session that can be used to test Mudlet lua systems (off-line!)</source>
-      <translation type="unfinished"/>
+      <translation>cargar una sessión MUD previamente guardada que puede ser usada para probar los sistemas lua de Mudlet (fuera de línea!)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="277"/>
       <source>opens the (on-line) Mudlet Forum in your system web-browser</source>
-      <translation type="unfinished"/>
+      <translation>abre el Foro Mudlet (en línea) en el navegador web de su sistema</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
@@ -5326,7 +5326,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="287"/>
       <source>Help chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat de ayuda</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="290"/>
@@ -5341,12 +5341,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="303"/>
       <source>Show map</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
       <source>show or hide the MUD Map</source>
-      <translation type="unfinished"/>
+      <translation>mostrar o esconder el mapa del MUD</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="309"/>
@@ -5356,12 +5356,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de paquetes</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>install and remove collections of Mudlet lua items (packages)</source>
-      <translation type="unfinished"/>
+      <translation>instala y remueve colecciones de elementos lua de Mudlet (paquetes)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="320"/>
@@ -5371,17 +5371,17 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
       <source>test1</source>
-      <translation type="unfinished"/>
+      <translation>test1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
       <source>asdf</source>
-      <translation type="unfinished"/>
+      <translation>asdf</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de módulos</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="338"/>
@@ -5434,62 +5434,62 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
       <source>◀</source>
-      <translation type="unfinished"/>
+      <translation>◀</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="298"/>
       <source>▼</source>
-      <translation type="unfinished"/>
+      <translation>▼</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="338"/>
       <source>▲</source>
-      <translation type="unfinished"/>
+      <translation>▲</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="378"/>
       <source>►</source>
-      <translation type="unfinished"/>
+      <translation>►</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="424"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="461"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
       <source>2D/3D</source>
-      <translation type="unfinished"/>
+      <translation>2D/3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>Área:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="571"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Habitaciones</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Salidas</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
       <source>Round</source>
-      <translation type="unfinished"/>
+      <translation>Redondo</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="648"/>
       <source>Info</source>
-      <translation type="unfinished"/>
+      <translation>Info</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
@@ -5662,79 +5662,79 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="251"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variables</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="252"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar y editar variables de Lua</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="257"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="258"/>
       <source>Open the Mudlet IRC client</source>
-      <translation type="unfinished"/>
+      <translation>Abrir el cliente IRC de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="263"/>
       <location filename="../src/mudlet.cpp" line="401"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Mapa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="264"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar/ocultar el mapa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="269"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Manual</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="270"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Examinar el material de referencia y documentación</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="275"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Configuración</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="276"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Ver y editar preferencias de perfil</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Bloc de notas</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="285"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Abrir un bloc de notas en el que puede almacenar sus notas</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
       <location filename="../src/mudlet.cpp" line="810"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de paquetes</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="291"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de Paquetes - le permite instalar xmls, .mpackages</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="296"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de módulo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="297"/>
@@ -5744,12 +5744,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="302"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Repetir</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="307"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Reconectar</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="308"/>
@@ -5760,7 +5760,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="313"/>
       <location filename="../src/mudlet.cpp" line="404"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Vista Múltiple</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="314"/>
@@ -5770,7 +5770,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="319"/>
       <source>Stop All Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Detener todos los disparadores</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
@@ -5802,42 +5802,42 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="398"/>
       <source>Actions</source>
-      <translation type="unfinished"/>
+      <translation>Acciones</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="402"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Ayuda</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="403"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferencias</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Cerrar</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Nombre del Módulo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Prioridad</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Sincronizar</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Ubicación Del Módulo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="576"/>
@@ -5847,34 +5847,35 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="636"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de Módulos - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="745"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Cargar Módulo Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="752"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Cargar Módulo Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="752"/>
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>No es posible leer el archivo %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="820"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importar Paquete de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importar Paquete de Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1188"/>
@@ -5890,7 +5891,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2641"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Mapa - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2649"/>
@@ -5905,7 +5906,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2732"/>
       <source>%1 - notes</source>
-      <translation type="unfinished"/>
+      <translation>%1 - notas</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2782"/>
