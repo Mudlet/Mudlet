@@ -2164,7 +2164,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
       <source>Button Bar Properties</source>
-      <translation type="unfinished"/>
+      <translation>Свойства панели кнопок</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
@@ -2204,7 +2204,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
       <source>Button Properties</source>
-      <translation type="unfinished"/>
+      <translation>Свойства кнопки</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
@@ -4005,12 +4005,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="287"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5792"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Кнопки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="288"/>
       <source>Show Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Показать кнопки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="292"/>
@@ -4031,7 +4031,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="298"/>
       <source>Show Timers</source>
-      <translation type="unfinished"/>
+      <translation>Показать таймеры</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="301"/>
@@ -4369,7 +4369,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2086"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2147"/>
       <source>Button</source>
-      <translation type="unfinished"/>
+      <translation>Кнопка</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1410"/>
@@ -4475,7 +4475,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5373"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>Свойства кнопки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5381"/>
@@ -5601,22 +5601,22 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="227"/>
       <location filename="../src/mudlet.cpp" line="397"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Таймеры</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="228"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать таймеры</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="233"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Кнопки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="234"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать кнопки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="239"/>
@@ -7390,7 +7390,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="63"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Команда:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="73"/>
@@ -7400,27 +7400,27 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="85"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;hours&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;часов&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="100"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;minutes&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;минут&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="115"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;seconds&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;секунд&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="130"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;miliseconds&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;миллисекунд&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="165"/>
       <source>Time:</source>
-      <translation type="unfinished"/>
+      <translation>Время:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="235"/>
@@ -7430,7 +7430,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="266"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>чч</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="299"/>
@@ -7446,7 +7446,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="387"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>мм</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="487"/>
@@ -7461,12 +7461,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="511"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>сек</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="544"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="611"/>
