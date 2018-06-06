@@ -4050,18 +4050,18 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="298"/>
       <source>Show Timers</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="301"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5675"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="302"/>
       <source>Show Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="305"/>
@@ -4077,7 +4077,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="309"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5918"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variables</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="310"/>
@@ -4484,7 +4484,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5324"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7694"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5363"/>
@@ -4563,7 +4563,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="6994"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7019"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>Paquete %1 guardado</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7034"/>
@@ -4589,22 +4589,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7135"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7159"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copiado %1 al portapapeles</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7165"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Exportar Disparadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7165"/>
       <source>Mudlet packages (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Paquetes Mudlet (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7179"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>exportar paquete:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7179"/>
@@ -4615,29 +4615,30 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7413"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importar Paquete de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7420"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7434"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importar Paquete de Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7420"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>No es posible leer el archivo %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7434"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Paquete %1 ya está instalado.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7560"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>No fue posible guardar el perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7560"/>
@@ -4647,17 +4648,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7566"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Respaldar Perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7566"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>archivos de disparador (*.trigger *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar Ícono</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
