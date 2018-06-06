@@ -185,7 +185,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! нет тем</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
@@ -225,7 +225,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 отошел: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
@@ -270,22 +270,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - отошел</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
       <source> - server operator</source>
-      <translation type="unfinished"/>
+      <translation> - оператор серверa</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1сек</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 дней</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
@@ -362,22 +362,22 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Метка с текстом</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2206"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Метка с изображением</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Задний план</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2232"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Передний план</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
@@ -472,7 +472,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2730"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Создать метки для отображения текста или изображения.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2735"/>
@@ -487,12 +487,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Переместить метку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2770"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Удалить метку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
@@ -869,7 +869,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="106"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Консоль отладки</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="122"/>
@@ -5312,7 +5312,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="290"/>
       <source>Get live help on IRC. If nobody answers right away, give it time</source>
-      <translation type="unfinished"/>
+      <translation>Получить помощь на IRC. Если никто не отвечает сразу, дайте время</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="295"/>
@@ -6420,12 +6420,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1129"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Передний план:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1149"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Задний план:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1166"/>
@@ -6734,7 +6734,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1864"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Цвет заднего плана:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2177"/>
@@ -7704,12 +7704,12 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground Color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background Color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет заднего плана</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
