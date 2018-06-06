@@ -2543,7 +2543,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2280"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Porta:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2321"/>
@@ -2578,7 +2578,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2392"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Password:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2399"/>
@@ -2603,7 +2603,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2455"/>
       <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>Sito web:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2517"/>
