@@ -119,33 +119,33 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
       <location filename="../src/ircmessageformatter.cpp" line="314"/>
       <source>[ERROR] %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
       <source>[Channel URL] %1</source>
-      <translation type="unfinished"/>
+      <translation>[URL del canal] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
@@ -378,52 +378,52 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Arrastre para seleccionar múltiples habitaciones o etiquetas, suelte para terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2637"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Deshacer el último punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Cambia las propiedades de esta línea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2650"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Completar el dibujo de esta línea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2668"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Mover habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2672"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2676"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Cambia el color de la habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Incrementa el espaciado X-Y del mapa para el grupo seleccionado de habitaciones</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2684"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Disminuye el espaciado X-Y del mapa para el grupo seleccionado de habitaciones</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2688"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Bloquear habitación para speed walk</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
@@ -433,22 +433,22 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2696"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Definir el peso de la habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Establece las salidas de la habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Elija uno o más símbolos o letras para marcar habitaciones especiales</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Mueve el grupo elegido a la posición indicada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
@@ -1023,7 +1023,8 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1679"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Archivo de mapa no encontrado, ruta de acceso y nombre utilizado fue:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1685"/>
@@ -1482,79 +1483,79 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="76"/>
       <location filename="../src/TRoom.cpp" line="766"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Norte</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="77"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Noreste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="78"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Noroeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="79"/>
       <location filename="../src/TRoom.cpp" line="811"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Sur</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="80"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Sureste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="81"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Suroeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="82"/>
       <location filename="../src/TRoom.cpp" line="856"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Este</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="83"/>
       <location filename="../src/TRoom.cpp" line="871"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Oeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="84"/>
       <location filename="../src/TRoom.cpp" line="886"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Arriba</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="85"/>
       <location filename="../src/TRoom.cpp" line="901"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Down</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="86"/>
       <location filename="../src/TRoom.cpp" line="916"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>Adentro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="87"/>
       <location filename="../src/TRoom.cpp" line="931"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Afuera</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="88"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Otro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="90"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Desconocido</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="222"/>
