@@ -3213,7 +3213,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
