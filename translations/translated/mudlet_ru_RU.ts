@@ -3224,7 +3224,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Алиасы</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
@@ -4015,12 +4015,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="292"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Алиасы</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="293"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Показать aлиасы</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="297"/>
@@ -4083,7 +4083,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="325"/>
       <source>Add new Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новый триггер, скрипт, aлиас или фильтр</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="328"/>
@@ -4094,7 +4094,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="329"/>
       <source>Delete Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Удалить триггер, скрипт, aлиас или фильтр</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="336"/>
@@ -4331,7 +4331,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1907"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1937"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Алиас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1256"/>
@@ -4746,7 +4746,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/ui/irc.ui" line="158"/>
       <location filename="../src/ui/irc.ui" line="173"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Алиас</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="163"/>
@@ -4769,7 +4769,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="201"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Алиасы</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="209"/>
@@ -5590,12 +5590,12 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="221"/>
       <location filename="../src/mudlet.cpp" line="396"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Алиасы</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="222"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать алиасы</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="227"/>
@@ -5756,7 +5756,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
       <source>Stop all triggers, alias, actions, timers and scripts</source>
-      <translation type="unfinished"/>
+      <translation>Остановить все триггеры, алиасы, кнопки, таймеры, и скрипты</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
@@ -7517,7 +7517,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="998"/>
       <location filename="../src/ui/trigger_editor.ui" line="1013"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Алиас</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1003"/>
@@ -7540,7 +7540,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1041"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Алиасы</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1049"/>
