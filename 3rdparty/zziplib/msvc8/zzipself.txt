@@ -1,9 +1,0 @@
-HOWTO create an exe-file with an appended zip-resource - file
-
-we assume an imaginary game called "tetris.exe"
-1. create a zip-archive "tetris.zip" and store "tetris.exe" with NO COMPRESSION (-e0 option in pkzip)
-2. add your data-files, images and sounds to "tetris.zip" with arbitrary compression
-3. call "setstub tetris.zip tetris.exe"
-4. rename tetris.zip into tetris.exe
-
-now your app should be able read data from itself.
