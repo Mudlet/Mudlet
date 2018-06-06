@@ -285,22 +285,22 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 días</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 horas</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 mins</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 segs</translation>
     </message>
   </context>
   <context>
@@ -313,7 +313,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nombre de habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="105"/>
@@ -330,7 +330,8 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2043"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nombre de Habitación: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2057"/>
@@ -5916,7 +5917,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2784"/>
       <source>*.dat</source>
-      <translation type="unfinished"/>
+      <translation>*.dat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3003"/>
@@ -6140,12 +6141,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
       <source>Browse...</source>
-      <translation type="unfinished"/>
+      <translation>Examinar...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="329"/>
       <source>Reset</source>
-      <translation type="unfinished"/>
+      <translation>Reestablecer</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="336"/>
@@ -6160,17 +6161,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="370"/>
       <source>.txt</source>
-      <translation type="unfinished"/>
+      <translation>.txt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="390"/>
       <source>Input line</source>
-      <translation type="unfinished"/>
+      <translation>Línea de entrada</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="399"/>
       <source>Input</source>
-      <translation type="unfinished"/>
+      <translation>Entrada</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="411"/>
@@ -6215,7 +6216,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="490"/>
       <source>Spell check</source>
-      <translation type="unfinished"/>
+      <translation>Corrector ortográfico</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="496"/>
@@ -6225,27 +6226,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="506"/>
       <source>Enable spell check</source>
-      <translation type="unfinished"/>
+      <translation>Habilitar el corrector ortográfico</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="539"/>
       <source>Main display</source>
-      <translation type="unfinished"/>
+      <translation>Pantalla principal</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
       <source>Font</source>
-      <translation type="unfinished"/>
+      <translation>Fuente</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="557"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Fuente:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="580"/>
       <source>Size:</source>
-      <translation type="unfinished"/>
+      <translation>Tamaño:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="590"/>
@@ -6320,7 +6321,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="847"/>
       <location filename="../src/ui/profile_preferences.ui" line="895"/>
       <source>characters</source>
-      <translation type="unfinished"/>
+      <translation>caracteres</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="875"/>
@@ -6330,7 +6331,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="908"/>
       <source>Double-click</source>
-      <translation type="unfinished"/>
+      <translation>Doble clic</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="914"/>
@@ -6355,7 +6356,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="937"/>
       <source>Display options</source>
-      <translation type="unfinished"/>
+      <translation>Opciones de Visualización</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="943"/>
@@ -6365,7 +6366,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="946"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation type="unfinished"/>
+      <translation>Arreglar saltos de línea innecesarios en servidores con GA</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="953"/>
@@ -6476,31 +6477,31 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1244"/>
       <location filename="../src/ui/profile_preferences.ui" line="1881"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Negro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1261"/>
       <location filename="../src/ui/profile_preferences.ui" line="1898"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Negro claro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1278"/>
       <location filename="../src/ui/profile_preferences.ui" line="1915"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rojo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1295"/>
       <location filename="../src/ui/profile_preferences.ui" line="1932"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Rojo claro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1312"/>
       <location filename="../src/ui/profile_preferences.ui" line="1949"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Verde:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1329"/>
@@ -6835,32 +6836,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2309"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2319"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Motor de búsqueda</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2331"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Actualizaciones de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2337"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Deshabilitar las actualizaciones automáticas</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2347"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>Otras Opciones especiales</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2404"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Guardar</translation>
     </message>
   </context>
   <context>
@@ -6868,7 +6869,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>Salidas generales:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="67"/>
@@ -7172,22 +7173,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>No door</source>
-      <translation type="unfinished"/>
+      <translation>Ninguna puerta</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>Puerta abierta</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>Puerta cerrada</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>Puerta asegurada</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
@@ -7197,7 +7198,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Guardar</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
@@ -7207,7 +7208,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -7295,7 +7296,7 @@ Locked</source>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>Comando o script LUA</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2111"/>
@@ -7328,7 +7329,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nombre:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
@@ -7348,7 +7349,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
@@ -7363,7 +7364,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -7440,7 +7441,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="165"/>
       <source>Time:</source>
-      <translation type="unfinished"/>
+      <translation>Hora:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="235"/>
@@ -7450,13 +7451,13 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="266"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="299"/>
       <location filename="../src/ui/timers_main_area.ui" line="420"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="366"/>
@@ -7466,7 +7467,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="387"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="487"/>
@@ -7481,12 +7482,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="511"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="544"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="611"/>
@@ -7501,7 +7502,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="635"/>
       <source>zzz</source>
-      <translation type="unfinished"/>
+      <translation>zzz</translation>
     </message>
   </context>
   <context>
@@ -7516,17 +7517,17 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="724"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar variables normalmente ocultas</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="600"/>
       <source>Search:</source>
-      <translation type="unfinished"/>
+      <translation>Buscar:</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="650"/>
@@ -7537,55 +7538,55 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="998"/>
       <location filename="../src/ui/trigger_editor.ui" line="1013"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1003"/>
       <location filename="../src/ui/trigger_editor.ui" line="1018"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Disparador</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1008"/>
       <location filename="../src/ui/trigger_editor.ui" line="1023"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variable</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1028"/>
       <location filename="../src/ui/trigger_editor.ui" line="1033"/>
       <source>Group</source>
-      <translation type="unfinished"/>
+      <translation>Grupo</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1041"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1049"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Disparadores</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1057"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variables</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1065"/>
       <source>Script options</source>
-      <translation type="unfinished"/>
+      <translation>Opciones de script</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1073"/>
       <source>Search results</source>
-      <translation type="unfinished"/>
+      <translation>Resultados de Búsqueda</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1078"/>
       <source>Expert mode</source>
-      <translation type="unfinished"/>
+      <translation>Modo experto</translation>
     </message>
   </context>
   <context>
@@ -7593,7 +7594,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="138"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nombre:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
@@ -7603,7 +7604,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="164"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
@@ -7639,12 +7640,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="535"/>
       <source>play sound</source>
-      <translation type="unfinished"/>
+      <translation>reproducir audio</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="574"/>
       <source>choose file:</source>
-      <translation type="unfinished"/>
+      <translation>seleccionar archivo:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="916"/>
@@ -7669,7 +7670,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1123"/>
       <source>filter</source>
-      <translation type="unfinished"/>
+      <translation>filtro</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1165"/>
