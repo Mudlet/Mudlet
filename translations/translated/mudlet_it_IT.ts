@@ -389,7 +389,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Modifica le proprietà di questa linea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2650"/>
@@ -399,7 +399,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2668"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Sposta stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2672"/>
@@ -409,7 +409,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2676"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Cambia colore stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
@@ -484,12 +484,12 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Sposta etichetta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2770"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Elimina etichetta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
@@ -954,7 +954,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="931"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet MUD Client versione: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="933"/>
@@ -1164,61 +1164,61 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>alto</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>basso</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
@@ -1275,7 +1275,7 @@ Areas id affected: %1.</source>
     <message>
       <location filename="../src/TMap.cpp" line="1162"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1297"/>
@@ -1483,57 +1483,57 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="76"/>
       <location filename="../src/TRoom.cpp" line="766"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Nord</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="77"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Nord-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="78"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Nord-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="79"/>
       <location filename="../src/TRoom.cpp" line="811"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Sud</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="80"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Sud-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="81"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Sud-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="82"/>
       <location filename="../src/TRoom.cpp" line="856"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="83"/>
       <location filename="../src/TRoom.cpp" line="871"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="84"/>
       <location filename="../src/TRoom.cpp" line="886"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Alto</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="85"/>
       <location filename="../src/TRoom.cpp" line="901"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Basso</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="86"/>
@@ -2133,7 +2133,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
@@ -2376,27 +2376,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Nero:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="57"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rosso:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="64"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Verde:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="71"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blu:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
@@ -2478,7 +2478,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/composer.ui" line="134"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Salva</translation>
     </message>
   </context>
   <context>
@@ -2496,7 +2496,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2092"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copia</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2121"/>
