@@ -1278,7 +1278,7 @@ Areas id affected: %1.</source>
     <message>
       <location filename="../src/TMap.cpp" line="1162"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1297"/>
@@ -1767,7 +1767,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="33"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Область по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="500"/>
@@ -1777,12 +1777,12 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="519"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Безымянная площадь (больше) не разрешена!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="523"/>
       <source>An area called %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Oбласть с именем %1 уже существует!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="608"/>
@@ -2174,12 +2174,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>Горизонтальная ориентация</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="155"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>Вертикальная ориентация</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
@@ -2209,7 +2209,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>Поворот кнопки:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
@@ -2254,7 +2254,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
       <source>Stylesheet:</source>
-      <translation type="unfinished"/>
+      <translation>Таблица стилей CSS:</translation>
     </message>
   </context>
   <context>
@@ -2718,7 +2718,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Обычные выходы:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
@@ -2788,7 +2788,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
       <source>Special Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Специальные выходы:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
@@ -2886,7 +2886,7 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
       <source>Usage
 Count</source>
-      <translation type="unfinished"/>
+      <translation>Счетчик использования</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
@@ -3083,7 +3083,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="543"/>
       <source>Deleting &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Удаление &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="946"/>
@@ -3229,12 +3229,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Таймеры</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="41"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Скрипты</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
@@ -3269,7 +3269,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
       <source>&amp;Export</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Экспорт</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="128"/>
@@ -3366,7 +3366,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1474"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить Mudlet карту</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1476"/>
@@ -3377,7 +3377,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1489"/>
       <source>Importing map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Импорт карты - подождите...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1493"/>
@@ -3413,12 +3413,12 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1522"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet карта (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1532"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Карта сохраняется, ждите...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1546"/>
@@ -3428,7 +3428,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1548"/>
       <source>Could not save map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Невозможно сохранить карту в %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1586"/>
@@ -3481,7 +3481,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1785"/>
       <source>Where should Mudlet save log files?</source>
-      <translation type="unfinished"/>
+      <translation>Где Mudlet сохранять лог-файлы?</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2080"/>
@@ -3496,7 +3496,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2319"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось обновить темы: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2436"/>
@@ -3531,7 +3531,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2492"/>
       <source>Updating themes from colorsublime.com...</source>
-      <translation type="unfinished"/>
+      <translation>Обновление тем от colorsublime.com...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2583"/>
@@ -3743,13 +3743,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="241"/>
       <source>&lt;command or Lua script&gt;</source>
       <comment>This string is also used programmatically ensure all instances are the same, (2 of 5)</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;command or Lua script&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="281"/>
       <source>&lt;command or Lua script&gt;</source>
       <comment>This string is also used programmatically ensure all instances are the same, (3 of 5)</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;command or Lua script&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="732"/>
@@ -4026,7 +4026,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="297"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5613"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Таймеры</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="298"/>
