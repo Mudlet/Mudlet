@@ -240,7 +240,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
       <source>[WHOIS] %1 is using a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 utilizza una connessione sicura</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="404"/>
@@ -285,22 +285,22 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 giorni</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 ore</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 minuti</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 secondi</translation>
     </message>
   </context>
   <context>
@@ -308,12 +308,12 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>ID Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="105"/>
@@ -330,7 +330,8 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2043"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nome Stanza: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2057"/>
@@ -403,7 +404,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2672"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Cancella stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2676"/>
