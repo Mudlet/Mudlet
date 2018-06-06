@@ -102,7 +102,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 antwortete in %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
@@ -145,7 +145,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
@@ -160,7 +160,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1 antwortete in %2 Sekunden</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
