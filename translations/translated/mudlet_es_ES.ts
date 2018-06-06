@@ -484,12 +484,12 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Mover Etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2770"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
@@ -535,24 +535,24 @@ the highlighted room (%1) to:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3252"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada x (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3253"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada y (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3254"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada z (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3358"/>
       <location filename="../src/T2DMap.cpp" line="3367"/>
       <location filename="../src/T2DMap.cpp" line="3406"/>
       <source>Enter room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Ingrese símbolo de la habitación</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3359"/>
@@ -695,56 +695,56 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="63"/>
       <source>ISO 8859-2 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-2 (europa Central)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="82"/>
       <location filename="../src/TBuffer.cpp" line="367"/>
       <source>ISO 8859-3 (South European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO-8859-3 (Europa del sur)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="101"/>
       <source>ISO 8859-4 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-4 (Báltico)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="120"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO-8859-5 (Cirílico)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="139"/>
       <source>ISO 8859-6 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO-8859-6 (Árabe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="158"/>
       <source>ISO 8859-7 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO-8859-7 (Griego)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="177"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-8 (hebreo Visual)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="196"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO-8859-9 (Turco)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="215"/>
       <source>ISO 8859-10 (Nordic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-10 (Nórdico)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="234"/>
@@ -916,7 +916,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Guardar Perfil?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
@@ -1165,73 +1165,73 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>arriba</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>abajo</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>adentro</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>afuera</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1028"/>
@@ -1276,7 +1276,7 @@ Areas id affected: %1.</source>
     <message>
       <location filename="../src/TMap.cpp" line="1162"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1297"/>
@@ -1332,7 +1332,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1537"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Descargar el mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1538"/>
@@ -1352,7 +1352,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2016"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Id de área: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
@@ -1362,12 +1362,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
       <source>Room id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Id de habitación: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2044"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Fin del reporte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2050"/>
@@ -1402,7 +1402,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>Abortar</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
@@ -2050,7 +2050,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1266"/>
       <source>restore Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>restaurar la Barra de herramientas Principal</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1269"/>
@@ -2080,7 +2080,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/updater.cpp" line="153"/>
       <location filename="../src/updater.cpp" line="215"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Actualización</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="307"/>
@@ -2252,7 +2252,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
       <source>Stylesheet:</source>
-      <translation type="unfinished"/>
+      <translation>Hoja de estilo:</translation>
     </message>
   </context>
   <context>
@@ -2260,7 +2260,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nombre:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -2368,7 +2368,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="29"/>
       <source>cancel</source>
-      <translation type="unfinished"/>
+      <translation>cancelar</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
@@ -2378,52 +2378,52 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Negro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="57"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rojo:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="64"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Verde:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="71"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Azul:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Cian:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Blanco:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Amarillo:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Negro claro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Rojo claro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
@@ -2670,17 +2670,17 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="153"/>
       <source>Origin:</source>
-      <translation type="unfinished"/>
+      <translation>Origen:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="194"/>
       <source>Destination:</source>
-      <translation type="unfinished"/>
+      <translation>Destino:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="232"/>
       <source>    Direction/Command:</source>
-      <translation type="unfinished"/>
+      <translation>    Dirección/Comando:</translation>
     </message>
   </context>
   <context>
@@ -2708,7 +2708,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Ajustes de línea:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
@@ -2733,7 +2733,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Salidas normales:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
@@ -2803,13 +2803,13 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
       <source>Special Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Salidas especiales:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
       <source>Has
 custom line?</source>
-      <translation type="unfinished"/>
+      <translation>Tiene línea personalizada?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
@@ -2819,7 +2819,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
       <source> Destination </source>
-      <translation type="unfinished"/>
+      <translation> Destino </translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
@@ -2829,7 +2829,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
       <source> Command</source>
-      <translation type="unfinished"/>
+      <translation> Comando</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -2845,7 +2845,7 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
   </context>
   <context>
@@ -2865,12 +2865,12 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
   </context>
   <context>
@@ -2878,7 +2878,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Estado</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -2906,7 +2906,7 @@ Count</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Habitaciones</translation>
     </message>
   </context>
   <context>
@@ -3238,32 +3238,32 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Disparadores</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Temporizadores</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="41"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Scripts</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Teclas</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="51"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Botones</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="62"/>
@@ -3273,7 +3273,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="75"/>
       <source>Add Files</source>
-      <translation type="unfinished"/>
+      <translation>Agregar archivos</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
@@ -3283,7 +3283,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="95"/>
       <source>Select</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
@@ -3605,12 +3605,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2805"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaa-MM-dd#HH-mm-ss (ej. 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2806"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaa-MM-ddTHH-mm-ss (ej. 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2807"/>
@@ -3922,52 +3922,52 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1719"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>noroeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1720"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>norte</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1721"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>noreste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>arriba</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>oeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1724"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>este</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>abajo</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>suroeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1727"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>sur</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1728"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>sureste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
@@ -4029,23 +4029,23 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="288"/>
       <source>Show Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Botones</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="292"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="293"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="297"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5613"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Temporizadores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="298"/>
