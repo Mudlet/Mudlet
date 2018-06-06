@@ -291,7 +291,7 @@ unix:!macx {
         -lpugixml \
         -L"$${MINGW_BASE_DIR}\\bin"
     INCLUDEPATH += "C:\\mingw32\\include" \
-                   "C:\\Libraries\\boost_1_60_0" \
+                   "C:\\Libraries\\boost_1_67_0" \
                    "$${MINGW_BASE_DIR}\\include" \
                    "$${MINGW_BASE_DIR}\\lib\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
