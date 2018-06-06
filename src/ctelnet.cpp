@@ -40,6 +40,8 @@
 
 #include "pre_guard.h"
 #include <QProgressDialog>
+#include <QTextCodec>
+#include <QTextEncoder>
 #include "post_guard.h"
 
 #define DEBUG

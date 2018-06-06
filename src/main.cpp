@@ -26,6 +26,7 @@
 
 #include "pre_guard.h"
 #include <QDesktopWidget>
+#include <QDir>
 #include <QPainter>
 #include <QSplashScreen>
 #include "post_guard.h"

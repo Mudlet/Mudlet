@@ -34,7 +34,9 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QProgressDialog>
 #include "post_guard.h"
 
