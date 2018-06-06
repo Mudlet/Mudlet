@@ -175,7 +175,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>%1 se ha ido</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
@@ -429,7 +429,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Desbloquear habitación para recorrido rápido</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2696"/>
@@ -514,12 +514,12 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2816"/>
       <source>Select a point first, then remove it</source>
-      <translation type="unfinished"/>
+      <translation>Seleccione un punto primero, luego eliminelo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2821"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Cambiar las propiedades de esta línea personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
