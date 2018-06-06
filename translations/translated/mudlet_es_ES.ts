@@ -8,14 +8,18 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacando módulo:
+&quot;%1&quot;
+Por favor, espere...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="816"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacando paquete:
+&quot;%1&quot;
+Por favor, espere...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="820"/>
@@ -364,12 +368,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Fondo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2232"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Primer plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
