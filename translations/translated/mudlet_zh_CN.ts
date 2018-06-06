@@ -5707,7 +5707,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="291"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation type="unfinished"/>
+      <translation>包管理器 - 允许你从xml、mpackage文件安装软件包</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="296"/>
