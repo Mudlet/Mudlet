@@ -462,12 +462,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation>Benutzerdefinierte Ausgangslinien werden im Rastermodus nicht angezeigt und sind nicht bearbeitbar</translation>
+      <translation>Benutzerdefinierte Ausgangslinien werden im Rastermodus nicht angezeigt und sind in diesem nicht bearbeitbar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
       <source>Replace an exit line with a custom line</source>
-      <translation>Ersetze eine Ausgangslinie mit einer eigenen Linie</translation>
+      <translation>Ersetze eine Ausgangslinie mit einer benutzerdefinierten Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2730"/>
