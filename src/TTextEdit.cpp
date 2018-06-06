@@ -1227,7 +1227,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         mIsCommandPopup = false;
 
 
-        QAction* action = new QAction("copy", this);
+        QAction* action = new QAction(tr("Copy"), this);
         // According to the Qt Documentation:
         // "This text is used for the tooltip."
         // "If no tooltip is specified, the action's text is used."
@@ -1238,17 +1238,22 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         // in the QAction constructor:
         action->setToolTip(QString());
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
-        QAction* action2 = new QAction("copy HTML", this);
+        QAction* action2 = new QAction(tr("Copy HTML"), this);
         action2->setToolTip(QString());
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
-        QAction* action3 = new QAction("select all", this);
+        QAction* action3 = new QAction(tr("Select All"), this);
         action3->setToolTip(QString());
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
         QString selectedEngine = mpHost->getSearchEngine().first;
-        QAction* action4 = new QAction(("search on " + selectedEngine), this);
+        QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
         action4->setToolTip(QString());
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+        if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+            action->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+            action3->setIcon(QIcon::fromTheme(QStringLiteral("edit-select-all"), QIcon(QStringLiteral(":/icons/edit-select-all.png"))));
+            action4->setIcon(QIcon::fromTheme(QStringLiteral("edit-web-search"), QIcon(QStringLiteral(":/icons/edit-web-search.png"))));
+        }
 
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true); // Not the default...
