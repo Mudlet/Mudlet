@@ -629,7 +629,7 @@ factor of:</source>
       <location filename="../src/T2DMap.cpp" line="3767"/>
       <location filename="../src/T2DMap.cpp" line="3812"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>输入房间权重</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3755"/>
@@ -986,7 +986,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="999"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>日志会话结束于 %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1000"/>
@@ -997,7 +997,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1013"/>
       <source>&lt;p&gt;Start logging MUD output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;开始记录 MUD 输出到日志文件。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1594"/>
@@ -2043,7 +2043,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1261"/>
       <source>restore Main menu</source>
-      <translation type="unfinished"/>
+      <translation>恢复主菜单</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1264"/>
@@ -2053,7 +2053,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1266"/>
       <source>restore Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>恢复主工具栏</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1269"/>
@@ -2083,12 +2083,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/updater.cpp" line="153"/>
       <location filename="../src/updater.cpp" line="215"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>更新</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="307"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>重新启动使更新生效</translation>
     </message>
   </context>
   <context>
@@ -2104,27 +2104,27 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="346"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>正在分析区域数据...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="350"/>
       <source>Parsing room data...</source>
-      <translation type="unfinished"/>
+      <translation>正在分析房间数据...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="354"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>正在分析环境数据...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="362"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>正在为房间分配区域...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="512"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>正在分析房间数据 [数量: %1]...</translation>
     </message>
   </context>
   <context>
@@ -2132,22 +2132,22 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>关于 Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>License</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>第三方</translation>
     </message>
   </context>
   <context>
@@ -2155,7 +2155,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名字:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
@@ -2235,7 +2235,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
