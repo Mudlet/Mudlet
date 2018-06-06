@@ -120,6 +120,8 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT(handle_socket_signal_readyRead()));
 
+    socket.setSocketOption(QAbstractSocket::KeepAliveOption, true);
+
     // initialize telnet session
     reset();
 
