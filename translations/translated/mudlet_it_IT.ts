@@ -7494,12 +7494,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostra le variabili solitamente nascoste</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="600"/>
       <source>Search:</source>
-      <translation type="unfinished"/>
+      <translation>Cerca:</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="650"/>
@@ -7510,55 +7510,55 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="998"/>
       <location filename="../src/ui/trigger_editor.ui" line="1013"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1003"/>
       <location filename="../src/ui/trigger_editor.ui" line="1018"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1008"/>
       <location filename="../src/ui/trigger_editor.ui" line="1023"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variabile</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1028"/>
       <location filename="../src/ui/trigger_editor.ui" line="1033"/>
       <source>Group</source>
-      <translation type="unfinished"/>
+      <translation>Gruppo</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1041"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1049"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Triggers</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1057"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variabili</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1065"/>
       <source>Script options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni di script</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1073"/>
       <source>Search results</source>
-      <translation type="unfinished"/>
+      <translation>Risultati della ricerca</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1078"/>
       <source>Expert mode</source>
-      <translation type="unfinished"/>
+      <translation>Modalità esperto</translation>
     </message>
   </context>
   <context>
@@ -7566,7 +7566,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="138"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
@@ -7576,7 +7576,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="164"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
@@ -7762,7 +7762,7 @@ otherwise highlight the entire match</source>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
       <location filename="../src/ui/vars_main_area.ui" line="392"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>tabella</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="174"/>
@@ -7784,7 +7784,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="275"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>variabile nascosta</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="352"/>
@@ -7794,27 +7794,27 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="361"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>Tipo di valore:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="377"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>stringa</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="382"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>numero</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="387"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>booleano</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="397"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>funzione</translation>
     </message>
   </context>
 </TS>
