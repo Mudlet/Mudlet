@@ -1224,13 +1224,13 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>entra</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>esci</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1028"/>
@@ -1539,23 +1539,23 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="86"/>
       <location filename="../src/TRoom.cpp" line="916"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>Entra</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="87"/>
       <location filename="../src/TRoom.cpp" line="931"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Esci</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="88"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Altro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="90"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Sconosciuto</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="222"/>
@@ -2501,7 +2501,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2121"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2195"/>
@@ -2533,7 +2533,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome profilo:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
@@ -2734,27 +2734,27 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="297"/>
       <source>UP</source>
-      <translation type="unfinished"/>
+      <translation>ALTO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="336"/>
       <source>W</source>
-      <translation type="unfinished"/>
+      <translation>O</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="346"/>
       <source>E</source>
-      <translation type="unfinished"/>
+      <translation>E</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="356"/>
       <source>IN</source>
-      <translation type="unfinished"/>
+      <translation>ENTRA</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="382"/>
       <source>OUT</source>
-      <translation type="unfinished"/>
+      <translation>ESCI</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="392"/>
@@ -2784,7 +2784,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
       <source>Special Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Uscite Speciali:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
@@ -2800,7 +2800,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
       <source> Destination </source>
-      <translation type="unfinished"/>
+      <translation> Destinazione </translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
@@ -3151,7 +3151,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="370"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Connesso a %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="371"/>
@@ -3166,17 +3166,17 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="381"/>
       <source>! Disconnected from %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Disconnesso da %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="443"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Sintassi: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="445"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Comando sconosciuto: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="589"/>
@@ -4168,12 +4168,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7613"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7632"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Maiusc+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="396"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>Salva Profilo come</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="400"/>
@@ -4652,7 +4652,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7740"/>
       <source>*</source>
-      <translation type="unfinished"/>
+      <translation>*</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7876"/>
@@ -4662,12 +4662,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8012"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Taglia</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8016"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona Tutto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8018"/>
@@ -4740,25 +4740,25 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/ui/irc.ui" line="158"/>
       <location filename="../src/ui/irc.ui" line="173"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="163"/>
       <location filename="../src/ui/irc.ui" line="178"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="168"/>
       <location filename="../src/ui/irc.ui" line="183"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variabile</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="188"/>
       <location filename="../src/ui/irc.ui" line="193"/>
       <source>Group</source>
-      <translation type="unfinished"/>
+      <translation>Gruppo</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="201"/>
@@ -4773,7 +4773,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="217"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variabili</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="225"/>
@@ -5345,12 +5345,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
       <source>test1</source>
-      <translation type="unfinished"/>
+      <translation>test1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
       <source>asdf</source>
-      <translation type="unfinished"/>
+      <translation>asdf</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
@@ -5438,7 +5438,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
       <source>2D/3D</source>
-      <translation type="unfinished"/>
+      <translation>2D/3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
@@ -5453,7 +5453,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Uscite</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
@@ -5550,7 +5550,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="155"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="169"/>
@@ -5561,7 +5561,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="206"/>
       <location filename="../src/mudlet.cpp" line="394"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Connetti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="207"/>
@@ -5572,7 +5572,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="215"/>
       <location filename="../src/mudlet.cpp" line="395"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
@@ -5583,7 +5583,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="221"/>
       <location filename="../src/mudlet.cpp" line="396"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="222"/>
@@ -5594,7 +5594,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="227"/>
       <location filename="../src/mudlet.cpp" line="397"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="228"/>
@@ -5615,7 +5615,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="239"/>
       <location filename="../src/mudlet.cpp" line="399"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Script</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="240"/>
@@ -5636,7 +5636,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="251"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variabili</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="252"/>
@@ -5646,7 +5646,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="257"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="258"/>
@@ -5791,7 +5791,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
@@ -6005,7 +6005,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="127"/>
       <location filename="../src/ui/profile_preferences.ui" line="156"/>
       <source>Never</source>
-      <translation type="unfinished"/>
+      <translation>Mai</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="132"/>
@@ -6017,7 +6017,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="137"/>
       <location filename="../src/ui/profile_preferences.ui" line="166"/>
       <source>Always</source>
-      <translation type="unfinished"/>
+      <translation>Sempre</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="145"/>
@@ -6113,7 +6113,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
       <source>Browse...</source>
-      <translation type="unfinished"/>
+      <translation>Sfoglia...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="329"/>
@@ -7150,17 +7150,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>Porta aperta</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>Porta chiusa</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>Porta bloccata</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
@@ -7170,7 +7170,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Salva</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
@@ -7423,13 +7423,13 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="266"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="299"/>
       <location filename="../src/ui/timers_main_area.ui" line="420"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="366"/>
@@ -7439,7 +7439,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="387"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="487"/>
@@ -7454,12 +7454,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="511"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="544"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="611"/>
@@ -7679,7 +7679,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1474"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>evidenzia</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1537"/>
