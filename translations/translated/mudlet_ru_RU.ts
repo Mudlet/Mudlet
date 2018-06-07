@@ -47,7 +47,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! пригласил %1 к %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
@@ -628,7 +628,7 @@ factor of:</source>
       <location filename="../src/T2DMap.cpp" line="3767"/>
       <location filename="../src/T2DMap.cpp" line="3812"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Введите вес для комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3755"/>
@@ -636,7 +636,9 @@ factor of:</source>
 (= travel time), mimimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите новый вес комнаты
+(= времени прохода), минимальная
+(и по умолчанию) 1:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3768"/>
@@ -647,7 +649,11 @@ selected rooms, mimimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите новый вес комнат
+(= времени поездки) для всех
+выделенных комнат, минимальная
+(и по умолчанию) 1 и
+теперешний вес:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3801"/>
@@ -4058,12 +4064,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="309"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5918"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Переменные</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="310"/>
       <source>Show Variables</source>
-      <translation type="unfinished"/>
+      <translation>Показать переменые</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="313"/>
@@ -4425,7 +4431,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1713"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1727"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Переменые</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1727"/>
@@ -4441,7 +4447,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3283"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Имя переменной...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4740"/>
@@ -4758,7 +4764,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/ui/irc.ui" line="168"/>
       <location filename="../src/ui/irc.ui" line="183"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Переменная</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="188"/>
@@ -4779,7 +4785,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="217"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Переменные</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="225"/>
@@ -5573,7 +5579,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="207"/>
       <source>Connect to a MUD</source>
-      <translation type="unfinished"/>
+      <translation>Подключиться к игре</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="215"/>
@@ -5584,7 +5590,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать триггеры</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
@@ -5622,7 +5628,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="239"/>
       <location filename="../src/mudlet.cpp" line="399"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Скрипты</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="240"/>
@@ -5633,7 +5639,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="245"/>
       <location filename="../src/mudlet.cpp" line="400"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Ключи</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="246"/>
@@ -5643,17 +5649,17 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="251"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Переменные</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="252"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать переменные</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="257"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="258"/>
@@ -5664,7 +5670,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="263"/>
       <location filename="../src/mudlet.cpp" line="401"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Карта</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="264"/>
@@ -5674,7 +5680,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="269"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Руководство</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="270"/>
@@ -5684,7 +5690,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="275"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Параметры</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="276"/>
@@ -5694,7 +5700,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Блокнот</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="285"/>
@@ -5705,7 +5711,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="290"/>
       <location filename="../src/mudlet.cpp" line="810"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер пакетов</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="291"/>
@@ -5730,7 +5736,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="307"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Переподключить</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="308"/>
@@ -5751,7 +5757,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="319"/>
       <source>Stop All Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Остановить все триггеры</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
@@ -5783,7 +5789,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="398"/>
       <source>Actions</source>
-      <translation type="unfinished"/>
+      <translation>Кнопки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="402"/>
@@ -5886,7 +5892,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2732"/>
       <source>%1 - notes</source>
-      <translation type="unfinished"/>
+      <translation>%1 - заметки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2782"/>
@@ -6024,7 +6030,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="137"/>
       <location filename="../src/ui/profile_preferences.ui" line="166"/>
       <source>Always</source>
-      <translation type="unfinished"/>
+      <translation>Всегда</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="145"/>
@@ -6120,12 +6126,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
       <source>Browse...</source>
-      <translation type="unfinished"/>
+      <translation>Обзор...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="329"/>
       <source>Reset</source>
-      <translation type="unfinished"/>
+      <translation>Сброс</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="336"/>
@@ -6150,7 +6156,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="399"/>
       <source>Input</source>
-      <translation type="unfinished"/>
+      <translation>Ввод</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="411"/>
@@ -6170,7 +6176,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="427"/>
       <source>Show the text you sent</source>
-      <translation type="unfinished"/>
+      <translation>Показывать текст, который вы отправили</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="437"/>
@@ -6180,7 +6186,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="447"/>
       <source>Command separator:</source>
-      <translation type="unfinished"/>
+      <translation>Разделитель команд:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="460"/>
@@ -6289,7 +6295,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="803"/>
       <source>Word wrapping</source>
-      <translation type="unfinished"/>
+      <translation>Перенос слов</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="827"/>
@@ -6300,7 +6306,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="847"/>
       <location filename="../src/ui/profile_preferences.ui" line="895"/>
       <source>characters</source>
-      <translation type="unfinished"/>
+      <translation>символов</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="875"/>
@@ -6310,7 +6316,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="908"/>
       <source>Double-click</source>
-      <translation type="unfinished"/>
+      <translation>Двойной клик</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="914"/>
@@ -6325,7 +6331,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="924"/>
       <source>&apos;&quot;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;&quot;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="927"/>
@@ -6335,7 +6341,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="937"/>
       <source>Display options</source>
-      <translation type="unfinished"/>
+      <translation>Графические настройки</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="943"/>
@@ -6405,7 +6411,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1093"/>
       <source>Updating themes from colorsublime.com...</source>
-      <translation type="unfinished"/>
+      <translation>Обновление тем от colorsublime.com...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1117"/>
@@ -6557,7 +6563,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1540"/>
       <source>Mapper</source>
-      <translation type="unfinished"/>
+      <translation>Маппер</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1546"/>
@@ -7501,7 +7507,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Показать скрытые переменные</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="600"/>
@@ -7529,7 +7535,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="1008"/>
       <location filename="../src/ui/trigger_editor.ui" line="1023"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Переменная</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1028"/>
@@ -7550,7 +7556,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1057"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Переменные</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1065"/>
@@ -7732,7 +7738,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Имя переменной...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
@@ -7791,7 +7797,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="275"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>скрытая переменная</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="352"/>
