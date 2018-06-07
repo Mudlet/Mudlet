@@ -2090,10 +2090,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         }
 
+#ifdef DEBUG
         infoText.append(tr("render time: %1S mO: (%2,%3,%4)")
                         .arg(__time.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
                         .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
-
+#endif
+    
         // Left margin for info widget:
         uint infoLeftSideAvoid = 10;
         if (mMultiSelectionListWidget.isVisible()) {
