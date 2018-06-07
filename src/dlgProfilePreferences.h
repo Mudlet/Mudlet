@@ -129,7 +129,6 @@ public slots:
 private slots:
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
-    void slot_resetThemeUpdateLabel();
     void slot_script_selected(int index);
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);
