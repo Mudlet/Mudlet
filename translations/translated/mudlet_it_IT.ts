@@ -280,7 +280,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
