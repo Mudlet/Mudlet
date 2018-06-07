@@ -59,6 +59,7 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <zip.h>
+#include <chrono>
 #include "post_guard.h"
 
 using namespace std;
@@ -122,7 +123,6 @@ mudlet* mudlet::self()
     return _self;
 }
 
-
 mudlet::mudlet()
 : QMainWindow()
 , mFontManager()
@@ -154,7 +154,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-
+, mAvoidNetworkTimeout{}
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -450,6 +450,8 @@ mudlet::mudlet()
     readSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
+
+    startAytTimer();
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -3714,4 +3716,17 @@ QStringList mudlet::getAvailableFonts()
     QFontDatabase database;
 
     return database.families(QFontDatabase::Any);
+}
+
+void mudlet::startAytTimer()
+{
+    QObject::connect(&mAvoidNetworkTimeout, &QTimer::timeout, this, [] {
+        auto& hostManager = mudlet::self()->getHostManager();
+
+        for (auto& hostName : hostManager.getHostList()) {
+            auto host = hostManager.getHost(hostName);
+            host->mTelnet.sendAyt();
+        }
+    });
+    mAvoidNetworkTimeout.start(2min);
 }

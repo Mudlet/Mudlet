@@ -120,8 +120,6 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT(handle_socket_signal_readyRead()));
 
-    socket.setSocketOption(QAbstractSocket::KeepAliveOption, true);
-
     // initialize telnet session
     reset();
 
@@ -1907,4 +1905,9 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentList.append(protocol);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
+}
+
+void cTelnet::sendAyt()
+{
+    sendTelnetOption(TN_IAC, TN_AYT);
 }

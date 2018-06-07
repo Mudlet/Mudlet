@@ -45,6 +45,7 @@
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
+#include <QTimer>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -319,6 +320,10 @@ public:
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
 
+    // a 2min timer to prevent a timeout due to the network (NATs and such) dropping
+    // an inactive connection. Does not affect game timeout if the user was inactive
+    QTimer mAvoidNetworkTimeout;
+
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
@@ -407,6 +412,7 @@ private slots:
 
 private:
     void initEdbee();
+    void startAytTimer();
 
     void goingDown() { mIsGoingDown = true; }
     QMap<QString, TConsole*> mTabMap;
