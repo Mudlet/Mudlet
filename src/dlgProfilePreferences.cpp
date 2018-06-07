@@ -2489,12 +2489,6 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
     config->endChanges();
 }
 
-void dlgProfilePreferences::slot_resetThemeUpdateLabel()
-{
-    theme_download_label->hide();
-    theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
-}
-
 /*
  * This is to deal particularly with the case where the preferences dialog is
  * opened without a host instance (other than the dummy "default_host") being
