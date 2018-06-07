@@ -804,7 +804,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="424"/>
       <source>MACINTOSH</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>MACINTOSH</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="443"/>
@@ -1570,22 +1570,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="781"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Nord-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="796"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Nord-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="826"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Sud-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="841"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Sud-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="953"/>
@@ -1636,17 +1636,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1151"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (aperto)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1154"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (chiuso)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1157"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (bloccato)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1160"/>
@@ -1764,7 +1764,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="33"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Area Predefinita</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="500"/>
@@ -2608,7 +2608,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2517"/>
       <source>MUD description</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione MUD</translation>
     </message>
   </context>
   <context>
@@ -3218,17 +3218,17 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="41"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Script</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
@@ -3238,7 +3238,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="51"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Bottoni</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="62"/>
@@ -3248,7 +3248,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="75"/>
       <source>Add Files</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi File</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
@@ -3401,23 +3401,23 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1522"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Salva mappa Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1522"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mappa Mudlet (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1532"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Salvataggio mappa - attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1546"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mappa salvata in %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1548"/>
@@ -4133,35 +4133,35 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="353"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="354"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>Copia trigger/script/alias/ecc</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="363"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8014"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Incolla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="368"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="369"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Incolla trigger/script/alias/ecc dagli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="378"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>Importa</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>Esporta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7883"/>
       <source>Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>Salva Profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="388"/>
@@ -4178,7 +4178,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="400"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>Statistiche</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="401"/>
@@ -4198,7 +4198,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="408"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>Debug</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="409"/>
@@ -4236,7 +4236,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1813"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1848"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1128"/>
@@ -4325,7 +4325,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1907"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1937"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1256"/>
@@ -4343,7 +4343,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1991"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2023"/>
       <source>Script</source>
-      <translation type="unfinished"/>
+      <translation>Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1337"/>
@@ -4403,7 +4403,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2191"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2221"/>
       <source>Timer</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1590"/>
@@ -4419,7 +4419,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1713"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1727"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1727"/>
@@ -4430,12 +4430,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3276"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome tabella...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3283"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome variabile...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4740"/>
@@ -4637,7 +4637,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>Immagini (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7690"/>
@@ -4734,7 +4734,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="25"/>
       <source>Mudlet IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Client IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="158"/>
@@ -4763,12 +4763,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="201"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="209"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="217"/>
@@ -4845,7 +4845,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="97"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="104"/>
@@ -5108,7 +5108,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="17"/>
       <source>Mudlet 1.0 - alpha 1</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 1.0 - alpha 1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
@@ -5244,7 +5244,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/ui/main_window.ui" line="237"/>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Forum online</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
