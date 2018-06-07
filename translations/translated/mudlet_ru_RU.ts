@@ -6568,12 +6568,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1546"/>
       <source>Map files</source>
-      <translation type="unfinished"/>
+      <translation>Файлы карт</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1552"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет текущую карту:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1562"/>
@@ -6583,7 +6583,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1569"/>
       <source>Load another map file in:</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить другую карту:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1579"/>
