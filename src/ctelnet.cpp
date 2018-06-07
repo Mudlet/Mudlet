@@ -785,7 +785,7 @@ void cTelnet::processTelnetCommand(const string& command)
 #endif
         //server wants us to enable some option
         option = command[2];
-        auto idxOption = static_cast<int>(option);
+        auto idxOption = static_cast<quint8>(option);
         if (option == static_cast<char>(69) && mpHost->mEnableMSDP) // MSDP support
         {
             qDebug() << "TELNET IAC DO MSDP";
