@@ -4073,7 +4073,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="314"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
-      <translation type="unfinished"/>
+      <translation>切换触发器、脚本等的启用、停用状态</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="324"/>
@@ -4109,7 +4109,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
       <source>Save Item</source>
-      <translation type="unfinished"/>
+      <translation>保存条目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="341"/>
@@ -4122,12 +4122,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="343"/>
       <source>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
 It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</source>
-      <translation type="unfinished"/>
+      <translation>保存选择的条目。 (Ctrl+S)&lt;/p&gt;保存会导致对该项目的任何更改生效。
+它不会存到磁盘，所以当计算机/程序崩溃时会丢失更改（右侧的保存配置按钮更安全）。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="345"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>保存选定的触发器、脚本、别名等，会使更改生效，但不会保存到磁盘...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="348"/>
@@ -7505,7 +7506,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="600"/>
       <source>Search:</source>
-      <translation type="unfinished"/>
+      <translation>搜索:</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="650"/>
