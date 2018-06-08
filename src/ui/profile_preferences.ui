@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>730</width>
-    <height>611</height>
+    <height>722</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -341,8 +341,7 @@
            </widget>
           </item>
           <item row="3" column="1" colspan="3">
-           <widget class="QComboBox" name="comboBox_logFileNameFormat">
-           </widget>
+           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
           </item>
           <item row="4" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_logFileName">
@@ -2242,7 +2241,7 @@
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_ircOptions">
          <property name="title">
           <string>IRC client options</string>
@@ -2313,7 +2312,7 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0">
+       <item row="3" column="0">
         <widget class="QGroupBox" name="groupbox_searchEngineSelection">
          <property name="title">
           <string>Search Engine</string>
@@ -2325,7 +2324,7 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QGroupBox" name="groupBox_updates">
          <property name="title">
           <string>Mudlet updates</string>
@@ -2341,7 +2340,7 @@
          </layout>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QGroupBox" name="groupBox_debug">
          <property name="title">
           <string>Other Special options</string>
@@ -2353,7 +2352,7 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="6" column="0">
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -2365,6 +2364,43 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Discord privacy</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_20">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_gameAddress">
+            <property name="text">
+             <string>Hide game address</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkBox_characterIcon">
+            <property name="text">
+             <string>Hide character icon</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_currentArea">
+            <property name="text">
+             <string>Hide current area</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_characterText">
+            <property name="text">
+             <string>Hide character text</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -2425,6 +2461,117 @@
  <tabstops>
   <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>closeButton</tabstop>
+  <tabstop>MainIconSize</tabstop>
+  <tabstop>TEFolderIconSize</tabstop>
+  <tabstop>comboBox_menuBarVisibility</tabstop>
+  <tabstop>comboBox_toolBarVisibility</tabstop>
+  <tabstop>comboBox_encoding</tabstop>
+  <tabstop>mAlertOnNewData</tabstop>
+  <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
+  <tabstop>acceptServerGUI</tabstop>
+  <tabstop>mEnableGMCP</tabstop>
+  <tabstop>mEnableMSDP</tabstop>
+  <tabstop>mIsToLogInHtml</tabstop>
+  <tabstop>mIsLoggingTimestamps</tabstop>
+  <tabstop>lineEdit_logFileFolder</tabstop>
+  <tabstop>pushButton_whereToLog</tabstop>
+  <tabstop>pushButton_resetLogDir</tabstop>
+  <tabstop>comboBox_logFileNameFormat</tabstop>
+  <tabstop>lineEdit_logFileName</tabstop>
+  <tabstop>USE_UNIX_EOL</tabstop>
+  <tabstop>auto_clear_input_line_checkbox</tabstop>
+  <tabstop>commandLineMinimumHeight</tabstop>
+  <tabstop>dictList</tabstop>
+  <tabstop>enableSpellCheck</tabstop>
+  <tabstop>fontComboBox</tabstop>
+  <tabstop>fontSize</tabstop>
+  <tabstop>mNoAntiAlias</tabstop>
+  <tabstop>topBorderHeight</tabstop>
+  <tabstop>leftBorderWidth</tabstop>
+  <tabstop>bottomBorderHeight</tabstop>
+  <tabstop>rightBorderWidth</tabstop>
+  <tabstop>wrap_at_spinBox</tabstop>
+  <tabstop>indent_wrapped_spinBox</tabstop>
+  <tabstop>doubleclick_ignore_lineedit</tabstop>
+  <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
+  <tabstop>checkBox_showSpacesAndTabs</tabstop>
+  <tabstop>checkBox_USE_SMALL_SCREEN</tabstop>
+  <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
+  <tabstop>checkBox_echoLuaErrors</tabstop>
+  <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
+  <tabstop>code_editor_theme_selection_combobox</tabstop>
+  <tabstop>script_preview_combobox</tabstop>
+  <tabstop>pushButton_foreground_color</tabstop>
+  <tabstop>pushButton_background_color</tabstop>
+  <tabstop>pushButton_command_line_foreground_color</tabstop>
+  <tabstop>pushButton_command_line_background_color</tabstop>
+  <tabstop>pushButton_command_foreground_color</tabstop>
+  <tabstop>pushButton_command_background_color</tabstop>
+  <tabstop>pushButton_black</tabstop>
+  <tabstop>pushButton_Lblack</tabstop>
+  <tabstop>pushButton_red</tabstop>
+  <tabstop>pushButton_Lred</tabstop>
+  <tabstop>pushButton_green</tabstop>
+  <tabstop>pushButton_Lgreen</tabstop>
+  <tabstop>pushButton_yellow</tabstop>
+  <tabstop>pushButton_Lyellow</tabstop>
+  <tabstop>pushButton_blue</tabstop>
+  <tabstop>pushButton_Lblue</tabstop>
+  <tabstop>pushButton_magenta</tabstop>
+  <tabstop>pushButton_Lmagenta</tabstop>
+  <tabstop>pushButton_cyan</tabstop>
+  <tabstop>pushButton_Lcyan</tabstop>
+  <tabstop>pushButton_white</tabstop>
+  <tabstop>pushButton_Lwhite</tabstop>
+  <tabstop>reset_colors_button</tabstop>
+  <tabstop>pushButton_saveMap</tabstop>
+  <tabstop>pushButton_loadMap</tabstop>
+  <tabstop>checkBox_reportMapIssuesOnScreen</tabstop>
+  <tabstop>pushButton_chooseProfiles</tabstop>
+  <tabstop>pushButton_copyMap</tabstop>
+  <tabstop>comboBox_mapFileSaveFormatVersion</tabstop>
+  <tabstop>buttonDownloadMap</tabstop>
+  <tabstop>comboBox</tabstop>
+  <tabstop>mMapperUseAntiAlias</tabstop>
+  <tabstop>fontComboBox_mapSymbols</tabstop>
+  <tabstop>checkBox_showDefaultArea</tabstop>
+  <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
+  <tabstop>pushButton_showGlyphUsage</tabstop>
+  <tabstop>pushButton_foreground_color_2</tabstop>
+  <tabstop>pushButton_background_color_2</tabstop>
+  <tabstop>pushButton_black_2</tabstop>
+  <tabstop>pushButton_Lblack_2</tabstop>
+  <tabstop>pushButton_red_2</tabstop>
+  <tabstop>pushButton_Lred_2</tabstop>
+  <tabstop>pushButton_green_2</tabstop>
+  <tabstop>pushButton_Lgreen_2</tabstop>
+  <tabstop>pushButton_yellow_2</tabstop>
+  <tabstop>pushButton_Lyellow_2</tabstop>
+  <tabstop>pushButton_blue_2</tabstop>
+  <tabstop>pushButton_Lblue_2</tabstop>
+  <tabstop>pushButton_magenta_2</tabstop>
+  <tabstop>pushButton_Lmagenta_2</tabstop>
+  <tabstop>pushButton_cyan_2</tabstop>
+  <tabstop>pushButton_Lcyan_2</tabstop>
+  <tabstop>pushButton_white_2</tabstop>
+  <tabstop>pushButton_Lwhite_2</tabstop>
+  <tabstop>reset_colors_button_2</tabstop>
+  <tabstop>mFORCE_MCCP_OFF</tabstop>
+  <tabstop>mFORCE_GA_OFF</tabstop>
+  <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
+  <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
+  <tabstop>ircHostName</tabstop>
+  <tabstop>ircChannels</tabstop>
+  <tabstop>ircNick</tabstop>
+  <tabstop>ircHostPort</tabstop>
+  <tabstop>search_engine_combobox</tabstop>
+  <tabstop>checkbox_noAutomaticUpdates</tabstop>
+  <tabstop>checkBox_gameAddress</tabstop>
+  <tabstop>checkBox_currentArea</tabstop>
+  <tabstop>checkBox_characterIcon</tabstop>
+  <tabstop>checkBox_characterText</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>
