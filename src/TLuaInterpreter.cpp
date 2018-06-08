@@ -10304,7 +10304,14 @@ int TLuaInterpreter::setDiscordCharacter(lua_State* L)
 int TLuaInterpreter::setDiscordArea(lua_State *L)
 {
     if (lua_isstring(L, 1)) {
-        mudlet::self()->mDiscord.setArea(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)));
+        if (mudlet::self()->mDiscord.setArea(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)));) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushboolean(L, false);
+            lua_pushstring(L, "Discord integration is not available");
+            return 2;
+        }
     } else {
         lua_pushfstring(L, "setDiscordArea: bad argument #%d type (string expected, got %s)", 1, luaL_typename(L, 1));
         lua_error(L);
