@@ -1390,18 +1390,10 @@ void cTelnet::postMessage(QString msg)
 
 //forward data for further processing
 
-
-void cTelnet::gotPrompt(string& mud_data)
+// Patch for servers that need GA/EOR for prompt fixups
+void cTelnet::applyGAFix()
 {
-    mpPostingTimer->stop();
-    mMudData += mud_data;
-
     if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        //////////////////////////////////////////////////////////////////////
-        //
-        // Patch for servers that need GA/EOR for prompt fixups
-        //
-
         int j = 0;
         int s = mMudData.size();
         while (j < s) {
@@ -1424,20 +1416,26 @@ void cTelnet::gotPrompt(string& mud_data)
         NEXT:
             j++;
         }
-        //
-        ////////////////////////////
     }
+}
+
+void cTelnet::gotPrompt(string& mud_data)
+{
+    mpPostingTimer->stop();
+    mMudData += mud_data;
+    applyGAFix();
 
     postData();
     mMudData = "";
     mIsTimerPosting = false;
 }
 
-void cTelnet::gotRest(string& mud_data)
+void cTelnet::gotChunk(string& mud_data)
 {
     if (mud_data.empty()) {
         return;
     }
+
     if (!mGA_Driver) {
         size_t i = mud_data.rfind('\n');
         if (i != string::npos) {
@@ -1460,6 +1458,7 @@ void cTelnet::gotRest(string& mud_data)
 
     } else if (mGA_Driver) {
         mMudData += mud_data;
+        applyGAFix();
         postData();
         mMudData = "";
     } else {
@@ -1532,16 +1531,16 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         return -1;
     }
     /* TODO: Remove this commented code once it is deemed safe. -MH
-	   else
-	   {
-	    if( zval <= 0 )
-	    {
-	        initStreamDecompressor();
-	        qDebug() << "Listening for new compression sequences";
-	        return -1;
-	    }
-	   }
-	 */
+       else
+       {
+        if( zval <= 0 )
+        {
+            initStreamDecompressor();
+            qDebug() << "Listening for new compression sequences";
+            return -1;
+        }
+       }
+     */
     return outSize;
 }
 
@@ -1647,6 +1646,8 @@ void cTelnet::slot_processReplayChunk()
                 //4. IAC DO/DONT/WILL/WONT <command code>
                 iac2 = false;
                 command += ch;
+                gotChunk(cleandata);
+                cleandata = "";
                 processTelnetCommand(command);
                 command = "";
             } else if (iac && (!insb) && (ch == TN_SB)) {
@@ -1663,6 +1664,8 @@ void cTelnet::slot_processReplayChunk()
                 command += ch;
                 if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
                 {
+                    gotChunk(cleandata);
+                    cleandata = "";
                     processTelnetCommand(command);
                     command = "";
                     iac = false;
@@ -1678,6 +1681,8 @@ void cTelnet::slot_processReplayChunk()
             {
                 iac = false;
                 command += ch;
+                gotChunk(cleandata);
+                cleandata = "";
                 processTelnetCommand(command);
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
@@ -1707,7 +1712,7 @@ void cTelnet::slot_processReplayChunk()
     } //for
 
     if (!cleandata.empty()) {
-        gotRest(cleandata);
+        gotChunk(cleandata);
     }
 
     mpHost->mpConsole->finalize();
@@ -1777,6 +1782,8 @@ void cTelnet::handle_socket_signal_readyRead()
                     //4. IAC DO/DONT/WILL/WONT <command code>
                     iac2 = false;
                     command += ch;
+                    gotChunk(cleandata);
+                    cleandata = "";
                     processTelnetCommand(command);
                     command = "";
                 } else if (iac && (!insb) && (ch == TN_SB)) {
@@ -1811,7 +1818,7 @@ void cTelnet::handle_socket_signal_readyRead()
                                 if (_compress) {
                                     mNeedDecompression = true;
                                     // from this position in stream onwards, data will be compressed by zlib
-                                    gotRest(cleandata);
+                                    gotChunk(cleandata);
                                     cleandata = "";
                                     initStreamDecompressor();
                                     buffer += i + 3; //bugfix: BenH
@@ -1839,6 +1846,8 @@ void cTelnet::handle_socket_signal_readyRead()
                     command += ch;
                     if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
                     {
+                        gotChunk(cleandata);
+                        cleandata = "";
                         processTelnetCommand(command);
                         command = "";
                         iac = false;
@@ -1854,6 +1863,8 @@ void cTelnet::handle_socket_signal_readyRead()
                 {
                     iac = false;
                     command += ch;
+                    gotChunk(cleandata);
+                    cleandata = "";
                     processTelnetCommand(command);
                     //this could have set receivedGA to true; we'll handle that later
                     command = "";
@@ -1893,7 +1904,7 @@ void cTelnet::handle_socket_signal_readyRead()
     } while (datalen == 100000);
 
     if (!cleandata.empty()) {
-        gotRest(cleandata);
+        gotChunk(cleandata);
     }
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();

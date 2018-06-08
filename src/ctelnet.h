@@ -157,7 +157,8 @@ private:
 
     void processTelnetCommand(const std::string& command);
     void sendTelnetOption(char type, char option);
-    void gotRest(std::string&);
+    void applyGAFix();
+    void gotChunk(std::string&);
     void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
