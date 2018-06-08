@@ -4052,7 +4052,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="306"/>
       <source>Show Keybindings</source>
-      <translation type="unfinished"/>
+      <translation>显示按键绑定</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="309"/>
@@ -4078,33 +4078,33 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="324"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>添加条目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="325"/>
       <source>Add new Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>添加新的触发器、脚本、别名或过滤器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="328"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="330"/>
       <source>Delete Item</source>
-      <translation type="unfinished"/>
+      <translation>删除条目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="329"/>
       <source>Delete Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>删除触发器、脚本、别名或过滤器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="336"/>
       <source>Add Group</source>
-      <translation type="unfinished"/>
+      <translation>添加组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="337"/>
       <source>Add new Group</source>
-      <translation type="unfinished"/>
+      <translation>添加新的组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
@@ -4157,12 +4157,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="378"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>导入</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>导出</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
@@ -4180,32 +4180,32 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="396"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>配置另存为</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="400"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>统计</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="401"/>
       <source>Generates a statics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>在主配置控制台生成一个统计摘要显示</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="404"/>
       <source>errors</source>
-      <translation type="unfinished"/>
+      <translation>错误</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="405"/>
       <source>Shows/Hides the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>在右侧编辑器底部显示/隐藏错误控制台</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="408"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>调试</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="409"/>
@@ -5584,7 +5584,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>显示并编辑触发器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
