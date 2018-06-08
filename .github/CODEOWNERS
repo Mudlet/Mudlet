@@ -3,9 +3,10 @@
 # project own the whole product.
 
 # Normally, *.ui, *.cpp and *.h files are reviewed by the core-cpp team only
-*.cpp                           @Mudlet/core-cpp
+# All files containing UI text are reviewed by the ui-review team
+*.cpp                           @Mudlet/core-cpp @Mudlet/ui-review
 *.h                             @Mudlet/core-cpp
-*.ui                            @Mudlet/core-cpp
+*.ui                            @Mudlet/core-cpp @Mudlet/ui-review
 
 # But the lua interface has additional reviewers
 /src/LuaInterface.cpp           @Mudlet/core-cpp @Mudlet/lua-interface
@@ -31,7 +32,3 @@
 *.pri                           @Mudlet/infrastructure
 CMakeLists.txt                  @Mudlet/infrastructure
 /cmake/                         @Mudlet/infrastructure
-
-# All files containing UI text are reviewed by the ui-review team
-*.cpp                           @Mudlet/ui-review
-*.ui                            @Mudlet/ui-review
