@@ -30,10 +30,12 @@ Discord::Discord(QObject* parent) : QObject(parent)
     Discord_Shutdown = reinterpret_cast<Discord_ShutdownPrototype>(mpLibrary->resolve("Discord_Shutdown"));
 
     if (!Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks || !Discord_Shutdown) {
+        qDebug() << "Discord integration failed to load.";
         return;
     }
 
     mLoaded = true;
+    qDebug() << "Discord integration loaded.";
 
     DiscordEventHandlers handlers;
     memset(&handlers, 0, sizeof(handlers));
