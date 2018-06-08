@@ -114,8 +114,8 @@ public slots:
     // Log.
     void slot_setLogDir();
     void slot_resetLogDir();
-    void slot_logFileNameFormatChange(const int index);
-    void slot_changeLogFileAsHtml(const bool isHtml);
+    void slot_logFileNameFormatChange(int index);
+    void slot_changeLogFileAsHtml(bool isHtml);
 
     // Save.
     void slot_save_and_exit();
@@ -123,20 +123,19 @@ public slots:
     void hideActionLabel();
     void slot_setEncoding(const QString&);
 
-    void slot_handleHostAddition(Host*, const quint8);
+    void slot_handleHostAddition(Host*, quint8);
     void slot_handleHostDeletion(Host*);
 
 private slots:
-    void slot_changeShowSpacesAndTabs(const bool);
-    void slot_changeShowLineFeedsAndParagraphs(const bool);
-    void slot_resetThemeUpdateLabel();
+    void slot_changeShowSpacesAndTabs(bool);
+    void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_script_selected(int index);
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);
     void slot_setMapSymbolFont(const QFont&);
-    void slot_setMapSymbolFontStrategy(const bool);
-    void slot_changeShowMenuBar(const int);
-    void slot_changeShowToolBar(const int);
+    void slot_setMapSymbolFontStrategy(bool);
+    void slot_changeShowMenuBar(int);
+    void slot_changeShowToolBar(int);
 
 private:
     void setColors();

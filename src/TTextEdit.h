@@ -118,7 +118,7 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
-    void slot_changeIsAmbigousWidthGlyphsToBeWide(const bool);
+    void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
 
 private:
     void initDefaultSettings();

@@ -174,8 +174,8 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
-    void setToolBarIconSize(const int);
-    void setEditorTreeWidgetIconSize(const int);
+    void setToolBarIconSize(int);
+    void setEditorTreeWidgetIconSize(int);
     enum controlsVisibilityFlag {
         visibleNever = 0,
         visibleOnlyWithoutLoadedProfile = 0x1,
@@ -183,8 +183,8 @@ public:
         visibleAlways = 0x3
     };
     Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-    void setToolBarVisibility(const controlsVisibility);
-    void setMenuBarVisibility(const controlsVisibility);
+    void setToolBarVisibility(controlsVisibility);
+    void setMenuBarVisibility(controlsVisibility);
     void adjustToolBarVisibility();
     void adjustMenuBarVisibility();
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
@@ -232,7 +232,7 @@ public:
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
@@ -315,7 +315,7 @@ public:
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath
     };
-    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
@@ -368,7 +368,7 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
-    void slot_newDataOnHost(const QString&, const bool isLowerPriorityChange = false);
+    void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
 
 
 protected:
@@ -377,11 +377,11 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
-    void signal_setToolBarIconSize(const int);
-    void signal_setTreeIconSize(const int);
-    void signal_hostCreated(Host*, const quint8);
-    void signal_hostDestroyed(Host*, const quint8);
     void signal_tabChanged(const QString& hostName);
+    void signal_setToolBarIconSize(int);
+    void signal_setTreeIconSize(int);
+    void signal_hostCreated(Host*, quint8);
+    void signal_hostDestroyed(Host*, quint8);
 
 private slots:
     void slot_close_profile();

@@ -40,7 +40,8 @@ class TEvent;
 class HostManager
 {
 public:
-    HostManager() /* : mpActiveHost() - Not needed */ {}
+    HostManager() = default; /* : mpActiveHost() - Not needed */
+
     Host* getHost(QString hostname);
     int getHostCount();
     QStringList getHostList();

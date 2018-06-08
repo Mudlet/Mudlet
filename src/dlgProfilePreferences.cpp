@@ -2317,7 +2317,10 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [this] { slot_resetThemeUpdateLabel(); });
+        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
+            label->hide();
+            label->setText(tr("Updating themes from colorsublime.com..."));
+        });
         getReply->deleteLater();
     });
 
@@ -2383,7 +2386,7 @@ void dlgProfilePreferences::populateThemesList()
     }
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
-    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const std::pair<QString, QString>& a, const std::pair<QString, QString>& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
+    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
     // temporary disable painting and event updates while we refill the list
     code_editor_theme_selection_combobox->setUpdatesEnabled(false);
@@ -2484,12 +2487,6 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
     config->beginChanges();
     config->setUseLineSeparator(state);
     config->endChanges();
-}
-
-void dlgProfilePreferences::slot_resetThemeUpdateLabel()
-{
-    theme_download_label->hide();
-    theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
 }
 
 /*

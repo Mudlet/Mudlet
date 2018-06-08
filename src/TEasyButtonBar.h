@@ -61,7 +61,7 @@ private:
     std::list<TFlipButton*> mButtonList;
 
 public slots:
-    void slot_pressed(const bool);
+    void slot_pressed(bool);
 };
 
 #endif // MUDLET_TEASYBUTTONBAR_H
