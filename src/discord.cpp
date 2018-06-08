@@ -18,7 +18,7 @@ Discord::Discord(QObject* parent) : QObject(parent)
   , mLoaded{}
   , mStartTime{}
 {
-    mpLibrary.reset(new QLibrary(QStringLiteral("libdiscord-rpc")));
+    mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc")));
 
     using Discord_InitializePrototype = void (*)(const char*, DiscordEventHandlers*, int, const char*);
     using Discord_UpdatePresencePrototype = void (*)(const DiscordRichPresence*);
