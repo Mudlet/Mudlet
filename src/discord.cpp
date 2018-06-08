@@ -184,7 +184,7 @@ void Discord::UpdatePresence()
     }
 
     if (!characterIcon.isEmpty()) {
-        // the game game is unknown, set the small image as the big one so at least something shows
+        // the game is unknown, set the small image as the big one so at least something shows
         if (knownGame) {
             discordPresence.smallImageKey = characterIcon.constData();
         } else {

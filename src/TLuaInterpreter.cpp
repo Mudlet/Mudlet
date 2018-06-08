@@ -10247,6 +10247,7 @@ int TLuaInterpreter::openWebPage(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGame
 int TLuaInterpreter::setDiscordGame(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
@@ -10266,6 +10267,7 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordCharacterIcon
 int TLuaInterpreter::setDiscordCharacterIcon(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
@@ -10284,6 +10286,7 @@ int TLuaInterpreter::setDiscordCharacterIcon(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordCharacter
 int TLuaInterpreter::setDiscordCharacter(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
@@ -10302,6 +10305,7 @@ int TLuaInterpreter::setDiscordCharacter(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordArea
 int TLuaInterpreter::setDiscordArea(lua_State *L)
 {
     if (lua_isstring(L, 1)) {
