@@ -2372,7 +2372,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="29"/>
       <source>cancel</source>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
@@ -2470,7 +2470,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="114"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="127"/>
@@ -2534,27 +2534,27 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2228"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>必填项</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>配置名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>服务器地址:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2280"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>端口:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2321"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>配置历史:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
@@ -2569,12 +2569,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2369"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>可选项</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2375"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>角色名字:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2382"/>
@@ -2584,7 +2584,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2392"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>密码:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2399"/>
@@ -2599,17 +2599,17 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Auto connect this profile on startup</source>
-      <translation type="unfinished"/>
+      <translation>启动时自动连接此配置</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>更多信息</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2455"/>
       <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>网站:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2517"/>
@@ -2832,7 +2832,7 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
   </context>
   <context>
@@ -2857,7 +2857,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
   </context>
   <context>
@@ -3034,7 +3034,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="56"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>连接</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="188"/>
@@ -4133,7 +4133,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="348"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8013"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>复制</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="353"/>
@@ -6784,7 +6784,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2264"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>端口:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2271"/>
@@ -6799,7 +6799,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2285"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>服务器地址:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2292"/>
