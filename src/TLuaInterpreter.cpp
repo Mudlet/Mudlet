@@ -10256,7 +10256,7 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
             lua_pushboolean(L, true);
             return 1;
         } else {
-            lua_pushboolean(L, false);
+            lua_pushnil(L);
             lua_pushstring(L, std::get<QString>(result).toUtf8().constData());
             return 2;
         }
@@ -10275,7 +10275,7 @@ int TLuaInterpreter::setDiscordCharacterIcon(lua_State* L)
             lua_pushboolean(L, true);
             return 1;
         } else {
-            lua_pushboolean(L, false);
+            lua_pushnil(L);
             lua_pushstring(L, "Discord integration is not available");
             return 2;
         }
@@ -10294,7 +10294,7 @@ int TLuaInterpreter::setDiscordCharacter(lua_State* L)
             lua_pushboolean(L, true);
             return 1;
         } else {
-            lua_pushboolean(L, false);
+            lua_pushnil(L);
             lua_pushstring(L, "Discord integration is not available");
             return 2;
         }
@@ -10313,7 +10313,7 @@ int TLuaInterpreter::setDiscordArea(lua_State *L)
             lua_pushboolean(L, true);
             return 1;
         } else {
-            lua_pushboolean(L, false);
+            lua_pushnil(L);
             lua_pushstring(L, "Discord integration is not available");
             return 2;
         }

@@ -81,7 +81,10 @@ std::tuple<bool, QString> Discord::setGame(Host* pHost, const QString& name)
             UpdatePresence();
             return std::tuple<bool, QString>(true, QString());
         } else {
-            return std::tuple<bool, QString>(false, QStringLiteral("%1 is not a known game").arg(name));
+            // set the game anyway to what the user would like
+            mGamesNames[pHost] = name;
+            UpdatePresence();
+            return std::tuple<bool, QString>(false, QStringLiteral("%1 is not a known game - no icon will be displayed").arg(name));
         }
     }
     return std::tuple<bool, QString>(false, QStringLiteral("Discord integration is not available"));
@@ -130,7 +133,11 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 {
     Q_UNUSED(request);
 
-    mudlet::self()->mDiscord.UpdatePresence();
+    // this seems to fire too early for Host::getUrl() to be ready, so delay until next cycle
+    QTimer::singleShot(0, []() {
+        Q_ASSERT(mudlet::self());
+        mudlet::self()->mDiscord.UpdatePresence();
+    });
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
@@ -165,11 +172,19 @@ void Discord::UpdatePresence()
 
     char buffer[256];
     buffer[0] = '\0';
-    auto gameName = mGamesNames[mudlet::self()->getActiveHost()].toUtf8();
-    auto gameNameLowercase = mGamesNames[mudlet::self()->getActiveHost()].toLower().toUtf8();
-    auto area = mAreas[mudlet::self()->getActiveHost()].toUtf8();
-    auto characterIcon = mCharacterIcons[mudlet::self()->getActiveHost()].toLower().toUtf8();
-    auto characterText = mCharacters[mudlet::self()->getActiveHost()].toUtf8();
+
+    auto host = mudlet::self()->getActiveHost();
+    if (!host) {
+        return;
+    }
+
+    auto gameName = mGamesNames[host].toUtf8();
+    auto gameNameLowercase = mGamesNames[host].toLower().toUtf8();
+    auto area = mAreas[host].toUtf8();
+    auto characterIcon = mCharacterIcons[host].toLower().toUtf8();
+    auto characterText = mCharacters[host].toUtf8();
+    auto url = host->getUrl();
+    auto port = QString::number(host->getPort());
 
     bool knownGame = mKnownGames.contains(gameNameLowercase);
 
@@ -177,6 +192,7 @@ void Discord::UpdatePresence()
         sprintf(buffer, "Playing %s", gameName.constData());
         discordPresence.details = buffer;
         discordPresence.largeImageKey = gameNameLowercase.constData();
+        discordPresence.largeImageText = QStringLiteral("%1:%2").arg(url, port).toUtf8().constData();
     }
 
     if (!area.isEmpty()) {
@@ -196,7 +212,7 @@ void Discord::UpdatePresence()
         if (knownGame) {
             discordPresence.smallImageText = characterText.constData();
         } else {
-            discordPresence.largeImageText = characterText.constData();
+            discordPresence.largeImageText = QStringLiteral("%1:%2 | %3").arg(url, port, characterText).toUtf8().constData();
         }
     }
 
