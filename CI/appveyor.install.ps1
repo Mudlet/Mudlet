@@ -292,7 +292,7 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.5.1.tar.gz" "libzip-1.5.1.tar.gz"
+  DownloadFile "https://github.com/nih-at/libzip/archive/rel-1-5-1.tar.gz" "libzip-1.5.1.tar.gz"
   ExtractTar "libzip-1.5.1.tar.gz" "libzip"
   Set-Location libzip\libzip-1.5.1
   if (!(Test-Path -Path "build" -PathType Container)) {
