@@ -183,7 +183,7 @@ void Discord::UpdatePresence()
         discordPresence.smallImageText = characterText.constData();
     }
 
-    discordPresence.startTimestamp = mStartTime;
+//    discordPresence.startTimestamp = mStartTime;
 
     discordPresence.instance = 1;
     Discord_UpdatePresence(&discordPresence);
