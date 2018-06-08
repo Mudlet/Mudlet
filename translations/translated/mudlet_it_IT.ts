@@ -102,7 +102,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 risposto in %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
@@ -170,7 +170,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
@@ -215,17 +215,17 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[WHOIS] %1 is connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 si è connesso tramite %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="394"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 si è connesso da %2 (inattività %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 è lontano dalla tastiera: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
@@ -359,32 +359,32 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Etichetta di Testo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2206"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Etichetta Immagine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Sfondo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2232"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>In primo piano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Trascinare per selezionare più stanze o etichette, rilascia per finire...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2637"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Annulla l'ultimo punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
@@ -394,7 +394,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2650"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Completare il disegno a questa linea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2668"/>
@@ -414,72 +414,72 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Aumentare le dimensioni X-Y della mappa per il gruppo selezionato di stanze</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2684"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Diminuire le dimensioni X-Y della mappa per il gruppo selezionato di stanze</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2688"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Blocca camera per camminate veloci</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Sblocca camera per camminate veloci</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2696"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Impostare il peso della stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Imposta le uscite della Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Impostare uno o più simboli o lettere per contrassegnare stanze speciali</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Spostare il gruppo selezionato a una posizione specificata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Setta l'area ID della stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Le linee di uscita personalizzate non vengono visualizzate e non sono modificabili in modalità griglia</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Sostituire una linea di uscita con una linea personalizzata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2730"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Creare etichette per visualizzare testo o immagini.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Setta qui la posizione attuale del giocatore</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Non è possibile impostare la posizione quando non è selezionata esattamente una stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
@@ -494,17 +494,17 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Dividere il segmento con l'aggiunta di un nuovo punto a metà strada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Selezionare un punto prima, quindi aggiungere un nuovo punto a metà strada lungo il segmento verso la stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2806"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Unire due segmenti rimuovendo questo punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
@@ -916,40 +916,42 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Salva Profilo?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi salvare il profilo %1?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="768"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Non e&apos; possibile salvare il profilo</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="768"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Spiacenti, non e&apos; possibile salvare il tuo profilo - errore: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="841"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>File di log</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="876"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è iniziata. File di log è %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="886"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è stata interrotta. File di log è %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="931"/>
@@ -959,20 +961,21 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="933"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, File di log del profilo %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="969"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log di sessione a partire &apos;hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;aaaa&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="990"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log di sessione a partire &apos;hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;aaaa&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="995"/>
