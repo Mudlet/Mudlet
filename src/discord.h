@@ -38,6 +38,7 @@ private:
 
     QScopedPointer<QLibrary> mpLibrary;
     bool mLoaded;
+    int64_t mStartTime;
 
     static void handleDiscordReady(const DiscordUser* request);
     static void handleDiscordDisconnected(int errorCode, const char* message);

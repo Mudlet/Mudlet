@@ -16,6 +16,7 @@ Discord::Discord(QObject* parent) : QObject(parent)
   , mCharacterIcons{}
   , mCharacters{}
   , mLoaded{}
+  , mStartTime{}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("libdiscord-rpc")));
 
@@ -45,6 +46,8 @@ Discord::Discord(QObject* parent) : QObject(parent)
     handlers.joinGame = handleDiscordJoinGame;
     handlers.spectateGame = handleDiscordSpectateGame;
     handlers.joinRequest = handleDiscordJoinRequest;
+
+    mStartTime = static_cast<int64_t>(std::time(nullptr));
 
     // 1234 is an optional Steam ID - we're not in Steam yet, so this value is fake one
     Discord_Initialize(APPLICATION_ID, &handlers, 1, "1234");
@@ -180,8 +183,7 @@ void Discord::UpdatePresence()
         discordPresence.smallImageText = characterText.constData();
     }
 
-    auto timestamp = static_cast<int64_t>(std::time(nullptr));
-    discordPresence.startTimestamp = timestamp;
+    discordPresence.startTimestamp = mStartTime;
 
     discordPresence.instance = 1;
     Discord_UpdatePresence(&discordPresence);
