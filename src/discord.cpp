@@ -17,6 +17,8 @@ Discord::Discord(QObject* parent) : QObject(parent)
   , mCharacters{}
   , mLoaded{}
   , mStartTime{}
+  // lowercase list of known games
+  , mKnownGames{"achaea", "midmud", "luminari"}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc")));
 
@@ -165,6 +167,8 @@ void Discord::UpdatePresence()
     auto characterIcon = mCharacterIcons[mudlet::self()->getActiveHost()].toLower().toUtf8();
     auto characterText = mCharacters[mudlet::self()->getActiveHost()].toUtf8();
 
+    bool knownGame = mKnownGames.contains(gameNameLowercase);
+
     if (!gameName.isEmpty()) {
         sprintf(buffer, "Playing %s", gameName.constData());
         discordPresence.details = buffer;
@@ -176,7 +180,12 @@ void Discord::UpdatePresence()
     }
 
     if (!characterIcon.isEmpty()) {
-        discordPresence.smallImageKey = characterIcon.constData();
+        // the game game is unknown, set the small image as the big one so at least something shows
+        if (knownGame) {
+            discordPresence.smallImageKey = characterIcon.constData();
+        } else {
+            discordPresence.largeImageKey = characterIcon.constData();
+        }
     }
 
     if (!characterText.isEmpty()) {

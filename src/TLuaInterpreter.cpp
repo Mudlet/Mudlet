@@ -10304,7 +10304,7 @@ int TLuaInterpreter::setDiscordCharacter(lua_State* L)
 int TLuaInterpreter::setDiscordArea(lua_State *L)
 {
     if (lua_isstring(L, 1)) {
-        if (mudlet::self()->mDiscord.setArea(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)));) {
+        if (mudlet::self()->mDiscord.setArea(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)))) {
             lua_pushboolean(L, true);
             return 1;
         } else {

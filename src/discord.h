@@ -39,6 +39,9 @@ private:
     QScopedPointer<QLibrary> mpLibrary;
     bool mLoaded;
     int64_t mStartTime;
+    // list of known games - if the user sets an unknown game, have a heuristic
+    // still display their character icon
+    QStringList mKnownGames;
 
     static void handleDiscordReady(const DiscordUser* request);
     static void handleDiscordDisconnected(int errorCode, const char* message);
