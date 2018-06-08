@@ -980,43 +980,43 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="995"/>
       <source>&lt;p&gt;Stop logging MUD output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Interrompere la registrazione di MUD sul file di log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="999"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>Sessione registrata termina alle %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1000"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;aaaa</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1013"/>
       <source>&lt;p&gt;Start logging MUD output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Interrompere la registrazione di MUD sul file di log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1594"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapporto del pre-caricamento della Mappa(1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1612"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Rapporto del caricamento della mappa(1) a %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1635"/>
       <source>loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: NULL Host pointer {in TConsole::importMap(...)} - Qualcosa e' andato storto!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1648"/>
       <source>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: impossibile inizializzare mapper {in TConsole::importMap(...)} - Qualcosa è andato storto!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1656"/>
