@@ -189,7 +189,11 @@ void Discord::UpdatePresence()
     }
 
     if (!characterText.isEmpty()) {
-        discordPresence.smallImageText = characterText.constData();
+        if (knownGame) {
+            discordPresence.smallImageText = characterText.constData();
+        } else {
+            discordPresence.largeImageText = characterText.constData();
+        }
     }
 
 //    discordPresence.startTimestamp = mStartTime;
