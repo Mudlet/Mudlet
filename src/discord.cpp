@@ -133,11 +133,7 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 {
     Q_UNUSED(request);
 
-    // this seems to fire too early for Host::getUrl() to be ready, so delay until next cycle
-    QTimer::singleShot(0, []() {
-        Q_ASSERT(mudlet::self());
-        mudlet::self()->mDiscord.UpdatePresence();
-    });
+    mudlet::self()->mDiscord.UpdatePresence();
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
