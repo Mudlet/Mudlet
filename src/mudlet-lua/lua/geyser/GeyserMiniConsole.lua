@@ -197,7 +197,7 @@ function Geyser.MiniConsole:new (cons, container)
   if cons.scrollBar then
     me:enableScrollBar()
   else
-    me:disableScrollbar()
+    me:disableScrollBar()
   end
   if cons.font then
     me:setFont(cons.font)
