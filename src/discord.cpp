@@ -73,14 +73,18 @@ Discord::~Discord()
     }
 }
 
-bool Discord::setGame(Host* pHost, const QString& name)
+std::tuple<bool, QString> Discord::setGame(Host* pHost, const QString& name)
 {
     if (mLoaded) {
-        mGamesNames[pHost] = name;
-        UpdatePresence();
-        return true;
+        if (mKnownGames.contains(name.toLower())) {
+            mGamesNames[pHost] = name;
+            UpdatePresence();
+            return std::tuple<bool, QString>(true, QString());
+        } else {
+            return std::tuple<bool, QString>(false, QStringLiteral("%1 is not a known game").arg(name));
+        }
     }
-    return false;
+    return std::tuple<bool, QString>(false, QStringLiteral("Discord integration is not available"));
 }
 
 bool Discord::setArea(Host* pHost, const QString& area)

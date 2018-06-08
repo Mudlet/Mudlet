@@ -20,7 +20,7 @@ public:
     explicit Discord(QObject *parent = nullptr);    
     ~Discord() override;
 
-    bool setGame(Host* pHost, const QString& name);
+    std::tuple<bool, QString> setGame(Host* pHost, const QString& name);
     bool setArea(Host* pHost, const QString& area);
     bool setCharacterIcon(Host* pHost, const QString& icon);
     bool setCharacter(Host* pHost, const QString& text);

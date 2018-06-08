@@ -10250,12 +10250,13 @@ int TLuaInterpreter::openWebPage(lua_State* L)
 int TLuaInterpreter::setDiscordGame(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
-        if (mudlet::self()->mDiscord.setGame(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)))) {
+        auto result = mudlet::self()->mDiscord.setGame(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)));
+        if (std::get<bool>(result)) {
             lua_pushboolean(L, true);
             return 1;
         } else {
             lua_pushboolean(L, false);
-            lua_pushstring(L, "Discord integration is not available");
+            lua_pushstring(L, std::get<QString>(result).toUtf8().constData());
             return 2;
         }
     } else {
