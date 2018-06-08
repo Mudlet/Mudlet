@@ -180,8 +180,8 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 # something else (or not even # exist) we need to be careful in checking it
 # exists before doing much else with it. Also as an environmental variable it
 # is tricky to handle unless we read it into a qmake variable first:
-FONT_TEST = $$(WITH_FONTS)
-isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
+FONT_TEST = $$upper($$(WITH_FONTS))
+isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     DEFINES += INCLUDE_FONTS
     # Can download and extract latest Unbuntu font files (currently X.YY is
     # 0.83) from:
@@ -203,8 +203,8 @@ isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
 # to handle unless we read it into a qmake variable first:
 linux|macx|win32 {
     # We are on one of the supported platforms
-    UPDATER_TEST = $$(WITH_UPDATER)
-    isEmpty( UPDATER_TEST ) | !equals($$upper(UPDATER_TEST), "NO" ) {
+    UPDATER_TEST = $$upper($$(WITH_UPDATER))
+    isEmpty( UPDATER_TEST ) | !equals(UPDATER_TEST, "NO" ) {
        # The environmental variable does not exist or it does and it is NOT the
        # particular value we are looking out for - so include the updater code:
        DEFINES += INCLUDE_UPDATER
