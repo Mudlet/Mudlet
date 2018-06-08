@@ -4226,7 +4226,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="518"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>区分大小写</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="521"/>
@@ -4448,13 +4448,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="4740"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4870"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>在提示行匹配</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4743"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4873"/>
       <source>match on the prompt line (disabled)</source>
-      <translation type="unfinished"/>
+      <translation>在提示行匹配(停用)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4744"/>
@@ -7714,7 +7714,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>在提示行匹配</translation>
     </message>
   </context>
   <context>
