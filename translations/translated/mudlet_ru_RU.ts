@@ -4116,7 +4116,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
       <source>Save Item</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="341"/>
