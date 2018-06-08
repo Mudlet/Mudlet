@@ -2492,7 +2492,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>选择配置文件进行连接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2063"/>
@@ -3089,7 +3089,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="946"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="960"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>该配置文件已载入——如果想修改连接配置，你需要先断开连接。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1576"/>
@@ -4068,7 +4068,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="313"/>
       <source>Activate</source>
-      <translation type="unfinished"/>
+      <translation>启用</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="314"/>
@@ -5144,7 +5144,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="160"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>开始</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="163"/>
