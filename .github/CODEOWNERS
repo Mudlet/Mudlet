@@ -31,3 +31,7 @@
 *.pri                           @Mudlet/infrastructure
 CMakeLists.txt                  @Mudlet/infrastructure
 /cmake/                         @Mudlet/infrastructure
+
+# All files containing UI text are reviewed by the ui-review team
+*.cpp                           @Mudlet/ui-review
+*.ui                            @Mudlet/ui-review
