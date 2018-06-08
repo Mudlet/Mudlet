@@ -567,7 +567,7 @@ for this/these room(s):</source>
 more of the selected rooms, delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
-      <translation type="unfinished"/>
+      <translation>El único símbolo utilizado es &quot;%1&quot; en una o más de las habitaciones seleccionadas, elimina esto para despejarlo de todas las habitaciones seleccionadas o reemplazarlo con un nuevo símbolo para utilizar en todas las habitaciones:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3374"/>
@@ -580,7 +580,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3399"/>
       <location filename="../src/T2DMap.cpp" line="3803"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {count:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3407"/>
