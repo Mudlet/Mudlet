@@ -2465,9 +2465,9 @@ p, li { white-space: pre-wrap; }
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="discord_optin_pushbutton">
-                <property name="toolTip">
-                 <string>Enable to show off your character on Discord</string>
+               <widget class="QCheckBox" name="checkBox">
+                <property name="text">
+                 <string/>
                 </property>
                 <property name="icon">
                  <iconset resource="../mudlet.qrc">
@@ -2478,9 +2478,6 @@ p, li { white-space: pre-wrap; }
                   <width>65</width>
                   <height>22</height>
                  </size>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
                 </property>
                </widget>
               </item>
