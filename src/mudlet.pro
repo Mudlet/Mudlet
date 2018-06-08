@@ -172,15 +172,14 @@ macx {
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
-# Setting an environmental variable WITH_FONTS to the case insensitive value
-# "no" will stop the inclusion of the fonts present in the source code in the
-# compiled binary. Linux packagers or other parties may not want to include the
-# fonts since such resources may already be available in other ways or are not
-# wanted in their binaries.
-# Note: as WITH_FONTS could be a number, a string, something else (or not even
-# exist) we need to be careful in checking it exists before doing much else
-# with it. Also as an environmental variable it is tricky to handle unless we
-# read it into a qmake variable first:
+# To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
+# set the environment WITH_FONTS variable to "NO"
+# ie: export WITH_UPDATER="NO" qmake
+# 
+# Note for Mudlet developers: as WITH_FONTS could be a number, a string, 
+# something else (or not even # exist) we need to be careful in checking it
+# exists before doing much else with it. Also as an environmental variable it
+# is tricky to handle unless we read it into a qmake variable first:
 FONT_TEST = $$(WITH_FONTS)
 isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
     DEFINES += INCLUDE_FONTS
@@ -195,14 +194,13 @@ isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
 }
 
 ######################### Auto Updater setting detection #########,#############
-# Enable the auto updater system by default on supported platforms. unless the
-# environmental variable WITH_UPDATER is already defined and is not
-# set to (case insenstive) "no". This is for Linux packagers and others who will
-# want to handle updates themselves.
-# Note: as WITH_UPDATER could be a number, a string, something else (or not even
-# exist) we need to be careful in checking it exists before doing much else
-# with it. Also as an environmental variable it is tricky to handle unless we
-# read it into a qmake variable first:
+# To remove the built-in updater, set the environment WITH_UPDATER variable to "NO"
+# ie: export WITH_UPDATER="NO" qmake
+# 
+# Note for Mudlet developers: as WITH_UPDATER could be a number, a string,
+# something else (or not even exist) we need to be careful in checking it exists
+# before doing much else with it. Also as an environmental variable it is tricky
+# to handle unless we read it into a qmake variable first:
 linux|macx|win32 {
     # We are on one of the supported platforms
     UPDATER_TEST = $$(WITH_UPDATER)
