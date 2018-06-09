@@ -90,7 +90,8 @@ public:
     bool mRunAllKeyMatches;
 
 private:
-    KeyUnit() {}
+    KeyUnit() = default;
+
     TKey* getKeyPrivate(int id);
     void initStats();
     void _assembleReport(TKey*);

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,17 +23,10 @@
 
 #include "Host.h"
 #include "TArea.h"
-#include "TMap.h"
-#include "TRoom.h"
 #include "mudlet.h"
 
-
 #include "pre_guard.h"
-#include <QApplication>
-#include <QDebug>
 #include <QElapsedTimer>
-#include <QRegularExpression>
-#include <QStringBuilder>
 #include "post_guard.h"
 
 
@@ -1096,7 +1089,7 @@ void TRoomDB::clearMapDB()
     for (auto area : areaList) {
         delete area;
     }
-    assert(areas.size() == 0);
+    assert(areas.empty());
     // Must now reinsert areaId -1 name = "Default Area"
     addArea(-1, mDefaultAreaName);
     qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
@@ -1155,7 +1148,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             areaNamesMap.insert(itArea.key(), nonEmptyAreaName);
         }
     }
-    if (renamedMap.size() || isEmptyAreaNamePresent) {
+    if (!renamedMap.empty() || isEmptyAreaNamePresent) {
         QString alertText;
         QString informativeText;
         QString extraTextForMatchingSuffixAlreadyUsed;
@@ -1164,7 +1157,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             extraTextForMatchingSuffixAlreadyUsed = tr(
                     R"(It has been detected that "_###" form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way <b>is</b> important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!</p>)");
         }
-        if (renamedMap.size()) {
+        if (!renamedMap.empty()) {
             detailText = tr("[  OK  ]  - The changes made are:\n"
                             "(ID) \"old name\" ==> \"new name\"\n");
             QMapIterator<QString, QString> itRemappedNames = renamedMap;
@@ -1181,7 +1174,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             }
             detailText.chop(1); // Trim last "\n" off
         }
-        if (renamedMap.size() && isEmptyAreaNamePresent) {
+        if (!renamedMap.empty() && isEmptyAreaNamePresent) {
             // At least one unnamed area and at least one duplicate area name
             // - may be the same items
             alertText = tr("[ ALERT ] - Empty and duplicate area names detected in Map file!");
@@ -1199,7 +1192,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "  If there were more than one area without a name then all but the\n"
                                  "first will also gain a suffix in this manner.\n"
                                  "%2").arg(mUnnamedAreaName, extraTextForMatchingSuffixAlreadyUsed);
-        } else if (renamedMap.size()) {
+        } else if (!renamedMap.empty()) {
             // Duplicates but no unnnamed area
             alertText = tr("[ ALERT ] - Duplicate area names detected in the Map file!");
             informativeText = tr("[ INFO ]  - Due to some situations not being checked in the past, Mudlet had\n"

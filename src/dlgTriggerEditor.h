@@ -258,7 +258,7 @@ public slots:
     void slot_copy_xml();
     void slot_paste_xml();
     void slot_chose_action_icon();
-    void slot_showSearchAreaResults(const bool);
+    void slot_showSearchAreaResults(bool);
     void slot_script_main_area_delete_handler();
     void slot_script_main_area_add_handler();
     void slot_script_main_area_edit_handler(QListWidgetItem*);
@@ -267,18 +267,18 @@ public slots:
     void grab_key_callback(int key, int modifier);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
-    void slot_setToolBarIconSize(const int);
-    void slot_setTreeWidgetIconSize(const int);
+    void slot_setToolBarIconSize(int);
+    void slot_setTreeWidgetIconSize(int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
-    void slot_updateStatusBar(const QString statusText); // For the source code editor
+    void slot_updateStatusBar(QString statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
-    void slot_toggle_isPushDownButton(const int);
-    void slot_toggleSearchCaseSensitivity(const bool);
+    void slot_toggle_isPushDownButton(int);
+    void slot_toggleSearchCaseSensitivity(bool);
     void slot_clearSearchResults();
     void slot_editorContextMenu();
 
@@ -449,6 +449,10 @@ private:
 
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
+
+    // keeps track of the dialog reset being queued
+    bool mCleanResetQueued;
+    void runScheduledCleanReset();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

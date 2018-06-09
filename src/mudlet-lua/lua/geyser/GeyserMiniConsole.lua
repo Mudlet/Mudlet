@@ -12,6 +12,14 @@ Geyser.MiniConsole = Geyser.Window:new({
   name = "MiniConsoleClass",
   wrapAt = 300, })
 
+--- Override reposition to reset autowrap
+function Geyser.MiniConsole:reposition()
+  self.parent.reposition(self)
+  if self.autoWrap then
+    self:resetAutoWrap()
+  end
+end
+
 --- Replaces the currently selected text.
 -- @param with The text to use as a replacement.
 function Geyser.MiniConsole:replace (with)
@@ -30,17 +38,23 @@ end
 -- and won't give the best results.
 -- @param font Font family name to use (see https://doc.qt.io/qt-5/qfont.html#setFamily for details)
 function Geyser.MiniConsole:setFont (font)
+  if font then
+    self.font = font
+  end
   setFont(self.name, font)
 end
 
 --- Returns the font family in use by this miniconsole.
 function Geyser.MiniConsole:getFont()
-  return getFont(self.name)
+  self.font = getFont(self.name)
+  return self.font
 end
 
---- Sets the point at which text is wrapped in this miniconsole
+--- Sets the point at which text is wrapped in this miniconsole unless autoWrap is on
 -- @param wrapAt The number of characters to start wrapping.
 function Geyser.MiniConsole:setWrap (wrapAt)
+  if self.autoWrap then return nil, "autoWrap is enabled in this MiniConsole and that overrides manual wrapping" end
+
   if wrapAt then
     self.wrapAt = wrapAt
   end
@@ -64,6 +78,10 @@ end
 -- @param italics The italicized status. 1 is italicized, 0 is normal.
 function Geyser.MiniConsole:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underline, italics)
   setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
+end
+
+function Geyser.MiniConsole:calcFontSize()
+  return calcFontSize(self.name)
 end
 
 -- Enables the scroll bar for this window
@@ -99,7 +117,10 @@ end
 --- Sets the font size for this miniconsole.
 -- @param size The font size.
 function Geyser.MiniConsole:setFontSize(size)
-  self.parent.setFontSize(self, size)
+  if size then
+    self.parent.setFontSize(self, size)
+  end
+
   setMiniConsoleFontSize(self.name, size)
 end
 
@@ -147,6 +168,27 @@ function Geyser.MiniConsole:getColumnCount()
     return getColumnCount(self.name)
 end
 
+--- Turn on auto wrap for the miniconsole
+function Geyser.MiniConsole:enableAutoWrap()
+  self.autoWrap = true
+  self:resetAutoWrap()
+end
+
+--- Turn off auto wrap for the miniconsole, after disabling you should immediately
+-- call setWrap with your desired wrap
+function Geyser.MiniConsole:disableAutoWrap()
+  self.autoWrap = false
+end
+
+--- Set the wrap based on how wide the console is
+function Geyser.MiniConsole:resetAutoWrap()
+  local fontWidth, fontHeight = calcFontSize(self.name)
+  local consoleWidth = self.get_width()
+  local charactersWidth = math.floor(consoleWidth / fontWidth)
+
+  self:setWrap(charactersWidth)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
@@ -171,21 +213,27 @@ function Geyser.MiniConsole:new (cons, container)
   -- Set any defined colors
   Geyser.Color.applyColors(me)
 
-  if cons.wrapAt then
-    me:setWrap(cons.wrapAt)
-  end
   if cons.fontSize then
     me:setFontSize(cons.fontSize)
   elseif container then
     me:setFontSize(container.fontSize)
+    cons.fontSize = container.fontSize
   else
     me:setFontSize(8)
+    cons.fontSize = 8
   end
   if cons.scrollBar then
     me:enableScrollBar()
+  else
+    me:disableScrollBar()
   end
   if cons.font then
     me:setFont(cons.font)
+  end
+  if cons.wrapAt == "auto" then
+    me:setAutoWrap()
+  elseif cons.wrapAt then
+    me:setWrap(cons.wrapAt)
   end
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

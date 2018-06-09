@@ -31,7 +31,6 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "XMLexport.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -39,17 +38,8 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
-#include <QApplication>
-#include <QDir>
-#include <QDirIterator>
-#include <QMessageBox>
-#include <QStringBuilder>
-#include "post_guard.h"
-
-
-#include <errno.h>
 #include <zip.h>
-
+#include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this)
@@ -549,7 +539,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
     if (!dontExpandAliases) {
         // allow sending blank commands
-        if (commandList.size() == 0) {
+        if (commandList.empty()) {
             sendRaw("\n");
             return;
         }
@@ -818,7 +808,7 @@ bool Host::installPackage(const QString& fileName, int module)
             return false;
         }
 
-        QLabel* pLabel = pUnzipDialog->findChild<QLabel*>(QStringLiteral("label"));
+        auto * pLabel = pUnzipDialog->findChild<QLabel*>(QStringLiteral("label"));
         if (pLabel) {
             if (module) {
                 pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));

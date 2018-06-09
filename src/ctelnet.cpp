@@ -32,31 +32,17 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
-#include "TDebug.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
-#include "glwidget.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDir>
-#include <QNetworkAccessManager>
 #include <QProgressDialog>
-#include <QStringBuilder>
 #include <QTextCodec>
-#include <QTimer>
+#include <QTextEncoder>
 #include "post_guard.h"
-
-#include <iostream>
-#include <memory>
-#include <sstream>
-
-#include <stdio.h>
-#include <sys/types.h>
-#include <time.h>
 
 #define DEBUG
 
@@ -182,7 +168,7 @@ cTelnet::~cTelnet()
         mudlet::self()->replayOver();
     }
 
-    if (messageStack.size()) {
+    if (!messageStack.empty()) {
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
         foreach (QString message, messageStack) {
             qWarning("%s\n------------", qPrintable(message));
@@ -747,7 +733,7 @@ void cTelnet::processTelnetCommand(const string& command)
         qDebug() << "cTelnet::processTelnetCommand() TN_WONT command=" << (quint8)command[2];
 #endif
         option = command[2];
-        int idxOption = static_cast<int>(option);
+        auto idxOption = static_cast<int>(option);
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = false;
             triedToEnable[idxOption] = false;
@@ -801,7 +787,7 @@ void cTelnet::processTelnetCommand(const string& command)
 #endif
         //server wants us to enable some option
         option = command[2];
-        int idxOption = static_cast<int>(option);
+        auto idxOption = static_cast<quint8>(option);
         if (option == static_cast<char>(69) && mpHost->mEnableMSDP) // MSDP support
         {
             qDebug() << "TELNET IAC DO MSDP";
@@ -1074,10 +1060,10 @@ void cTelnet::processTelnetCommand(const string& command)
     }
     }; //end switch 1
        // raise sysTelnetEvent for all unhandled protocols
-       // EXCEPT TN_GA (performance)
-    if (command[1] != TN_GA) {
-        unsigned char type = static_cast<unsigned char>(command[1]);
-        unsigned char telnetOption = static_cast<unsigned char>(command[2]);
+       // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+    if (command[1] != TN_GA && command[1] != TN_EOR) {
+        auto type = static_cast<unsigned char>(command[1]);
+        auto telnetOption = static_cast<unsigned char>(command[2]);
         QString msg = command.c_str();
         if (command.size() >= 6) {
             msg = msg.mid(3, command.size() - 5);
@@ -1297,7 +1283,7 @@ void cTelnet::postMessage(QString msg)
         return;
     }
 
-    while (messageStack.size()) {
+    while (!messageStack.empty()) {
         while (messageStack.first().endsWith('\n')) { // Must strip off final line feeds as use that character for split() - will replace it later
             messageStack.first().chop(1);
         }
@@ -1325,7 +1311,7 @@ void cTelnet::postMessage(QString msg)
                     // Fix for lua using tabs for indentation which was messing up justification:
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), Qt::black); // Bright Yellow on black
                 }
             } else if (prefix.contains("LUA")) {
@@ -1336,7 +1322,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size() > 0) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), Qt::black); // Red on black
                 }
             } else if (prefix.contains("WARN")) {
@@ -1347,7 +1333,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), Qt::black);
                 }
             } else if (prefix.contains("ALERT")) {
@@ -1358,7 +1344,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), Qt::black); // Yellow on Black
                 }
             } else if (prefix.contains("INFO")) {
@@ -1369,7 +1355,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), Qt::black); // Light Green on Black
                 }
             } else if (prefix.contains("OK")) {
@@ -1380,7 +1366,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), Qt::black); // Orangish on black
                 }
             } else {                                                                                             // Unrecognised but still in a "[ something ] -  message..." format
@@ -1391,7 +1377,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(50, 50, 50), QColor(190, 190, 190)); //Foreground dark grey, background bright grey
                 }
             }
@@ -1449,7 +1435,7 @@ void cTelnet::gotPrompt(string& mud_data)
 
 void cTelnet::gotRest(string& mud_data)
 {
-    if (mud_data.size() < 1) {
+    if (mud_data.empty()) {
         return;
     }
     if (!mGA_Driver) {
@@ -1720,7 +1706,7 @@ void cTelnet::slot_processReplayChunk()
         }
     } //for
 
-    if (cleandata.size() > 0) {
+    if (!cleandata.empty()) {
         gotRest(cleandata);
     }
 
@@ -1906,7 +1892,7 @@ void cTelnet::handle_socket_signal_readyRead()
         } //for
     } while (datalen == 100000);
 
-    if (cleandata.size() > 0) {
+    if (!cleandata.empty()) {
         gotRest(cleandata);
     }
     mpHost->mpConsole->finalize();

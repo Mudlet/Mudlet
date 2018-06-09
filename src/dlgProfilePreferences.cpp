@@ -30,7 +30,6 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
-#include "ctelnet.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -42,16 +41,10 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
-#include <QMainWindow>
 #include <QNetworkDiskCache>
-#include <QPalette>
-#include <QRegularExpression>
-#include <QStandardPaths>
 #include <QTableWidget>
-#include <QTextOption>
 #include <QToolBar>
 #include <QUiLoader>
-#include <QVariant>
 #include "post_guard.h"
 
 
@@ -568,7 +561,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
         mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
-        QFormLayout* pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
+        auto * pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
         if (pdebugLayout) {
             pdebugLayout->addRow(pLabel_mapSymbolFontFudge, mpDoubleSpinBox_mapSymbolFontFudge);
             groupBox_debug->show();
@@ -720,7 +713,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
     disconnect(reset_colors_button, &QAbstractButton::clicked, 0, 0);
-    disconnect(reset_colors_button_2, &QAbstractButton::clicked, 0, 0);
+    disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)));
     disconnect(fontSize, SIGNAL(currentIndexChanged(int)));
@@ -1802,7 +1795,7 @@ void dlgProfilePreferences::slot_setLogDir()
     QString currentLogDir = QFileDialog::getExistingDirectory(
             this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lineEdit_logFileFolder->placeholderText() : mLogDirPath), QFileDialog::DontUseNativeDialog);
 
-    if (!currentLogDir.isEmpty() && currentLogDir != NULL) {
+    if (!currentLogDir.isEmpty() && currentLogDir != nullptr) {
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
@@ -2336,7 +2329,10 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [this] { slot_resetThemeUpdateLabel(); });
+        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
+            label->hide();
+            label->setText(tr("Updating themes from colorsublime.com..."));
+        });
         getReply->deleteLater();
     });
 
@@ -2402,7 +2398,7 @@ void dlgProfilePreferences::populateThemesList()
     }
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
-    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const std::pair<QString, QString>& a, const std::pair<QString, QString>& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
+    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
     // temporary disable painting and event updates while we refill the list
     code_editor_theme_selection_combobox->setUpdatesEnabled(false);
@@ -2505,12 +2501,6 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
     config->endChanges();
 }
 
-void dlgProfilePreferences::slot_resetThemeUpdateLabel()
-{
-    theme_download_label->hide();
-    theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
-}
-
 /*
  * This is to deal particularly with the case where the preferences dialog is
  * opened without a host instance (other than the dummy "default_host") being
@@ -2596,13 +2586,13 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         if (roomsWithSymbol.count() > 1) {
             std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
         }
-        QTableWidgetItem* pSymbolInFont = new QTableWidgetItem();
+        auto * pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
         pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                   .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.</p>")));
         pSymbolInFont->setFont(selectedFont);
 
-        QTableWidgetItem* pSymbolAnyFont = new QTableWidgetItem();
+        auto * pSymbolAnyFont = new QTableWidgetItem();
         pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
         pSymbolAnyFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(tr("<p>The room symbol will appear like this if symbols (glyphs) from any font can be used.</p>")));
@@ -2669,7 +2659,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                  .arg(tr("<p>The rooms with this symbol, up to a maximum of thirty-two, if there are more "
                                          "than this, it is indicated but they are not shown.</p>")));
 
-        QToolButton * pDummyButton = new QToolButton();
+        auto * pDummyButton = new QToolButton();
         if (isSingleFontUsable) {
             pSymbolInFont->setText(symbol);
             pSymbolAnyFont->setText(symbol);

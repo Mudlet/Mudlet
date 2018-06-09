@@ -32,18 +32,12 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
-#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtConcurrent>
-#include <QMap>
-#include <QMutableMapIterator>
-#include <QMapIterator>
-#include <chrono>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include "post_guard.h"
 
@@ -407,7 +401,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mInstalledPackages.append_child("string").text().set(pHost->mInstalledPackages.at(i).toUtf8().constData());
         }
 
-        if (pHost->mInstalledModules.size()) {
+        if (!pHost->mInstalledModules.empty()) {
             auto mInstalledModules = host.append_child("mInstalledModules");
             QMapIterator<QString, QStringList> it(pHost->mInstalledModules);
             pHost->modulesToWrite.clear();
@@ -747,8 +741,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeTrigger(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeTrigger(it, xmlParent);
     }
 }
 
@@ -800,8 +794,8 @@ void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeAlias(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeAlias(it, xmlParent);
     }
 }
 
@@ -870,8 +864,8 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeAction(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeAction(it, xmlParent);
     }
 }
 
@@ -926,8 +920,8 @@ void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeTimer(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeTimer(it, xmlParent);
     }
 }
 
@@ -981,8 +975,8 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++) {
-        writeScript(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeScript(it, xmlParent);
     }
 }
 
@@ -1035,8 +1029,8 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); ++it) {
-        writeKey(*it, xmlParent);
+    for (auto& it : *pT->mpMyChildrenList) {
+        writeKey(it, xmlParent);
     }
 }
 

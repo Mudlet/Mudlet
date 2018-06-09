@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,28 +22,22 @@
 
 
 #include "dlgPackageExporter.h"
-
+#include "ui_dlgPackageExporter.h"
 
 #include "mudlet.h"
-#include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
-#include "XMLexport.h"
 
 #include "pre_guard.h"
-#include "ui_dlgPackageExporter.h"
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QInputDialog>
-#include "post_guard.h"
-
 #include <zip.h>
-
-#include <errno.h>
+#include "post_guard.h"
 
 
 using namespace std;
@@ -319,7 +314,7 @@ void dlgPackageExporter::slot_addFiles()
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
 {
     list<TTrigger*>* childList = trig->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TTrigger*>::iterator it;
@@ -364,7 +359,7 @@ void dlgPackageExporter::listTriggers()
 void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
 {
     list<TAlias*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TAlias*>::iterator it;
@@ -410,7 +405,7 @@ void dlgPackageExporter::listAliases()
 void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
 {
     list<TScript*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TScript*>::iterator it;
@@ -450,7 +445,7 @@ void dlgPackageExporter::listScripts()
 void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
 {
     list<TKey*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TKey*>::iterator it;
@@ -494,7 +489,7 @@ void dlgPackageExporter::listKeys()
 void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
 {
     list<TAction*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TAction*>::iterator it;
@@ -534,7 +529,7 @@ void dlgPackageExporter::listActions()
 void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
 {
     list<TTimer*>* childList = item->getChildrenList();
-    if (!childList->size()) {
+    if (childList->empty()) {
         return;
     }
     list<TTimer*>::iterator it;

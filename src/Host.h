@@ -88,7 +88,7 @@ public:
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
     bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
-    void               setWideAmbiguousEAsianGlyphs( const Qt::CheckState state );
+    void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state );
     // Is used to set preference dialog control directly:
     Qt::CheckState     getWideAmbiguousEAsianGlyphsControlState() { QMutexLocker locker(& mLock);
                                                                        return mAutoAmbigousWidthGlyphsSetting
@@ -349,7 +349,7 @@ public:
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
-    void signal_changeIsAmbigousWidthGlyphsToBeWide(const bool);
+    void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
 

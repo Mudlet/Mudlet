@@ -38,7 +38,7 @@ class TToolBar : public QDockWidget
 
 public:
     Q_DISABLE_COPY(TToolBar)
-    TToolBar(TAction*, const QString&, QWidget* pW = 0);
+    TToolBar(TAction*, const QString&, QWidget* pW = nullptr);
     void addButton(TFlipButton* pW);
     void resizeEvent(QResizeEvent* e) override;
     void moveEvent(QMoveEvent* e) override;
@@ -59,7 +59,7 @@ private:
     int mItemCount;
 
 public slots:
-    void slot_pressed(const bool);
+    void slot_pressed(bool);
     void slot_topLevelChanged(bool);
     void slot_dockLocationChanged(Qt::DockWidgetArea);
 };
