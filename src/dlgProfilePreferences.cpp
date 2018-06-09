@@ -150,11 +150,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                         .arg(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
                                                 "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                        .arg("<p>Using a single font is likely to produce a more consistent style but may "
-                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+                                                     .arg(tr("<p>Using a single font is likely to produce a more consistent style but may "
+                                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
+    checkBox_runAllKeyBindings->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                           .arg(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
+                                                   "(combination of key and modifiers) even if more than one of them is set to be "
+                                                   "active. This means that a temporary keybinding (not visible in the Editor) "
+                                                   "created by a script or package may be used in preference to a permanent one "
+                                                   "that is shown and is set to be active. If checked then all matching keybindings "
+                                                   "will be run.</p>"
+                                                   "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
+                                                   "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>")));
     checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                                          .arg("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
                                                               "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
@@ -429,6 +438,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
+    checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
     topBorderHeight->setValue(pHost->mBorderTopHeight);
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
@@ -1865,6 +1875,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
+        pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();
         pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();

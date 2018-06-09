@@ -341,8 +341,7 @@
            </widget>
           </item>
           <item row="3" column="1" colspan="3">
-           <widget class="QComboBox" name="comboBox_logFileNameFormat">
-           </widget>
+           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
           </item>
           <item row="4" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_logFileName">
@@ -398,15 +397,9 @@
          <property name="title">
           <string>Input</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_5">
+         <layout class="QGridLayout" name="gridLayout_5" columnstretch="1,1,1,1">
           <item row="0" column="0" colspan="2">
            <widget class="QCheckBox" name="USE_UNIX_EOL">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
             <property name="toolTip">
              <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
             </property>
@@ -415,11 +408,15 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
+            <property name="text">
+             <string>Auto clear the input line after you sent text</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="show_sent_text_checkbox">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="toolTip">
              <string>Echo the text you send in the display box</string>
             </property>
@@ -428,18 +425,18 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="3">
-           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
-            <property name="enabled">
-             <bool>true</bool>
+          <item row="1" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>Auto clear the input line after you sent text</string>
+             <string>React to all keybindings on the same key</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_18">
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_commandSeparator">
             <property name="toolTip">
              <string/>
             </property>
@@ -451,21 +448,15 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">
+          <item row="2" column="1" colspan="3">
            <widget class="QLineEdit" name="command_separator_lineedit">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="placeholderText">
              <string>Enter text to separate commands with or leave blank to disable</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_38">
-            <property name="toolTip">
-             <string/>
-            </property>
+          <item row="3" column="0" colspan="3" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
             </property>
@@ -474,8 +465,11 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1" colspan="2">
+          <item row="3" column="3">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
             <property name="maximum">
              <number>300</number>
             </property>
