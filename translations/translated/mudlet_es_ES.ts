@@ -867,7 +867,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="106"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Consola de depuración</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="122"/>
@@ -2613,7 +2613,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Auto connect this profile on startup</source>
-      <translation type="unfinished"/>
+      <translation>Auto conectar este perfil al iniciar</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
@@ -2646,7 +2646,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Ajustes de línea:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -2666,7 +2666,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="138"/>
       <source>Exit Details:</source>
-      <translation type="unfinished"/>
+      <translation>Detalles de salida:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="153"/>
@@ -2779,17 +2779,17 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="392"/>
       <source>SW</source>
-      <translation type="unfinished"/>
+      <translation>SO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="402"/>
       <source>S</source>
-      <translation type="unfinished"/>
+      <translation>S</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="412"/>
       <source>SE</source>
-      <translation type="unfinished"/>
+      <translation>SE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="422"/>
