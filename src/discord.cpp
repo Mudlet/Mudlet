@@ -188,7 +188,10 @@ void Discord::UpdatePresence()
         sprintf(buffer, "Playing %s", gameName.constData());
         discordPresence.details = buffer;
         discordPresence.largeImageKey = gameNameLowercase.constData();
-        discordPresence.largeImageText = QStringLiteral("%1:%2").arg(url, port).toUtf8().constData();
+
+        if (!host->mDiscordHideAddress) {
+            discordPresence.largeImageText = QStringLiteral("%1:%2").arg(url, port).toUtf8().constData();
+        }
     }
 
     if (!area.isEmpty()) {
@@ -208,7 +211,11 @@ void Discord::UpdatePresence()
         if (knownGame) {
             discordPresence.smallImageText = characterText.constData();
         } else {
-            discordPresence.largeImageText = QStringLiteral("%1:%2 | %3").arg(url, port, characterText).toUtf8().constData();
+            if (!host->mDiscordHideAddress) {
+                discordPresence.largeImageText = QStringLiteral("%1:%2 | %3").arg(url, port, characterText).toUtf8().constData();
+            } else {
+                discordPresence.largeImageText = characterText.constData();
+            }
         }
     }
 

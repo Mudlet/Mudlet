@@ -20,6 +20,7 @@ public:
     explicit Discord(QObject *parent = nullptr);    
     ~Discord() override;
 
+    void UpdatePresence();
     std::tuple<bool, QString> setGame(Host* pHost, const QString& name);
     bool setArea(Host* pHost, const QString& area);
     bool setCharacterIcon(Host* pHost, const QString& icon);
@@ -49,7 +50,6 @@ private:
     static void handleDiscordJoinGame(const char* joinSecret);
     static void handleDiscordSpectateGame(const char* spectateSecret);
     static void handleDiscordJoinRequest(const DiscordUser* request);
-    void UpdatePresence();
 
     void timerEvent(QTimerEvent *event) override;
 

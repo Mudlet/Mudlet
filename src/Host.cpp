@@ -133,6 +133,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
+, mDiscordHideAddress{}
+, mDiscordHideCharacterIcon{}
+, mDiscordHideCharacterText{}
+, mDiscordHideCurrentArea{}
 , mLineSize(10.0)
 , mRoomSize(0.5)
 , mShowInfo(true)

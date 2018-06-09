@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>7</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -2372,28 +2372,28 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_20">
           <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_gameAddress">
+           <widget class="QCheckBox" name="checkBox_discordGameAddress">
             <property name="text">
              <string>Hide game address</string>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_characterIcon">
+           <widget class="QCheckBox" name="checkBox_discordCharacterIcon">
             <property name="text">
              <string>Hide character icon</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_currentArea">
+           <widget class="QCheckBox" name="checkBox_discordCurrentArea">
             <property name="text">
              <string>Hide current area</string>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_characterText">
+           <widget class="QCheckBox" name="checkBox_discordCharacterText">
             <property name="text">
              <string>Hide character text</string>
             </property>
@@ -2568,10 +2568,10 @@
   <tabstop>ircHostPort</tabstop>
   <tabstop>search_engine_combobox</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
-  <tabstop>checkBox_gameAddress</tabstop>
-  <tabstop>checkBox_currentArea</tabstop>
-  <tabstop>checkBox_characterIcon</tabstop>
-  <tabstop>checkBox_characterText</tabstop>
+  <tabstop>checkBox_discordGameAddress</tabstop>
+  <tabstop>checkBox_discordCurrentArea</tabstop>
+  <tabstop>checkBox_discordCharacterIcon</tabstop>
+  <tabstop>checkBox_discordCharacterText</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>

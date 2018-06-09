@@ -815,6 +815,10 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mSearchEngineName = QString("Google");
     }
+    pHost->mDiscordHideAddress = (attributes().value("mDiscordHideAddress") == "yes");
+    pHost->mDiscordHideCurrentArea = (attributes().value("mDiscordHideCurrentArea") == "yes");
+    pHost->mDiscordHideCharacterIcon = (attributes().value("mDiscordHideCharacterIcon") == "yes");
+    pHost->mDiscordHideCharacterText = (attributes().value("mDiscordHideCharacterText") == "yes");
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();

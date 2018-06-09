@@ -329,6 +329,11 @@ public:
     QMap<QString, QStringList> modulesToWrite;
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
+    bool mDiscordHideAddress;
+    bool mDiscordHideCharacterIcon;
+    bool mDiscordHideCharacterText;
+    bool mDiscordHideCurrentArea;
+
     double mLineSize;
     double mRoomSize;
     bool mShowInfo;

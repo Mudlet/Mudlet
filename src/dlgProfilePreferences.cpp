@@ -428,6 +428,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
+
+    checkBox_discordGameAddress->setChecked(pHost->mDiscordHideAddress);
+    checkBox_discordCurrentArea->setChecked(pHost->mDiscordHideCurrentArea);
+    checkBox_discordCharacterText->setChecked(pHost->mDiscordHideCharacterText);
+    checkBox_discordCharacterIcon->setChecked(pHost->mDiscordHideCharacterIcon);
+
     topBorderHeight->setValue(pHost->mBorderTopHeight);
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
@@ -667,6 +673,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
     connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
     connect(mIsToLogInHtml, SIGNAL(clicked(bool)), this, SLOT(slot_changeLogFileAsHtml(bool)));
+    connect(checkBox_discordGameAddress, &QAbstractButton::clicked, &mudlet::self()->mDiscord, &Discord::UpdatePresence);
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -743,6 +750,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_resetLogDir, SIGNAL(clicked()));
     disconnect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)));
     disconnect(mIsToLogInHtml, SIGNAL(clicked(bool)));
+    disconnect(checkBox_discordGameAddress, &QAbstractButton::clicked, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -831,6 +839,11 @@ void dlgProfilePreferences::clearHostDetails()
 
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
+
+    checkBox_discordGameAddress->setChecked(false);
+    checkBox_discordCharacterIcon->setChecked(false);
+    checkBox_discordCharacterText->setChecked(false);
+    checkBox_discordCurrentArea->setChecked(false);
 }
 
 void dlgProfilePreferences::loadEditorTab()
@@ -2013,6 +2026,11 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mThemePreviewType = data.first;
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
+
+        pHost->mDiscordHideAddress = checkBox_discordGameAddress->isChecked();
+        pHost->mDiscordHideCurrentArea = checkBox_discordCurrentArea->isChecked();
+        pHost->mDiscordHideCharacterText = checkBox_discordCharacterText->isChecked();
+        pHost->mDiscordHideCharacterIcon = checkBox_discordCharacterIcon->isChecked();
     }
 
 #if defined(INCLUDE_UPDATER)
@@ -2058,6 +2076,8 @@ void dlgProfilePreferences::slot_save_and_exit()
     // they changed things at the same time:
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+    mudlet::self()->mDiscord.UpdatePresence();
 
     close();
 }
