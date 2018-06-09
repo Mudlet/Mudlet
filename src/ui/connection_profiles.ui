@@ -2470,7 +2470,7 @@ p, li { white-space: pre-wrap; }
                  <bool>false</bool>
                 </property>
                 <property name="toolTip">
-                 <string>Enable Discord integration from the game (not implemented)</string>
+                 <string>Enable Discord integration (not supported by game)</string>
                 </property>
                 <property name="text">
                  <string/>
