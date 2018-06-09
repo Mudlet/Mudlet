@@ -46,9 +46,11 @@ function Geyser.MiniConsole:getFont()
   return getFont(self.name)
 end
 
---- Sets the point at which text is wrapped in this miniconsole
+--- Sets the point at which text is wrapped in this miniconsole unless autoWrap is on
 -- @param wrapAt The number of characters to start wrapping.
 function Geyser.MiniConsole:setWrap (wrapAt)
+  if self.autoWrap then return nil, "autoWrap is enabled in this MiniConsole and that overrides manual wrapping" end
+
   if wrapAt then
     self.wrapAt = wrapAt
   end
