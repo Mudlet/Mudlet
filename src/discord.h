@@ -25,6 +25,7 @@ public:
     bool setArea(Host* pHost, const QString& area);
     bool setCharacterIcon(Host* pHost, const QString& icon);
     bool setCharacter(Host* pHost, const QString& text);
+    bool gameIntegrationSupported(const QString& address);
 
 private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -42,6 +43,7 @@ private:
     int64_t mStartTime;
 
     QHash<QString, QVector<QString>> mKnownGames;
+    QVector<QString> mKnownAddresses;
 
     static void handleDiscordReady(const DiscordUser* request);
     static void handleDiscordDisconnected(int errorCode, const char* message);

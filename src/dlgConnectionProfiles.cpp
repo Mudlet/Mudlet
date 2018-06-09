@@ -816,6 +816,15 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         autologin_checkBox->setChecked(false);
     }
 
+    auto gameSupportsDiscord = mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed());
+    if (gameSupportsDiscord) {
+        discord_optin_checkBox->setEnabled(true);
+        discord_optin_checkBox->setToolTip(tr("Enable Discord integration"));
+    } else {
+        discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setToolTip(tr("Enable Discord integration (not supported by game)"));
+    }
+
     mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
 
     val = readProfileData(profile, QStringLiteral("website"));
@@ -1396,6 +1405,9 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     profiles_tree_widget->setCurrentRow(toselectRow);
+
+    auto gameSupportsDiscord = mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed());
+    discord_optin_checkBox->setEnabled(gameSupportsDiscord);
 }
 
 void dlgConnectionProfiles::slot_cancel()

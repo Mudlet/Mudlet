@@ -18,8 +18,12 @@ Discord::Discord(QObject* parent)
 , mCharacters{}
 , mLoaded{}
 , mStartTime{} // lowercase list of known games
-, mKnownGames{{"achaea", {}}, {"midmud", {"midmud.com"}}, {"luminari", {}}}
+, mKnownGames{{"achaea", {"achaea.com"}}, {"midmud", {"midmud.com"}}, {"luminari", {}}}
 {
+    for (auto& game : mKnownGames) {
+        mKnownAddresses.append(game);
+    }
+
     mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc")));
 
     using Discord_InitializePrototype = void (*)(const char*, DiscordEventHandlers*, int, const char*);
@@ -229,5 +233,5 @@ void Discord::UpdatePresence()
 
 bool Discord::gameIntegrationSupported(const QString& address)
 {
-
+    return mKnownAddresses.contains(address);
 }
