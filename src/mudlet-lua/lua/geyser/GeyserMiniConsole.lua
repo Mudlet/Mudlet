@@ -186,7 +186,8 @@ function Geyser.MiniConsole:resetAutoWrap()
   local consoleWidth = self.get_width()
   local charactersWidth = math.floor(consoleWidth / fontWidth)
 
-  self:setWrap(charactersWidth)
+  self.wrapAt = charactersWidth
+  setWindowWrap(self.name, self.wrapAt)
 end
 
 -- Save a reference to our parent constructor
