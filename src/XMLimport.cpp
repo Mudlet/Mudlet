@@ -30,6 +30,12 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QBuffer>
+#include <QtMath>
+#include "post_guard.h"
+
+
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 , mPackageName(QString())
@@ -762,6 +768,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes");
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = (attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes");
     pHost->mUSE_UNIX_EOL = (attributes().value("mUSE_UNIX_EOL") == "yes");
+    pHost->getKeyUnit()->mRunAllKeyMatches = (attributes().value("runAllKeyMatches") == "yes");
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
