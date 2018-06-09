@@ -10,15 +10,15 @@
 // Mudlet's applicationID on Discord: https://discordapp.com/developers/docs/rich-presence/how-to#initialization
 static const char* APPLICATION_ID = "450571881909583884";
 
-Discord::Discord(QObject* parent) : QObject(parent)
-  , mGamesNames{}
-  , mAreas{}
-  , mCharacterIcons{}
-  , mCharacters{}
-  , mLoaded{}
-  , mStartTime{}
-  // lowercase list of known games
-  , mKnownGames{"achaea", "midmud", "luminari"}
+Discord::Discord(QObject* parent)
+: QObject(parent)
+, mGamesNames{}
+, mAreas{}
+, mCharacterIcons{}
+, mCharacters{}
+, mLoaded{}
+, mStartTime{} // lowercase list of known games
+, mKnownGames{{"achaea", {}}, {"midmud", {"midmud.com"}}, {"luminari", {}}}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc")));
 
@@ -182,6 +182,8 @@ void Discord::UpdatePresence()
     auto url = host->getUrl();
     auto port = QString::number(host->getPort());
 
+    // list of known games - if the user sets an unknown game, have a heuristic
+    // still display their character icon
     bool knownGame = mKnownGames.contains(gameNameLowercase);
 
     if (!gameName.isEmpty()) {
@@ -223,4 +225,9 @@ void Discord::UpdatePresence()
 
     discordPresence.instance = 1;
     Discord_UpdatePresence(&discordPresence);
+}
+
+bool Discord::gameIntegrationSupported(const QString& address)
+{
+
 }
