@@ -816,14 +816,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         autologin_checkBox->setChecked(false);
     }
 
-    auto gameSupportsDiscord = mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed());
-    if (gameSupportsDiscord) {
-        discord_optin_checkBox->setEnabled(true);
-        discord_optin_checkBox->setToolTip(tr("Enable Discord integration"));
-    } else {
-        discord_optin_checkBox->setDisabled(true);
-        discord_optin_checkBox->setToolTip(tr("Enable Discord integration (not supported by game)"));
-    }
+    updateDiscordStatus();
 
     mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
 
@@ -974,6 +967,23 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             notificationAreaMessageBox->hide();
             notificationAreaMessageBox->setText(QString());
         }
+    }
+}
+
+void dlgConnectionProfiles::updateDiscordStatus()
+{
+    auto gameSupportsDiscord = mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed());
+    auto discordLoaded = mudlet::self()->mDiscord.libraryLoaded();
+
+    if (!discordLoaded) {
+        discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setToolTip(tr("Enable Discord integration (not available on this platform)"));
+    } else if (!gameSupportsDiscord) {
+        discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setToolTip(tr("Enable Discord integration (not supported by game)"));
+    } else {
+        discord_optin_checkBox->setEnabled(true);
+        discord_optin_checkBox->setToolTip(tr("Enable Discord integration"));
     }
 }
 
@@ -1406,8 +1416,7 @@ void dlgConnectionProfiles::fillout_form()
 
     profiles_tree_widget->setCurrentRow(toselectRow);
 
-    auto gameSupportsDiscord = mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed());
-    discord_optin_checkBox->setEnabled(gameSupportsDiscord);
+    updateDiscordStatus();
 }
 
 void dlgConnectionProfiles::slot_cancel()

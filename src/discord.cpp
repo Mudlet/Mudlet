@@ -239,3 +239,8 @@ bool Discord::gameIntegrationSupported(const QString& address)
 {
     return mKnownAddresses.contains(address);
 }
+
+bool Discord::libraryLoaded()
+{
+    return mLoaded;
+}

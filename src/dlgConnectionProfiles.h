@@ -79,6 +79,7 @@ private:
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
+    void updateDiscordStatus();
 };
 
 #endif // MUDLET_DLGCONNECTIONPROFILES_H

@@ -26,6 +26,7 @@ public:
     bool setCharacterIcon(Host* pHost, const QString& icon);
     bool setCharacter(Host* pHost, const QString& text);
     bool gameIntegrationSupported(const QString& address);
+    bool libraryLoaded();
 
 private:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;

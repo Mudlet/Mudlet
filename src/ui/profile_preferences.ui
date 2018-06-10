@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
-    <height>722</height>
+    <width>755</width>
+    <height>742</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>7</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -2361,7 +2361,7 @@
         </spacer>
        </item>
        <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="groupBox_discordPrivacy">
          <property name="title">
           <string>Discord privacy</string>
          </property>

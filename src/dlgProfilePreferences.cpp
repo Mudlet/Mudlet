@@ -439,14 +439,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
-    checkBox_discordGameAddress->setChecked(pHost->mDiscordHideAddress);
-    checkBox_discordCurrentArea->setChecked(pHost->mDiscordHideCurrentArea);
-    if (!pHost->mDiscordHideCharacterIcon && !pHost->mDiscordHideCharacterText) {
-        comboBox_discordCharacter->setCurrentIndex(0);
-    } else if (!pHost->mDiscordHideCharacterIcon && pHost->mDiscordHideCharacterText) {
-        comboBox_discordCharacter->setCurrentIndex(1);
+    if (!mudlet::self()->mDiscord.libraryLoaded()) {
+        groupBox_discordPrivacy->hide();
     } else {
-        comboBox_discordCharacter->setCurrentIndex(2);
+        checkBox_discordGameAddress->setChecked(pHost->mDiscordHideAddress);
+        checkBox_discordCurrentArea->setChecked(pHost->mDiscordHideCurrentArea);
+        if (!pHost->mDiscordHideCharacterIcon && !pHost->mDiscordHideCharacterText) {
+            comboBox_discordCharacter->setCurrentIndex(0);
+        } else if (!pHost->mDiscordHideCharacterIcon && pHost->mDiscordHideCharacterText) {
+            comboBox_discordCharacter->setCurrentIndex(1);
+        } else {
+            comboBox_discordCharacter->setCurrentIndex(2);
+        }
     }
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
