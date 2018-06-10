@@ -102,7 +102,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 antwortete in %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
@@ -145,7 +145,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
@@ -160,7 +160,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1 antwortete in %2 Sekunden</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
@@ -308,7 +308,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Id</source>
-      <translation>Raum-Id</translation>
+      <translation>Raum-ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
@@ -331,19 +331,22 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2043"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Raumname: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2057"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>Raum-ID: %1 (Aktuelle) Position auf der Karte: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2068"/>
       <source>Room ID: %1 (Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>Raum-ID: %1 (Gewählte) Position auf der Karte: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2079"/>
@@ -359,17 +362,17 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Textmarke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2206"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Bildmarke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2232"/>
@@ -379,152 +382,152 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Ziehen zum Auswählen mehrerer Räume oder Marken, loslassen zum Beenden...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2637"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Letzten Punkt rückgängig machen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Ändere die Eigenschaften dieser Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2650"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Zeichnen der Linie beenden</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2668"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Raum verschieben</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2672"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Raum löschen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2676"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Ändern der Raumfarbe</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Erhöhe den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2684"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Vermindere den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2688"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Sperre den Raum für Schnellgänge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Entsperre den Raum für Schnellgänge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2696"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Setze Raumgewicht</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Setze Raumausgänge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Markiere spezielle Räume mit einem oder mehreren Symbolen oder Buchstaben</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Verschiebe die gewählte Gruppe an eine bestimmte Position</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Setze die Regions-ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerdefinierte Ausgangslinien werden im Rastermodus nicht angezeigt und sind in diesem nicht bearbeitbar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Ersetze eine Ausgangslinie mit einer benutzerdefinierten Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2730"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Erstelle Marken und Text oder Bilder anzuzeigen.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Setze die aktuelle Spielerposition hierher</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Kann die Position nicht setzen, wenn nicht genau ein Raum gewählt ist</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Verschiebe Marke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2770"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Lösche Marke</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Teile das Segment, indem ein neuer Punkt in der Mitte ergänzt wird</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Wähle zuerst einen Punkt, dann ergänze einen neuen Punkt in der Mitte des Segments zum Raum</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2806"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Vereinige zwei Segmente, indem dieser Punkt entfernt wird</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Entferne das letzte Segment, indem dieser Punkt entfernt wird</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2816"/>
       <source>Select a point first, then remove it</source>
-      <translation type="unfinished"/>
+      <translation>Wähle zuerst einen Punkt, dann entferne ihn</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2821"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Ändere die Eigenschaften dieser benutzerdefinierten Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Lösche diese benutzerdefinierte Linie ganz</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3250"/>
