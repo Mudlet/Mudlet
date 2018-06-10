@@ -10301,8 +10301,15 @@ int TLuaInterpreter::openWebPage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGame
 int TLuaInterpreter::setDiscordGame(lua_State* L)
 {
+    auto& host = getHostFromLua(L);
+    if (host.mDiscordDisableLua) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Discord API is disabled in settings for privacy");
+        return 2;
+    }
+
     if (lua_isstring(L, 1)) {
-        auto result = mudlet::self()->mDiscord.setGame(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)));
+        auto result = mudlet::self()->mDiscord.setGame(&host, QString::fromUtf8(lua_tostring(L, 1)));
         if (std::get<bool>(result)) {
             lua_pushboolean(L, true);
             return 1;
@@ -10321,8 +10328,15 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordCharacterIcon
 int TLuaInterpreter::setDiscordCharacterIcon(lua_State* L)
 {
+    auto& host = getHostFromLua(L);
+    if (host.mDiscordDisableLua) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Discord API is disabled in settings for privacy");
+        return 2;
+    }
+
     if (lua_isstring(L, 1)) {
-        if (mudlet::self()->mDiscord.setCharacterIcon(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)))) {
+        if (mudlet::self()->mDiscord.setCharacterIcon(&host, QString::fromUtf8(lua_tostring(L, 1)))) {
             lua_pushboolean(L, true);
             return 1;
         } else {
@@ -10340,8 +10354,15 @@ int TLuaInterpreter::setDiscordCharacterIcon(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordCharacter
 int TLuaInterpreter::setDiscordCharacter(lua_State* L)
 {
+    auto& host = getHostFromLua(L);
+    if (host.mDiscordDisableLua) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Discord API is disabled in settings for privacy");
+        return 2;
+    }
+
     if (lua_isstring(L, 1)) {
-        if (mudlet::self()->mDiscord.setCharacter(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)))) {
+        if (mudlet::self()->mDiscord.setCharacter(&host, QString::fromUtf8(lua_tostring(L, 1)))) {
             lua_pushboolean(L, true);
             return 1;
         } else {
@@ -10359,8 +10380,15 @@ int TLuaInterpreter::setDiscordCharacter(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordArea
 int TLuaInterpreter::setDiscordArea(lua_State *L)
 {
+    auto& host = getHostFromLua(L);
+    if (host.mDiscordDisableLua) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Discord API is disabled in settings for privacy");
+        return 2;
+    }
+
     if (lua_isstring(L, 1)) {
-        if (mudlet::self()->mDiscord.setArea(&getHostFromLua(L), QString::fromUtf8(lua_tostring(L, 1)))) {
+        if (mudlet::self()->mDiscord.setArea(&host, QString::fromUtf8(lua_tostring(L, 1)))) {
             lua_pushboolean(L, true);
             return 1;
         } else {

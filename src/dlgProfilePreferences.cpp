@@ -444,7 +444,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     } else {
         checkBox_discordGameAddress->setChecked(pHost->mDiscordHideAddress);
         checkBox_discordCurrentArea->setChecked(pHost->mDiscordHideCurrentArea);
-        checkBox_discordLuaAPI->setChecked(pHost->mDiscordDisableLua);
+        checkBox_discordLuaAPI->setChecked(!pHost->mDiscordDisableLua);
         if (!pHost->mDiscordHideCharacterIcon && !pHost->mDiscordHideCharacterText) {
             comboBox_discordCharacter->setCurrentIndex(0);
         } else if (!pHost->mDiscordHideCharacterIcon && pHost->mDiscordHideCharacterText) {
@@ -2051,7 +2051,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSearchEngineName = search_engine_combobox->currentText();
 
         pHost->mDiscordHideAddress = checkBox_discordGameAddress->isChecked();
-        pHost->mDiscordDisableLua = checkBox_discordLuaAPI->isChecked();
+        pHost->mDiscordDisableLua = !checkBox_discordLuaAPI->isChecked();
         pHost->mDiscordHideCurrentArea = checkBox_discordCurrentArea->isChecked();
         if (comboBox_discordCharacter->currentIndex() == 0) {
             pHost->mDiscordHideCharacterText = false;
