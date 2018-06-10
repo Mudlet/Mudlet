@@ -11622,6 +11622,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
                     QString token = varList.front();
                     token = token.replace(QLatin1Char('"'), QString());
                     //qDebug()<<"[SET]<Token><"<<token<<"><JSON><"<<script<<">";
+                    mpHost->processDiscordMSDP(token, script);
                     setMSDPTable(token, script);
                     varList.clear();
                     script.clear();
@@ -11681,6 +11682,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
             }
         }
         //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
+        mpHost->processDiscordMSDP(token, script);
         setMSDPTable(token, script);
     }
 }

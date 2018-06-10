@@ -184,7 +184,8 @@ public:
     void xmlSaved(const QString &xmlName);
     bool currentlySavingProfile();
     void waitForProfileSave();
-    void processDiscordData(const QString &packageMessage, const QString &data);
+    void processDiscordGMCP(const QString &packageMessage, const QString &data);
+    void processDiscordMSDP(const QString &variable, QString value);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -334,6 +335,7 @@ public:
     bool mDiscordHideCharacterIcon;
     bool mDiscordHideCharacterText;
     bool mDiscordHideCurrentArea;
+    bool mDiscordDisableServerSide;
     bool mDiscordDisableLua;
 
     double mLineSize;
@@ -351,7 +353,6 @@ public:
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
-
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

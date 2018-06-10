@@ -1200,7 +1200,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
     data.remove(QChar('\r'));
 
     if (packageMessage.startsWith(QStringLiteral("Char")) || packageMessage.startsWith(QStringLiteral("Room"))) {
-        mpHost->processDiscordData(packageMessage, data);
+        mpHost->processDiscordGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);

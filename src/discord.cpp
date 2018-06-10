@@ -82,15 +82,13 @@ std::tuple<bool, QString> Discord::setGame(Host* pHost, const QString& name)
     if (!mLoaded) {
         return std::tuple<bool, QString>(false, QStringLiteral("Discord integration is not available"));
     }
-    
+        
+    mGamesNames[pHost] = name;
+    UpdatePresence();
     if (mKnownGames.contains(name.toLower())) {
-        mGamesNames[pHost] = name;
-        UpdatePresence();
         return std::tuple<bool, QString>(true, QString());
     } else {
-        // set the game anyway to what the user would like
-        mGamesNames[pHost] = name;
-        UpdatePresence();
+        // set the game anyway to what the user would like, but warn
         return std::tuple<bool, QString>(false, QStringLiteral("changed text, but %1 is not a known game - no icon will be displayed").arg(name));
     }
 }

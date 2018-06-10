@@ -977,9 +977,11 @@ void dlgConnectionProfiles::updateDiscordStatus()
 
     if (!discordLoaded) {
         discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setChecked(false);
         discord_optin_checkBox->setToolTip(tr("Enable Discord integration (not available on this platform)"));
     } else if (!gameSupportsDiscord) {
         discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setChecked(false);
         discord_optin_checkBox->setToolTip(tr("Enable Discord integration (not supported by game)"));
     } else {
         discord_optin_checkBox->setEnabled(true);

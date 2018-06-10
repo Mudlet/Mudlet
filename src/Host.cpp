@@ -137,7 +137,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDiscordHideCharacterIcon{}
 , mDiscordHideCharacterText{}
 , mDiscordHideCurrentArea{}
-, mDiscordDisableLua{true}
+, mDiscordDisableServerSide(true)
+, mDiscordDisableLua(true)
 , mLineSize(10.0)
 , mRoomSize(0.5)
 , mShowInfo(true)
@@ -1276,8 +1277,12 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 }
 
 // handles out of band (OOB) GMCP/MSDP data for Discord
-void Host::processDiscordData(const QString& packageMessage, const QString& data)
+void Host::processDiscordGMCP(const QString& packageMessage, const QString& data)
 {
+    if (mDiscordDisableServerSide) {
+        return;
+    }
+
     auto document = QJsonDocument::fromJson(data.toUtf8());
     if (!document.isObject()) {
         return;
@@ -1300,5 +1305,31 @@ void Host::processDiscordData(const QString& packageMessage, const QString& data
         if (area != QJsonValue::Undefined) {
             mudlet::self()->mDiscord.setArea(this, area.toString());
         }
+    }
+}
+
+void Host::processDiscordMSDP(const QString& variable, QString value)
+{
+    if (mDiscordDisableServerSide) {
+        return;
+    }
+
+    if (!(variable == QLatin1String("SERVER_ID") || variable == QLatin1String("AREA_NAME"))) {
+        return;
+    }
+
+    if (value.startsWith(QLatin1String("\""))) {
+        value = value.remove(0, 1);
+    }
+
+    if (value.endsWith(QLatin1String("\""))) {
+        value = value.remove(value.length()-1, 1);
+    }
+
+    // MSDP value comes padded with quotes - strip them
+    if (variable == QLatin1String("SERVER_ID")) {
+        mudlet::self()->mDiscord.setGame(this, value);
+    } else if (variable == QLatin1String("AREA_NAME")) {
+        mudlet::self()->mDiscord.setArea(this, value);
     }
 }
