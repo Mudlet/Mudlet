@@ -167,6 +167,10 @@ void Discord::handleDiscordJoinRequest(const DiscordUser* request)
 
 void Discord::UpdatePresence()
 {
+    if (!mLoaded) {
+        return;
+    }
+
     DiscordRichPresence discordPresence;
     memset(&discordPresence, 0, sizeof(discordPresence));
 
