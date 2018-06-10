@@ -137,6 +137,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDiscordHideCharacterIcon{}
 , mDiscordHideCharacterText{}
 , mDiscordHideCurrentArea{}
+, mDiscordDisableLua{}
 , mLineSize(10.0)
 , mRoomSize(0.5)
 , mShowInfo(true)

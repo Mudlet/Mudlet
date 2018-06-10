@@ -333,6 +333,7 @@ public:
     bool mDiscordHideCharacterIcon;
     bool mDiscordHideCharacterText;
     bool mDiscordHideCurrentArea;
+    bool mDiscordDisableLua;
 
     double mLineSize;
     double mRoomSize;
