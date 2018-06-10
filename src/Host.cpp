@@ -1274,3 +1274,31 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
 }
+
+// handles out of band (OOB) GMCP/MSDP data for Discord
+void Host::processDiscordData(const QString& packageMessage, const QString& data)
+{
+    auto document = QJsonDocument::fromJson(data.toUtf8());
+    if (!document.isObject()) {
+        return;
+    }
+
+    auto json = document.object();
+    if (json.isEmpty()) {
+        return;
+    }
+
+    if (packageMessage == QLatin1String("Char.Name")) {
+        auto gameName = json.value(QStringLiteral("name"));
+
+        if (gameName != QJsonValue::Undefined) {
+            mudlet::self()->mDiscord.setGame(this, gameName.toString());
+        }
+    } else if (packageMessage == QLatin1String("Room.Info")) {
+        auto area = json.value(QStringLiteral("area"));
+
+        if (area != QJsonValue::Undefined) {
+            mudlet::self()->mDiscord.setArea(this, area.toString());
+        }
+    }
+}

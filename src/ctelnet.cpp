@@ -1139,14 +1139,14 @@ void cTelnet::setATCPVariables(const QString& msg)
 
 void cTelnet::setGMCPVariables(const QString& msg)
 {
-    QString var;
-    QString arg;
+    QString packageMessage;
+    QString data;
     if (msg.indexOf('\n') > -1) {
-        var = msg.section(QChar::LineFeed, 0, 0);
-        arg = msg.section(QChar::LineFeed, 1);
+        packageMessage = msg.section(QChar::LineFeed, 0, 0);
+        data = msg.section(QChar::LineFeed, 1);
     } else {
-        var = msg.section(QChar::Space, 0, 0);
-        arg = msg.section(QChar::Space, 1);
+        packageMessage = msg.section(QChar::Space, 0, 0);
+        data = msg.section(QChar::Space, 1);
     }
 
     if (msg.startsWith(QStringLiteral("Client.GUI"))) {
@@ -1195,10 +1195,15 @@ void cTelnet::setGMCPVariables(const QString& msg)
         mpProgressDialog->show();
         return;
     }
-    arg.remove('\n');
+    data.remove('\n');
     // remove \r's from the data, as yajl doesn't like it
-    arg.remove(QChar('\r'));
-    mpHost->mLuaInterpreter.setGMCPTable(var, arg);
+    data.remove(QChar('\r'));
+
+    if (packageMessage.startsWith(QStringLiteral("Char")) || packageMessage.startsWith(QStringLiteral("Room"))) {
+        mpHost->processDiscordData(packageMessage, data);
+    }
+
+    mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)

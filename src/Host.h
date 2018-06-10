@@ -184,6 +184,7 @@ public:
     void xmlSaved(const QString &xmlName);
     bool currentlySavingProfile();
     void waitForProfileSave();
+    void processDiscordData(const QString &packageMessage, const QString &data);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
