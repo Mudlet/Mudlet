@@ -31,6 +31,7 @@
 #include "pre_guard.h"
 #include <QString>
 #include <QStringBuilder>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 TRoom::TRoom(TRoomDB* pRDB)

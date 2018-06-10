@@ -49,6 +49,7 @@
 #include "pre_guard.h"
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 // Provides the lua zip module for MacOs platform that does not have an easy way
