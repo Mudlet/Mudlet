@@ -24,6 +24,7 @@
 
 
 #include "Host.h"
+#include <QRegularExpression>
 #include "TConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
