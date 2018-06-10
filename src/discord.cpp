@@ -200,11 +200,11 @@ void Discord::UpdatePresence()
         }
     }
 
-    if (!area.isEmpty()) {
+    if (!host->mDiscordHideCurrentArea && !area.isEmpty()) {
         discordPresence.state = area.constData();
     }
 
-    if (!characterIcon.isEmpty()) {
+    if (!host->mDiscordHideCharacterIcon && !characterIcon.isEmpty()) {
         // the game is unknown, set the small image as the big one so at least something shows
         if (knownGame) {
             discordPresence.smallImageKey = characterIcon.constData();
@@ -213,7 +213,7 @@ void Discord::UpdatePresence()
         }
     }
 
-    if (!characterText.isEmpty()) {
+    if (!host->mDiscordHideCharacterText && !characterText.isEmpty()) {
         if (knownGame) {
             discordPresence.smallImageText = characterText.constData();
         } else {

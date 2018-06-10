@@ -441,8 +441,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_discordGameAddress->setChecked(pHost->mDiscordHideAddress);
     checkBox_discordCurrentArea->setChecked(pHost->mDiscordHideCurrentArea);
-    checkBox_discordCharacterText->setChecked(pHost->mDiscordHideCharacterText);
-    checkBox_discordCharacterIcon->setChecked(pHost->mDiscordHideCharacterIcon);
+    if (!pHost->mDiscordHideCharacterIcon && !pHost->mDiscordHideCharacterText) {
+        comboBox_discordCharacter->setCurrentIndex(0);
+    } else if (!pHost->mDiscordHideCharacterIcon && pHost->mDiscordHideCharacterText) {
+        comboBox_discordCharacter->setCurrentIndex(1);
+    } else {
+        comboBox_discordCharacter->setCurrentIndex(2);
+    }
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
@@ -853,9 +858,8 @@ void dlgProfilePreferences::clearHostDetails()
     search_engine_combobox->clear();
 
     checkBox_discordGameAddress->setChecked(false);
-    checkBox_discordCharacterIcon->setChecked(false);
-    checkBox_discordCharacterText->setChecked(false);
     checkBox_discordCurrentArea->setChecked(false);
+    comboBox_discordCharacter->setCurrentIndex(0);
 }
 
 void dlgProfilePreferences::loadEditorTab()
@@ -2042,8 +2046,16 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->mDiscordHideAddress = checkBox_discordGameAddress->isChecked();
         pHost->mDiscordHideCurrentArea = checkBox_discordCurrentArea->isChecked();
-        pHost->mDiscordHideCharacterText = checkBox_discordCharacterText->isChecked();
-        pHost->mDiscordHideCharacterIcon = checkBox_discordCharacterIcon->isChecked();
+        if (comboBox_discordCharacter->currentIndex() == 0) {
+            pHost->mDiscordHideCharacterText = false;
+            pHost->mDiscordHideCharacterIcon = false;
+        } else if (comboBox_discordCharacter->currentIndex() == 1) {
+            pHost->mDiscordHideCharacterIcon = false;
+            pHost->mDiscordHideCharacterText = true;
+        } else {
+            pHost->mDiscordHideCharacterText = true;
+            pHost->mDiscordHideCharacterIcon = true;
+        }
     }
 
 #if defined(INCLUDE_UPDATER)

@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -2373,13 +2373,6 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_discordCharacterIcon">
-            <property name="text">
-             <string>Hide character icon</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_discordCurrentArea">
             <property name="text">
@@ -2387,10 +2380,44 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_discordCharacter">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <item>
+             <property name="text">
+              <string>Don't hide character icon or text</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide character text</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide character icon and text</string>
+             </property>
+            </item>
+           </widget>
+          </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_discordCharacterText">
+           <widget class="QCheckBox" name="checkBox">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Lua API is currently always enabled for testing purposes</string>
+            </property>
             <property name="text">
-             <string>Hide character text</string>
+             <string>Enable Lua API</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -2565,8 +2592,6 @@
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>checkBox_discordGameAddress</tabstop>
   <tabstop>checkBox_discordCurrentArea</tabstop>
-  <tabstop>checkBox_discordCharacterIcon</tabstop>
-  <tabstop>checkBox_discordCharacterText</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>
