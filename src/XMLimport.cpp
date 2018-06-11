@@ -824,7 +824,6 @@ void XMLimport::readHostPackage(Host* pHost)
     }
     pHost->mDiscordHideAddress = (attributes().value("mDiscordHideAddress") == "yes");
     pHost->mDiscordHideCurrentArea = (attributes().value("mDiscordHideCurrentArea") == "yes");
-    pHost->mDiscordDisableServerSide = (attributes().value("mDiscordDisableServerSide") == "yes");
     pHost->mDiscordDisableLua = (attributes().value("mDiscordDisableLua") == "yes");
     pHost->mDiscordHideCharacterIcon = (attributes().value("mDiscordHideCharacterIcon") == "yes");
     pHost->mDiscordHideCharacterText = (attributes().value("mDiscordHideCharacterText") == "yes");
