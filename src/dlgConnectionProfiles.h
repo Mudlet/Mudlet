@@ -58,6 +58,7 @@ public slots:
     void slot_reallyDeleteProfile();
 
     void slot_update_autologin(int state);
+    void slot_update_discord_optin(int state);
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();

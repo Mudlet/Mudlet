@@ -66,6 +66,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
     connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
+    connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_discord_optin);
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
@@ -200,6 +201,16 @@ void dlgConnectionProfiles::slot_update_autologin(int state)
     }
     QString profile = pItem->text();
     writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
+}
+
+void dlgConnectionProfiles::slot_update_discord_optin(int state)
+{
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    if (!pItem) {
+        return;
+    }
+    QString profile = pItem->text();
+    writeProfileData(profile, QStringLiteral("discordoptin"), QString::number(state));
 }
 
 void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
@@ -814,6 +825,13 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         autologin_checkBox->setChecked(true);
     } else {
         autologin_checkBox->setChecked(false);
+    }
+
+    val = readProfileData(profile, QStringLiteral("discordoptin"));
+    if (val.toInt() == Qt::Checked) {
+        discord_optin_checkBox->setChecked(true);
+    } else {
+        discord_optin_checkBox->setChecked(false);
     }
 
     updateDiscordStatus();

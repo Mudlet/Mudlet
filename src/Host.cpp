@@ -211,6 +211,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"DuckDuckGo", "https://duckduckgo.com/?q="},
                     {"Google",     "https://www.google.com/search?q="}
     });
+
+    auto optin = readProfileData(QStringLiteral("discordoptin"));
+    if (!optin.isEmpty()) {
+        mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
+    }
 }
 
 Host::~Host()
