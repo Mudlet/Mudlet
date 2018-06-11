@@ -373,41 +373,63 @@ bool TCommandLine::event(QEvent* event)
             }
 
         case Qt::Key_Down:
+#if defined(Q_OS_MACOS)
+            if ((ke->modifiers() & allModifiers) == (Qt::ControlModifier|Qt::KeypadModifier)) {
+#else
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
-                // If EXACTLY <Ctrl>-Down is pressed
+#endif
+                // If EXACTLY <Ctrl>-Down is pressed (special case for macOs -
+                // also sets KeyPad modifier)
                 moveCursor(QTextCursor::Down, QTextCursor::MoveAnchor);
                 ke->accept();
                 return true;
 
+#if defined(Q_OS_MACOS)
+            } else if ((ke->modifiers() & allModifiers) == Qt::KeypadModifier) {
+#else
             } else if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                // If EXACTLY Up is pressed without modifiers
+#endif
+                // If EXACTLY Down is pressed without modifiers (special case
+                // for macOs - also sets KeyPad modifier)
                 historyDown(ke);
                 ke->accept();
                 return true;
 
             } else {
                 // Process as a possible key binding if there are ANY modifiers,
-                // other than just the Control modifier
+                // other than just the Control modifier (or keypad modifier on
+                // macOs)
                 return processPotentialKeyBinding(ke);
 
             }
 
         case Qt::Key_Up:
+#if defined(Q_OS_MACOS)
+            if ((ke->modifiers() & allModifiers) == (Qt::ControlModifier|Qt::KeypadModifier)) {
+#else
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
-                // If EXACTLY <Ctrl>-Up is pressed
+#endif
+                // If EXACTLY <Ctrl>-Up is pressed (special case for macOs -
+                // also sets KeyPad modifier)
                 moveCursor(QTextCursor::Up, QTextCursor::MoveAnchor);
                 ke->accept();
                 return true;
 
+#if defined(Q_OS_MACOS)
+            } else if ((ke->modifiers() & allModifiers) == Qt::KeypadModifier) {
+#else
             } else if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                // If EXACTLY Up is pressed without modifiers
+#endif
+                // If EXACTLY Up is pressed without modifiers (special case for
+                // macOs - also sets KeyPad modifier)
                 historyUp(ke);
                 ke->accept();
                 return true;
 
             } else {
                 // Process as a possible key binding if there are ANY modifiers,
-                // other than just the Control modifier
+                // other than just the Control modifier (or keypad modifier on
+                // macOs)
                 return processPotentialKeyBinding(ke);
 
             }
