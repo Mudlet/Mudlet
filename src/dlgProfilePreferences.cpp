@@ -177,6 +177,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                               "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
                                                               "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
                                                               "full support for languages other than English.</i></p>"));
+    checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mIsIconShownOnMenuCheckedState);
+    checkBox_showIconsOnMenus->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
+                                               "shown icons on menus, others, however do not. This control allows the user to override "
+                                               "the setting, if needed, as follows:"
+                                               "<ul><li><b>Unchecked</b> '<i>off</i>' = Force menus to be drawn without icons.</li>"
+                                               "<li><b>Checked</b> '<i>wide</i>' = Force menus to be drawn with icons.</li>"
+                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
+                                               "<p><i>This setting is only processed when individual menus are created and changes may not "
+                                               "propogate everywhere until Mudlet is restarted.</i></p>"));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -194,7 +204,11 @@ void dlgProfilePreferences::disableHostDetails()
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
     groupBox_encoding->setEnabled(false);
-    groupBox_miscellaneous->setEnabled(false);
+    // groupBox_miscellaneous now contains a non-Host specific control so must
+    // disable the other elements of it instead of whole groupdBox
+    mAlertOnNewData->setEnabled(false);
+    acceptServerGUI->setEnabled(false);
+    mFORCE_SAVE_ON_EXIT->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
@@ -266,7 +280,11 @@ void dlgProfilePreferences::disableHostDetails()
 void dlgProfilePreferences::enableHostDetails()
 {
     groupBox_encoding->setEnabled(true);
-    groupBox_miscellaneous->setEnabled(true);
+    // groupBox_miscellaneous now contains a non-Host specific control so must
+    // enable the other elements of it instead of whole groupdBox
+    mAlertOnNewData->setEnabled(true);
+    acceptServerGUI->setEnabled(true);
+    mFORCE_SAVE_ON_EXIT->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
     // on tab_inputLine:
@@ -2070,6 +2088,18 @@ void dlgProfilePreferences::slot_save_and_exit()
     // they changed things at the same time:
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+    mudlet::self()->mIsIconShownOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
+    switch (checkBox_showIconsOnMenus->checkState()) {
+    case Qt::Unchecked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
+        break;
+    case Qt::Checked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+        break;
+    case Qt::PartiallyChecked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mudlet::self()->mIsIconShownOnMenuOriginally);
+    }
 
     close();
 }

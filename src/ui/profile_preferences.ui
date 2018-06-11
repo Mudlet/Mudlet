@@ -198,25 +198,41 @@
          <property name="title">
           <string>Misc</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_15">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="text">
              <string>Toolbar notification if Mudlet is minimized and new data arrives</string>
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="acceptServerGUI">
+            <property name="text">
+             <string>Allow server to install script packages</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
            <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
             <property name="text">
              <string>Force auto save on exit</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QCheckBox" name="acceptServerGUI">
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_showIconsOnMenus">
             <property name="text">
-             <string>Allow server to install script packages</string>
+             <string>Show icons on menus</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
             </property>
            </widget>
           </item>

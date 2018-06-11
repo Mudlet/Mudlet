@@ -155,6 +155,15 @@ mudlet::mudlet()
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mShowIconsOnDialogs(true)
 {
+    mIsIconShownOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+    mpSettings = getQSettings();
+    readEarlySettings(*mpSettings);
+    if (mIsIconShownOnMenuCheckedState != Qt::PartiallyChecked) {
+        // If the setting is not the "tri-state" one then force the setting,
+        // have to invert the sense because the attribute is a negative one:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mIsIconShownOnMenuCheckedState == Qt::Unchecked));
+    }
+
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
     setContentsMargins(0, 0, 0, 0);
@@ -446,7 +455,7 @@ mudlet::mudlet()
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
     mpSettings = getQSettings();
-    readSettings(*mpSettings);
+    readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
 
@@ -2319,7 +2328,17 @@ void mudlet::forceClose()
     close();
 }
 
-void mudlet::readSettings(const QSettings& settings)
+// readSettings has been split into two because some settings will need to be
+// known BEFORE (early) the GUI is constructed and some AFTERWARDS (late)
+void mudlet::readEarlySettings(const QSettings& settings)
+{
+    // In the near future the user's locale preferences will need to be read
+    // as soon as possible as well!
+
+    mIsIconShownOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
+}
+
+void mudlet::readLateSettings(const QSettings& settings)
 {
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
@@ -2463,6 +2482,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
+    settings.setValue("showIconsInMenus", mIsIconShownOnMenuCheckedState);
 }
 
 void mudlet::slot_show_connection_dialog()

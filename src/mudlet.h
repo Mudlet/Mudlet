@@ -156,7 +156,8 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings(const QSettings&);
+    void readEarlySettings(const QSettings&);
+    void readLateSettings(const QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
@@ -229,6 +230,18 @@ public:
     // does use them - use this flag to determine whether we should apply our
     // icons to override some of them:
     bool mShowIconsOnDialogs;
+    // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
+    // startup which the user may leave as is or force on or off:
+    bool mIsIconShownOnMenuOriginally;
+    // This is the state for the tri-state control on the preferences and
+    // means:
+    // Qt::PartiallyChecked = use the previous state set on application start
+    //    (set AA_DontShowIconsInMenus to inverse of mIsIconShownOnMenuOriginally)
+    // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
+    //    to false ourselves)
+    // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
+    //    true ourselves)
+    Qt::CheckState mIsIconShownOnMenuCheckedState;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
