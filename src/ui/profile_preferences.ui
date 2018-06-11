@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
-    <height>611</height>
+    <width>745</width>
+    <height>716</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -2346,9 +2346,9 @@
           <string>Other special options</string>
          </property>
          <layout class="QFormLayout" name="formLayout_debug">
-           <property name="labelAlignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
+          <property name="labelAlignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
          </layout>
         </widget>
        </item>
@@ -2377,7 +2377,7 @@
              <string>Store settings in:</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -2424,6 +2424,13 @@
            <widget class="QToolButton" name="toolButton_setConfigDir">
             <property name="text">
              <string>Browse...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="3">
+           <widget class="QCheckBox" name="checkBox_moveConfigDir">
+            <property name="text">
+             <string>Move configuration from the current folder</string>
             </property>
            </widget>
           </item>

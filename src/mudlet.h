@@ -158,6 +158,7 @@ public:
     void writeConfigPath();
     QString mConfigDir;
     int mConfigDirIndex;
+    bool moveConfigDir(const QString& oldPath, const QString& newPath);
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
     void processEventLoopHack();
@@ -312,11 +313,14 @@ public:
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath
     };
-    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString(), const QString& homePath = QString());
+    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+    static QPointer<QSettings> getQConfig();
+    QPointer<QSettings> getQSettings();
+
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -454,9 +458,6 @@ private:
     bool mCompactInputLine;
     void slot_toggle_compact_input_line();
     void set_compact_input_line();
-
-    static QPointer<QSettings> getQConfig();
-    QSettings* getQSettings();
 
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:

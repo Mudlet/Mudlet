@@ -168,6 +168,7 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss", "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mConfigDir(QString())
 , mConfigDirIndex(0)
+, mpSettings(nullptr)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -215,6 +216,9 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
+
+    mpSettings = getQSettings();
+    readSettings();
 
     QAction* actionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
     actionConnect->setToolTip(tr("Connect to a MUD"));
@@ -459,8 +463,6 @@ mudlet::mudlet()
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
-    mpSettings = getQSettings();
-    readSettings();
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
 
@@ -515,7 +517,7 @@ QPointer<QSettings> mudlet::getQConfig()
     return config;
 }
 
-QSettings* mudlet::getQSettings()
+QPointer<QSettings> mudlet::getQSettings()
 {
     QPointer<QSettings> config = getQConfig();
     QString configPath = config->value(QStringLiteral("configPath")).toString();
@@ -2489,28 +2491,56 @@ void mudlet::writeSettings()
 
 void mudlet::writeConfigPath()
 {
-    QPointer<QSettings> config;
-    if (mConfigDir == ".") {
+    QPointer<QSettings> relConfig = new QSettings(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
+    if (self()->mConfigDir == ".") {
         // Write to a 'config.ini' file in the same directory as the
         // application file if mConfigDir is set to a relative path
-        config = new QSettings(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
+        relConfig->setValue("configPath", self()->mConfigDir);
+        relConfig->sync();
+        return;
     } else {
-        // Otherwise, if config.ini exists in the same directory as
-        // the application, load it
-        QSettings relConfig(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
+        QPointer<QSettings> config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
         // Remove the configPath value in relConfig if it exists so it
         // does not override the new config file
-        if (relConfig.contains("configPath")) {
-            relConfig.remove("configPath");
+        if (relConfig->contains("configPath")) {
+            relConfig->remove("configPath");
         }
-        // Load config in one of the default QSettings locations
-        config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
+        config->setValue("configPath", self()->mConfigDir);
+        config->sync();
+        return;
     }
-    config->setValue("configPath", mConfigDir);
-    config->sync();
-    qDebug() << "config is opened at: " + config->fileName();
-    qDebug() << "config.configPath set to: " + config->value("configPath").toString();
-    qDebug() << "config status: " + config->status();
+}
+
+bool mudlet::moveConfigDir(const QString& oldPath, const QString& newPath)
+{
+    QDir oldDir(oldPath);
+    QDir newDir(newPath);
+    // Move the directory only if it actually exists. Otherwise,
+    // return false as there's nothing to move.
+    if (oldDir.exists()) {
+        // Save and close any currently running profiles.
+        /*
+        for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+            slot_close_profile();
+        }
+        */
+        // Delete pointers to QSettings files
+        delete mpSettings;
+        newDir.rmpath(newPath);
+        if (!oldDir.rename(oldPath, newPath)) {
+            QMessageBox::critical(this,
+                                  tr("Couldn't move configuration"),
+                                  tr("Error when attempting to rename %1 to %2. You may not have the permissions to move the directory, or there may be an existing directory in the new path.")
+                                          .arg(oldPath, newPath));
+            qWarning() << QStringLiteral("ERROR: Could not move configuration directory from %1 to %2.").arg(oldPath, newPath);
+            return false;
+        }
+        return true;
+    }
+    QMessageBox::warning(this, tr("No existing configuration to move"), tr("%1 does not exist.").arg(oldPath));
+    qWarning() << tr("ERROR: Could not move configuration directory. Does not exist.");
+
+    return false;
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2830,7 +2860,7 @@ void mudlet::slot_replay()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), getMudletPath(profileReplayAndLogFilesPath, pHost->getName(), QString(), pHost->mHomePath), tr("*.dat"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), getMudletPath(profileReplayAndLogFilesPath, pHost->getName()), tr("*.dat"));
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
@@ -3534,20 +3564,19 @@ void mudlet::slot_module_manager_destroyed()
 
 // Convenience helper - may aide things if we want to put files in a different
 // place...!
-QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2, const QString& homePath)
+QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
 {
     QString configDir;
-    if (self()) {
-        configDir = self()->mConfigDir;
+    if (mudlet::self() != nullptr) {
+        configDir = mudlet::self()->mConfigDir;
     } else {
-        configDir = mudlet::getQConfig()->value("configPath").toString();
+        configDir = mudlet::getQConfig()->value(QStringLiteral("configPath")).toString();
     }
 
+    qDebug() << "Getting mudlet path from: " << configDir;
+
     QString configPath;
-    if (!homePath.isEmpty()) {
-        // If set, use the parameter homePath as the configPath.
-        configPath = homePath;
-    } else if (configDir == ".") {
+    if (configDir == QStringLiteral(".")) {
         // Otherwise, if configDir is set to a relative path, set
         // configPath to the directory "/config" within the
         // application directory path.

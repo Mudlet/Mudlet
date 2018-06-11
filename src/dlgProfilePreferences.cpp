@@ -121,10 +121,24 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // groupBox_config:
     comboBox_selectConfigDir->setToolTip(
             tr("<html><head/><body>%1</body></html>")
-                    .arg("<p>Choose where Mudlet will read and store its configuration files. The profiles and settings in the selected directory will be read as soon as you press <i>Save</i>.</p>"
-                         "<p>Any running profile will continue to write its settings in the directory it was originally loaded from after this option is changed.</p>"));
+                    .arg("<p>Choose where Mudlet will store its configuration files. The profiles and settings in the selected directory will be read as soon as you press <i>Save</i>.</p>"
+                         "<p>Any running profile will continue to write its settings in the directory it was originally loaded from unless <i>Move configuration from the current folder</i> is "
+                         "checked.</p>"));
     lineEdit_configDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>The directory where Mudlet will store its configuration.</p>"));
     toolButton_setConfigDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Choose a directory where Mudlet will store its configuration.</p>"));
+    checkBox_moveConfigDir->setToolTip(tr("<html><head/><body>%1</body></html>")
+                                               .arg("<p>If checked, all profiles and settings in the current configuration directory will be moved to the directory selected above.</p>"
+                                                    "<p>Any currently opened profiles will be saved and closed.</p>"));
+
+    // Set the text of lineEdit_configDir to the current configuration directory.
+    lineEdit_configDir->setText(mudlet::getMudletPath(mudlet::mainPath));
+    comboBox_selectConfigDir->setCurrentIndex(mudlet::self()->mConfigDirIndex);
+    // Make options to set a config dir visible if the option "Select
+    // a directory" is selected
+    bool isShown = comboBox_selectConfigDir->currentIndex() == 1;
+    label_setConfigDir->setVisible(isShown);
+    lineEdit_configDir->setVisible(isShown);
+    toolButton_setConfigDir->setVisible(isShown);
 
     if (pHost) {
         initWithHost(pHost);
@@ -191,6 +205,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*, quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
     connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
     connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
+    connect(comboBox_selectConfigDir, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_configDirOptionChange(int)));
+    connect(toolButton_setConfigDir, SIGNAL(clicked(bool)), this, SLOT(slot_setConfigDir()));
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -267,10 +283,6 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_ircOptions enabled...
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
-    comboBox_selectConfigDir->setEnabled(false);
-    label_setConfigDir->hide();
-    lineEdit_configDir->hide();
-    toolButton_setConfigDir->hide();
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -325,7 +337,6 @@ void dlgProfilePreferences::enableHostDetails()
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
     groupbox_searchEngineSelection->setEnabled(true);
-    comboBox_selectConfigDir->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -481,7 +492,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // pHost->mLogDir should be empty for the default location:
     mLogDirPath = pHost->mLogDir;
     lineEdit_logFileFolder->setText(mLogDirPath);
-    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName(), QString(), pHost->mHomePath));
+    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
     // set the cursor position to the end of the lineEdit's text property.
     lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
     // Enable the reset button if the current location is not the default one:
@@ -613,18 +624,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
-    // groupBox_config:
-    comboBox_selectConfigDir->setCurrentIndex(mudlet::self()->mConfigDirIndex);
-    // Set the text of lineEdit_configDir to the default .config
-    // folder in the user's home directory if mConfigDir is empty
-    lineEdit_configDir->setText(mudlet::getMudletPath(mudlet::mainPath));
-    // Make options to set a config dir visible if the option "Select
-    // a directory" is selected
-    bool isShown = comboBox_selectConfigDir->currentIndex() == 1;
-    label_setConfigDir->setVisible(isShown);
-    lineEdit_configDir->setVisible(isShown);
-    toolButton_setConfigDir->setVisible(isShown);
-
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
@@ -699,9 +698,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
     connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
     connect(mIsToLogInHtml, SIGNAL(clicked(bool)), this, SLOT(slot_changeLogFileAsHtml(bool)));
-
-    connect(comboBox_selectConfigDir, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_configDirOptionChange(int)));
-    connect(toolButton_setConfigDir, SIGNAL(clicked()), this, SLOT(slot_setConfigDir()));
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1504,12 +1500,10 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(
-                           this,
-                           tr("Load Mudlet map"),
-                           mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName(), QString(), pHost->mHomePath),
-                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
-                              "Do not change extensions (in braces) they are used programmatically!"));
+    QString fileName = QFileDialog::getOpenFileName(this,
+                                                    tr("Load Mudlet map"),
+                                                    mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName(), QString()),
+                                                    tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -1615,7 +1609,7 @@ void dlgProfilePreferences::copyMap()
 
             // Check for the destination directory for the other profiles
             QDir toProfileDir;
-            QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName, QString(), pHost->mHomePath);
+            QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName);
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
@@ -1734,7 +1728,7 @@ void dlgProfilePreferences::copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName(), QString(), pHost->mHomePath));
+    QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()));
     QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -1764,7 +1758,7 @@ void dlgProfilePreferences::copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName, pHost->mHomePath))) {
+        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
             continue; // Try again with next profile
@@ -1823,7 +1817,7 @@ void dlgProfilePreferences::slot_setLogDir()
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName(), QString(), pHost->mHomePath)) {
+        if (currentLogDir == mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName())) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -1890,7 +1884,7 @@ void dlgProfilePreferences::slot_configDirOptionChange(const int index)
     case 0:
         // Clear mConfigDirPath if 'Default' is selected
         mConfigDirPath.clear();
-        lineEdit_configDir->setText(QDir::homePath() + "/.config");
+        lineEdit_configDir->setText(QDir::homePath() + "/.config/mudlet");
         break;
     case 1:
         // Set mConfigDirPath to the value of lineEdit_configDir if
@@ -1908,16 +1902,11 @@ void dlgProfilePreferences::slot_configDirOptionChange(const int index)
 
 void dlgProfilePreferences::slot_setConfigDir()
 {
-    Host* pHost = mpHost;
-    if (!pHost) {
-        return;
-    }
-
     QString dir = QFileDialog::getExistingDirectory(this,
                                                     tr("Select a directory where your configuration will be stored"),
                                                     (lineEdit_configDir->text().isEmpty() ? QDir::homePath() + "/.config" : lineEdit_configDir->text()),
                                                     QFileDialog::DontUseNativeDialog);
-    if (!dir.isEmpty() && dir != NULL) {
+    if (!dir.isEmpty()) {
         if (dir == QDir::homePath() + "/.config") {
             // Clear mConfigDirPath if the directory is selected is
             // equal to the default
@@ -2153,11 +2142,19 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    // Save the previous loaded configuration before setting mConfigDir to
-    // the changed path
-    // mudlet::self()->writeSettings();
-    mudlet::self()->mConfigDir = mConfigDirPath;
+    if (mConfigDirPath != mudlet::self()->mConfigDir) {
+        QString oldPath = mudlet::getMudletPath(mudlet::mainPath);
+        mudlet::self()->mConfigDir = mConfigDirPath;
+        qDebug() << "Configuration directory set to: " << mudlet::self()->mConfigDir;
+        // Move the current configuration directory to the new path if
+        // checkBox_moveConfigDir is checked.
+        if (checkBox_moveConfigDir->isChecked()) {
+            mudlet::self()->moveConfigDir(oldPath, lineEdit_configDir->text());
+        }
+    }
     mudlet::self()->mConfigDirIndex = comboBox_selectConfigDir->currentIndex();
+    mudlet::self()->mpSettings = mudlet::self()->getQSettings();
+    mudlet::self()->writeSettings();
 
     close();
 }
