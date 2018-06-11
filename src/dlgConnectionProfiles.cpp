@@ -59,10 +59,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     // the first and best place to test this as the "Cancel" button is a built-
     // in dialog button which will have an icon if the current system style
     // settings suggest it:
-    mudlet::self()->mIsIconShownOnDialogButtons = !abort->icon().isNull();
+    mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
-    QTextDocument* pWelcome_document = new QTextDocument(this);
-    if (mudlet::self()->mIsIconShownOnDialogButtons) {
+    auto pWelcome_document = new QTextDocument(this);
+    if (mudlet::self()->mShowIconsOnDialogs) {
         // Since I've switched to allowing the possibility of theme replacement
         // of icons we need a way to insert the current theme icons for
         // "dialog-ok-apply" and "edit-copy" into the help message - this is
