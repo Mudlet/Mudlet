@@ -27,6 +27,7 @@
 
 
 #include "HostManager.h"
+#include "FontManager.h"
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -85,7 +86,8 @@ public:
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    HostManager& getHostManager() { return mHostManager; }
+    HostManager& getHostManager() { return mHostManager; }    
+    FontManager mFontManager;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
@@ -108,6 +110,7 @@ public:
     QString getWindowFont(Host*, const QString&);
     bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
+    QSize calcFontSize(Host* pHost, const QString& windowName);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);
@@ -173,8 +176,8 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
-    void setToolBarIconSize(const int);
-    void setEditorTreeWidgetIconSize(const int);
+    void setToolBarIconSize(int);
+    void setEditorTreeWidgetIconSize(int);
     enum controlsVisibilityFlag {
         visibleNever = 0,
         visibleOnlyWithoutLoadedProfile = 0x1,
@@ -182,8 +185,8 @@ public:
         visibleAlways = 0x3
     };
     Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-    void setToolBarVisibility(const controlsVisibility);
-    void setMenuBarVisibility(const controlsVisibility);
+    void setToolBarVisibility(controlsVisibility);
+    void setMenuBarVisibility(controlsVisibility);
     void adjustToolBarVisibility();
     void adjustMenuBarVisibility();
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
@@ -203,6 +206,7 @@ public:
     void playSound(QString s, int);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
+    QStringList getAvailableFonts();
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -230,7 +234,7 @@ public:
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
@@ -313,7 +317,7 @@ public:
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath
     };
-    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
@@ -369,7 +373,7 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
-    void slot_newDataOnHost(const QString&, const bool isLowerPriorityChange = false);
+    void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
 
 
 protected:
@@ -378,10 +382,10 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
-    void signal_setToolBarIconSize(const int);
-    void signal_setTreeIconSize(const int);
-    void signal_hostCreated(Host*, const quint8);
-    void signal_hostDestroyed(Host*, const quint8);
+    void signal_setToolBarIconSize(int);
+    void signal_setTreeIconSize(int);
+    void signal_hostCreated(Host*, quint8);
+    void signal_hostDestroyed(Host*, quint8);
 
 private slots:
     void slot_close_profile();

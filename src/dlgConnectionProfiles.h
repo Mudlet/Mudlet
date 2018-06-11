@@ -34,7 +34,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
-    dlgConnectionProfiles(QWidget* parent = 0);
+    dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPointer<QSettings> getProfileSettings(const QString& profile);
     QPair<bool, QString> writeProfileData(const QString& profile);
@@ -46,7 +46,7 @@ signals:
     void signal_establish_connection(QString profile_name, int historyVersion);
 
 public slots:
-    void slot_update_name(const QString);
+    void slot_update_name(QString);
     void slot_save_name();
     void slot_update_url(const QString &);
     void slot_update_port(const QString);
@@ -63,7 +63,7 @@ public slots:
 
 private:
     void copyFolder(QString sourceFolder, QString destFolder);
-    QString getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name);
+    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
 
     bool validName;
     bool validUrl;

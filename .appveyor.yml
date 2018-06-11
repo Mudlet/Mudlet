@@ -3,8 +3,7 @@ init:
 - cmd: mkdir C:\src\
 environment:
   matrix:
-  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
-#  - QT_BASE_DIR: C:\Qt\5.9\mingw53_32
+  - QT_BASE_DIR: C:\Qt\5.11\mingw53_32
 install:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.install.ps1"

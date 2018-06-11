@@ -25,10 +25,6 @@
 #include "Host.h"
 #include "TScript.h"
 
-#include "pre_guard.h"
-#include <QMapIterator>
-#include "post_guard.h"
-
 
 using namespace std;
 

@@ -25,12 +25,9 @@
 
 #include "Host.h"
 #include "TConsole.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
-#include <QApplication>
-#include <QDebug>
 #include <QElapsedTimer>
 #include "post_guard.h"
 

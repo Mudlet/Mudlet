@@ -48,10 +48,10 @@ public:
     bool tabUnderline(const int index) const { return indexedTabState(index, mUnderlineTabsSet); }
 
 private:
-    bool indexedTabState(const int, const QSet<QString>&) const;
+    bool indexedTabState(int, const QSet<QString>&) const;
     bool namedTabState(const QString&, const QSet<QString>&) const;
-    void setNamedTabState(const QString&, const bool, QSet<QString>&);
-    void setIndexedTabState(const int, const bool, QSet<QString>&);
+    void setNamedTabState(const QString&, bool, QSet<QString>&);
+    void setIndexedTabState(int, bool, QSet<QString>&);
 
 
     QTabBar * mpTabBar;

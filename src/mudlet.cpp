@@ -26,8 +26,6 @@
 #include "mudlet.h"
 
 #include "EAction.h"
-#include "Host.h"
-#include "HostManager.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -49,12 +47,8 @@
 #include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
-#include "edbee/edbee.h"
-#include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
-#include "edbee/views/texttheme.h"
+
 #if defined(INCLUDE_UPDATER)
-#include "updater.h"
 #endif
 
 #include "pre_guard.h"
@@ -64,16 +58,14 @@
 #include <QToolBar>
 #include <QtEvents>
 #include <QtUiTools/quiloader.h>
-#include <QApplication>
 #include <QDesktopServices>
 #include <QDesktopWidget>
-#include <QDockWidget>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScrollBar>
-#include "post_guard.h"
 
 #include <zip.h>
+#include "post_guard.h"
 
 using namespace std;
 
@@ -139,6 +131,7 @@ mudlet* mudlet::self()
 
 mudlet::mudlet()
 : QMainWindow()
+, mFontManager()
 , mToolbarIconSize(0)
 , mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
@@ -500,6 +493,9 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+
+    // load bundled fonts
+    mFontManager.addFonts();
 }
 
 QPointer<QSettings> mudlet::getQConfig()
@@ -1077,7 +1073,7 @@ void mudlet::slot_tab_changed(int tabID)
             return;
         }
     } else {
-        if (mTabMap.size() > 0) {
+        if (!mTabMap.empty()) {
             mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
         } else {
             mpCurrentActiveHost = nullptr;
@@ -1456,6 +1452,31 @@ int mudlet::getFontSize(Host* pHost, const QString& name)
     } else {
         return -1;
     }
+}
+
+QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
+{
+    if (!pHost) {
+        return QSize(-1, -1);
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QFont font;
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        font = pHost->mDisplayFont;
+    } else {
+        const auto window = dockWindowConsoleMap.constFind(windowName);
+        if (window != dockWindowConsoleMap.cend()) {
+            Q_ASSERT_X(window.value()->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
+            font = window.value()->mUpperPane->mDisplayFont;
+        } else {
+            return QSize(-1, -1);
+        }
+    }
+
+    auto fontMetrics = QFontMetrics(font);
+    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
 }
 
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
@@ -2951,6 +2972,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     }
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
@@ -3802,4 +3824,11 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
             }
         }
     }
+}
+
+QStringList mudlet::getAvailableFonts()
+{
+    QFontDatabase database;
+
+    return database.families(QFontDatabase::Any);
 }

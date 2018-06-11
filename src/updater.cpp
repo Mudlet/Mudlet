@@ -27,7 +27,6 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
-#include <QProcessEnvironment>
 #include "post_guard.h"
 
 // update flows:

@@ -21,7 +21,6 @@
 
 #include "TTreeWidget.h"
 
-
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TTimer.h"
@@ -30,9 +29,7 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QHeaderView>
-#include <QTreeWidget>
 #include "post_guard.h"
-
 
 TTreeWidget::TTreeWidget(QWidget* pW) : QTreeWidget(pW), mChildID()
 {

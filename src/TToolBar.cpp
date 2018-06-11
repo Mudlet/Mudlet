@@ -29,10 +29,6 @@
 #include "TFlipButton.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QtEvents>
-#include "post_guard.h"
-
 
 TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget( pW )
@@ -185,7 +181,7 @@ void TToolBar::finalize()
 // now retrieve the button state to ensure the visible representation is used.
 void TToolBar::slot_pressed(const bool isChecked)
 {
-    TFlipButton* pB = dynamic_cast<TFlipButton*>(sender());
+    auto * pB = dynamic_cast<TFlipButton*>(sender());
     if (!pB) {
         return;
     }

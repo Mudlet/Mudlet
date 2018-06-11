@@ -21,20 +21,14 @@
  ***************************************************************************/
 
 
-#include "FontManager.h"
 #include "HostManager.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
 #include <QDesktopWidget>
 #include <QDir>
-#include <QFile>
-#include <QMessageBox>
 #include <QPainter>
 #include <QSplashScreen>
-#include <QStringBuilder>
-#include <QTextLayout>
 #include "post_guard.h"
 
 /*
@@ -50,8 +44,6 @@
 #include <Windows.h>
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
-
-#include <iostream>
 
 
 using namespace std;
@@ -198,7 +190,7 @@ int main(int argc, char* argv[])
     unsigned int startupAction = 0;
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
-    QApplication* app = qobject_cast<QApplication*>(initApp.data());
+    auto * app = qobject_cast<QApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
@@ -544,8 +536,6 @@ int main(int argc, char* argv[])
 #endif
 
     mudlet::debugMode = false;
-    FontManager fm;
-    fm.addFonts();
 
     if (show_splash) {
         splash_message.append("Done.\n\n"

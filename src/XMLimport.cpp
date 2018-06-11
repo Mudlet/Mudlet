@@ -25,25 +25,16 @@
 
 #include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
 #include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
-#include "TScript.h"
-#include "TTimer.h"
-#include "TTrigger.h"
-#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QtMath>
-#include <QDebug>
 #include <QBuffer>
-#include <QStringList>
+#include <QtMath>
 #include "post_guard.h"
+
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
@@ -777,6 +768,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes");
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = (attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes");
     pHost->mUSE_UNIX_EOL = (attributes().value("mUSE_UNIX_EOL") == "yes");
+    pHost->getKeyUnit()->mRunAllKeyMatches = (attributes().value("runAllKeyMatches") == "yes");
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {

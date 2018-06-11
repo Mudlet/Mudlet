@@ -109,8 +109,20 @@ function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_D
 }
 
 function RunMake([string] $makefile = "Makefile"){
-  Step "Running make"
-  exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
+  For ($retries=1; $retries -le 3; $retries++){
+    Step "Running make"
+    try{
+      exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
+      break
+    }Catch{
+      Write-Output "Attempt $retries failed." | Tee-Object -File "$logFile" -Append
+      if ($retries -lt 3) {
+        Write-Output "Retrying..." | Tee-Object -File "$logFile" -Append
+      }else{
+        throw $_.Exception
+      }
+    }
+  }
 }
 
 function RunMakeInstall([string] $makefile = "Makefile"){
