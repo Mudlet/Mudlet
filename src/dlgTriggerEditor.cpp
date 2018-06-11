@@ -7505,7 +7505,7 @@ void dlgTriggerEditor::doCleanReset()
 
     mCleanResetQueued = true;
 
-    QTimer::singleShot(0, [=]() {
+    QTimer::singleShot(0, this, [=]() {
         mCleanResetQueued = false;
 
         runScheduledCleanReset();

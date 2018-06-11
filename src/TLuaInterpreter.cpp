@@ -12533,7 +12533,7 @@ void TLuaInterpreter::initLuaGlobals()
     // prepend profile path to package.path and package.cpath
     // with a singleShot Timer to avoid crash on startup.
     // crash caused by calling Host::getName() too early.
-    QTimer::singleShot(0, [this]() {
+    QTimer::singleShot(0, this, [this]() {
         QChar separator = QDir::separator();
 
         luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(separator).toUtf8().constData());
