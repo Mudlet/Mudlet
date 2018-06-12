@@ -121,6 +121,7 @@ public:
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
     const QString& getFriendlyEncoding();
+    void requestDiscordInfo();
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;

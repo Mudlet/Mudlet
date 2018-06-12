@@ -220,7 +220,7 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
     }
 
     if (state == Qt::Checked) {
-        pHost->reprocessDiscordData();
+        pHost->mTelnet.requestDiscordInfo();
     } else {
         pHost->clearDiscordData();
     }

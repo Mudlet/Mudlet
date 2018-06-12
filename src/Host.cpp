@@ -1325,24 +1325,6 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
     }
 }
 
-void Host::reprocessDiscordData() {
-    auto gameName = mLuaInterpreter.getLuaString(QStringLiteral("gmcp.Char.Name.name"));
-    if (!gameName.isEmpty()) {
-        mudlet::self()->mDiscord.setGame(this, gameName);
-    } else {
-        gameName = mLuaInterpreter.getLuaString(QStringLiteral("msdp.SERVER_ID"));
-        mudlet::self()->mDiscord.setGame(this, gameName);
-    }
-
-    auto area = mLuaInterpreter.getLuaString(QStringLiteral("gmcp.Room.Info.area"));
-    if (!area.isEmpty()) {
-        mudlet::self()->mDiscord.setArea(this, area);
-    } else {
-        area = mLuaInterpreter.getLuaString(QStringLiteral("msdp.AREA_NAME"));
-        mudlet::self()->mDiscord.setArea(this, gameName);
-    }
-}
-
 void Host::clearDiscordData() {
     mudlet::self()->mDiscord.setGame(this, QString());
     mudlet::self()->mDiscord.setArea(this, QString());

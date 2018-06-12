@@ -252,6 +252,19 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     return qMakePair(true, QString());
 }
 
+void cTelnet::requestDiscordInfo()
+{
+    string _h;
+    _h = TN_IAC;
+    _h += TN_SB;
+    _h += GMCP;
+    _h += string("Extern.Discord.Get");
+    _h += TN_IAC;
+    _h += TN_SE;
+
+    socketOutRaw(_h);
+}
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     // wird an dieser Stelle gesetzt
