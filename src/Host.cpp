@@ -1300,26 +1300,26 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
 
     if (packageMessage == QLatin1String("Extern.Discord.Status")) {
         auto gameName = json.value(QStringLiteral("game"));
-        if (gameName == QJsonValue::String) {
+        if (gameName != QJsonValue::Undefined) {
             mudlet::self()->mDiscord.setGame(this, gameName.toString());
         }
 
         auto area = json.value(QStringLiteral("state"));
-        if (area == QJsonValue::String) {
+        if (area == QJsonValue::Undefined) {
             mudlet::self()->mDiscord.setArea(this, area.toString());
         }
 
         auto smallImage = json.value(QStringLiteral("smallImage"));
-        if (smallImage == QJsonValue::Array) {
+        if (smallImage == QJsonValue::Undefined) {
             auto image = smallImage.toArray().first();
 
-            if (image == QJsonValue::String) {
+            if (image == QJsonValue::Undefined) {
                 mudlet::self()->mDiscord.setCharacterIcon(this, image.toString());
             }
         }
 
         auto character = json.value(QStringLiteral("smallImageText"));
-        if (character == QJsonValue::String) {
+        if (character == QJsonValue::Undefined) {
             mudlet::self()->mDiscord.setCharacter(this, character.toString());
         }
     }
