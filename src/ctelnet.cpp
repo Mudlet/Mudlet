@@ -661,6 +661,15 @@ void cTelnet::processTelnetCommand(const string& command)
 
             socketOutRaw(_h);
 
+            _h = TN_IAC;
+            _h += TN_SB;
+            _h += GMCP;
+            _h += "Extern.Discord.Hello";
+            _h += TN_IAC;
+            _h += TN_SE;
+
+            socketOutRaw(_h);
+
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
         }
@@ -1199,7 +1208,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar('\r'));
 
-    if (packageMessage.startsWith(QStringLiteral("Char")) || packageMessage.startsWith(QStringLiteral("Room"))) {
+    if (packageMessage.startsWith(QStringLiteral("Extern.Discord.Status"))) {
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 

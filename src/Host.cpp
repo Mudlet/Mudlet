@@ -1298,17 +1298,29 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
         return;
     }
 
-    if (packageMessage == QLatin1String("Char.Name")) {
-        auto gameName = json.value(QStringLiteral("name"));
-
-        if (gameName != QJsonValue::Undefined) {
+    if (packageMessage == QLatin1String("Extern.Discord.Status")) {
+        auto gameName = json.value(QStringLiteral("game"));
+        if (gameName == QJsonValue::String) {
             mudlet::self()->mDiscord.setGame(this, gameName.toString());
         }
-    } else if (packageMessage == QLatin1String("Room.Info")) {
-        auto area = json.value(QStringLiteral("area"));
 
-        if (area != QJsonValue::Undefined) {
+        auto area = json.value(QStringLiteral("state"));
+        if (area == QJsonValue::String) {
             mudlet::self()->mDiscord.setArea(this, area.toString());
+        }
+
+        auto smallImage = json.value(QStringLiteral("smallImage"));
+        if (smallImage == QJsonValue::Array) {
+            auto image = smallImage.toArray().first();
+
+            if (image == QJsonValue::String) {
+                mudlet::self()->mDiscord.setCharacterIcon(this, image.toString());
+            }
+        }
+
+        auto character = json.value(QStringLiteral("smallImageText"));
+        if (character == QJsonValue::String) {
+            mudlet::self()->mDiscord.setCharacter(this, character.toString());
         }
     }
 }

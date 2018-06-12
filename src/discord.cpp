@@ -18,7 +18,14 @@ Discord::Discord(QObject* parent)
 , mCharacters{}
 , mLoaded{}
 , mStartTime{} // lowercase list of known games
-, mKnownGames{{"achaea", {"achaea.com"}}, {"midmud", {"midmud.com"}}, {"luminari", {}}}
+// {game name, {game addresses}}
+, mKnownGames{{"midmud", {"midmud.com"}},
+              {"luminari", {}},
+              {"achaea", {"achaea.com", "iron-ach.ironrealms.com"}},
+              {"aetolia", {"aetolia.com", "iron-aet.ironrealms.com"}},
+              {"imperian", {"imperian.com", " iron-imp.ironrealms.com"}},
+              {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
+              {"starmourn", {"starmourn.com"}}}
 {
     for (auto& game : mKnownGames) {
         mKnownAddresses.append(game);

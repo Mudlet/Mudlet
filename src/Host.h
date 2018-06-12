@@ -333,6 +333,7 @@ public:
     QMap<QString, QStringList> modulesToWrite;
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
+    // Discord privacy options to give the user control over what data to display
     bool mDiscordHideAddress;
     bool mDiscordHideCharacterIcon;
     bool mDiscordHideCharacterText;
