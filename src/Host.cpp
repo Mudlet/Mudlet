@@ -1309,7 +1309,7 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
             mudlet::self()->mDiscord.setArea(this, area.toString());
         }
 
-        auto smallImage = json.value(QStringLiteral("smallImage"));
+        auto smallImage = json.value(QStringLiteral("smallimage"));
         if (smallImage == QJsonValue::Undefined) {
             auto image = smallImage.toArray().first();
 
@@ -1318,7 +1318,7 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
             }
         }
 
-        auto character = json.value(QStringLiteral("smallImageText"));
+        auto character = json.value(QStringLiteral("smallimagetext"));
         if (character == QJsonValue::Undefined) {
             mudlet::self()->mDiscord.setCharacter(this, character.toString());
         }
