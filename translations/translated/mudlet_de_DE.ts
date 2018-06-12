@@ -2086,7 +2086,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1266"/>
       <source>restore Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Hauptsymbolleiste wiederherstellen</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1269"/>
