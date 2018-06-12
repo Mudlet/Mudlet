@@ -180,7 +180,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation>! %1 ha salido (%2)</translation>
+      <translation>! %1 se ha desconectado (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
@@ -195,7 +195,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 ha borrado el asunto</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
@@ -210,27 +210,27 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
       <source>[WHOIS] %1 is %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 es %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[WHOIS] %1 is connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado desde %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="394"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado desde %2 (inactivo %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está ausente: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
       <source>[WHOIS] %1 is logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está registrado como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
@@ -255,22 +255,22 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="412"/>
       <source>[WHOWAS] %1 was connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 estaba conectado a través de %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="414"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 estaba registrado como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
       <source>[WHO] %1 (%2)</source>
-      <translation type="unfinished"/>
+      <translation>[WHO] %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - ausente</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
@@ -338,24 +338,27 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2057"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID de la sala: %1 (Actual) Posición en el Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2068"/>
       <source>Room ID: %1 (Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID de la sala: %1 (Seleccionada) Posición en el Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2079"/>
       <source>Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID de la sala: %1 (%5 Seleccionada) Posición en el Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2093"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
-      <translation type="unfinished"/>
+      <translation>tiempo de renderizado: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
@@ -455,7 +458,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Establecer ID del área de la sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
@@ -3078,43 +3081,45 @@ Count</source>
       <source>This character is not permitted. Use one of the following:
 &quot;%1&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Este carácter no está permitido. Utiliza uno de los siguientes:
+&quot;%1&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="291"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Este nombre de perfil ya está en uso.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="342"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo renombrar la información de su perfil en el ordenador.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="350"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo crear el directorio de nuevo perfil en tu ordenador.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="446"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>nombre del nuevo perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="543"/>
       <source>Deleting &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Borrando &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="946"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="960"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Este perfil está actualmente cargado - necesitará desconectar antes de cambiar sus parámetros de conexión.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1576"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Por favor, introduce datos válidos de nombre de perfil, dirección de servidor y puerto de juego antes de conectarte.</translation>
     </message>
   </context>
   <context>
@@ -3122,37 +3127,37 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="101"/>
       <source>%1 closed their client.</source>
-      <translation type="unfinished"/>
+      <translation>%1 cerró su cliente.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="113"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation type="unfinished"/>
+      <translation>Cliente IRC de Mudlet - %1 - %2 en %3</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="127"/>
       <source>$ Starting Mudlet IRC Client...</source>
-      <translation type="unfinished"/>
+      <translation>$ Iniciando Cliente IRC de Mudlet...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="128"/>
       <source>$ Host: %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>$ Nombre de servidor: %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="129"/>
       <source>$ Nick: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Apodo: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="130"/>
       <source>$ Auto-Join Channels: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Auto-Unirse a Canales: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="131"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
-      <translation type="unfinished"/>
+      <translation>$ Este cliente soporta auto-completar usando la tecla Tabulador.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="132"/>
@@ -3229,12 +3234,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="14"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Exportador de paquetes</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="21"/>
       <source>Check items to export</source>
-      <translation type="unfinished"/>
+      <translation>Selecciona los elementos a exportar</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
