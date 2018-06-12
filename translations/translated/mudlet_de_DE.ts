@@ -690,12 +690,12 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="4613"/>
       <location filename="../src/T2DMap.cpp" line="4649"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
-      <translation type="unfinished"/>
+      <translation>Links klicken um einen Punkt hinzuzufügen, rechts klicken zum rückgängig machen/ändern/beenden...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4660"/>
       <source>Left-click and drag a square for the size and position of your label</source>
-      <translation type="unfinished"/>
+      <translation>Links klicken und ein Rechteck aufziehen für die Größe und Position der Marke</translation>
     </message>
   </context>
   <context>
