@@ -186,6 +186,7 @@ public:
     void waitForProfileSave();
     void processDiscordGMCP(const QString &packageMessage, const QString &data);
     void reprocessDiscordData();
+    void clearDiscordData();
     void processDiscordMSDP(const QString &variable, QString value);
 
     cTelnet mTelnet;

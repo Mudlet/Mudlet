@@ -1327,8 +1327,13 @@ void Host::reprocessDiscordData() {
         mudlet::self()->mDiscord.setArea(this, area);
     } else {
         area = mLuaInterpreter.getLuaString(QStringLiteral("msdp.AREA_NAME"));
-        mudlet::self()->mDiscord.setGame(this, gameName);
+        mudlet::self()->mDiscord.setArea(this, gameName);
     }
+}
+
+void Host::clearDiscordData() {
+    mudlet::self()->mDiscord.setGame(this, QString());
+    mudlet::self()->mDiscord.setArea(this, QString());
 }
 
 void Host::processDiscordMSDP(const QString& variable, QString value)
