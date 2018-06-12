@@ -1328,6 +1328,8 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
 void Host::clearDiscordData() {
     mudlet::self()->mDiscord.setGame(this, QString());
     mudlet::self()->mDiscord.setArea(this, QString());
+    mudlet::self()->mDiscord.setCharacter(this, QString());
+    mudlet::self()->mDiscord.setCharacterIcon(this, QString());
 }
 
 void Host::processDiscordMSDP(const QString& variable, QString value)
