@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>760</width>
-    <height>620</height>
+    <height>626</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -2488,18 +2488,6 @@ p, li { white-space: pre-wrap; }
                </widget>
               </item>
              </layout>
-            </item>
-            <item row="4" column="0" colspan="2">
-             <widget class="QLabel" name="discord_message_label">
-              <property name="font">
-               <font>
-                <pointsize>8</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Discord integration disabled</string>
-              </property>
-             </widget>
             </item>
            </layout>
           </widget>

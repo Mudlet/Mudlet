@@ -89,7 +89,7 @@ public:
     bool compileAndExecuteScript(const QString&);
     QString formatLuaCode(const QString &);
     void loadGlobal();
-    QString get_lua_string(const QString& stringName);
+    QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);

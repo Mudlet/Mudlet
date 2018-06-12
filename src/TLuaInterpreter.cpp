@@ -12217,17 +12217,20 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
 }
 
 // No documentation available in wiki - internal function
-QString TLuaInterpreter::get_lua_string(const QString& stringName)
+QString TLuaInterpreter::getLuaString(const QString& stringName)
 {
     lua_State* L = pGlobalLua;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return QString("LUA CRITICAL ERROR");
+        return QStringLiteral("LUA CRITICAL ERROR");
     }
 
-    lua_getglobal(L, stringName.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, stringName.toUtf8().constData());
-    return QString(lua_tostring(L, 1));
+    int error = luaL_dostring(L, QStringLiteral("return %1").arg(stringName).toUtf8().constData());
+    if (!error) {
+        return QString::fromUtf8(lua_tostring(L, 1));
+    } else {
+        return QString();
+    }
 }
 
 // check for <whitespace><no_valid_representation> as output

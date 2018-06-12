@@ -103,8 +103,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
-
-    discord_message_label->hide();
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -214,7 +212,7 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
     QString profile = pItem->text();
     writeProfileData(profile, QStringLiteral("discordoptin"), QString::number(state));
 
-    // in case the user is already connected, ask for a reconnect so all
+    // in case the user is already connected, pull up stored GMCP data
     auto& hostManager = mudlet::self()->getHostManager();
     auto pHost = hostManager.getHost(profile_name_entry->text());
     if (!pHost) {
@@ -222,10 +220,7 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
     }
 
     if (state == Qt::Checked) {
-        discord_message_label->setText(tr("Please reconnect to the game to update Discord"));
-        discord_message_label->show();
-
-        QTimer::singleShot(10 * 1000, this, [=]() { discord_message_label->hide(); });
+        pHost->reprocessDiscordData();
     }
 }
 
