@@ -668,7 +668,7 @@ void cTelnet::processTelnetCommand(const string& command)
             _h = TN_IAC;
             _h += TN_SB;
             _h += GMCP;
-            _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1"])";
+            _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "Extern.Discord 1"])";
             _h += TN_IAC;
             _h += TN_SE;
 
