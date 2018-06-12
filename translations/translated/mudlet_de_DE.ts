@@ -352,12 +352,13 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2079"/>
       <source>Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>Raum-ID: %1 (%5 gewählte) Position auf der Karte: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2093"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
-      <translation type="unfinished"/>
+      <translation>Berechnungszeit: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
@@ -533,35 +534,38 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="3250"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>Die Auswahl, zentriert auf
+den markierten Raum (%1), verschieben nach:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3252"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>x-Koordinate (war %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3253"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>y-Koordinate (war %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3254"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>z-Koordinate (war %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3358"/>
       <location filename="../src/T2DMap.cpp" line="3367"/>
       <location filename="../src/T2DMap.cpp" line="3406"/>
       <source>Enter room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Raumsymbol</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3359"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished"/>
+      <translation type="unfinished">
+        <numerusform>Wähle das Symbol, das für diese Räume zu verwenden ist:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3369"/>
@@ -569,20 +573,30 @@ for this/these room(s):</source>
 more of the selected rooms, delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
-      <translation type="unfinished"/>
+      <translation>Das einzige verwendete Symbol in 
+einem oder mehreren der 
+ausgewählten Räume ist &quot;%1&quot;. 
+Lösche dieses, um es in allen 
+ausgewählten Räumen zu löschen,
+oder ersetze es mit einem neuen 
+Symbol für alle Räume:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3374"/>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
-      <translation type="unfinished"/>
+      <translation>Das einzige verwendete Symbol im
+ausgewählten Raum ist &quot;%1&quot;. 
+Lösche dieses, um es im ausgewählten 
+Raum zu löschen, oder ersetze es mit 
+einem neuen Symbol für diesen Raum:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3399"/>
       <location filename="../src/T2DMap.cpp" line="3803"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Anzahl: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3407"/>
@@ -2624,7 +2638,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>Select Style, Color and whether to end the line with an arrow head.</source>
-      <translation type="unfinished"/>
+      <translation>Wählen Sie den Stil, die Farbe und ob die Linie mit einem Pfeil enden soll.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
