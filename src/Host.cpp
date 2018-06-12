@@ -187,7 +187,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // file auditing and other issues)
     mErrorLogStream.setDevice(&mErrorLogFile);
 
-    QTimer::singleShot(0, [this]() {
+    QTimer::singleShot(0, this, [this]() {
         qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
         if (mpMap->restore(QString(), false)) {
             mpMap->audit();

@@ -25,6 +25,7 @@
 
 
 #include "Host.h"
+#include <QRegularExpression>
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"

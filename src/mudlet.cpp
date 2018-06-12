@@ -47,13 +47,7 @@
 #include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
-#include "edbee/edbee.h"
-#include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
-#include "edbee/views/texttheme.h"
 #include "discord.h"
-#if defined(INCLUDE_UPDATER)
-#endif
 
 #include "pre_guard.h"
 #include <QtUiTools/quiloader.h>
@@ -161,7 +155,7 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mDiscord()
-
+, mShowIconsOnDialogs(true)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);

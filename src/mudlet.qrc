@@ -48,8 +48,7 @@
         <file>icons/document-save-as.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
-        <file>icons/edit-clear-locationbar-rtl.png</file>
-        <file>icons/edit-copy.png</file>
+        <file>icons/edit-delete.png</file>
         <file>icons/edit-delete-shred.png</file>
         <file>icons/edit-paste.png</file>
         <file>icons/errors.png</file>
@@ -93,7 +92,6 @@
         <file>icons/imperian_120_30.png</file>
         <file>icons/import.png</file>
         <file>icons/internet-telephony.png</file>
-        <file>icons/list-add_small.png</file>
         <file>icons/luminari_icon.png</file>
         <file>icons/lusternia_120_30.png</file>
         <file>icons/media-optical.png</file>

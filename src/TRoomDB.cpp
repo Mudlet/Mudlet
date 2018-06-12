@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QElapsedTimer>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 

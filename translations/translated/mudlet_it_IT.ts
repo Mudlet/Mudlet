@@ -8,19 +8,23 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Decompressione del modulo in corso:
+&quot;%1&quot;
+attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="816"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Decompressione del pacchetto in corso:
+&quot;%1&quot;
+attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="820"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Decompressione</translation>
     </message>
   </context>
   <context>
@@ -28,42 +32,42 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation type="unfinished"/>
+      <translation>! %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 è lontano dalla tastiera (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation type="unfinished"/>
+      <translation>! %1 è tornato</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! ha invitato %1 su %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation type="unfinished"/>
+      <translation>! %2 ti ha invitato su %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
       <source>! You have joined %1 as %2</source>
-      <translation type="unfinished"/>
+      <translation>! Ti sei unito a %1 come %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="160"/>
       <source>! %1 has joined %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 si è unito a %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha respinto %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
@@ -73,32 +77,32 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
       <source>! %1 sets mode %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>! %1 imposta la modalità %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
       <source>[MOTD] %1%2</source>
-      <translation type="unfinished"/>
+      <translation>[MOTD] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
       <source>! %1 has %2 users: %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha %2 utenti: %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha %2 utenti</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
       <source>! %1 has changed nick to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha cambiato il nome in %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 risposto in %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
@@ -115,113 +119,113 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
       <location filename="../src/ircmessageformatter.cpp" line="314"/>
       <source>[ERROR] %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
       <source>[Channel URL] %1</source>
-      <translation type="unfinished"/>
+      <translation>[URL del canale] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha abbandonato %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
       <source>! %1 has left %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha abbandonato %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ha risposto in %2 secondi</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
       <source>* %1 %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>! %1 si è disconnesso</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 si è disconnesso (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! nessun argomento</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
       <source>[TOPIC] %1</source>
-      <translation type="unfinished"/>
+      <translation>[TOPIC] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 argomento cancellato</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
       <source>! %2 changed topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 argomento modificato</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
       <source>[WHOIS] %1 is %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 è %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[WHOIS] %1 is connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 si è connesso tramite %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="394"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 si è connesso da %2 (inattività %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 è lontano dalla tastiera: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
@@ -236,7 +240,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
       <source>[WHOIS] %1 is using a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 utilizza una connessione sicura</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="404"/>
@@ -276,27 +280,27 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 giorni</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 ore</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 minuti</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 secondi</translation>
     </message>
   </context>
   <context>
@@ -304,12 +308,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>ID Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="102"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="105"/>
@@ -326,7 +330,8 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2043"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nome Stanza: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2057"/>
@@ -354,152 +359,152 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Etichetta di Testo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2206"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Etichetta Immagine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Sfondo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2232"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>In primo piano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2478"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Trascinare per selezionare più stanze o etichette, rilascia per finire...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2637"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Annulla l'ultimo punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Modifica le proprietà di questa linea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2650"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Completare il disegno a questa linea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2668"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Sposta stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2672"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Cancella stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2676"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Cambia colore stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Aumentare le dimensioni X-Y della mappa per il gruppo selezionato di stanze</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2684"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Diminuire le dimensioni X-Y della mappa per il gruppo selezionato di stanze</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2688"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Blocca camera per camminate veloci</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Sblocca camera per camminate veloci</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2696"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Impostare il peso della stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Imposta le uscite della Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Impostare uno o più simboli o lettere per contrassegnare stanze speciali</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Spostare il gruppo selezionato a una posizione specificata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Setta l'area ID della stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Le linee di uscita personalizzate non vengono visualizzate e non sono modificabili in modalità griglia</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Sostituire una linea di uscita con una linea personalizzata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2730"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Creare etichette per visualizzare testo o immagini.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Setta qui la posizione attuale del giocatore</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Non è possibile impostare la posizione quando non è selezionata esattamente una stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Sposta etichetta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2770"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Elimina etichetta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Dividere il segmento con l'aggiunta di un nuovo punto a metà strada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Selezionare un punto prima, quindi aggiungere un nuovo punto a metà strada lungo il segmento verso la stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2806"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Unire due segmenti rimuovendo questo punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
@@ -799,7 +804,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="424"/>
       <source>MACINTOSH</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>MACINTOSH</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="443"/>
@@ -911,104 +916,107 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Salva Profilo?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Vuoi salvare il profilo %1?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="768"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Non e&apos; possibile salvare il profilo</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="768"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Spiacenti, non e&apos; possibile salvare il tuo profilo - errore: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="841"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>File di log</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="876"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è iniziata. File di log è %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="886"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è stata interrotta. File di log è %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="931"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet MUD Client versione: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="933"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, File di log del profilo %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="969"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log di sessione a partire &apos;hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;aaaa&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="990"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log di sessione a partire &apos;hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;aaaa&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="995"/>
       <source>&lt;p&gt;Stop logging MUD output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Interrompere la registrazione di MUD sul file di log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="999"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>Sessione registrata termina alle %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1000"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;aaaa</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1013"/>
       <source>&lt;p&gt;Start logging MUD output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Interrompere la registrazione di MUD sul file di log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1594"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapporto del pre-caricamento della Mappa(1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1612"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Rapporto del caricamento della mappa(1) a %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1635"/>
       <source>loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: NULL Host pointer {in TConsole::importMap(...)} - Qualcosa e' andato storto!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1648"/>
       <source>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: impossibile inizializzare mapper {in TConsole::importMap(...)} - Qualcosa è andato storto!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1656"/>
@@ -1159,73 +1167,73 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>alto</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>basso</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>entra</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>esci</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1028"/>
@@ -1270,7 +1278,7 @@ Areas id affected: %1.</source>
     <message>
       <location filename="../src/TMap.cpp" line="1162"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1297"/>
@@ -1478,79 +1486,79 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="76"/>
       <location filename="../src/TRoom.cpp" line="766"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Nord</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="77"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Nord-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="78"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Nord-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="79"/>
       <location filename="../src/TRoom.cpp" line="811"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Sud</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="80"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Sud-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="81"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Sud-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="82"/>
       <location filename="../src/TRoom.cpp" line="856"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="83"/>
       <location filename="../src/TRoom.cpp" line="871"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="84"/>
       <location filename="../src/TRoom.cpp" line="886"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Alto</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="85"/>
       <location filename="../src/TRoom.cpp" line="901"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Basso</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="86"/>
       <location filename="../src/TRoom.cpp" line="916"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>Entra</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="87"/>
       <location filename="../src/TRoom.cpp" line="931"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Esci</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="88"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Altro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="90"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Sconosciuto</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="222"/>
@@ -1565,22 +1573,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="781"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Nord-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="796"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Nord-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="826"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Sud-est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="841"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Sud-ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="953"/>
@@ -1631,17 +1639,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1151"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (aperto)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1154"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (chiuso)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1157"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (bloccato)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1160"/>
@@ -1759,7 +1767,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="33"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Area Predefinita</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="500"/>
@@ -2128,7 +2136,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
@@ -2371,27 +2379,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Nero:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="57"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rosso:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="64"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Verde:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="71"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blu:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
@@ -2473,7 +2481,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/composer.ui" line="134"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Salva</translation>
     </message>
   </context>
   <context>
@@ -2491,12 +2499,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2092"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copia</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2121"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2195"/>
@@ -2528,7 +2536,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome profilo:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
@@ -2538,7 +2546,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2280"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Porta:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2321"/>
@@ -2573,7 +2581,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2392"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Password:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2399"/>
@@ -2598,12 +2606,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2455"/>
       <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>Sito web:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2517"/>
       <source>MUD description</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione MUD</translation>
     </message>
   </context>
   <context>
@@ -2714,62 +2722,62 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
       <source>NW</source>
-      <translation type="unfinished"/>
+      <translation>NO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="235"/>
       <source>N</source>
-      <translation type="unfinished"/>
+      <translation>N</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="258"/>
       <source>NE</source>
-      <translation type="unfinished"/>
+      <translation>NE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="297"/>
       <source>UP</source>
-      <translation type="unfinished"/>
+      <translation>ALTO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="336"/>
       <source>W</source>
-      <translation type="unfinished"/>
+      <translation>O</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="346"/>
       <source>E</source>
-      <translation type="unfinished"/>
+      <translation>E</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="356"/>
       <source>IN</source>
-      <translation type="unfinished"/>
+      <translation>ENTRA</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="382"/>
       <source>OUT</source>
-      <translation type="unfinished"/>
+      <translation>ESCI</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="392"/>
       <source>SW</source>
-      <translation type="unfinished"/>
+      <translation>SO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="402"/>
       <source>S</source>
-      <translation type="unfinished"/>
+      <translation>S</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="412"/>
       <source>SE</source>
-      <translation type="unfinished"/>
+      <translation>SE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="422"/>
       <source>DOWN</source>
-      <translation type="unfinished"/>
+      <translation>BASSO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
@@ -2779,7 +2787,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
       <source>Special Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Uscite Speciali:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
@@ -2795,7 +2803,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
       <source> Destination </source>
-      <translation type="unfinished"/>
+      <translation> Destinazione </translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
@@ -2841,7 +2849,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Elimina</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
@@ -2854,7 +2862,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Stato</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -3023,7 +3031,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="56"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Connetti</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="188"/>
@@ -3146,7 +3154,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="370"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Connesso a %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="371"/>
@@ -3161,17 +3169,17 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="381"/>
       <source>! Disconnected from %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Disconnesso da %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="443"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Sintassi: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="445"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Comando sconosciuto: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="589"/>
@@ -3208,22 +3216,22 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="41"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Script</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
@@ -3233,7 +3241,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="51"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Bottoni</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="62"/>
@@ -3243,7 +3251,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="75"/>
       <source>Add Files</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi File</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
@@ -3396,23 +3404,23 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1522"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Salva mappa Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1522"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mappa Mudlet (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1532"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Salvataggio mappa - attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1546"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mappa salvata in %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1548"/>
@@ -3897,47 +3905,47 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1720"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>nord</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1721"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>nord-est</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>alto</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>ovest</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1724"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>est</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>basso</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>sud-ovest</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1727"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>sud</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1728"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>sud-est</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
@@ -3983,7 +3991,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="283"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5531"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="284"/>
@@ -4004,12 +4012,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="292"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="293"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="297"/>
@@ -4047,7 +4055,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="309"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5918"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variabili</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="310"/>
@@ -4128,52 +4136,52 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="353"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="354"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>Copia trigger/script/alias/ecc</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="363"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8014"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Incolla</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="368"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="369"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Incolla trigger/script/alias/ecc dagli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="378"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>Importa</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>Esporta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7883"/>
       <source>Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>Salva Profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="388"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7613"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7632"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Maiusc+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="396"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>Salva Profilo come</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="400"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>Statistiche</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="401"/>
@@ -4193,7 +4201,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="408"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>Debug</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="409"/>
@@ -4231,7 +4239,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1813"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1848"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1128"/>
@@ -4320,7 +4328,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1907"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1937"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1256"/>
@@ -4338,7 +4346,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1991"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2023"/>
       <source>Script</source>
-      <translation type="unfinished"/>
+      <translation>Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1337"/>
@@ -4398,7 +4406,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2191"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2221"/>
       <source>Timer</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1590"/>
@@ -4414,7 +4422,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1713"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1727"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1727"/>
@@ -4425,12 +4433,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3276"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome tabella...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3283"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome variabile...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4740"/>
@@ -4632,7 +4640,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>Immagini (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7690"/>
@@ -4647,7 +4655,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7740"/>
       <source>*</source>
-      <translation type="unfinished"/>
+      <translation>*</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7876"/>
@@ -4657,12 +4665,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8012"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Taglia</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8016"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona Tutto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8018"/>
@@ -4729,46 +4737,46 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="25"/>
       <source>Mudlet IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Client IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="158"/>
       <location filename="../src/ui/irc.ui" line="173"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="163"/>
       <location filename="../src/ui/irc.ui" line="178"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="168"/>
       <location filename="../src/ui/irc.ui" line="183"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variabile</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="188"/>
       <location filename="../src/ui/irc.ui" line="193"/>
       <source>Group</source>
-      <translation type="unfinished"/>
+      <translation>Gruppo</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="201"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="209"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="217"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variabili</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="225"/>
@@ -4840,7 +4848,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="97"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="104"/>
@@ -5103,7 +5111,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="17"/>
       <source>Mudlet 1.0 - alpha 1</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 1.0 - alpha 1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
@@ -5239,7 +5247,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/ui/main_window.ui" line="237"/>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Forum online</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
@@ -5340,12 +5348,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
       <source>test1</source>
-      <translation type="unfinished"/>
+      <translation>test1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
       <source>asdf</source>
-      <translation type="unfinished"/>
+      <translation>asdf</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
@@ -5433,7 +5441,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
       <source>2D/3D</source>
-      <translation type="unfinished"/>
+      <translation>2D/3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
@@ -5448,7 +5456,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Uscite</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
@@ -5545,7 +5553,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="155"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="169"/>
@@ -5556,7 +5564,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="206"/>
       <location filename="../src/mudlet.cpp" line="394"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Connetti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="207"/>
@@ -5567,7 +5575,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="215"/>
       <location filename="../src/mudlet.cpp" line="395"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
@@ -5578,7 +5586,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="221"/>
       <location filename="../src/mudlet.cpp" line="396"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="222"/>
@@ -5589,7 +5597,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="227"/>
       <location filename="../src/mudlet.cpp" line="397"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="228"/>
@@ -5610,7 +5618,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="239"/>
       <location filename="../src/mudlet.cpp" line="399"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Script</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="240"/>
@@ -5631,7 +5639,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="251"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variabili</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="252"/>
@@ -5641,7 +5649,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="257"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="258"/>
@@ -5786,7 +5794,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="534"/>
@@ -6000,7 +6008,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="127"/>
       <location filename="../src/ui/profile_preferences.ui" line="156"/>
       <source>Never</source>
-      <translation type="unfinished"/>
+      <translation>Mai</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="132"/>
@@ -6012,7 +6020,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="137"/>
       <location filename="../src/ui/profile_preferences.ui" line="166"/>
       <source>Always</source>
-      <translation type="unfinished"/>
+      <translation>Sempre</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="145"/>
@@ -6108,7 +6116,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
       <source>Browse...</source>
-      <translation type="unfinished"/>
+      <translation>Sfoglia...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="329"/>
@@ -7145,17 +7153,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>Porta aperta</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>Porta chiusa</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>Porta bloccata</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
@@ -7165,7 +7173,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Salva</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
@@ -7418,13 +7426,13 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="266"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="299"/>
       <location filename="../src/ui/timers_main_area.ui" line="420"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="366"/>
@@ -7434,7 +7442,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="387"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="487"/>
@@ -7449,12 +7457,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="511"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="544"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="611"/>
@@ -7489,12 +7497,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostra le variabili solitamente nascoste</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="600"/>
       <source>Search:</source>
-      <translation type="unfinished"/>
+      <translation>Cerca:</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="650"/>
@@ -7505,55 +7513,55 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="998"/>
       <location filename="../src/ui/trigger_editor.ui" line="1013"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1003"/>
       <location filename="../src/ui/trigger_editor.ui" line="1018"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1008"/>
       <location filename="../src/ui/trigger_editor.ui" line="1023"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variabile</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1028"/>
       <location filename="../src/ui/trigger_editor.ui" line="1033"/>
       <source>Group</source>
-      <translation type="unfinished"/>
+      <translation>Gruppo</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1041"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1049"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Triggers</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1057"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variabili</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1065"/>
       <source>Script options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni di script</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1073"/>
       <source>Search results</source>
-      <translation type="unfinished"/>
+      <translation>Risultati della ricerca</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="1078"/>
       <source>Expert mode</source>
-      <translation type="unfinished"/>
+      <translation>Modalità esperto</translation>
     </message>
   </context>
   <context>
@@ -7561,7 +7569,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="138"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
@@ -7571,7 +7579,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="164"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
@@ -7674,7 +7682,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1474"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>evidenzia</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1537"/>
@@ -7757,7 +7765,7 @@ otherwise highlight the entire match</source>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
       <location filename="../src/ui/vars_main_area.ui" line="392"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>tabella</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="174"/>
@@ -7779,7 +7787,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="275"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>variabile nascosta</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="352"/>
@@ -7789,27 +7797,27 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="361"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>Tipo di valore:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="377"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>stringa</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="382"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>numero</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="387"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>booleano</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="397"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>funzione</translation>
     </message>
   </context>
 </TS>
