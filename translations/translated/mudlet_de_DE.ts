@@ -1344,58 +1344,58 @@ bitte warten...</translation>
       <location filename="../src/TMap.cpp" line="1435"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Standardregion (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden, reservierte ID -1 ergänzt.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1519"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Kartendatei (%1s) erfolgreich gelesen, prüfe einige Details der Konsistenz...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1536"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>Keine Karte gefunden. Karte herunterladen oder eine eigene beginnen?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1537"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Karte herunterladen</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1538"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Eigene beginnen</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2001"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Themen zur Karte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2008"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Themen zur Region</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2016"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Regions-ID: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>Themen zum Raum</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
       <source>Room id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Raum-ID: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2044"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Ende des Berichts</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2050"/>
