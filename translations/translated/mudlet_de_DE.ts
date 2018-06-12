@@ -1405,7 +1405,12 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Mindestens eine Sache wurde während der letzten Kartenbearbeitung erkannt.
+Es wird empfohlen, den jüngsten Bericht in
+folgender Datei zu überprüfen:
+&quot;%1&quot;
+- dabei den (letzten) Bericht mit folgendem Titel suchen:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2058"/>
@@ -1415,33 +1420,36 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Äquivalente Informationen wie oben zur letzten Kartenbearbeitung wurden zur Überprüfung als jüngster Bericht in folgender Datei gespeichert:
+&quot;%1&quot;
+- dabei den (letzten) Bericht mit folgendem Titel suchen:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2141"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Karte wird heruntergeladen, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>Downloading XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Lade XML-Kartendatei für den Gebrauch in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>Karte herunterladen</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2177"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: Anfrage kann nicht durchgeführt werden. Es wird bereits eine Karte heruntergeladen oder importiert auf Benutzerwunsch.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2209"/>
