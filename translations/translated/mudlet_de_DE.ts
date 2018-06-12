@@ -1454,64 +1454,64 @@ imported at user request.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2209"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Importiere XML-Kartendatei für den Gebrauch in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2210"/>
       <source>Map import</source>
-      <translation type="unfinished"/>
+      <translation>Karte importieren</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2237"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: Fehler beim Import der XML-Kartendatei. Weitere Informationen sind möglicherweise in der Hauptkonsole verfügbar!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2272"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] – Herunterladen der Karte wurde auf Benutzeranforderung abgebrochen.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2291"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] – Herunterladen der Karte ist auf einen Fehler gestoßen: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2305"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] – Herunterladen der Karte fehlgeschlagen. Fehlermeldung war: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2313"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] – Herunterladen der Karte fehlgeschlagen. Konnte Zieldatei nicht öffnen: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2318"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] – Herunterladen der Karte fehlgeschlagen. Konnte Zieldatei nicht schreiben: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - ... Karte heruntergeladen und gespeichert, wird jetzt verarbeitet...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2351"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] – Problem beim Herunterladen der Karte. Fehler beim Verarbeiten der Zieldatei: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2356"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] – Problem beim Herunterladen der Karte. Konnte Zieldatei nicht lesen: %1.</translation>
     </message>
   </context>
   <context>
@@ -1520,39 +1520,39 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="76"/>
       <location filename="../src/TRoom.cpp" line="766"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Norden</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="77"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Nordosten</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="78"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Nordwesten</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="79"/>
       <location filename="../src/TRoom.cpp" line="811"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Süden</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="80"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Südosten</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="81"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Südwesten</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="82"/>
       <location filename="../src/TRoom.cpp" line="856"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Osten</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="83"/>
@@ -1998,7 +1998,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1164"/>
       <source>&lt;nothing&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;nothing&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1176"/>
@@ -2076,7 +2076,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1261"/>
       <source>restore Main menu</source>
-      <translation type="unfinished"/>
+      <translation>Hauptmenü wiederherstellen</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1264"/>
