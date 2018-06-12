@@ -1313,7 +1313,7 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
         if (smallImage != QJsonValue::Undefined) {
             auto image = smallImage.toArray().first();
 
-            if (image == QJsonValue::Undefined) {
+            if (image != QJsonValue::Undefined) {
                 mudlet::self()->mDiscord.setCharacterIcon(this, image.toString());
             }
         }
