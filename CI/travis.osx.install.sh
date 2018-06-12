@@ -5,7 +5,7 @@ if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
 fi
 
 set +e
-BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml cocoapods"
+BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml"
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo "Upgrading ${i}"
@@ -47,3 +47,4 @@ for i in $BREWS; do
     fi
   done
 done
+gem update cocoapods
