@@ -3284,7 +3284,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>Ubicación de exportación:</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="95"/>
@@ -3294,7 +3294,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
       <source>&amp;Export</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Exportar</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="128"/>
