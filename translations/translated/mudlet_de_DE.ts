@@ -908,75 +908,77 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="405"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;i&gt;N:&lt;/i&gt; is the latency of the MUD server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;i&gt;N:&lt;/i&gt; ist die Latenz von Spielserver und Netzwerk (aka Ping in Sekunden), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; ist die System-Verarbeitungszeit - wie lange die Trigger zum verarbeiten der letzten Zeile(n) brauchten.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="442"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Emergency Stop. Stops all timers and triggers.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Not-Abschaltung. Stoppt alle Timer und Trigger.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="458"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search buffer.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Puffer durchsuchen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Earlier search result.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Früheres Suchergebnis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="475"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Later search result.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Späteres Suchergebnis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Profil speichern?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="755"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Möchten Sie das Profil %1 speichern?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="768"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Konnte Profil nicht speichern</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="768"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Leider konnte das Profil nicht gespeichert werden - folgende Fehlermeldung erhalten: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="841"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>Logdatei</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="876"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Protokollierung wurde gestartet. Log-Datei ist %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="886"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Protokollierung wurde beendet. Log-Datei ist %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="931"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet MUD-Client Version: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="933"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Log aus %1 Profil</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="969"/>
@@ -1235,26 +1237,27 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>unten</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>rein</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>raus</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1028"/>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Speichere Karte in einem Format {%1}, somit anders als das, in dem sie
+geladen wurde {%2}. Dies kann ein Problem sein, wenn sie mit Anderen geteilt werden soll, die sich auf das ursprüngliche Format verlassen.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1038"/>
@@ -1267,66 +1270,75 @@ a release version may allow you to downgrade to save a map in
 a format compatible with others using older versions of MUDLET
 however some features may be crippled or non-operational for
 this version of MUDLET.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Speichere Karte in einem anderem Format {%1} als dem empfohlenen {%2} mit dem Build-Status des Quellcodes im Hinterkopf. Entwicklungsversionen des Quellcodes bieten möglicherweise die Chance,
+experimentelle Funktionen zu testen und benötigen ein überarbeitetes Format, das vielleicht nicht kompatibel ist mit bestehenden release-code-Versionen. Umgekehrt kann
+eine release-version es ermöglichen, eine Karte in einem Format zu speichern, das kompatibel ist für Andere, die ältere Versionen von MUDLET benutzen, aber einige Funktionen sind möglicherweise zerstört worden oder nicht in Betrieb in dieser Version von MUDLET.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1076"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Karten-Benutzerdaten verloren gegangen beim Speichern der Kartendatei. Bitte erneut speichern in einem Format von mindestens 17 um die Daten zu retten, bevor MUDLET beendet wird!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1155"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Benutzerdaten dieser Region sind verloren gegangen beim Speichern der Kartendatei. Bitte erneut speichern in einem Format von mindestens 17, um die Daten zu retten, bevor MUDLET beendet wird!
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1159"/>
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Benutzerdaten dieser Region sind verloren gegangen beim Speichern der Kartendatei. Bitte erneut speichern in einem Format von mindestens 17, um die Daten zu retten, bevor MUDLET beendet wird!
+ID der betroffenen Regionen: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1162"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1297"/>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Kartendatei ist zu neu, das Dateiformat (%1) ist höher als diese Version von Mudlet verarbeiten kann (%2)! Die Datei ist:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1304"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Bitte Mudlet aktualisieren oder eine in einem älteren Format gespeicherte Kartendatei finden.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1311"/>
       <source>[ ALERT ] - Map file is really old, it&apos;s file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Kartendatei ist wirklich alt, ihr Dateiformat (%1) ist so alt, dass
+diese Version von Mudlet vielleicht nicht genügend Informationen daraus sammeln kann,
+aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1318"/>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 be better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Vielleicht sollte man DIESE Kartendatei dem Mudlet Museum spenden! Es gibt so viele Daten, die sie NICHT BESITZT, dass man vielleicht besser wieder von vorne beginnen könnte...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1327"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Lesen der Karte (Format-Version:%1) Datei:
+&quot;%2&quot;,
+bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1435"/>
