@@ -12,6 +12,14 @@ Geyser.MiniConsole = Geyser.Window:new({
   name = "MiniConsoleClass",
   wrapAt = 300, })
 
+--- Override reposition to reset autowrap
+function Geyser.MiniConsole:reposition()
+  self.parent.reposition(self)
+  if self.autoWrap then
+    self:resetAutoWrap()
+  end
+end
+
 --- Replaces the currently selected text.
 -- @param with The text to use as a replacement.
 function Geyser.MiniConsole:replace (with)
@@ -42,9 +50,11 @@ function Geyser.MiniConsole:getFont()
   return self.font
 end
 
---- Sets the point at which text is wrapped in this miniconsole
+--- Sets the point at which text is wrapped in this miniconsole unless autoWrap is on
 -- @param wrapAt The number of characters to start wrapping.
 function Geyser.MiniConsole:setWrap (wrapAt)
+  if self.autoWrap then return nil, "autoWrap is enabled in this MiniConsole and that overrides manual wrapping" end
+
   if wrapAt then
     self.wrapAt = wrapAt
   end
@@ -158,6 +168,28 @@ function Geyser.MiniConsole:getColumnCount()
     return getColumnCount(self.name)
 end
 
+--- Turn on auto wrap for the miniconsole
+function Geyser.MiniConsole:enableAutoWrap()
+  self.autoWrap = true
+  self:resetAutoWrap()
+end
+
+--- Turn off auto wrap for the miniconsole, after disabling you should immediately
+-- call setWrap with your desired wrap
+function Geyser.MiniConsole:disableAutoWrap()
+  self.autoWrap = false
+end
+
+--- Set the wrap based on how wide the console is
+function Geyser.MiniConsole:resetAutoWrap()
+  local fontWidth, fontHeight = calcFontSize(self.name)
+  local consoleWidth = self.get_width()
+  local charactersWidth = math.floor(consoleWidth / fontWidth)
+
+  self.wrapAt = charactersWidth
+  setWindowWrap(self.name, self.wrapAt)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
@@ -182,9 +214,6 @@ function Geyser.MiniConsole:new (cons, container)
   -- Set any defined colors
   Geyser.Color.applyColors(me)
 
-  if cons.wrapAt then
-    me:setWrap(cons.wrapAt)
-  end
   if cons.fontSize then
     me:setFontSize(cons.fontSize)
   elseif container then
@@ -197,10 +226,15 @@ function Geyser.MiniConsole:new (cons, container)
   if cons.scrollBar then
     me:enableScrollBar()
   else
-    me:disableScrollbar()
+    me:disableScrollBar()
   end
   if cons.font then
     me:setFont(cons.font)
+  end
+  if cons.wrapAt == "auto" then
+    me:setAutoWrap()
+  elseif cons.wrapAt then
+    me:setWrap(cons.wrapAt)
   end
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
