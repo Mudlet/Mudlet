@@ -154,7 +154,6 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-, mAvoidNetworkTimeout{}
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);

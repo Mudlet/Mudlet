@@ -320,10 +320,6 @@ public:
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
 
-    // a 2min timer to prevent a timeout due to the network (NATs and such) dropping
-    // an inactive connection. Does not affect game timeout if the user was inactive
-    QTimer mAvoidNetworkTimeout;
-
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
