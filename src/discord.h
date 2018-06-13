@@ -4,6 +4,8 @@
 #include "Host.h"
 
 #include "pre_guard.h"
+#include <functional>
+#include <utility>
 #include <QDebug>
 #include <QTimer>
 #include <QTimerEvent>

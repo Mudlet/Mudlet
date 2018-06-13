@@ -2,10 +2,8 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <functional>
-#include <utility>
+#include <ctime>
 #include "post_guard.h"
-
 
 // Mudlet's applicationID on Discord: https://discordapp.com/developers/docs/rich-presence/how-to#initialization
 static const char* APPLICATION_ID = "450571881909583884";
