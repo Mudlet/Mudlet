@@ -296,8 +296,10 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
     }
 
     if (state == Qt::Checked) {
+        pHost->mDiscordDisableServerSide = false;
         pHost->mTelnet.requestDiscordInfo();
     } else {
+        pHost->mDiscordDisableServerSide = true;
         pHost->clearDiscordData();
     }
 }
