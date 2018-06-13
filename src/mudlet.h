@@ -412,7 +412,6 @@ private slots:
 
 private:
     void initEdbee();
-    void startAytTimer();
 
     void goingDown() { mIsGoingDown = true; }
     QMap<QString, TConsole*> mTabMap;

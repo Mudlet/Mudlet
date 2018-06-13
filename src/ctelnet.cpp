@@ -1906,8 +1906,3 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 }
-
-void cTelnet::sendAyt()
-{
-    sendTelnetOption(TN_IAC, TN_AYT);
-}

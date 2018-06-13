@@ -451,8 +451,6 @@ mudlet::mudlet()
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
 
-    startAytTimer();
-
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
@@ -3716,17 +3714,4 @@ QStringList mudlet::getAvailableFonts()
     QFontDatabase database;
 
     return database.families(QFontDatabase::Any);
-}
-
-void mudlet::startAytTimer()
-{
-    QObject::connect(&mAvoidNetworkTimeout, &QTimer::timeout, this, [] {
-        auto& hostManager = mudlet::self()->getHostManager();
-
-        for (auto& hostName : hostManager.getHostList()) {
-            auto host = hostManager.getHost(hostName);
-            host->mTelnet.sendAyt();
-        }
-    });
-    mAvoidNetworkTimeout.start(2min);
 }
