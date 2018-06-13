@@ -120,6 +120,8 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT(handle_socket_signal_readyRead()));
 
+    setKeepAlive(socket.socketDescriptor());
+
     // initialize telnet session
     reset();
 
@@ -1905,4 +1907,35 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentList.append(protocol);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
+}
+
+// credit: https://github.com/qflow/websockets
+void cTelnet::setKeepAlive(int socketHandle)
+{
+#ifdef Q_OS_WIN
+    struct tcp_keepalive
+    {
+        u_long onoff;
+        u_long keepalivetime;
+        u_long keepaliveinterval;
+    } alive;
+    alive.onoff = TRUE;
+    alive.keepalivetime = 2 * 60 * 1000;
+    alive.keepaliveinterval = 3000;
+    DWORD dwBytesRet = 0;
+    int res = WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
+#endif
+#ifdef Q_OS_LINUX
+    int enableKeepAlive = 1;
+    int res = setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &enableKeepAlive, sizeof(enableKeepAlive));
+
+    constexpr int maxIdle = 2 * 60; /* send keepalive after 2 minutes */
+    res = setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &maxIdle, sizeof(maxIdle));
+
+    int count = 3; // send up to 3 keepalive packets out, then disconnect if no response
+    res = setsockopt(socketHandle, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count));
+
+    int interval = 2; // send a keepalive packet out every 2 seconds (after the 5 second idle period)
+    res = setsockopt(socketHandle, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+#endif
 }

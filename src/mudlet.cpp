@@ -59,7 +59,6 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <zip.h>
-#include <chrono>
 #include "post_guard.h"
 
 using namespace std;
