@@ -254,15 +254,18 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
 
 void cTelnet::requestDiscordInfo()
 {
-    string _h;
-    _h = TN_IAC;
-    _h += TN_SB;
-    _h += GMCP;
-    _h += string("Extern.Discord.Get");
-    _h += TN_IAC;
-    _h += TN_SE;
+    string data;
+    data = TN_IAC;
+    data += TN_SB;
+    data += GMCP;
+    data += string("Extern.Discord.Get");
+    data += TN_IAC;
+    data += TN_SE;
 
-    socketOutRaw(_h);
+    // some games are buggy with MCCP on and require actual input before GMCP is processed
+    data += "\n";
+
+    socketOutRaw(data);
 }
 
 void cTelnet::connectIt(const QString& address, int port)
