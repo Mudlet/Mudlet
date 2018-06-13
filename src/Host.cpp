@@ -1298,7 +1298,7 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
         return;
     }
 
-    if (packageMessage == QLatin1String("Extern.Discord.Status")) {
+    if (packageMessage == QLatin1String("External.Discord.Status")) {
         auto gameName = json.value(QStringLiteral("game"));
         if (gameName != QJsonValue::Undefined) {
             mudlet::self()->mDiscord.setGame(this, gameName.toString());

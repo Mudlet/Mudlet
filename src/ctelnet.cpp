@@ -258,7 +258,7 @@ void cTelnet::requestDiscordInfo()
     data = TN_IAC;
     data += TN_SB;
     data += GMCP;
-    data += string("Extern.Discord.Get");
+    data += string("External.Discord.Get");
     data += TN_IAC;
     data += TN_SE;
 
@@ -671,7 +671,7 @@ void cTelnet::processTelnetCommand(const string& command)
             _h = TN_IAC;
             _h += TN_SB;
             _h += GMCP;
-            _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "Extern.Discord 1"])";
+            _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1"])";
             _h += TN_IAC;
             _h += TN_SE;
 
@@ -680,7 +680,7 @@ void cTelnet::processTelnetCommand(const string& command)
             _h = TN_IAC;
             _h += TN_SB;
             _h += GMCP;
-            _h += "Extern.Discord.Hello";
+            _h += "External.Discord.Hello";
             _h += TN_IAC;
             _h += TN_SE;
 
@@ -1224,7 +1224,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar('\r'));
 
-    if (packageMessage.startsWith(QStringLiteral("Extern.Discord.Status"))) {
+    if (packageMessage.startsWith(QStringLiteral("External.Discord.Status"))) {
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
