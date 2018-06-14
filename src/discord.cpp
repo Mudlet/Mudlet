@@ -241,7 +241,7 @@ void Discord::UpdatePresence()
 
 bool Discord::gameIntegrationSupported(const QString& address)
 {
-    return mKnownAddresses.contains(address);
+    return address == QLatin1String("localhost") || address == QLatin1String("127.0.0.1") || mKnownAddresses.contains(address);
 }
 
 bool Discord::libraryLoaded()
