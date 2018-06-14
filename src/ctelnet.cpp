@@ -1914,7 +1914,7 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
 // credit: https://github.com/qflow/websockets
 void cTelnet::setKeepAlive(int socketHandle)
 {
-#ifdef Q_OS_WIN
+#ifdef Q_OS_WIN32
     struct tcp_keepalive
     {
         u_long onoff;
@@ -1930,12 +1930,11 @@ void cTelnet::setKeepAlive(int socketHandle)
     TEvent event;
     event.mArgumentList.append("telnetdebug");
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(res);
+    event.mArgumentList.append(QString::number(res));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(event);
 
-#endif
-#ifdef Q_OS_LINUX
+#elif defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     int enableKeepAlive = 1;
     int res = setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &enableKeepAlive, sizeof(enableKeepAlive));
 

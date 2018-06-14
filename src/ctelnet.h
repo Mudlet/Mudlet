@@ -45,9 +45,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#endif
 
-#ifdef Q_OS_WIN
+#elif defined(Q_OS_WIN32)
 #include <Winsock2.h>
 #include <ws2tcpip.h>
 #include "mstcpip.h"
