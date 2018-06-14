@@ -1921,7 +1921,7 @@ void cTelnet::setKeepAlive(int socketHandle)
         u_long keepalivetime;
         u_long keepaliveinterval;
     } alive;
-    alive.onoff = TRUE;
+    alive.onoff = true;
     alive.keepalivetime = 2 * 60 * 1000;
     alive.keepaliveinterval = 3000;
     DWORD dwBytesRet = 0;
