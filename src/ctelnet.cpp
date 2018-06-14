@@ -122,8 +122,6 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT(handle_socket_signal_readyRead()));
 
-    setKeepAlive(socket.socketDescriptor());
-
     // initialize telnet session
     reset();
 
@@ -301,6 +299,9 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
+
+    setKeepAlive(socket.socketDescriptor());
+
     QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
     postMessage(msg);
     QString func = "onConnect";
@@ -1921,18 +1922,11 @@ void cTelnet::setKeepAlive(int socketHandle)
         u_long keepalivetime;
         u_long keepaliveinterval;
     } alive;
-    alive.onoff = true;
+    alive.onoff = TRUE;
     alive.keepalivetime = 2 * 60 * 1000;
     alive.keepaliveinterval = 3000;
     DWORD dwBytesRet = 0;
     int res = WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
-
-    TEvent event;
-    event.mArgumentList.append("telnetdebug");
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(res));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mpHost->raiseEvent(event);
 
 #elif defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     int enableKeepAlive = 1;
