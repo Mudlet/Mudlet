@@ -1943,7 +1943,7 @@ void cTelnet::setKeepAlive(int socketHandle)
 
 #elif defined(Q_OS_MACOS)
     constexpr int on = 1;
-    setsockopt(skt, SOL_SOCKET,  SO_KEEPALIVE, &on, sizeof on);
-    setsockopt(skt, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof secs);
+    setsockopt(socketHandle, SOL_SOCKET,  SO_KEEPALIVE, &on, sizeof on);
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof secs);
 #endif
 }
