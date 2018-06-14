@@ -1926,6 +1926,14 @@ void cTelnet::setKeepAlive(int socketHandle)
     alive.keepaliveinterval = 3000;
     DWORD dwBytesRet = 0;
     int res = WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
+
+    TEvent event;
+    event.mArgumentList.append("telnetdebug");
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(res);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(event);
+
 #endif
 #ifdef Q_OS_LINUX
     int enableKeepAlive = 1;
