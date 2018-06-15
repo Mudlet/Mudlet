@@ -303,6 +303,7 @@ private:
     void addTrigger(bool isFolder);
     void addAction(bool isFolder);
     void addKey(bool);
+    void timerEvent(QTimerEvent *event) override;
 
     void selectTriggerByID(int id);
     void selectTimerByID(int id);

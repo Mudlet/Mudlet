@@ -603,6 +603,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
     showHiddenVars = false;
     widget_searchTerm->updateGeometry();
+
+    // start autosave timer
+    startTimer(2min);
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVar(bool status)
@@ -6311,6 +6314,15 @@ void dlgTriggerEditor::saveOpenChanges()
         saveVar();
         break;
     };
+}
+
+void dlgTriggerEditor::timerEvent(QTimerEvent *event)
+{
+    Q_UNUSED(event);
+
+    if (isActiveWindow()) {
+        autoSave();
+    }
 }
 
 void dlgTriggerEditor::autoSave()
