@@ -719,7 +719,6 @@ void dlgTriggerEditor::readSettings()
     move(pos);
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
-    qWarning() << "interval:" << mAutosaveInterval;
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -6325,7 +6324,6 @@ void dlgTriggerEditor::timerEvent(QTimerEvent *event)
 {
     Q_UNUSED(event);
 
-    qWarning() << "timerEvent fired :)";
     if (isActiveWindow()) {
         autoSave();
     }
@@ -6401,8 +6399,6 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
     Q_UNUSED(pE);
 
-    qWarning() << "focusOutEvent";
-
     saveOpenChanges();
     autoSave();
 }
@@ -6412,8 +6408,6 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 void dlgTriggerEditor::leaveEvent(QEvent *event)
 {
     Q_UNUSED(event);
-
-    qWarning() << "leaveEvent";
 
     saveOpenChanges();
     autoSave();
