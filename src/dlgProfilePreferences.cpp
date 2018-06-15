@@ -708,7 +708,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // The "new" style connect(...) does not have the same range of overloaded
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
-    disconnect(pushButton_resetColors, &QAbstractButton::clicked, 0, 0);
+    disconnect(pushButton_resetColors, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)));

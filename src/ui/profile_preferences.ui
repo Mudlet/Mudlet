@@ -1132,7 +1132,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_foreground_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used by default for the main console unless changed by a lua command or the MUD Server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1155,7 +1155,7 @@
           <item row="0" column="3">
            <widget class="QPushButton" name="pushButton_background_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used by default for the main console unless changed by a lua command or the MUD Server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1175,7 +1175,7 @@
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_command_line_foreground_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for the area at the bottom of the main console where text to send to the MUD Server, or processed locally, is entered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string/>
@@ -1192,7 +1192,7 @@
           <item row="1" column="3">
            <widget class="QPushButton" name="pushButton_command_line_background_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for the area at the bottom of the main console where text to send to the MUD Server, or processed locally, is entered.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string/>
@@ -1209,7 +1209,7 @@
           <item row="2" column="1">
            <widget class="QPushButton" name="pushButton_command_foreground_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used in the main console when text sent to the MUD Server, or which was processed locally, which was entered in the command line, is shown afterward (when the &amp;quot;&lt;span style=&quot; font-style:italic;&quot;&gt;Show the text you sent&lt;/span&gt;&amp;quot; option is checked).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1229,7 +1229,7 @@
           <item row="2" column="3">
            <widget class="QPushButton" name="pushButton_command_background_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used in the main console when text sent to the MUD Server, or which was processed locally, which was entered in the command line, is shown afterward (when the &amp;quot;&lt;span style=&quot; font-style:italic;&quot;&gt;Show the text you sent&lt;/span&gt;&amp;quot; option is checked).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
