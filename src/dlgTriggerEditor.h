@@ -456,6 +456,9 @@ private:
     bool mCleanResetQueued;
     void runScheduledCleanReset();
     void autoSave();
+
+    // profile autosave interval in minutes
+    int mAutosaveInterval;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

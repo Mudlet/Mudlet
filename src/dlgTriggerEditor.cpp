@@ -105,6 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
 , mCleanResetQueued(false)
+, mAutosaveInterval{}
 {
     // init generated dialog
     setupUi(this);
@@ -604,8 +605,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showHiddenVars = false;
     widget_searchTerm->updateGeometry();
 
-    // start autosave timer
-    startTimer(2min);
+    if (mAutosaveInterval > 0) {
+        startTimer(mAutosaveInterval * 1min);
+    }
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVar(bool status)
@@ -711,11 +713,13 @@ void dlgTriggerEditor::readSettings()
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
-
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
     move(pos);
+
+    mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
+    qWarning() << "interval:" << mAutosaveInterval;
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -727,6 +731,7 @@ void dlgTriggerEditor::writeSettings()
     QSettings settings("mudlet", "Mudlet");
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
+    settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
 }
 
 void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
@@ -6320,6 +6325,7 @@ void dlgTriggerEditor::timerEvent(QTimerEvent *event)
 {
     Q_UNUSED(event);
 
+    qWarning() << "timerEvent fired :)";
     if (isActiveWindow()) {
         autoSave();
     }
