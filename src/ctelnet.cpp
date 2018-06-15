@@ -1456,19 +1456,13 @@ void cTelnet::gotChunk(string& mud_data)
             }
         }
 
-    } else if (mGA_Driver) {
+    } else {
         mMudData += mud_data;
         if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
             applyGAFix();
         }
         postData();
         mMudData = "";
-    } else {
-        mMudData += mud_data;
-        if (!mIsTimerPosting) {
-            mpPostingTimer->start();
-            mIsTimerPosting = true;
-        }
     }
 }
 
