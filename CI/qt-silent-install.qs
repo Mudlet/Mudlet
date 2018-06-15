@@ -27,8 +27,8 @@ Controller.prototype.ComponentSelectionPageCallback = function() {
     var widget = gui.currentPageWidget();
 
     widget.deselectAll();
-    widget.selectComponent("qt.563.win32_mingw49");
-    widget.selectComponent("qt.tools.win32_mingw492");
+    widget.selectComponent("qt.qt5.5110.win32_mingw53");
+    widget.selectComponent("qt.tools.win32_mingw530");
 
     gui.clickButton(buttons.NextButton);
 }
