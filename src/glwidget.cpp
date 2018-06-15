@@ -25,16 +25,12 @@
 
 #include "Host.h"
 #include "TArea.h"
-#include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
 #include "post_guard.h"
-
-#include <math.h>
 
 #ifdef Q_OS_MACOS
 #include <OpenGL/glu.h>
@@ -116,9 +112,7 @@ GLWidget::GLWidget(TMap* pM, QWidget* parent)
 }
 
 
-GLWidget::~GLWidget()
-{
-}
+GLWidget::~GLWidget() = default;
 
 QSize GLWidget::minimumSizeHint() const
 {

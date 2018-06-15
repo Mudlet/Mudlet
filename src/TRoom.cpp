@@ -29,13 +29,10 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
-#include <QDataStream>
-#include <QDebug>
-#include <QElapsedTimer>
+#include <QString>
 #include <QStringBuilder>
+#include <QRegularExpression>
 #include "post_guard.h"
-
 
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)

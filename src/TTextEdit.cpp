@@ -26,25 +26,17 @@
 
 #include "TTextEdit.h"
 
-
 #include "mudlet.h"
-#include "Host.h"
 #include "TConsole.h"
 #include "TEvent.h"
 #include "wcwidth.h"
 
 #include "pre_guard.h"
-#include <QtEvents>
-#include <QApplication>
-#include <QClipboard>
 #include <QDesktopServices>
-#include <QMenu>
 #include <QPainter>
 #include <QScrollBar>
-#include <QString>
-#include <QTextBoundaryFinder>
-#include <QTextCursor>
 #include <QToolTip>
+#include <QTextBoundaryFinder>
 #include "post_guard.h"
 
 
@@ -1473,6 +1465,9 @@ QString TTextEdit::getSelectedText(char newlineChar)
         if (y == mPA.y()) {
             // start from the column where the selection started
             x = mPA.x();
+            // insert the number of spaces to push the first line to the right
+            // so it lines up with the following lines
+            text.append(QStringLiteral(" ").repeated(x));
         }
         // while we are not at the end of the buffer line
         while (x < static_cast<int>(mpBuffer->buffer[y].size())) {

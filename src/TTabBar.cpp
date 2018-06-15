@@ -26,11 +26,9 @@
 #include "TTabBar.h"
 
 #include "pre_guard.h"
-#include <QFont>
 #include <QStyleOption>
 #include <QPainter>
 #include "post_guard.h"
-
 
 void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
 {

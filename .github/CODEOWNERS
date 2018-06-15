@@ -3,13 +3,16 @@
 # project own the whole product.
 
 # Normally, *.ui, *.cpp and *.h files are reviewed by the core-cpp team only
-*.cpp                           @Mudlet/core-cpp
+# All files containing UI text are reviewed by the ui-review team
+*.cpp                           @Mudlet/core-cpp @Mudlet/ui-review
 *.h                             @Mudlet/core-cpp
-*.ui                            @Mudlet/core-cpp
+*.ui                            @Mudlet/core-cpp @Mudlet/ui-review
 
 # But the lua interface has additional reviewers
-/src/LuaInterface.cpp           @Mudlet/core-cpp @Mudlet/lua-interface
+/src/LuaInterface.cpp           @Mudlet/core-cpp @Mudlet/lua-interface @Mudlet/ui-review
 /src/LuaInterface.h             @Mudlet/core-cpp @Mudlet/lua-interface
+/src/TLuaInterpreter.cpp        @Mudlet/core-cpp @Mudlet/lua-interface @Mudlet/ui-review
+/src/TLuaInterpreter.h          @Mudlet/core-cpp @Mudlet/lua-interface
 
 # The lua-interface team is also reviewing everything below the mudlet-lua
 # folder and some pre-installed packages

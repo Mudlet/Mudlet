@@ -113,21 +113,21 @@ public:
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
     void initGraph();
     void connectExitStub(int roomId, int dirType);
-    void postMessage(const QString text);
+    void postMessage(QString text);
 
     // Used by the 2D mapper to send view center coordinates to 3D one
-    void set3DViewCenter(const int, const int, const int, const int);
+    void set3DViewCenter(int, int, int, int);
 
-    void appendRoomErrorMsg(const int, const QString, const bool isToSetFileViewingRecommended = false);
-    void appendAreaErrorMsg(const int, const QString, const bool isToSetFileViewingRecommended = false);
-    void appendErrorMsg(const QString, const bool isToSetFileViewingRecommended = false);
-    void appendErrorMsgWithNoLf(const QString, const bool isToSetFileViewingRecommended = false);
+    void appendRoomErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
+    void appendAreaErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
+    void appendErrorMsg(QString, bool isToSetFileViewingRecommended = false);
+    void appendErrorMsgWithNoLf(QString, bool isToSetFileViewingRecommended = false);
 
     // If the argument is true does not write out any thing if there is no data
     // to dump, intended to be used before an operation like a map load so that
     // any messages previously recorded are not associated with a "fresh" batch
     // from the operation.
-    void pushErrorMessagesToFile(const QString, const bool isACleanup = false);
+    void pushErrorMessagesToFile(QString, bool isACleanup = false);
 
     // Moved and revised from dlgMapper:
     void downloadMap(const QString* remoteUrl = Q_NULLPTR, const QString* localFileName = Q_NULLPTR);
@@ -140,10 +140,10 @@ public:
     bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
 
     // Use progress dialog for post-download operations.
-    void reportStringToProgressDialog(const QString);
+    void reportStringToProgressDialog(QString);
 
     // Use progress dialog for post-download operations.
-    void reportProgressToProgressDialog(const int, const int);
+    void reportProgressToProgressDialog(int, int);
 
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
@@ -234,7 +234,7 @@ public slots:
 
 
 private:
-    const QString createFileHeaderLine(const QString, const QChar);
+    const QString createFileHeaderLine(QString, QChar);
 
     QStringList mStoredMessages;
 

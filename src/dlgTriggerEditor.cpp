@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -26,18 +26,12 @@
 #include "dlgTriggerEditor.h"
 
 #include "Host.h"
-#include "HostManager.h"
 #include "LuaInterface.h"
-#include "TAction.h"
 #include "TConsole.h"
 #include "TEasyButtonBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
-#include "TTreeWidget.h"
-#include "TTrigger.h"
-#include "TriggerUnit.h"
 #include "VarUnit.h"
-#include "XMLexport.h"
 #include "XMLimport.h"
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
@@ -45,20 +39,12 @@
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
-#include "dlgTriggersMainArea.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
 #include <QFileDialog>
-#include <QHeaderView>
-#include <QListWidget>
-#include <QMainWindow>
 #include <QMessageBox>
-#include <QSettings>
-#include <QTextCursor>
-#include <QTextDocument>
-#include <QTextOption>
 #include <QToolBar>
 #include "post_guard.h"
 
@@ -7519,7 +7505,7 @@ void dlgTriggerEditor::doCleanReset()
 
     mCleanResetQueued = true;
 
-    QTimer::singleShot(0, [=]() {
+    QTimer::singleShot(0, this, [=]() {
         mCleanResetQueued = false;
 
         runScheduledCleanReset();

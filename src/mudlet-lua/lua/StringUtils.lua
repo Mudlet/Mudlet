@@ -4,21 +4,7 @@
 
 
 
---- Cut string to specified maximum length.
----
---- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
----
---- @usage Following call will return 'abc'.
----   <pre>
----   string.cut("abcde", 3)
----   </pre>
---- @usage You can easily pad string to certain length.
----   Example bellow will print 'abcde     ' e.g. pad/cut string to 10 characters.
----   <pre>
----   local s = "abcde"
----   s = string.cut(s .. "          ", 10)   -- append 10 spaces
----   echo("'" .. s .. "'")
----   </pre>
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.cut
 function string.cut(s, maxLen)
   if string.len(s) > maxLen then
     return string.sub(s, 1, maxLen)
@@ -29,7 +15,7 @@ end
 
 
 
---- Enclose string by long brackets. <br/>
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.enclose
 function string.enclose(s, maxlevel)
   s = "[" .. s .. "]"
   local level = 0
@@ -46,25 +32,14 @@ end
 
 
 
---- Test if string is ending with specified suffix.
----
---- @see string.starts
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.ends
 function string.ends(String, Suffix)
   return Suffix == '' or string.sub(String, -string.len(Suffix)) == Suffix
 end
 
 
 
---- Generate case insensitive search pattern from string.
----
---- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
----
---- @return case insensitive pattern string
----
---- @usage Following example will generate and print <i>"123[aA][bB][cC]"</i> string.
----   <pre>
----   echo(string.genNocasePattern("123abc"))
----   </pre>
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.genNocasePattern
 function string.genNocasePattern(s)
   s = string.gsub(s, "%a",
   function(c)
@@ -75,28 +50,7 @@ end
 
 
 
---- Return first matching substring or nil.
----
---- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
----
---- @return nil or first matching substring
----
---- @usage Following example will print: "I did find: Troll" string.
----   <pre>
----   local match = string.findPattern("Troll is here!", "Troll")
----   if match then
----      echo("I did find: " .. match)
----   end
----   </pre>
---- @usage This example will find substring regardless of case.
----   <pre>
----   local match = string.findPattern("Troll is here!", string.genNocasePattern("troll"))
----   if match then
----      echo("I did find: " .. match)
----   end
----   </pre>
----
---- @see string.genNocasePattern
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.findPattern
 function string.findPattern(text, pattern)
   if string.find(text, pattern, 1) then
     return string.sub(text, string.find(text, pattern, 1))
@@ -107,25 +61,7 @@ end
 
 
 
---- Splits a string into a table by the given delimiter.
----
---- @usage Split string by ", " delimiter.
----   <pre>
----   names = "Alice, Bob, Peter"
----   name_table = names:split(", ")
----   display(name_table)
----   </pre>
----
----   Previous code will print out:
----   <pre>
----   table {
----     1: 'Alice'
----     2: 'Bob'
----     3: 'Peter'
----   }
----   </pre>
----
---- @return array with split strings
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.split
 function string:split(delimiter)
   local result = { }
   local from = 1
@@ -141,26 +77,14 @@ end
 
 
 
---- Test if string is starting with specified prefix.
----
---- @see string.ends
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.starts
 function string.starts(String, Prefix)
   return string.sub(String, 1, string.len(Prefix)) == Prefix
 end
 
 
 
---- Capitalize first character in a string.
----
---- @usage Variable testname is now Anna.
----   <pre>
----   testname = string.title("anna")
----   </pre>
---- @usage Example will set test to "Bob".
----   <pre>
----   test = "bob"
----   test = string.title(test)
----   </pre>
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.title
 function string:title()
   assert(type(self) == "string", "string.title(): no word given to capitalize")
   self = self:gsub("^%l", string.upper, 1)
@@ -169,15 +93,7 @@ end
 
 
 
---- Trim string (remove all white spaces around string).
----
---- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
----
---- @usage Example will print 'Troll is here!'.
----   <pre>
----   local str = string.trim("  Troll is here!  ")
----   echo("'" .. str .. "'")
----   </pre>
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.trim
 function string.trim(s)
   if s then
     return string.gsub(s, "^%s*(.-)%s*$", "%1")

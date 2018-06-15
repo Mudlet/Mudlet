@@ -70,8 +70,8 @@ macx {
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++11 for builds.
-CONFIG += c++11
+# enable C++14 for builds.
+CONFIG += c++14
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -139,7 +139,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.9.0
+VERSION = 3.10.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -172,17 +172,16 @@ macx {
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
-# Setting an environmental variable WITH_FONTS to the case insensitive value
-# "no" will stop the inclusion of the fonts present in the source code in the
-# compiled binary. Linux packagers or other parties may not want to include the
-# fonts since such resources may already be available in other ways or are not
-# wanted in their binaries.
-# Note: as WITH_FONTS could be a number, a string, something else (or not even
-# exist) we need to be careful in checking it exists before doing much else
-# with it. Also as an environmental variable it is tricky to handle unless we
-# read it into a qmake variable first:
-FONT_TEST = $$(WITH_FONTS)
-isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
+# To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
+# set the environment WITH_FONTS variable to "NO"
+# ie: export WITH_UPDATER="NO" qmake
+# 
+# Note for Mudlet developers: as WITH_FONTS could be a number, a string, 
+# something else (or not even # exist) we need to be careful in checking it
+# exists before doing much else with it. Also as an environmental variable it
+# is tricky to handle unless we read it into a qmake variable first:
+FONT_TEST = $$upper($$(WITH_FONTS))
+isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     DEFINES += INCLUDE_FONTS
     # Can download and extract latest Unbuntu font files (currently X.YY is
     # 0.83) from:
@@ -195,18 +194,17 @@ isEmpty( FONT_TEST ) | !equals($$upper(FONT_TEST), "NO" ) {
 }
 
 ######################### Auto Updater setting detection #########,#############
-# Enable the auto updater system by default on supported platforms. unless the
-# environmental variable WITH_UPDATER is already defined and is not
-# set to (case insenstive) "no". This is for Linux packagers and others who will
-# want to handle updates themselves.
-# Note: as WITH_UPDATER could be a number, a string, something else (or not even
-# exist) we need to be careful in checking it exists before doing much else
-# with it. Also as an environmental variable it is tricky to handle unless we
-# read it into a qmake variable first:
+# To remove the built-in updater, set the environment WITH_UPDATER variable to "NO"
+# ie: export WITH_UPDATER="NO" qmake
+# 
+# Note for Mudlet developers: as WITH_UPDATER could be a number, a string,
+# something else (or not even exist) we need to be careful in checking it exists
+# before doing much else with it. Also as an environmental variable it is tricky
+# to handle unless we read it into a qmake variable first:
 linux|macx|win32 {
     # We are on one of the supported platforms
-    UPDATER_TEST = $$(WITH_UPDATER)
-    isEmpty( UPDATER_TEST ) | !equals($$upper(UPDATER_TEST), "NO" ) {
+    UPDATER_TEST = $$upper($$(WITH_UPDATER))
+    isEmpty( UPDATER_TEST ) | !equals(UPDATER_TEST, "NO" ) {
        # The environmental variable does not exist or it does and it is NOT the
        # particular value we are looking out for - so include the updater code:
        DEFINES += INCLUDE_UPDATER

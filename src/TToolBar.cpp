@@ -29,10 +29,6 @@
 #include "TFlipButton.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QtEvents>
-#include "post_guard.h"
-
 
 TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget( pW )

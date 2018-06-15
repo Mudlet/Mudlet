@@ -140,7 +140,7 @@ public:
     QStringList getEndLines(int);
     void clear();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s, const bool isFromServer=false);
+    void translateToPlainText(std::string& s, bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void appendLine(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void setWrapAt(int i) { mWrapAt = i; }
@@ -201,8 +201,8 @@ private:
     void shrinkBuffer();
     int calcWrapPos(int line, int begin, int end);
     void handleNewLine();
-    bool processUtf8Sequence(const std::string&, const bool, const size_t, size_t&, bool&);
-    bool processGBSequence(const std::string&, const bool, const bool, const size_t, size_t&, bool&);
+    bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
+    bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
 
 
     bool gotESC;
