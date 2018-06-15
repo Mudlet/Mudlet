@@ -165,6 +165,7 @@ public:
     void showInfo(const QString&);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void leaveEvent(QEvent *event) override;
     void enterEvent(QEvent* pE) override;
     bool eventFilter(QObject*, QEvent* event) override;
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
@@ -453,6 +454,7 @@ private:
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued;
     void runScheduledCleanReset();
+    void autoSave();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

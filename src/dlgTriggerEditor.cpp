@@ -6313,6 +6313,11 @@ void dlgTriggerEditor::saveOpenChanges()
     };
 }
 
+void dlgTriggerEditor::autoSave()
+{
+    mpHost->saveProfile(nullptr, QStringLiteral("autosave"));
+}
+
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
     if (mNeedUpdateData) {
@@ -6376,7 +6381,24 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 
 void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
+    Q_UNUSED(pE);
+
+    qWarning() << "focusOutEvent";
+
     saveOpenChanges();
+    autoSave();
+}
+
+// this doesn't seem 100% right - I couldn't find a "window lost focus" event
+// The focusOutEvent above is not it - that is for keyboard focus
+void dlgTriggerEditor::leaveEvent(QEvent *event)
+{
+    Q_UNUSED(event);
+
+    qWarning() << "leaveEvent";
+
+    saveOpenChanges();
+    autoSave();
 }
 
 void dlgTriggerEditor::changeView(int view)
