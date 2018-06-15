@@ -1393,29 +1393,27 @@ void cTelnet::postMessage(QString msg)
 // Patch for servers that need GA/EOR for prompt fixups
 void cTelnet::applyGAFix()
 {
-    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        int j = 0;
-        int s = mMudData.size();
-        while (j < s) {
-            // search for leading <LF> but skip leading ANSI control sequences
-            if (mMudData[j] == 0x1B) {
-                while (j < s) {
-                    if (mMudData[j] == 'm') {
-                        goto NEXT;
-                        break;
-                    }
-                    j++;
+    int j = 0;
+    int s = mMudData.size();
+    while (j < s) {
+        // search for leading <LF> but skip leading ANSI control sequences
+        if (mMudData[j] == 0x1B) {
+            while (j < s) {
+                if (mMudData[j] == 'm') {
+                    goto NEXT;
+                    break;
                 }
+                j++;
             }
-            if (mMudData[j] == '\n') {
-                mMudData.erase(j, 1);
-                break;
-            } else {
-                break;
-            }
-        NEXT:
-            j++;
         }
+        if (mMudData[j] == '\n') {
+            mMudData.erase(j, 1);
+            break;
+        } else {
+            break;
+        }
+    NEXT:
+        j++;
     }
 }
 
@@ -1423,7 +1421,9 @@ void cTelnet::gotPrompt(string& mud_data)
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
-    applyGAFix();
+    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
+        applyGAFix();
+    }
 
     postData();
     mMudData = "";
@@ -1458,7 +1458,9 @@ void cTelnet::gotChunk(string& mud_data)
 
     } else if (mGA_Driver) {
         mMudData += mud_data;
-        applyGAFix();
+        if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
+            applyGAFix();
+        }
         postData();
         mMudData = "";
     } else {
