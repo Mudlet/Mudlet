@@ -273,7 +273,12 @@ unix:!macx {
         -lpugixml
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
-    LIBS += \
+    MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
+    isEmpty(MINGW_BASE_DIR) {
+        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw492_32"
+    }
+    LIBS += -L"C:\\mingw32\\bin" \
+        -L"C:\\mingw32\\lib" \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.6 \
@@ -284,7 +289,11 @@ unix:!macx {
         -lglut \
         -lglu32 \
         -lpugixml \
-    INCLUDEPATH += "C:\\Libraries\\boost_1_67_0"
+        -L"$${MINGW_BASE_DIR}\\bin"
+    INCLUDEPATH += "C:\\mingw32\\include" \
+                   "C:\\Libraries\\boost_1_67_0" \
+                   "$${MINGW_BASE_DIR}\\include" \
+                   "$${MINGW_BASE_DIR}\\lib\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
