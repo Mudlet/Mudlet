@@ -155,13 +155,13 @@ mudlet::mudlet()
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mShowIconsOnDialogs(true)
 {
-    mIsIconShownOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+    mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
-    if (mIsIconShownOnMenuCheckedState != Qt::PartiallyChecked) {
+    if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
         // If the setting is not the "tri-state" one then force the setting,
         // have to invert the sense because the attribute is a negative one:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mIsIconShownOnMenuCheckedState == Qt::Unchecked));
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
 
     setupUi(this);
@@ -2335,7 +2335,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
     // In the near future the user's locale preferences will need to be read
     // as soon as possible as well!
 
-    mIsIconShownOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
+    mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2482,7 +2482,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
-    settings.setValue("showIconsInMenus", mIsIconShownOnMenuCheckedState);
+    settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
 }
 
 void mudlet::slot_show_connection_dialog()

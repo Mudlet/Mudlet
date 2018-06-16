@@ -232,16 +232,16 @@ public:
     bool mShowIconsOnDialogs;
     // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
     // startup which the user may leave as is or force on or off:
-    bool mIsIconShownOnMenuOriginally;
+    bool mShowIconsOnMenuOriginally;
     // This is the state for the tri-state control on the preferences and
     // means:
     // Qt::PartiallyChecked = use the previous state set on application start
-    //    (set AA_DontShowIconsInMenus to inverse of mIsIconShownOnMenuOriginally)
+    //    (set AA_DontShowIconsInMenus to inverse of mShowIconsOnMenuOriginally)
     // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
     //    to false ourselves)
     // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
     //    true ourselves)
-    Qt::CheckState mIsIconShownOnMenuCheckedState;
+    Qt::CheckState mShowIconsOnMenuCheckedState;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces

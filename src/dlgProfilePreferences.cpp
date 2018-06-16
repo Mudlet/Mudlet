@@ -57,10 +57,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // init generated dialog
     setupUi(this);
 
-    // This is currently empty so can be hidden until needed, but provides a
-    // location on the last (Special Options) tab where
-    // temporary/development/testing controls can be placed if needed...
-    groupBox_debug->hide();
+    // The groupBox_debug is no longer empty, (it contains
+    // checkBox_showIconsOnMenus) so can no longer be "hidden until needed"
+    // it still provides a location on the last (Special Options) tab where
+    // temporary/development/testing controls can be placed if needed, they
+    // should be added to the (QGridLayout*) returned by:
+    // qobject_cast<QGridLayout*>(groupBox_debug->layout())
 
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
@@ -177,13 +179,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                               "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
                                                               "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
                                                               "full support for languages other than English.</i></p>"));
-    checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mIsIconShownOnMenuCheckedState);
+    checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mShowIconsOnMenuCheckedState);
     checkBox_showIconsOnMenus->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                           .arg("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
                                                "shown icons on menus, others, however do not. This control allows the user to override "
                                                "the setting, if needed, as follows:"
                                                "<ul><li><b>Unchecked</b> '<i>off</i>' = Force menus to be drawn without icons.</li>"
-                                               "<li><b>Checked</b> '<i>wide</i>' = Force menus to be drawn with icons.</li>"
+                                               "<li><b>Checked</b> '<i>on</i>' = Force menus to be drawn with icons.</li>"
                                                "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                                "<p><i>This setting is only processed when individual menus are created and changes may not "
                                                "propogate everywhere until Mudlet is restarted.</i></p>"));
@@ -204,11 +206,7 @@ void dlgProfilePreferences::disableHostDetails()
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
     groupBox_encoding->setEnabled(false);
-    // groupBox_miscellaneous now contains a non-Host specific control so must
-    // disable the other elements of it instead of whole groupdBox
-    mAlertOnNewData->setEnabled(false);
-    acceptServerGUI->setEnabled(false);
-    mFORCE_SAVE_ON_EXIT->setEnabled(false);
+    groupBox_miscellaneous->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
@@ -280,11 +278,7 @@ void dlgProfilePreferences::disableHostDetails()
 void dlgProfilePreferences::enableHostDetails()
 {
     groupBox_encoding->setEnabled(true);
-    // groupBox_miscellaneous now contains a non-Host specific control so must
-    // enable the other elements of it instead of whole groupdBox
-    mAlertOnNewData->setEnabled(true);
-    acceptServerGUI->setEnabled(true);
-    mFORCE_SAVE_ON_EXIT->setEnabled(true);
+    groupBox_miscellaneous->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
     // on tab_inputLine:
@@ -579,12 +573,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
         mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
-        auto * pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
+        auto * pdebugLayout = qobject_cast<QGridLayout*>(groupBox_debug->layout());
         if (pdebugLayout) {
-            pdebugLayout->addRow(pLabel_mapSymbolFontFudge, mpDoubleSpinBox_mapSymbolFontFudge);
-            groupBox_debug->show();
+            int existingRows = pdebugLayout->rowCount();
+            pdebugLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
+            pdebugLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
         } else {
-            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QFormLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
+            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QGridLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
         }
 
         label_mapSymbolsFont->setEnabled(true);
@@ -2089,7 +2084,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    mudlet::self()->mIsIconShownOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
+    mudlet::self()->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
     switch (checkBox_showIconsOnMenus->checkState()) {
     case Qt::Unchecked:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
@@ -2098,7 +2093,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
         break;
     case Qt::PartiallyChecked:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mudlet::self()->mIsIconShownOnMenuOriginally);
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mudlet::self()->mShowIconsOnMenuOriginally);
     }
 
     close();
