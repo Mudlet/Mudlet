@@ -275,10 +275,9 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
     isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw492_32"
+        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw530_32"
     }
-    LIBS += -L"C:\\mingw32\\bin" \
-        -L"C:\\mingw32\\lib" \
+    LIBS +=  \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.6 \
@@ -290,7 +289,7 @@ unix:!macx {
         -lglu32 \
         -lpugixml \
         -L"$${MINGW_BASE_DIR}\\bin"
-    INCLUDEPATH += "C:\\mingw32\\include" \
+    INCLUDEPATH += \
                    "C:\\Libraries\\boost_1_67_0" \
                    "$${MINGW_BASE_DIR}\\include" \
                    "$${MINGW_BASE_DIR}\\lib\include"
