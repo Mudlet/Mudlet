@@ -198,6 +198,7 @@ public slots:
     void slot_customLineRemovePoint();
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
+    void slot_newMap();
 
 private:
     void resizeMultiSelectionWidget();
