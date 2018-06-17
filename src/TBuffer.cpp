@@ -613,6 +613,11 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
 };
 // clang-format on
 
+// a map of supported MXP elements and attributes
+const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
+    {QStringLiteral("send"), {"href", "hint", "prompt"}}
+};
+
 TChar::TChar()
 {
     fgR = 255;
@@ -1939,7 +1944,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     if (_tn == "VERSION") {
                         mpHost->sendRaw(QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
                     } else if (_tn == QLatin1String("SUPPORT")) {
-                        mpHost->sendRaw(QString("\n\x1b[1z<SUPPORTS =1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
+                        mpHost->sendRaw(processSupportsRequest(currentToken.c_str()));
                     }
                     if (_tn == "BR") {
                         ch = '\n';
@@ -4432,4 +4437,60 @@ void TBuffer::encodingChanged(const QString& newEncoding)
             mMainIncomingCodec = nullptr;
         }
     }
+}
+
+QString TBuffer::processSupportsRequest(const QString& elements)
+{
+    auto elementsList = elements.split(QStringLiteral(" "), QString::SkipEmptyParts);
+    QStringList result;
+
+    // turn this into a lambda for readability
+    if (elementsList.isEmpty()) {
+        auto elementsIterator = mSupportedMxpElements.constBegin();
+        while (elementsIterator != mSupportedMxpElements.constEnd()) {
+
+            // make this a lambda to append element + all attributes
+            const auto& element = elementsIterator.key();
+            result.append("+" + element);
+
+            for (const auto& attribute : elementsIterator.value()) {
+                result.append("+" + element + QStringLiteral(".") + attribute);
+            }
+        }
+    } else {
+        for (auto& element : elementsList) {
+            // prune any enclosing quote
+            if (element.startsWith(QLatin1String("\""))) {
+                element = element.remove(0, 1);
+            }
+            if (element.endsWith(QLatin1String("\""))) {
+                element.chop(1);
+            }
+
+            if (!element.contains(QLatin1String("."))) {
+                result.append((mSupportedMxpElements.contains(element) ? "+" : "-") + element);
+            } else {
+                auto elementName = element.section(QStringLiteral("."), 0, 0);
+                auto attributeName = element.section(QStringLiteral("."), 1, 1);
+
+                if (!mSupportedMxpElements.contains(elementName)) {
+                    result.append("-" + elementName);
+                } else if (attributeName == QLatin1String("*")) {
+                    result.append("+" + elementName);
+
+                    for (const auto& attribute : mSupportedMxpElements.value(elementName)) {
+                        result.append("+" + element + "." + attribute);
+                    }
+                } else {
+                    if (mSupportedMxpElements.value(elementName).contains(attributeName)) {
+                        result.append("+" + element + "." + attributeName);
+                    } else {
+                        result.append("-" + element + "." + attributeName);
+                    }
+                }
+            }
+        }
+    }
+
+    return result.join(QLatin1String(" "));
 }
