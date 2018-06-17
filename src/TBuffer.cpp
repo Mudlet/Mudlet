@@ -1938,6 +1938,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     _tn = _tn.toUpper();
                     if (_tn == "VERSION") {
                         mpHost->sendRaw(QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
+                    } else if (_tn == QLatin1String("SUPPORT")) {
+                        mpHost->sendRaw(QString("\n\x1b[1z<SUPPORTS =1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
                     }
                     if (_tn == "BR") {
                         ch = '\n';
@@ -2063,7 +2065,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             _tp = currentToken.substr(_fs).c_str();
                         }
                         QString _t1 = _tp.toUpper();
-                        const TMxpElement& _element = mMXP_Elements[_tn];
+                        const TMxpElement& _element =  mMXP_Elements[_tn];
                         QString _t2 = _element.href;
                         QString _t3 = _element.hint;
                         bool _userTag = true;
