@@ -31,6 +31,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -2666,6 +2667,24 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
 
         if (!mLabelHilite && mCustomLineSelectedRoom == 0) {
+            auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
+            auto pArea = mpMap->mpRoomDB->getArea(mAID);
+
+            if (!playerRoom || !pArea) {
+                auto createMap = new QAction("create new map", this);
+
+                auto loadMap = new QAction("load map", this);
+                connect(loadMap, &QAction::triggered, this, &T2DMap::slot_loadMap);
+
+                mPopupMenu = true;
+
+                popup->addAction(createMap);
+                popup->addAction(loadMap);
+
+                popup->popup(mapToGlobal(event->pos()));
+                return;
+            }
+
             QAction* action = new QAction("move", this);
             action->setToolTip(tr("Move room"));
             connect(action, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
@@ -2715,10 +2734,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             connect(action13, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
             QAction* action14 = new QAction("custom exit lines", this);
-            TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
-            if (!pArea) {
-                return;
-            }
+
             if (pArea->gridMode) {
                 // Disable custom exit lines in grid mode as they aren't visible anyway
                 action14->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode"));
@@ -3850,6 +3866,28 @@ void T2DMap::slot_setRoomWeight()
         }
         mpMap->mMapGraphNeedsUpdate = true;
         repaint();
+    }
+}
+
+void T2DMap::slot_loadMap() {
+    if (!mpHost) {
+        return;
+    }
+
+    QString fileName = QFileDialog::getOpenFileName(
+                           this,
+                           tr("Load Mudlet map"),
+                           mudlet::getMudletPath(mudlet::profileMapsPath, mpHost->getName()),
+                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
+                              "Do not change extensions (in braces) they are used programmatically!"));
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
+        mpHost->mpConsole->importMap(fileName);
+    } else {
+        mpHost->mpConsole->loadMap(fileName);
     }
 }
 
