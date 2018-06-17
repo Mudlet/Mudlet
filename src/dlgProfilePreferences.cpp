@@ -2146,17 +2146,14 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    if (mConfigDirPath != mudlet::self()->mConfigDir) {
-        QString oldPath = mudlet::getMudletPath(mudlet::mainPath);
-        mudlet::self()->mConfigDir = mConfigDirPath;
-        qDebug() << "Configuration directory set to: " << mudlet::self()->mConfigDir;
-        // Move the current configuration directory to the new path if
-        // checkBox_moveConfigDir is checked.
-        if (checkBox_moveConfigDir->isChecked()) {
-            mudlet::self()->moveConfigDir(oldPath, lineEdit_configDir->text());
-        }
-    }
+    QString oldPath = mudlet::getMudletPath(mudlet::mainPath);
+    mudlet::self()->mConfigDir = mConfigDirPath;
     mudlet::self()->mConfigDirIndex = comboBox_selectConfigDir->currentIndex();
+    // Move the current configuration directory to the new path if
+    // checkBox_moveConfigDir is checked.
+    if (checkBox_moveConfigDir->isChecked()) {
+        mudlet::self()->moveConfigDir(oldPath, lineEdit_configDir->text());
+    }
     mudlet::self()->mpSettings = mudlet::self()->getQSettings();
     mudlet::self()->writeSettings();
 

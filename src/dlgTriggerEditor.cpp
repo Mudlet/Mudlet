@@ -7437,7 +7437,7 @@ void dlgTriggerEditor::slot_import()
 
     QFile file2;
     if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
-        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packageName, mpHost->mHomePath);
+        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packageName);
         QDir _tmpDir;
         _tmpDir.mkpath(_dest);
         QString _script = QStringLiteral("unzip([[%1]], [[%2]])").arg(fileName, _dest);
