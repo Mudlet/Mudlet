@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -58,16 +59,15 @@ public:
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() { return mCommand; }
 
-    bool match(int, int);
+    bool match(int, int, const bool);
     bool registerKey();
 
-    //bool             serialize( QDataStream & );
-    //bool             restore( QDataStream & fs, bool );
     bool exportItem;
     bool mModuleMasterFolder;
 
 private:
     TKey() = default;
+
     QString mName;
     QString mCommand;
 

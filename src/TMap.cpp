@@ -34,7 +34,9 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QProgressDialog>
 #include "post_guard.h"
 
@@ -1317,7 +1319,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             postMessage(alertMsg);
             QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
                                  "There is so much data that it DOES NOT have that you could be\n"
-                                 "be better off starting again...");
+                                 "better off starting again...");
             appendErrorMsgWithNoLf(infoMsg, false);
             postMessage(infoMsg);
             canRestore = false;

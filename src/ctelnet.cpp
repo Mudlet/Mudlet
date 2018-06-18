@@ -40,6 +40,8 @@
 
 #include "pre_guard.h"
 #include <QProgressDialog>
+#include <QTextCodec>
+#include <QTextEncoder>
 #include "post_guard.h"
 
 #define DEBUG
@@ -785,7 +787,7 @@ void cTelnet::processTelnetCommand(const string& command)
 #endif
         //server wants us to enable some option
         option = command[2];
-        auto idxOption = static_cast<int>(option);
+        auto idxOption = static_cast<quint8>(option);
         if (option == static_cast<char>(69) && mpHost->mEnableMSDP) // MSDP support
         {
             qDebug() << "TELNET IAC DO MSDP";
@@ -1529,17 +1531,6 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         qDebug() << "Listening for new compression sequences";
         return -1;
     }
-    /* TODO: Remove this commented code once it is deemed safe. -MH
-	   else
-	   {
-	    if( zval <= 0 )
-	    {
-	        initStreamDecompressor();
-	        qDebug() << "Listening for new compression sequences";
-	        return -1;
-	    }
-	   }
-	 */
     return outSize;
 }
 

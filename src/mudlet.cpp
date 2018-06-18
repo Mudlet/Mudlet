@@ -48,13 +48,12 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 
-#if defined(INCLUDE_UPDATER)
-#endif
-
 #include "pre_guard.h"
 #include <QtUiTools/quiloader.h>
+#include <QDesktopServices>
 #include <QDesktopWidget>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QToolBar>
@@ -154,7 +153,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-
+, mShowIconsOnDialogs(true)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);

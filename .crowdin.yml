@@ -1,0 +1,3 @@
+files:
+  - source: /translations/mudlet.ts
+    translation: /translations/translated/mudlet_%locale_with_underscore%.%file_extension%
