@@ -268,7 +268,7 @@ void T2DMap::shiftZdown()
 }
 
 
-void T2DMap::slot_switchArea(QString name)
+void T2DMap::slot_switchArea(const QString& newAreaName)
 {
     Host* pHost = mpHost;
     if (!pHost || !mpMap) {
@@ -277,9 +277,9 @@ void T2DMap::slot_switchArea(QString name)
 
     int playerRoomId = mpMap->mRoomIdHash.value(pHost->getName());
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
-    int playerAreaId = -2; // Cannot be valid (but -1 can be)!
+    int playerAreaID = -2; // Cannot be valid (but -1 can be)!
     if (pPlayerRoom) {
-        playerAreaId = pPlayerRoom->getArea();
+        playerAreaID = pPlayerRoom->getArea();
     }
 
     QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
@@ -287,14 +287,14 @@ void T2DMap::slot_switchArea(QString name)
         it.next();
         int areaID = it.key();
 
-        QString _n = it.value();
-        TArea* pA = mpMap->mpRoomDB->getArea(areaID);
-        if (name == _n && pA) {
+        auto areaName = it.value();
+        TArea* area = mpMap->mpRoomDB->getArea(areaID);
+        if (area && newAreaName == areaName) {
             mAID = areaID;
             mShiftMode = true;
-            pA->calcSpan();
+            area->calcSpan();
 
-            if (areaID == playerAreaId) {
+            if (areaID == playerAreaID) {
                 // We are switching back to the area that has the player in it
                 // recenter view on that room!
                 mOx = pPlayerRoom->x;
@@ -309,36 +309,36 @@ void T2DMap::slot_switchArea(QString name)
                 return;
             }
 
-            bool isAValidRoomFound = false;
-            if (!pA->ebenen.contains(mOz)) {
+            bool validRoomFound = false;
+            if (!area->zLevels.contains(mOz)) {
                 // If the current map z-coordinate value is NOT one that is used
                 // for this then get the FIRST room in the area and goto the
-                // mathmatical midpoint of all the rooms on the same
+                // mathematical midpoint of all the rooms on the same
                 // z-coordinate.
-                QSetIterator<int> itRoom(pA->getAreaRooms());
+                QSetIterator<int> itRoom(area->getAreaRooms());
                 // key is z-coordinate, value is count of rooms on that level
                 QMap<int, int> roomsCountLevelMap;
                 while (itRoom.hasNext()) {
-                    int checkRoomId = itRoom.next();
-                    TRoom* pR = mpMap->mpRoomDB->getRoom(checkRoomId);
-                    if (pR) {
-                        isAValidRoomFound = true;
-                        if (roomsCountLevelMap.contains(pR->z)) {
-                            ++roomsCountLevelMap[pR->z];
+                    int checkRoomID = itRoom.next();
+                    TRoom* room = mpMap->mpRoomDB->getRoom(checkRoomID);
+                    if (room) {
+                        validRoomFound = true;
+                        if (roomsCountLevelMap.contains(room->z)) {
+                            ++roomsCountLevelMap[room->z];
                         } else {
-                            roomsCountLevelMap[pR->z] = 1;
+                            roomsCountLevelMap[room->z] = 1;
                         }
                     }
                 }
 
-                if (isAValidRoomFound) {
+                if (validRoomFound) {
                     QMapIterator<int, int> itRoomsCount(roomsCountLevelMap);
                     // Start at highest value and work down
                     itRoomsCount.toBack();
                     // This will be Okay as we KNOW there is at least one entry
                     itRoomsCount.previous();
                     int maxRoomCountOnLevel = 0;
-                    // Initalisation value, will get overwritten
+                    // Initialisation value, will get overwritten
                     int minLevelWithMaxRoomCount = itRoomsCount.key();
                     // Return to the back so the previous() in the do loop works
                     // correctly
@@ -358,7 +358,7 @@ void T2DMap::slot_switchArea(QString name)
                     float mean_x = 0.0;
                     float mean_y = 0.0;
                     uint processedRoomCount = 0;
-                    QSet<TRoom*> pSRoom; // Hold on to relevent rooms for
+                    QSet<TRoom*> roomsToConsider; // Hold on to relevant rooms for
                                          // following step
                     while (itRoom.hasNext()) {
                         TRoom* pR = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -366,7 +366,7 @@ void T2DMap::slot_switchArea(QString name)
                             continue;
                         }
 
-                        pSRoom.insert(pR);
+                        roomsToConsider.insert(pR);
                         mean_x += (static_cast<float>(pR->x - mean_x)) / ++processedRoomCount;
                         mean_y += (static_cast<float>(pR->y - mean_y)) / processedRoomCount;
                     }
@@ -374,35 +374,35 @@ void T2DMap::slot_switchArea(QString name)
                     // We now have the position that is the "centre" of the
                     // rooms on this level - just need to find the room nearest
                     // to that:
-                    QSetIterator<TRoom*> itpRoom(pSRoom);
+                    QSetIterator<TRoom*> itpRoom(roomsToConsider);
                     float closestSquareDistance = -1.0;
-                    TRoom* pClosestRoom = nullptr;
+                    TRoom* closestCenterRoom = nullptr;
                     while (itpRoom.hasNext()) {
-                        TRoom* pR = itpRoom.next();
-                        QVector2D meanToRoom(static_cast<float>(pR->x) - mean_x, static_cast<float>(pR->y) - mean_y);
+                        TRoom* room = itpRoom.next();
+                        QVector2D meanToRoom(static_cast<float>(room->x) - mean_x, static_cast<float>(room->y) - mean_y);
                         if (closestSquareDistance < -0.5) {
-                            // Test for first time around loop - for initalisation
+                            // Test for first time around loop - for initialisation
                             // Don't use an equality to zero test, we are using
                             // floats so need to allow for a little bit of
-                            // fuzzzyness!
+                            // fuzzyness!
                             closestSquareDistance = meanToRoom.lengthSquared();
-                            pClosestRoom = pR;
+                            closestCenterRoom = room;
                         } else {
                             float currentRoomSquareDistance = meanToRoom.lengthSquared();
                             if (closestSquareDistance > currentRoomSquareDistance) {
                                 closestSquareDistance = currentRoomSquareDistance;
-                                pClosestRoom = pR;
+                                closestCenterRoom = room;
                             }
                         }
                     }
 
-                    mOx = pClosestRoom->x;
+                    mOx = closestCenterRoom->x;
                     // Map y coordinates are reversed on 2D map!
-                    mOy = -pClosestRoom->y;
-                    mOz = pClosestRoom->z;
+                    mOy = -closestCenterRoom->y;
+                    mOz = closestCenterRoom->z;
                 }
 
-                if (!isAValidRoomFound) {
+                if (!validRoomFound) {
                     //no rooms, go to 0,0,0
                     mOx = 0;
                     mOy = 0;
@@ -416,49 +416,49 @@ void T2DMap::slot_switchArea(QString name)
                 float mean_x = 0.0;
                 float mean_y = 0.0;
                 uint processedRoomCount = 0;
-                QSet<TRoom*> pSRoom; // Hold on to relevent rooms for
+                QSet<TRoom*> roomsToConsider; // Hold on to relevant rooms for
                                      // following step
-                QSetIterator<int> itRoom(pA->getAreaRooms());
+                QSetIterator<int> itRoom(area->getAreaRooms());
                 while (itRoom.hasNext()) {
-                    TRoom* pR = mpMap->mpRoomDB->getRoom(itRoom.next());
-                    if (!pR || pR->z != mOz) {
+                    TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+                    if (!room || room->z != mOz) {
                         continue;
                     }
 
-                    pSRoom.insert(pR);
-                    mean_x += (static_cast<float>(pR->x - mean_x)) / ++processedRoomCount;
-                    mean_y += (static_cast<float>(pR->y - mean_y)) / processedRoomCount;
+                    roomsToConsider.insert(room);
+                    mean_x += (static_cast<float>(room->x - mean_x)) / ++processedRoomCount;
+                    mean_y += (static_cast<float>(room->y - mean_y)) / processedRoomCount;
                 }
 
                 // We now have the position that is the "centre" of the
                 // rooms on this level - just need to find the room nearest
                 // to that:
-                QSetIterator<TRoom*> itpRoom(pSRoom);
+                QSetIterator<TRoom*> itpRoom(roomsToConsider);
                 float closestSquareDistance = -1.0;
-                TRoom* pClosestRoom = nullptr;
+                TRoom* closestCenterRoom = nullptr;
                 while (itpRoom.hasNext()) {
                     TRoom* pR = itpRoom.next();
                     QVector2D meanToRoom(static_cast<float>(pR->x) - mean_x, static_cast<float>(pR->y) - mean_y);
                     if (closestSquareDistance < -0.5) {
-                        // Test for first time around loop - for initalisation
+                        // Test for first time around loop - for initialisation
                         // Don't use an equality to zero test, we are using
                         // floats so need to allow for a little bit of
-                        // fuzzzyness!
+                        // fuzzyness!
                         closestSquareDistance = meanToRoom.lengthSquared();
-                        pClosestRoom = pR;
+                        closestCenterRoom = pR;
                     } else {
                         float currentRoomSquareDistance = meanToRoom.lengthSquared();
                         if (closestSquareDistance > currentRoomSquareDistance) {
                             closestSquareDistance = currentRoomSquareDistance;
-                            pClosestRoom = pR;
+                            closestCenterRoom = pR;
                         }
                     }
                 }
 
-                if (pClosestRoom) {
-                    mOx = pClosestRoom->x;
+                if (closestCenterRoom) {
+                    mOx = closestCenterRoom->x;
                     // Map y coordinates are reversed on 2D map!
-                    mOy = -pClosestRoom->y;
+                    mOy = -closestCenterRoom->y;
                 }
             }
             repaint();
@@ -470,21 +470,21 @@ void T2DMap::slot_switchArea(QString name)
 }
 
 // key format: <"W_" or "B_" for White/Black><QString of one or more QChars>
-void T2DMap::addSymbolToPixmapCache( const QString key, const bool isGridMode)
+void T2DMap::addSymbolToPixmapCache(const QString& key, const bool gridMode)
 {
     // Some constants used to prevent small, unreadable symbols:
     static float symbolLowerSizeLimit = 8.0;
     static unsigned int minimumUsableFontSize = 8;
 
-    // Draw onto a rectangle that will fit the room suymbol rectangle,
+    // Draw onto a rectangle that will fit the room symbol rectangle,
     // Must tweak the size so it fits within circle when round room symbols are
     // used and also accomodate fixed sizes for gridmode:
     QRectF symbolRect;
-    if (isGridMode && mBubbleMode) {
+    if (gridMode && mBubbleMode) {
         symbolRect = QRectF(0.0, 0.0, 0.707*mTX, 0.707*mTY);
     } else if (mBubbleMode) {
         symbolRect = QRectF(0.0, 0.0, 0.707*mTX*rSize, 0.707*mTY*rSize);
-    } else if (isGridMode){
+    } else if (gridMode){
         symbolRect = QRectF(0.0, 0.0, mTX, mTY);
     } else {
         symbolRect = QRectF(0.0, 0.0, mTX * rSize, mTY * rSize);
