@@ -1885,7 +1885,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
             pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             bool isAreaWidgetInNeedOfResetting = false;
-            if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAID == -1)) {
+            if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
                 isAreaWidgetInNeedOfResetting = true;
             }
 
