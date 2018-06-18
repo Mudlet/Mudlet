@@ -6,13 +6,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      if(Test-Path "C:\Qt\5.6.3\mingw49_32\bin\qmake.exe"){
-        $Env:QT_BASE_DIR = "C:\Qt\5.6.3\mingw49_32"
-      }
-      else
-      {
-        $Env:QT_BASE_DIR = "C:\Qt\5.6.3\mingw49_32"
-      }
+      $Env:QT_BASE_DIR = "C:\Qt\5.11.0\mingw53_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
