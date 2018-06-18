@@ -194,6 +194,7 @@ public:
     static int clearSpecialExits(lua_State*);
     static int solveRoomCollisions(lua_State*);
     static int setGridMode(lua_State* L);
+    static int getGridMode(lua_State* L);
     static int getCustomEnvColorTable(lua_State* L);
     static int setRoomName(lua_State*);
     static int getRoomName(lua_State*);
