@@ -1524,6 +1524,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
+        file.close();
         if (canRestore) {
             return true;
         }

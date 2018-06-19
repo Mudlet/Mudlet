@@ -7178,6 +7178,7 @@ void dlgTriggerEditor::slot_export()
         QMessageBox::warning(this, tr("export package:"), tr("Cannot write file %1:\n%2.").arg(fileName, file.errorString()));
         return;
     }
+    file.close();
 
     switch (mCurrentView) {
     case static_cast<int>(EditorViewType::cmTriggerView):
@@ -7493,6 +7494,9 @@ void dlgTriggerEditor::slot_import()
     mpCurrentKeyItem = nullptr;
 
     slot_show_triggers();
+
+    file.close();
+    file2.close();
 }
 
 void dlgTriggerEditor::doCleanReset()

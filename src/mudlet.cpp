@@ -498,24 +498,24 @@ mudlet::mudlet()
     mFontManager.addFonts();
 }
 
-QPointer<QSettings> mudlet::getQConfig()
+QPointer<QSettings> mudlet::getConfig()
 {
     QPointer<QSettings> config;
     // Try for a config.ini file relative to the executable file,
     // first, and check whether a custom path for the configuration is
     // given.
-    config = new QSettings(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
+    config = new QSettings(QStringLiteral("%1/%2").arg(QCoreApplication::applicationDirPath(), "config.ini"), QSettings::IniFormat);
     // If a config.ini file does not exist relative to the executable, try to
     // load one from the default paths
     if (!config->contains(QStringLiteral("configPath"))) {
-        config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
+        config = new QSettings(QStringLiteral("%1/%2").arg(QDir::homePath(), "mudlet.ini"), QSettings::IniFormat);
     }
     return config;
 }
 
 QPointer<QSettings> mudlet::getQSettings()
 {
-    QPointer<QSettings> config = getQConfig();
+    QPointer<QSettings> config = getConfig();
     QString configPath = config->value(QStringLiteral("configPath")).toString();
     // Return the Mudlet settings file in the directory given by
     // config if the value configPath exists.
@@ -524,11 +524,11 @@ QPointer<QSettings> mudlet::getQSettings()
         if (configPath == ".") {
             // Load config/Mudlet.ini from the same directory as the
             // application if configPath is set to a relative path
-            return new QSettings(QCoreApplication::applicationDirPath() + "/config/Mudlet.ini", QSettings::IniFormat);
+            return new QSettings(QStringLiteral("%1/%2").arg(QCoreApplication::applicationDirPath(), "config/Mudlet.ini"), QSettings::IniFormat);
         }
         // If configPath is not relative, load Mudlet.ini from the
         // specified directory in configPath
-        return new QSettings(configPath + "/Mudlet.ini", QSettings::IniFormat);
+        return new QSettings(QStringLiteral("%1/%2").arg(configPath, "Mudlet.ini"), QSettings::IniFormat);
     }
 
     // If config.ini or the value configPath does not exist, use the
@@ -794,6 +794,7 @@ void mudlet::slot_install_module()
         QMessageBox::warning(this, tr("Load Mudlet Module:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
         return;
     }
+    file.close();
 
     mpModuleTableHost->installPackage(fileName, 1);
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
@@ -869,6 +870,7 @@ void mudlet::slot_install_package()
         QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
         return;
     }
+    file.close();
 
     Host* pH = getActiveHost();
     if (!pH) {
@@ -2512,17 +2514,19 @@ void mudlet::writeSettings()
 
 void mudlet::writeConfigPath()
 {
-    QPointer<QSettings> relConfig = new QSettings(QCoreApplication::applicationDirPath() + "/config.ini", QSettings::IniFormat);
-    if (self()->mConfigDir == ".") {
+    QPointer<QSettings> relConfig = new QSettings(QStringLiteral("%1/%2").arg(QCoreApplication::applicationDirPath(), "config.ini"), QSettings::IniFormat);
+    if (mConfigDir == ".") {
         // Write to a 'config.ini' file in the same directory as the
         // application file if mConfigDir is set to a relative path
         relConfig->setValue("configPath", self()->mConfigDir);
         relConfig->sync();
         return;
     } else {
-        QPointer<QSettings> config = new QSettings(QSettings::IniFormat, QSettings::UserScope, "mudlet", "config");
+        QPointer<QSettings> config = new QSettings(QStringLiteral("%1/%2").arg(QDir::homePath(), "mudlet.ini"), QSettings::IniFormat);
         // Remove the configPath value in relConfig if it exists so it
-        // does not override the new config file
+        // does not override the new config file, which exists outside
+        // the mudlet configuration directory and in the user's home
+        // directory
         if (relConfig->contains("configPath")) {
             relConfig->remove("configPath");
         }
@@ -2536,6 +2540,7 @@ bool mudlet::moveConfigDir(const QString& oldPath, const QString& newPath)
 {
     QDir oldDir(oldPath);
     QDir newDir(newPath);
+
     // Move the directory only if it actually exists. Otherwise,
     // return false as there's nothing to move.
     if (oldDir.exists()) {
@@ -2546,7 +2551,6 @@ bool mudlet::moveConfigDir(const QString& oldPath, const QString& newPath)
         }
         */
         // Delete pointers to QSettings files
-        delete mpSettings;
         newDir.rmpath(newPath);
         if (!oldDir.rename(oldPath, newPath)) {
             QMessageBox::critical(this,
@@ -2556,6 +2560,8 @@ bool mudlet::moveConfigDir(const QString& oldPath, const QString& newPath)
             qWarning() << QStringLiteral("ERROR: Could not move configuration directory from %1 to %2.").arg(oldPath, newPath);
             return false;
         }
+        // Re-open any previously closed files throughout the application.
+        emit signal_moveConfigDirCompleted(newPath, oldPath);
         return true;
     }
     QMessageBox::warning(this, tr("No existing configuration to move"), tr("%1 does not exist.").arg(oldPath));
@@ -2973,6 +2979,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file); // TODO: Missing false return value handler
         pHost->refreshPackageFonts();
+        file.close();
     }
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
@@ -3592,7 +3599,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     if (mudlet::self() != nullptr) {
         configDir = mudlet::self()->mConfigDir;
     } else {
-        configDir = mudlet::getQConfig()->value(QStringLiteral("configPath")).toString();
+        configDir = mudlet::getConfig()->value(QStringLiteral("configPath")).toString();
     }
 
     qDebug() << "Getting mudlet path from: " << configDir;

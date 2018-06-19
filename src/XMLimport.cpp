@@ -169,6 +169,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                                          "and this one cannot read it, you need a newer Mudlet!")
                                               .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
+                    pfile->close();
                     return false;
                 }
 
@@ -223,6 +224,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         }
     }
 
+    pfile->close();
     return !error();
 }
 

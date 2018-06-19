@@ -138,6 +138,9 @@ cTelnet::cTelnet(Host* pH)
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+
+    connect(mudlet::self(), SIGNAL(signal_moveConfigDirRequested(QString, QString)), this, SLOT(slot_closeFiles()));
+    connect(mudlet::self(), SIGNAL(signal_moveConfigDirCompleted(QString, QString)), this, SLOT(slot_openFiles(QString, QString)));
 }
 
 void cTelnet::reset()
@@ -350,6 +353,23 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         socket.connectToHost(hostInfo.hostName(), hostPort);
         postMessage(tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."));
         return;
+    }
+}
+
+void cTelnet::slot_closeFiles()
+{
+    if (loadingReplay) {
+        replayFile.close();
+    }
+}
+
+void cTelnet::slot_openFiles(QString newPath, QString oldPath)
+{
+    if (loadingReplay) {
+        QString replayFileName = replayFile.fileName();
+        replayFileName.replace(oldPath, newPath);
+        replayFile.setFileName(replayFileName);
+        replayFile.open(QIODevice::ReadOnly);
     }
 }
 

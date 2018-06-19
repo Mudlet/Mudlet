@@ -42,6 +42,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextCodec>
+#include <QFileInfo>
 #include "post_guard.h"
 
 
@@ -569,9 +570,12 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         // So, this SHOULD be the main profile mUpperPane - Slysven
         connect(mudlet::self(), SIGNAL(signal_profileMapReloadRequested(QList<QString>)), this, SLOT(slot_reloadMap(QList<QString>)), Qt::UniqueConnection);
         connect(this, SIGNAL(signal_newDataAlert(const QString&, const bool)), mudlet::self(), SLOT(slot_newDataOnHost(const QString&, const bool)), Qt::UniqueConnection);
+        connect(mudlet::self(), SIGNAL(signal_moveConfigDirRequested(QString, QString)), this, SLOT(slot_closeFiles()));
+        connect(mudlet::self(), SIGNAL(signal_moveConfigDirCompleted(QString, QString)), this, SLOT(slot_openFiles()));
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
     }
+
 }
 
 Host* TConsole::getHost()
@@ -2786,4 +2790,40 @@ void TConsole::slot_reloadMap(QList<QString> profilesList)
     }
 
     pHost->postMessage(outcomeMsg);
+}
+
+void TConsole::slot_closeFiles()
+{
+    if (mLogToLogFile) {
+        toggleLogging(false);
+        // Set mLogToLogFile back to true, as toggleLogging() would have set it
+        // to false.
+        mLogToLogFile = true;
+    }
+    mReplayFile.close();
+}
+
+void TConsole::slot_openFiles()
+{
+    // Once the configuration directory is moved, toggle logging and re-open the
+    // replay file.
+    if (mLogToLogFile) {
+        // Set mLogToLogFile to false, so toggleLogging() will turn logging on.
+        mLogToLogFile = false;
+        toggleLogging(false);
+    }
+
+    if (mRecordReplay) {
+        QFileInfo replayFileInfo(mReplayFile.fileName());
+        QString replayFileName = replayFileInfo.fileName();
+        
+        QString path = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+
+        mReplayFile.setFileName(QStringLiteral("%1/%2").arg(path, replayFileName));
+        // Open in 'Append', as the recording of the replay file was not
+        // explicitly closed by the user, so continue recording the replay where
+        // we left off.
+        mReplayFile.open(QIODevice::Append);
+        mReplayStream.setDevice(&mReplayFile);
+    }
 }

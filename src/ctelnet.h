@@ -147,6 +147,9 @@ public slots:
     void slot_send_login();
     void slot_send_pass();
 
+    void slot_closeFiles();
+    void slot_openFiles(QString, QString);
+
 
 private:
     cTelnet() = default;

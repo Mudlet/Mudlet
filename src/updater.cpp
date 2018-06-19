@@ -257,8 +257,10 @@ void Updater::updateBinaryOnLinux()
     QFile updatedBinary(appimageLocation);
     if (!updatedBinary.setPermissions(executablePermissions)) {
         qWarning() << "couldn't set executable permissions on updated Mudlet binary at" << installedBinaryPath;
+        updatedBinary.close();
         return;
     }
+    updatedBinary.close();
 
     finishSetup();
 }

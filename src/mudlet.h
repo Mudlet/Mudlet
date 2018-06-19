@@ -322,7 +322,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
-    static QPointer<QSettings> getQConfig();
+    static QPointer<QSettings> getConfig();
     QPointer<QSettings> getQSettings();
 
 
@@ -386,6 +386,8 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_moveConfigDirRequested(QString, QString);
+    void signal_moveConfigDirCompleted(QString, QString);
 
 private slots:
     void slot_close_profile();

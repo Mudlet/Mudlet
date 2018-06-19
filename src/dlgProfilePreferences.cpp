@@ -64,6 +64,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
+    file_use_smallscreen.close();
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     // As we reflect the state of the above two checkboxes in the preview widget
@@ -1784,6 +1785,8 @@ void dlgProfilePreferences::copyMap()
     // CHECK: Race condition? We might be changing this whilst other profile
     // are accessing it...
     mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
+
+    thisProfileLatestMapFile.close();
 }
 
 void dlgProfilePreferences::slot_setLogDir()
@@ -1905,20 +1908,40 @@ void dlgProfilePreferences::slot_configDirOptionChange(const int index)
 
 void dlgProfilePreferences::slot_setConfigDir()
 {
+    QString startDir;
+    if (lineEdit_configDir->text().isEmpty() ||
+        lineEdit_configDir->text() == QString("%1/%2").arg(QDir::homePath(), ".config/mudlet")) {
+        // Set the directory the QFileDialog starts in to the default
+        // directory if the line edit is empty or equal to Mudlet's
+        // default configuration directory
+        startDir = QDir::homePath() + "/.config";
+    } else if (lineEdit_configDir->text() ==
+               QString("%1/%2").arg(QCoreApplication::applicationDirPath(), "config")) {
+        // Use the contents of the line edit if set to the path
+        // relative to the application file
+        startDir = lineEdit_configDir->text();
+    } else {
+        // Start in the parent directory if a custom directory is set
+        QFileInfo configDirInfo(lineEdit_configDir->text());
+        QDir configDirParent(configDirInfo.dir());
+        startDir = configDirParent.absolutePath();
+    }
+
     QString dir = QFileDialog::getExistingDirectory(this,
                                                     tr("Select a directory where your configuration will be stored"),
-                                                    (lineEdit_configDir->text().isEmpty() ? QDir::homePath() + "/.config" : lineEdit_configDir->text()),
+                                                    startDir,
                                                     QFileDialog::DontUseNativeDialog);
     if (!dir.isEmpty()) {
-        if (dir == QDir::homePath() + "/.config") {
-            // Clear mConfigDirPath if the directory is selected is
-            // equal to the default
+        if (dir == QDir::homePath() + "/.config" || dir == QDir::homePath() + "/.config/mudlet") {
+            // Clear mConfigDirPath if the directory selected is
+            // Mudlet's default configuration directory
             mConfigDirPath.clear();
-            lineEdit_configDir->setText(QDir::homePath() + "/.config");
+            lineEdit_configDir->setText(QStringLiteral("%1/%2").arg(QDir::homePath(), ".config/mudlet"));
         } else {
-            // Set mConfigDirPath to the selected directory
-            mConfigDirPath = dir;
-            lineEdit_configDir->setText(mConfigDirPath);
+            // Set mConfigDirPath to a "mudlet-data" folder within the
+            // selected directory
+            mConfigDirPath = QStringLiteral("%1/%2").arg(dir, "mudlet-data");
+            lineEdit_configDir->setText(QStringLiteral("%1/%2").arg(dir, "mudlet-data"));
             lineEdit_configDir->setCursorPosition(lineEdit_configDir->text().length());
         }
     }
@@ -2152,10 +2175,11 @@ void dlgProfilePreferences::slot_save_and_exit()
     // Move the current configuration directory to the new path if
     // checkBox_moveConfigDir is checked.
     if (checkBox_moveConfigDir->isChecked()) {
-        mudlet::self()->moveConfigDir(oldPath, lineEdit_configDir->text());
+        // Close all currently open files.
+        emit mudlet::self()->signal_moveConfigDirRequested(mudlet::getMudletPath(mudlet::mainPath), oldPath);
+        mudlet::self()->moveConfigDir(oldPath, mudlet::getMudletPath(mudlet::mainPath));
     }
-    mudlet::self()->mpSettings = mudlet::self()->getQSettings();
-    mudlet::self()->writeSettings();
+    mudlet::self()->writeConfigPath();
 
     close();
 }
@@ -2481,6 +2505,7 @@ void dlgProfilePreferences::populateThemesList()
                 sortedThemes << make_pair(themeText, themeFileName);
             }
         }
+        themesFile.close();
     }
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 

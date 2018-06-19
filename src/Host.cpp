@@ -760,6 +760,7 @@ bool Host::installPackage(const QString& fileName, int module)
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
         return false;
     }
+    file.close();
 
     QString packageName = fileName.section(QStringLiteral("/"), -1);
     packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
@@ -1095,6 +1096,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         while (!in.atEnd()) {
             strings += in.readLine();
         }
+        configFile.close();
     }
 
     lua_State* L = luaL_newstate();
