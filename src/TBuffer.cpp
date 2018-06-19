@@ -615,7 +615,8 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
 
 // a map of supported MXP elements and attributes
 const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
-    {QStringLiteral("send"), {"href", "hint", "prompt"}}
+    {QStringLiteral("send"), {"href", "hint", "prompt"}},
+    {QStringLiteral("br"), {}}
 };
 
 TChar::TChar()
