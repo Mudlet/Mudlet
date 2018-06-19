@@ -701,6 +701,7 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
     $${PWD}/mudlet-lua/lua/KeyCodes.lua \
+    $${PWD}/mudlet-lua/lua/TTSValues.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
