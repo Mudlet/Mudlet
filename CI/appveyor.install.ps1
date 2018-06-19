@@ -144,9 +144,9 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 # installation functions
 function InstallSevenZ() {
   if($64Bit){
-    $downloadUrl = "http://www.7-zip.org/a/7z1604-x64.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z1805-x64.exe"
   } else {
-    $downloadUrl = "http://www.7-zip.org/a/7z1604.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z1805.exe"
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
@@ -179,18 +179,19 @@ function InstallMsys() {
 }
 
 function InstallBoost() {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download" "boost.tar.gz" $true
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.67.0/boost_1_67_0.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
   ExtractTar "boost.tar.gz" "."
   Step "Copying folder"
-  Move-Item "boost_1_60_0" "C:\Libraries\" >> "$logFile" 2>&1
+  Move-Item "boost_1_67_0" "C:\Libraries\" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
   DownloadFile "http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe" "qt-installer.exe"
+  Step "Installing"
   exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
 }
 
@@ -378,7 +379,7 @@ CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { InstallSevenZ }
 CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
 CheckAndInstall "mingw-get" "C:\MinGW\bin\mingw-get.exe" { InstallMingwGet }
 CheckAndInstall "MSYS and autotools" "C:\MinGW\bin\autoconf" { InstallMsys }
-CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { InstallBoost }
+CheckAndInstall "Boost" "C:\Libraries\boost_1_67_0\bootstrap.bat" { InstallBoost }
 CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
 CheckAndInstall "Python" "C:\Python27\python.exe" { InstallPython }
 

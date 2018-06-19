@@ -277,7 +277,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, const QString& fi
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
         // timer is necessary as calling close right way doesn't seem to do the trick
-        QTimer::singleShot(0, [=]() {
+        QTimer::singleShot(0, this, [=]() {
             updateDialog->close();
             updateDialog->done(0);
         });

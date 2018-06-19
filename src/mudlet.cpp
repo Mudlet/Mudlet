@@ -48,9 +48,6 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 
-#if defined(INCLUDE_UPDATER)
-#endif
-
 #include "pre_guard.h"
 #include <QTabBar>
 #include <QTableWidget>
@@ -162,6 +159,7 @@ mudlet::mudlet()
 , mConfigDir(QString())
 , mConfigDirIndex(0)
 , mpSettings(nullptr)
+, mShowIconsOnDialogs(true)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);

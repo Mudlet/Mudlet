@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -53,9 +53,85 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
-    abort->setIcon(QIcon(QStringLiteral(":/icons/dialog-close.png")));
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    connect_button->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
+
+    // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
+    // is already a Qt provided icon on a predefined button, this is probably
+    // the first and best place to test this as the "Cancel" button is a built-
+    // in dialog button which will have an icon if the current system style
+    // settings suggest it:
+    mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
+
+    auto pWelcome_document = new QTextDocument(this);
+    if (mudlet::self()->mShowIconsOnDialogs) {
+        // Since I've switched to allowing the possibility of theme replacement
+        // of icons we need a way to insert the current theme icons for
+        // "dialog-ok-apply" and "edit-copy" into the help message - this is
+        // awkward because Qt would normally expect to load them from a
+        // resource file but this is no good in this case as we only use the
+        // resource file if the icon is NOT supplied from the current theme.
+        // We can fix this with a bit of fancy editing of the text - replacing a
+        // particular sequence of characters with an image generated from the
+        // actual icon in use.
+        pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
+                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
+                                           "<p>To play a game not in the list, click on NEW_PROFILE_ICON "
+                                           "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
+                                           "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
+                                           "<p>After that, click CONNECT_PROFILE_ICON <span style=\" color:#555753;\">Connect</span> "
+                                           "to play.</p>"
+                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
+                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
+                                           "Welcome message when icons for control buttons are shown, please leave the XXXX_ICON marker words as "
+                                           "they are - they will be replaced by icons (images) when this text is used; otherwise the text should "
+                                           "be identical to the one without icons.")));
+
+        // As we are repurposing the cancel to be a close button we do want to
+        // change it anyhow:
+        abort->setIcon(QIcon::fromTheme(QStringLiteral("dialog-close"), QIcon(QStringLiteral(":/icons/dialog-close.png"))));
+
+        QIcon icon_new(QIcon::fromTheme(QStringLiteral("document-new"), QIcon(QStringLiteral(":/icons/document-new.png"))));
+        QIcon icon_connect(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":/icons/dialog-ok-apply.png"))));
+
+        connect_button->setIcon(icon_connect);
+        new_profile_button->setIcon(icon_new);
+        copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+        remove_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))));
+
+        QTextCursor cursor = pWelcome_document->find(QStringLiteral("NEW_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
+        // The indicated piece of marker text should be selected by the cursor
+        Q_ASSERT_X(!cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)",
+                   "NEW_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
+        // Remove the marker:
+        cursor.removeSelectedText();
+        // Insert the current icon image into the same place:
+        QImage image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
+        cursor.insertImage(image_new);
+        cursor.clearSelection();
+
+        cursor = pWelcome_document->find(QStringLiteral("CONNECT_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
+        Q_ASSERT_X(!cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)",
+                   "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
+        cursor.removeSelectedText();
+        QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
+        cursor.insertImage(image_connect);
+        cursor.clearSelection();
+    } else {
+        pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
+                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
+                                           "<p>To play a game not in the list, click on <span style=\" color:#555753;\">New</span>, fill in the "
+                                           "<i>Profile Name</i>, <i>Server address</i>, and <i>Port</i> fields in the "
+                                           "<i>Required </i> area.</p>"
+                                           "<p>After that, click <span style=\" color:#555753;\">Connect</span> to play.</p>"
+                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
+                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
+                                           "Welcome message when icons for control buttons are NOT shown the text should "
+                                           "be identical to the one with icons except for a pair of XXXX_ICON markers not "
+                                           "in this version.")));
+    }
+    welcome_message->setDocument(pWelcome_document);
 
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);

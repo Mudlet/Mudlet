@@ -11336,7 +11336,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         return;
     }
     int i = 0;
-    for (; i < tokenList.size() - 1; i++) {
+    for (int total = tokenList.size() - 1; i < total; ++i) {
         lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
         if (!lua_istable(L, -1)) {
             lua_pop(L, 1);
@@ -11385,7 +11385,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             }
             lua_getglobal(L, "gmcp");
             i = 0;
-            for (; i < tokenList.size() - 1; i++) {
+            for (int total = tokenList.size() - 1; i < total; ++i) {
                 lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
                 lua_remove(L, -2);
             }
@@ -11416,7 +11416,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         key.prepend("gmcp.");
     }
 
-    for (int k = 0; k < tokenList.size(); k++) {
+    for (int k = 0, total = tokenList.size(); k < total; ++k) {
         TEvent event;
         token.append(".");
         token.append(tokenList[k]);
@@ -12533,7 +12533,7 @@ void TLuaInterpreter::initLuaGlobals()
     // prepend profile path to package.path and package.cpath
     // with a singleShot Timer to avoid crash on startup.
     // crash caused by calling Host::getName() too early.
-    QTimer::singleShot(0, [this]() {
+    QTimer::singleShot(0, this, [this]() {
         QChar separator = QDir::separator();
 
         luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(separator).toUtf8().constData());
