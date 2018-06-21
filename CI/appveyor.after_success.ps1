@@ -12,9 +12,8 @@ Remove-Item * -include *.cpp, *.o
 #  $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
 #} else {
   Write-Output "=== Cloning installer project ==="
-  git clone https://github.com/keneanung/mudlet-installers.git C:\projects\installers
+  git clone https://github.com/Mudlet/installers.git C:\projects\installers
   cd C:\projects\installers\windows
-  git checkout AddWindowsCodeCertificate
   
   Write-Output "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
