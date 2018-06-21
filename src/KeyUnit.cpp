@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,7 +29,19 @@
 
 using namespace std;
 
-KeyUnit::KeyUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mModuleMember()
+KeyUnit::KeyUnit(Host* pHost)
+: statsKeyTotal(0)
+, statsTempKeys(0)
+, statsActiveKeys(0)
+, statsActiveKeysMax(0)
+, statsActiveKeysMin(0)
+, statsActiveKeysAverage(0)
+, statsTempKeysCreated(0)
+, statsTempKeysKilled(0)
+, mRunAllKeyMatches(false)
+, mpHost(pHost)
+, mMaxID(0)
+, mModuleMember(false)
 {
     setupKeyNames();
 }
@@ -60,13 +73,18 @@ void KeyUnit::uninstall(const QString& packageName)
 
 bool KeyUnit::processDataStream(int key, int modifier)
 {
+    bool isMatchFound = false;
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifier)) {
-            return true;
+        if (keyObject->match(key, modifier, mRunAllKeyMatches)) {
+            if (!mRunAllKeyMatches) {
+                return true;
+            } else {
+                isMatchFound = true;
+            }
         }
     }
 
-    return false;
+    return isMatchFound;
 }
 
 void KeyUnit::compileAll()
@@ -138,8 +156,7 @@ bool KeyUnit::disableKey(const QString& name)
 
 bool KeyUnit::killKey(QString& name)
 {
-    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
-        TKey* pChild = *it;
+    for (auto pChild : mKeyRootNodeList) {
         if (pChild->getName() == name) {
             // only temporary Keys can be killed
             if (!pChild->isTemporary()) {
@@ -371,8 +388,7 @@ void KeyUnit::initStats()
 void KeyUnit::_assembleReport(TKey* pChild)
 {
     list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
-        TKey* pT = *it2;
+    for (auto pT : *childrenList) {
         _assembleReport(pT);
         if (pT->isActive()) {
             statsActiveKeys++;
@@ -389,8 +405,7 @@ QString KeyUnit::assembleReport()
     statsActiveKeys = 0;
     statsKeyTotal = 0;
     statsTempKeys = 0;
-    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
-        TKey* pChild = *it;
+    for (auto pChild : mKeyRootNodeList) {
         if (pChild->isActive()) {
             statsActiveKeys++;
         }
@@ -399,8 +414,7 @@ QString KeyUnit::assembleReport()
         }
         statsKeyTotal++;
         list<TKey*>* childrenList = pChild->mpMyChildrenList;
-        for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
-            TKey* pT = *it2;
+        for (auto pT : *childrenList) {
             _assembleReport(pT);
             if (pT->isActive()) {
                 statsActiveKeys++;

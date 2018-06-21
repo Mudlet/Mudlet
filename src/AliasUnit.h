@@ -81,7 +81,8 @@ public:
 
 
 private:
-    AliasUnit() {}
+    AliasUnit() = default;
+
     void initStats();
     void _assembleReport(TAlias*);
     TAlias* getAliasPrivate(int id);

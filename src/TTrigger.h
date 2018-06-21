@@ -150,7 +150,8 @@ public:
     bool mRegisteredAnonymousLuaFunction;
 
 private:
-    TTrigger() {}
+    TTrigger() = default;
+
     void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList);
     void filter(std::string&, int&);
 

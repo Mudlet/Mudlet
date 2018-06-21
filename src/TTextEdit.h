@@ -81,7 +81,7 @@ public:
     int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
     void copySelectionToClipboard();
-    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
+// Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void copySelectionToClipboardHTML();
@@ -118,7 +118,7 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
-    void slot_changeIsAmbigousWidthGlyphsToBeWide(const bool);
+    void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
 
 private:
     void initDefaultSettings();

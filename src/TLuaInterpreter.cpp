@@ -47,7 +47,10 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QDesktopServices>
 #include <QFileDialog>
+#include <QRegularExpression>
+#include "post_guard.h"
 
 #include <QRegularExpression>
 #include <QSound>
@@ -3081,51 +3084,101 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBackgroundColor
 int TLuaInterpreter::setBackgroundColor(lua_State* L)
 {
-    string luaSendText = "";
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaSendText = lua_tostring(L, 1);
-    }
-    double x1;
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x1 = lua_tonumber(L, 2);
-    }
-    double y1;
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        y1 = lua_tonumber(L, 3);
-    }
-    double x2;
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x2 = lua_tonumber(L, 4);
-    }
-    double y2;
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "setBackgroundColor: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        y2 = lua_tonumber(L, 5);
-    }
-    Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
-    mudlet::self()->setBackgroundColor(&host, text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2));
+    Host* pHost = &getHostFromLua(L);
+    QString windowName;
+    int r, g, b, alpha;
 
-    return 0;
+    auto validRange = [](int number) {
+        return number >= 0 and number <= 255;
+    };
+
+    int s = 1;
+    if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
+        windowName = QString::fromUtf8(lua_tostring(L, s));
+
+        if (!lua_isnumber(L, ++s)) {
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            r = static_cast<int>(lua_tonumber(L, s));
+
+            if (!validRange(r)) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
+                return 2;
+            }
+        }
+    } else if (lua_isnumber(L, s)) {
+        r = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(r)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
+            return 2;
+        }
+    } else {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (green value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        g = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(g)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
+            return 2;
+        }
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (blue value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        b = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(b)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
+            return 2;
+        }
+    }
+
+    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+    if (lua_gettop(L) <= s) {
+        alpha = 255;
+    } else if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        alpha = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(alpha)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
+            return 2;
+        }
+    }
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            pHost->mBgColor.setRgb(r, g, b);
+            pHost->mpConsole->setConsoleBgColor(r, g, b);
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "could not find the main window");
+            return 2;
+        }
+    } else if (!mudlet::self()->setBackgroundColor(pHost, windowName, r, g, b, alpha)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#calcFontSize
@@ -11299,7 +11352,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         return;
     }
     int i = 0;
-    for (; i < tokenList.size() - 1; i++) {
+    for (int total = tokenList.size() - 1; i < total; ++i) {
         lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
         if (!lua_istable(L, -1)) {
             lua_pop(L, 1);
@@ -11348,7 +11401,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             }
             lua_getglobal(L, "gmcp");
             i = 0;
-            for (; i < tokenList.size() - 1; i++) {
+            for (int total = tokenList.size() - 1; i < total; ++i) {
                 lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
                 lua_remove(L, -2);
             }
@@ -11379,7 +11432,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         key.prepend("gmcp.");
     }
 
-    for (int k = 0; k < tokenList.size(); k++) {
+    for (int k = 0, total = tokenList.size(); k < total; ++k) {
         TEvent event;
         token.append(".");
         token.append(tokenList[k]);
@@ -12496,7 +12549,7 @@ void TLuaInterpreter::initLuaGlobals()
     // prepend profile path to package.path and package.cpath
     // with a singleShot Timer to avoid crash on startup.
     // crash caused by calling Host::getName() too early.
-    QTimer::singleShot(0, [this]() {
+    QTimer::singleShot(0, this, [this]() {
         QChar separator = QDir::separator();
 
         luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(separator).toUtf8().constData());

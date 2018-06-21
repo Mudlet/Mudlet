@@ -117,12 +117,12 @@ public:
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
     void scrollUp(int lines);
-    void print(const QString&, const QColor fgColor, const QColor bgColor);
+    void print(const QString&, QColor fgColor, QColor bgColor);
     void print(const QString& msg);
     void print(const char*);
     void printDebug(QColor&, QColor&, const QString&);
     void printSystemMessage(const QString& msg);
-    void printOnDisplay(std::string&, const bool isFromServer = false);
+    void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
     bool hasSelection();
     void moveCursorEnd();
@@ -153,7 +153,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int);
-    void setConsoleFgColor(int, int, int);
+// Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> _getFgColor();
     std::list<int> _getBgColor();
     void _luaWrapLine(int);
@@ -266,7 +266,7 @@ signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet
     // class, second argument is true for a lower priority indication when
     // locally produced information is painted into main console
-    void signal_newDataAlert(const QString&, const bool isLowerPriorityChange = false);
+    void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
 
 
 public slots:

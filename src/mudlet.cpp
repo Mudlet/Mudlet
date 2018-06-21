@@ -48,13 +48,12 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 
-#if defined(INCLUDE_UPDATER)
-#endif
-
 #include "pre_guard.h"
 #include <QtUiTools/quiloader.h>
+#include <QDesktopServices>
 #include <QDesktopWidget>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QToolBar>
@@ -161,7 +160,7 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-
+, mShowIconsOnDialogs(true)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -1437,10 +1436,14 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         font = pHost->mDisplayFont;
-    } else if (dockWindowConsoleMap.contains(windowName)) {
-        font = dockWindowConsoleMap.value(windowName)->mUpperPane->mDisplayFont;
     } else {
-        return QSize(-1, -1);
+        const auto window = dockWindowConsoleMap.constFind(windowName);
+        if (window != dockWindowConsoleMap.cend()) {
+            Q_ASSERT_X(window.value()->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
+            font = window.value()->mUpperPane->mDisplayFont;
+        } else {
+            return QSize(-1, -1);
+        }
     }
 
     auto fontMetrics = QFontMetrics(font);
