@@ -8,9 +8,9 @@ windeployqt.exe --release mudlet.exe
 
 Remove-Item * -include *.cpp, *.o
 
-#if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
-#  $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
-#} else {
+if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
+  $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
+} else {
   Write-Output "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git C:\projects\installers
   cd C:\projects\installers\windows
@@ -60,7 +60,7 @@ Remove-Item * -include *.cpp, *.o
   DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
   fi #>
 
-#}
+}
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
   $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
