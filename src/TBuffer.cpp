@@ -4461,7 +4461,6 @@ QString TBuffer::processSupportsRequest(const QString& elements)
         auto elementsIterator = mSupportedMxpElements.constBegin();
         while (elementsIterator != mSupportedMxpElements.constEnd()) {
 
-            // make this a lambda to append element + all attributes
             result = reportEntireElement(elementsIterator.key(), result);
         }
 
@@ -4483,10 +4482,14 @@ QString TBuffer::processSupportsRequest(const QString& elements)
             }
 
             if (!element.contains(QChar('.'))) {
-                result.append((mSupportedMxpElements.contains(element) ? "+" : "-") + element);
+                if (mSupportedMxpElements.contains(element)) {
+                    result = reportEntireElement(element, result);
+                } else {
+                    result.append("-" + element);
+                }
             } else {
-                auto elementName = element.section(QStringLiteral("."), 0, 0);
-                auto attributeName = element.section(QStringLiteral("."), 1, 1);
+                auto elementName = element.section(QChar('.'), 0, 0);
+                auto attributeName = element.section(QChar('.'), 1, 1);
 
                 if (!mSupportedMxpElements.contains(elementName)) {
                     result.append("-" + element);
