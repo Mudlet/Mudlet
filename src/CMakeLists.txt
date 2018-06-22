@@ -338,8 +338,8 @@ find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools 
 # This is not present before Qt 5.7:
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.6)
-  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+if (Qt5Core_VERSION VERSION_LESS 5.7)
+  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later")
 else()
   if (Qt5Core_VERSION VERSION_LESS 5.7)
     message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.7 at a minimum")
