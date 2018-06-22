@@ -410,7 +410,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                 }
             } else {
                 // Else the selected area DOES have rooms on the same
-                // z-coordinate. Now find the geometry center of the rooms on
+                // z-coordinate. Now find the geometric center of the rooms on
                 // the given level, in a similar manner to the
                 // getCenterSelection() method
                 float mean_x = 0.0;
@@ -470,7 +470,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
 }
 
 // key format: <"W_" or "B_" for White/Black><QString of one or more QChars>
-void T2DMap::addSymbolToPixmapCache(const QString& key, const bool gridMode)
+void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
 {
     // Some constants used to prevent small, unreadable symbols:
     static float symbolLowerSizeLimit = 8.0;
@@ -4645,7 +4645,7 @@ void T2DMap::slot_roomSelectionChanged()
 
 void T2DMap::paintMap()
 {
-
+    // TODO: reimpliment this!
 }
 
 void T2DMap::resizeMultiSelectionWidget()
