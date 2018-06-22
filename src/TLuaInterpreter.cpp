@@ -547,7 +547,7 @@ int TLuaInterpreter::selectCurrentLine(lua_State* L)
         luaSendText = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "selectCurrentLine: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "selectCurrentLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
@@ -563,10 +563,10 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 {
     int ansiFg;
 
-    std::string window = "main";
+    std::string windowName = "main";
 
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "isAnsiFgColor: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "isAnsiFgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         ansiFg = lua_tointeger(L, 1);
@@ -574,7 +574,7 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
-    result = host.mpConsole->getFgColor(window);
+    result = host.mpConsole->getFgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
         return 0;
@@ -814,14 +814,13 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
     int s = 1;
-    int n = lua_gettop(L);
-    string window = "main";
-    if (n > 1) {
+    string windowName = "main";
+    if (lua_gettop(L)) {
         if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, "wrapLine: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "wrapLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
-            window = lua_tostring(L, s);
+            windowName = lua_tostring(L, s);
             s++;
         }
     }
@@ -835,7 +834,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    host.mpConsole->luaWrapLine(window, lineNumber);
+    host.mpConsole->luaWrapLine(windowName, lineNumber);
     return 0;
 }
 
@@ -969,7 +968,7 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
         window = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getCurrentLine: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "getCurrentLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
             window = lua_tostring(L, 1);
@@ -9874,7 +9873,7 @@ int TLuaInterpreter::Echo(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoPopup
 int TLuaInterpreter::echoPopup(lua_State* L)
 {
-    QString window;
+    QString windowName;
     QString text;
     QStringList hintList;
     QStringList commandList;
@@ -9887,7 +9886,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
             lua_pushfstring(L, "echoPopup: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         } else {
-            window = QString::fromUtf8(lua_tostring(L, s));
+            windowName = QString::fromUtf8(lua_tostring(L, s));
             s++;
         }
     }
@@ -9915,7 +9914,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         s++;
     }
     if (!lua_istable(L, s)) {
-        lua_pushfstring(L, "echoPopup: bad argument #%d type (tooltip list as table expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "echoPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         lua_pushnil(L);
@@ -9940,10 +9939,10 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return lua_error(L);
     }
 
-    if (window.isEmpty()) {
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->echoLink(text, commandList, hintList, customFormat);
     } else {
-        mudlet::self()->echoLink(&host, window, text, commandList, hintList, customFormat);
+        mudlet::self()->echoLink(&host, windowName, text, commandList, hintList, customFormat);
     }
 
     return 0;
