@@ -668,7 +668,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
     std::string window = "main";
 
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "isAnsiBgColor: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "isAnsiBgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         ansiFg = lua_tointeger(L, 1);
@@ -770,7 +770,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
         luaSendText = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getFgColor: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "getFgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
@@ -794,7 +794,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
         luaSendText = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getBgColor: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "getBgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
