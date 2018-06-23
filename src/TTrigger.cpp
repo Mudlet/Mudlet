@@ -1350,7 +1350,16 @@ void TTrigger::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpLua->call_luafunction(this);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->call_luafunction(this);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callLuaFunctionReturnBool(this);
+            if (result.second) {
+                mExpiryCount++;
+            }
+        }
         return;
     }
 

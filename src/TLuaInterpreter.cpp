@@ -11679,6 +11679,58 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 }
 
 // No documentation available in wiki - internal function
+std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
+{
+    lua_State* L = pGlobalLua;
+    lua_pushlightuserdata(L, pT);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    bool returnValue = false;
+
+    if (lua_isfunction(L, -1)) {
+        int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+        if (error != 0) {
+            int nbpossible_errors = lua_gettop(L);
+            for (int i = 1; i <= nbpossible_errors; i++) {
+                string e = "";
+                if (lua_isstring(L, i)) {
+                    e = "Lua error:";
+                    e += lua_tostring(L, i);
+                    QString _n = "error in anonymous Lua function";
+                    QString _n2 = "no debug data available";
+                    logError(e, _n, _n2);
+                    if (mudlet::debugMode) {
+                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> 0;
+                    }
+                }
+            }
+        } else {
+            auto index = lua_gettop(L);
+            if (lua_isboolean(L, index)) {
+                returnValue = lua_toboolean(L, index);
+            }
+
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK anonymous Lua function ran without errors\n" >> 0;
+            }
+        }
+        lua_pop(L, lua_gettop(L));
+        //lua_settop(L, 0);
+        if (error == 0) {
+            return make_pair(true, returnValue);
+        } else {
+            return make_pair(true, returnValue);
+        }
+    } else {
+        QString _n = "error in anonymous Lua function";
+        QString _n2 = "func reference not found by Lua, func can not be called";
+        string e = "Lua error:";
+        logError(e, _n, _n2);
+    }
+
+    return make_pair(false, false);
+}
+
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::call(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
