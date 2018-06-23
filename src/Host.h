@@ -142,7 +142,7 @@ public:
     double getStopWatchTime(int);
     int createStopWatch();
     void startSpeedWalk();
-    void saveModules(int);
+    void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();

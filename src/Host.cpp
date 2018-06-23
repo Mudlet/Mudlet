@@ -219,7 +219,7 @@ Host::~Host()
     mErrorLogFile.close();
 }
 
-void Host::saveModules(int sync)
+void Host::saveModules(int sync, bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
@@ -247,7 +247,7 @@ void Host::saveModules(int sync)
             if (!packageDir.exists()) {
                 packageDir.mkpath(packagePathName);
             }
-        } else {
+        } else if (backup) {
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
         }
 
@@ -403,7 +403,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     auto writer = new XMLexport(this);
     writers.insert(QStringLiteral("profile"), writer);
     writer->exportHost(filename_xml);
-    saveModules(syncModules ? 1 : 0);
+    saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
     return std::make_tuple(true, filename_xml, QString());
 }
 
