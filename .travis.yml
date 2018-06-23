@@ -108,7 +108,7 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-    - QT_VERSION=57 # actually Qt 5.6, used to check minimum supported Qt works
+    - QT_VERSION=57 # actually Qt 5.7, used to check minimum supported Qt works
     addons:
       apt:
         sources: *add-sources
