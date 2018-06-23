@@ -106,7 +106,7 @@ public:
     int startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
-    int startTempTrigger(const QString&, const QString&);
+    int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&);
     int startTempExactMatchTrigger(const QString&, const QString&);
     int startTempLineTrigger(int, int, const QString&);

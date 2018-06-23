@@ -70,6 +70,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
 , mRegisteredAnonymousLuaFunction(false)
+, mExpiryCount(-1)
 {
 }
 
@@ -105,6 +106,7 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
 , mRegisteredAnonymousLuaFunction(false)
+, mExpiryCount(-1)
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -530,6 +532,16 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
         trigger->match(filterSubject, text, -1, posOffset);
     }
     free(filterSubject);
+}
+
+int TTrigger::getExpiryCount() const
+{
+    return mExpiryCount;
+}
+
+void TTrigger::setExpiryCount(int expiryCount)
+{
+    mExpiryCount = expiryCount;
 }
 
 bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
@@ -988,6 +1000,19 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
             return true;
         }
 
+        if (conditionMet && mExpiryCount > -1) {
+            mExpiryCount--;
+
+            if (mExpiryCount == 0) {
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << "trigger name=" << mName << " expired.\n" >> 0;
+                }
+
+                mpHost->getTriggerUnit()->markCleanup(this);
+            } else if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("trigger name=%1 has %n match(es) left.\n", "", mExpiryCount).arg(mName) >> 0;
+            }
+        }
 
         return conditionMet;
     }

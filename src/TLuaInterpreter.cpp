@@ -5768,17 +5768,23 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     QString substringPattern;
+    int triggerID;
+    int expiryCount = -1;
+
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempTrigger: bad argument #1 type (substring pattern as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     substringPattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    int triggerID;
+    if (lua_isnumber(L, 3)) {
+        expiryCount = lua_tonumber(L, 3);
+    }
+
     if (lua_isstring(L, 2)) {
-        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString::fromUtf8(lua_tostring(L, 2)));
+        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString::fromUtf8(lua_tostring(L, 2)), expiryCount);
     } else if (lua_isfunction(L, 2)) {
-        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString());
+        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -12973,7 +12979,7 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -12988,6 +12994,7 @@ int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& funct
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
