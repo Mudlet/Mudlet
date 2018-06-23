@@ -5779,6 +5779,11 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 
     if (lua_isnumber(L, 3)) {
         expiryCount = lua_tonumber(L, 3);
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
     }
 
     if (lua_isstring(L, 2)) {
@@ -5810,6 +5815,12 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
 
     if (lua_isnumber(L, 2)) {
         expiryCount = lua_tonumber(L, 2);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
     }
 
     if (lua_isstring(L, 1)) {
@@ -5854,6 +5865,12 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 
     if (lua_isnumber(L, 4)) {
         expiryCount = lua_tonumber(L, 4);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
     }
 
     if (lua_isstring(L, 3)) {
@@ -5896,6 +5913,12 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 
     if (lua_isnumber(L, 4)) {
         expiryCount = lua_tonumber(L, 4);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
     }
 
     if (lua_isstring(L, 3)) {
@@ -6002,6 +6025,12 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
     if (lua_isnumber(L, 14)) {
         expiryCount = lua_tonumber(L, 14);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
     }
 
     QString pattern = QString::fromUtf8(lua_tostring(L, 2));
