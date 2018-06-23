@@ -107,12 +107,12 @@ public:
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
-    int startTempBeginOfLineTrigger(const QString&, const QString&);
-    int startTempExactMatchTrigger(const QString&, const QString&);
-    int startTempLineTrigger(int, int, const QString&);
-    int startTempRegexTrigger(const QString&, const QString&);
-    int startTempColorTrigger(int, int, const QString&);
-    int startTempPromptTrigger(const QString& function);
+    int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempLineTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);

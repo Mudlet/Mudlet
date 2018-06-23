@@ -5806,10 +5806,16 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     int triggerID;
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 2)) {
+        expiryCount = lua_tonumber(L, 2);
+    }
+
     if (lua_isstring(L, 1)) {
-        triggerID = pLuaInterpreter->startTempPromptTrigger(QString::fromUtf8(lua_tostring(L, 1)));
+        triggerID = pLuaInterpreter->startTempPromptTrigger(QString::fromUtf8(lua_tostring(L, 1)), expiryCount);
     } else if (lua_isfunction(L, 1)) {
-        triggerID = pLuaInterpreter->startTempPromptTrigger(QString());
+        triggerID = pLuaInterpreter->startTempPromptTrigger(QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5843,11 +5849,17 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     }
     int backgroundColor = lua_tointeger(L, 2);
 
-    int triggerID;
+    int triggerID;    
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 4)) {
+        expiryCount = lua_tonumber(L, 4);
+    }
+
     if (lua_isstring(L, 3)) {
-        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString::fromUtf8(lua_tostring(L, 3)));
+        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString::fromUtf8(lua_tostring(L, 3)), expiryCount);
     } else if (lua_isfunction(L, 3)) {
-        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString());
+        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5880,10 +5892,16 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     int from = lua_tointeger(L, 1);
     int howMany = lua_tointeger(L, 2);
     int triggerID;
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 4)) {
+        expiryCount = lua_tonumber(L, 4);
+    }
+
     if (lua_isstring(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString::fromUtf8(lua_tostring(L, 3)));
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString::fromUtf8(lua_tostring(L, 3)), expiryCount);
     } else if (lua_isfunction(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString());
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5980,6 +5998,12 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     int fireLength = lua_tonumber(L, 12);
     int lineDelta = lua_tonumber(L, 13);
 
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 14)) {
+        expiryCount = lua_tonumber(L, 14);
+    }
+
     QString pattern = QString::fromUtf8(lua_tostring(L, 2));
     QStringList regexList;
     QList<int> propertyList;
@@ -6011,6 +6035,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         pT->setSound(soundFile);
     }
     pT->setIsColorizerTrigger(highlight); //highlight
+    pT->setExpiryCount(expiryCount);
     if (highlight) {
         pT->setFgColor(hlFgColor);
         pT->setBgColor(hlBgColor);
@@ -12941,7 +12966,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, QString& function
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -12956,11 +12981,12 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -12975,6 +13001,7 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
@@ -12999,7 +13026,7 @@ int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& funct
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempPromptTrigger(const QString& function)
+int TLuaInterpreter::startTempPromptTrigger(const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList = {QString()};
@@ -13012,11 +13039,12 @@ int TLuaInterpreter::startTempPromptTrigger(const QString& function)
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& function)
+int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     //    QStringList sList;
@@ -13034,11 +13062,12 @@ int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& 
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& function)
+int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     //    QStringList sList;
@@ -13055,11 +13084,12 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -13075,6 +13105,7 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
