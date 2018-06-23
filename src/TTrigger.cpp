@@ -1007,10 +1007,10 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                 mpHost->getTriggerUnit()->markCleanup(this);
 
                 if (mudlet::debugMode) {
-                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("trigger name=%1 expired.\n").arg(mName) >> 0;
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 expired.\n").arg(mName) >> 0;
                 }
             } else if (mudlet::debugMode) {
-                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("trigger name=%1 has %n match(es) left.\n", "", mExpiryCount).arg(mName) >> 0;
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 has %n match(es) left.\n", "", mExpiryCount).arg(mName) >> 0;
             }
         }
 
@@ -1359,9 +1359,27 @@ void TTrigger::execute()
     }
 
     if (mIsMultiline) {
-        mpLua->callMulti(mFuncName, mName);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->callMulti(mFuncName, mName);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callMultiReturnBool(mFuncName, mName);
+            if (result.second) {
+                mExpiryCount++;
+            }
+        }
     } else {
-        mpLua->call(mFuncName, mName);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->call(mFuncName, mName);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callReturnBool(mFuncName, mName);
+            if (result.second) {
+                mExpiryCount++;
+            }
+        }
     }
 }
 

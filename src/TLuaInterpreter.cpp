@@ -11730,6 +11730,65 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
 }
 
 // No documentation available in wiki - internal function
+std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return make_pair(false, false);
+    }
+
+    bool returnValue = false;
+
+    if (!mCaptureGroupList.empty()) {
+        lua_newtable(L);
+
+        // set values
+        int i = 1; // Lua indexes start with 1 as a general convention
+        for (auto it = mCaptureGroupList.begin(); it != mCaptureGroupList.end(); it++, i++) {
+            //if( (*it).length() < 1 ) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
+            lua_pushnumber(L, i);
+            lua_pushstring(L, (*it).c_str());
+            lua_settable(L, -3);
+        }
+        lua_setglobal(L, "matches");
+    }
+
+    lua_getglobal(L, function.toUtf8().constData());
+    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
+    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                logError(e, mName, function);
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> 0;
+                }
+            }
+        }
+    } else {
+        auto index = lua_gettop(L);
+        if (lua_isboolean(L, index)) {
+            returnValue = lua_toboolean(L, index);
+        }
+
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+    if (error == 0) {
+        return make_pair(true, returnValue);
+    } else {
+        return make_pair(false, returnValue);
+    }
+}
+
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::logError(std::string& e, const QString& name, const QString& function)
 {
     auto blue = QColor(Qt::blue);
@@ -11856,6 +11915,68 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         return true;
     } else {
         return false;
+    }
+}
+
+// No documentation available in wiki - internal function
+std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return make_pair(false, false);
+    }
+
+    bool returnValue = false;
+
+    if (!mMultiCaptureGroupList.empty()) {
+        int k = 1;       // Lua indexes start with 1 as a general convention
+        lua_newtable(L); //multimatches
+        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
+            // multimatches{ trigger_idx{ table_matches{ ... } } }
+            lua_pushnumber(L, k);
+            lua_newtable(L); //regex-value => table matches
+            int i = 1;       // Lua indexes start with 1 as a general convention
+            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
+                lua_pushnumber(L, i);
+                lua_pushstring(L, (*it).c_str());
+                lua_settable(L, -3); //match in matches
+            }
+            lua_settable(L, -3); //matches in regex
+        }
+        lua_setglobal(L, "multimatches");
+    }
+
+    lua_getglobal(L, function.toUtf8().constData());
+    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
+    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                logError(e, mName, function);
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> 0;
+                }
+            }
+        }
+    } else {
+        auto index = lua_gettop(L);
+        if (lua_isboolean(L, index)) {
+            returnValue = lua_toboolean(L, index);
+        }
+
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+    if (error == 0) {
+        return make_pair(true, returnValue);
+    } else {
+        return make_pair(false, returnValue);
     }
 }
 
