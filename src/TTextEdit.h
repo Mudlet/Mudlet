@@ -80,7 +80,7 @@ public:
     int imageTopLine();
     int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
-    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
+// Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void searchSelectionOnline();
