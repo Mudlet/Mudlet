@@ -195,15 +195,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
     edbee::StringTextAutoCompleteProvider* provider = new edbee::StringTextAutoCompleteProvider();
-    //QListIterator<QString> i(mudlet::);
-    foreach(QString key, mudlet::mLuaFunctionNames.keys())
+    //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
+
+    // Add lua functions and reserved lua terms to an AutoComplete provider
+    for(QString key : mudlet::mLuaFunctionNames.keys())
     {
-        provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());//, mudlet::mLuaFunctionNames.value(key).toString());
+        provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());
     }
-    //and       break     do        else      elseif
-    //end       false     for       function  if
-    //in        local     nil       not       or
-    //repeat    return    then      true      until     while
+
     provider->add("and", 14);
     provider->add("break", 14);
     provider->add("else", 14);
@@ -221,21 +220,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     provider->add("true", 14);
     provider->add("until", 14);
     provider->add("while", 14);
-    /*provider->add("getAllMapUserData", "tbl mapUserData</b> = <font color='blue'>getAllMapUserData</font>()", "table");
-    provider->add("getAllRoomUserData", "tbl <b>roomUserData</b> = getAllRoomUserData(num <b>roomID</b>)", "table");
-    provider->add("getAreaExits", "tbl <b>exits</b> = getAreaExits(num <b>areaID</b>, bool <b>showExits</b>)", "table");
-    provider->add("getPath", "bool <b>pathFound</b> = getPath(num <b>fromRoomID</b>, num <b>toRoomID</b>)", "boolean");
-    provider->add("getRoomArea", "num <b>areaID</b> = getRoomArea(num <b>roomID</b>)", "number");
-    provider->add("getRoomAreaName", "str <b>areaName</b> = getRoomAreaName(num <b>areaID</b>)", "string");
-    provider->add("getRoomAreaName", "num <b>areaID</b> = getRoomAreaName(str <b>areaName</b>)", "number");
-    provider->add("getRoomChar", "str <b>roomChar</b> = getRoomChar(num <b>roomID</b>)", "string");
-    provider->add("getRoomCoordinates", "num <b>x</b>, num <b>y</b>, num <b>z</b> = getRoomCoordinates(num <b>roomID</b>)", "number");
-    provider->add("getRoomEnv", "num <b>roomEnv</b> = getRoomEnv(num <b>id</b>)", "number");
-    provider->add("getRoomIDbyHash", "num <b>roomID</b> = getRoomIDbyHash(num <b>roomID</b>)", "number");
-    provider->add("getRoomName", "<dd>str</dd> <dt>roomName</dt> = <dt>getRoomName</dt>(<dd>num</dd> <dt>roomID</dt>)", "string");
-    provider->add("getRooms", "tbl <b>rooms</b> = getRooms()", "table");
-    provider->add("gotoRoom", "gotoRoom(num <b>roomID</b>)", "void");*/
 
+    // Set the newly filled provider to be used by our Edbee instance
     edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
 
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
