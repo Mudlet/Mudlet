@@ -47,3 +47,4 @@ for i in $BREWS; do
     fi
   done
 done
+gem update cocoapods

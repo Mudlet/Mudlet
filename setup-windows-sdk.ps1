@@ -6,7 +6,8 @@ If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Start-Process powershell -Verb runAs -ArgumentList $arguments -Wait
 }
 else {
-    CI\appveyor.install.ps1
+    cd CI
+    .\appveyor.install.ps1
 }
 
 cd "$sourceDir"

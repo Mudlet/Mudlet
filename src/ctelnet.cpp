@@ -1528,17 +1528,6 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         qDebug() << "Listening for new compression sequences";
         return -1;
     }
-    /* TODO: Remove this commented code once it is deemed safe. -MH
-       else
-       {
-        if( zval <= 0 )
-        {
-            initStreamDecompressor();
-            qDebug() << "Listening for new compression sequences";
-            return -1;
-        }
-       }
-     */
     return outSize;
 }
 
