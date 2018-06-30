@@ -12581,21 +12581,23 @@ void TLuaInterpreter::initLuaGlobals()
     QString n;
     int error;
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#endif
-#ifdef Q_OS_MAC
+#elif defined(Q_OS_MAC)
     //macOS app bundle would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#endif
-#ifdef Q_OS_WIN32
-    //Windows Qt Creator builds with our SDK install the library into a well known directory
-    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+#elif defined(Q_OS_WIN32)
+    //Windows Qt Creator builds with our SDK install the library into a well
+    //known directory - but other possiblities might exist for those hacking
+    //around...
+    // When we were using an older Qt provided mingw:
+    // luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw530_32\lib\lua\5.1\?.dll]])");
 #endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
