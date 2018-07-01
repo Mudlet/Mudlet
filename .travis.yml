@@ -27,19 +27,6 @@ addons:
     - lua-sql-sqlite3
     - libpugixml-dev
 env:
-#  matrix:
-#  - Q_OR_C_MAKE=cmake
-#    QT_VERSION=59
-#    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
-#  - Q_OR_C_MAKE=qmake
-#    QT_VERSION=59
-#    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
-#  - Q_OR_C_MAKE=cmake
-#    QT_VERSION=59
-#    WITH_UPDATER=NO # actually Qt 5.9, non-default without updater
-#  - Q_OR_C_MAKE=qmake
-#    QT_VERSION=59
-#    WITH_UPDATER=NO # actually Qt 5.9, non-default without updater
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
   - secure: XxdhHVraWpXpWo4tluD7NwJtqQT1b6LKoxX6QWKzR0fvcKgqBy2jlXMu0KVtTYtVI7M1wFdjtwSixK1UGFZyDgEYYUnDTufq7E81TWJSQ5ZhxNRaDAyO2vkLNFpH7LkwVrV/fWCPKE9t3/WiowwQnXesm9MMxAzbd2mIaeyiccY=
@@ -59,21 +46,7 @@ matrix:
     osx_image: xcode8
     compiler: clang
     env:
-    - Q_OR_C_MAKE=qmake
-      WITH_UPDATER=NO
-
-  - os: osx
-    osx_image: xcode8
-    compiler: clang
-    env:
     - Q_OR_C_MAKE=cmake
-
-  - os: osx
-    osx_image: xcode8
-    compiler: clang
-    env:
-    - Q_OR_C_MAKE=cmake
-      WITH_UPDATER=NO
 
   - os: linux
     compiler: gcc
@@ -93,36 +66,8 @@ matrix:
   - os: linux
     compiler: gcc
     env:
-    - Q_OR_C_MAKE=qmake
-      QT_VERSION=59
-      WITH_UPDATER=NO
-    addons:
-      apt:
-        sources: *add-sources
-        packages: &qt59-packages
-        - *common-packages
-        - qt59base
-        - qt59multimedia
-        - qt59tools
-        - qt59gamepad
-
-  - os: linux
-    compiler: gcc
-    env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=59
-    addons:
-      apt:
-        sources: *add-sources
-        packages:
-        - *qt59-packages
-
-  - os: linux
-    compiler: gcc
-    env:
-    - Q_OR_C_MAKE=cmake
-      QT_VERSION=59
-      WITH_UPDATER=NO
     addons:
       apt:
         sources: *add-sources
@@ -143,32 +88,8 @@ matrix:
   - os: linux
     compiler: clang
     env:
-    - Q_OR_C_MAKE=qmake
-      QT_VERSION=59
-      WITH_UPDATER=NO
-    addons:
-      apt:
-        sources: *add-sources
-        packages:
-        - *qt59-packages
-
-  - os: linux
-    compiler: clang
-    env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=59
-    addons:
-      apt:
-        sources: *add-sources
-        packages:
-        - *qt59-packages
-
-  - os: linux
-    compiler: clang
-    env:
-    - Q_OR_C_MAKE=cmake
-      QT_VERSION=59
-      WITH_UPDATER=NO
     addons:
       apt:
         sources: *add-sources
@@ -180,21 +101,6 @@ matrix:
     env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
-    addons:
-      apt:
-        sources: *add-sources
-        packages: &qt56-packages
-        - *common-packages
-        - qt56base
-        - qt56multimedia
-        - qt56tools
-
-  - os: linux
-    compiler: gcc
-    env:
-    - Q_OR_C_MAKE=cmake
-      QT_VERSION=56
-      WITH_UPDATER=NO # actually Qt 5.6, used to check minimum supported Qt works
     addons:
       apt:
         sources: *add-sources
