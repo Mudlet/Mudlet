@@ -105,6 +105,7 @@ cTelnet::cTelnet(Host* pH)
         mAcceptableEncodings << QStringLiteral("UTF-8");
         mAcceptableEncodings << QStringLiteral("GBK");
         mAcceptableEncodings << QStringLiteral("GB18030");
+        mAcceptableEncodings << QStringLiteral("Big5");
         mAcceptableEncodings << QStringLiteral("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
@@ -113,6 +114,7 @@ cTelnet::cTelnet(Host* pH)
         mFriendlyEncodings << QStringLiteral("UTF-8");
         mFriendlyEncodings << QStringLiteral("GBK");
         mFriendlyEncodings << QStringLiteral("GB18030");
+        mFriendlyEncodings << QStringLiteral("Big5");
         mFriendlyEncodings << QStringLiteral("ISO 8859-1");
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
