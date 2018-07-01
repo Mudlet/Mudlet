@@ -54,17 +54,25 @@ matrix:
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
+    - Q_OR_C_MAKE=qmake
+      WITH_UPDATER=NO
+
   - os: osx
     osx_image: xcode8
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
+    - Q_OR_C_MAKE=cmake
+      WITH_UPDATER=NO
 
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=qmake
-    - QT_VERSION=59
+      QT_VERSION=59
+    - Q_OR_C_MAKE=qmake
+      QT_VERSION=59
+      WITH_UPDATER=NO
     addons:
       apt:
         sources: *add-sources
@@ -78,7 +86,10 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-    - QT_VERSION=59
+      QT_VERSION=59
+    - Q_OR_C_MAKE=cmake
+      QT_VERSION=59
+      WITH_UPDATER=NO
     addons:
       apt:
         sources: *add-sources
@@ -88,7 +99,10 @@ matrix:
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
-    - QT_VERSION=59
+      QT_VERSION=59
+    - Q_OR_C_MAKE=qmake
+      QT_VERSION=59
+      WITH_UPDATER=NO
     addons:
       apt:
         sources: *add-sources
@@ -98,7 +112,10 @@ matrix:
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
-    - QT_VERSION=59
+      QT_VERSION=59
+    - Q_OR_C_MAKE=cmake
+      QT_VERSION=59
+      WITH_UPDATER=NO
     addons:
       apt:
         sources: *add-sources
@@ -108,7 +125,10 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-    - QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
+      QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
+    - Q_OR_C_MAKE=cmake
+      QT_VERSION=56
+      WITH_UPDATER=NO # actually Qt 5.6, used to check minimum supported Qt works
     addons:
       apt:
         sources: *add-sources
