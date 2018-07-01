@@ -54,6 +54,11 @@ matrix:
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
+
+  - os: osx
+    osx_image: xcode8
+    compiler: clang
+    env:
     - Q_OR_C_MAKE=qmake
       WITH_UPDATER=NO
 
@@ -62,6 +67,11 @@ matrix:
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
+
+  - os: osx
+    osx_image: xcode8
+    compiler: clang
+    env:
     - Q_OR_C_MAKE=cmake
       WITH_UPDATER=NO
 
@@ -70,6 +80,19 @@ matrix:
     env:
     - Q_OR_C_MAKE=qmake
       QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages: &qt59-packages
+        - *common-packages
+        - qt59base
+        - qt59multimedia
+        - qt59tools
+        - qt59gamepad
+
+  - os: linux
+    compiler: gcc
+    env:
     - Q_OR_C_MAKE=qmake
       QT_VERSION=59
       WITH_UPDATER=NO
@@ -82,11 +105,21 @@ matrix:
         - qt59multimedia
         - qt59tools
         - qt59gamepad
+
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+
+  - os: linux
+    compiler: gcc
+    env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=59
       WITH_UPDATER=NO
@@ -95,11 +128,21 @@ matrix:
         sources: *add-sources
         packages:
         - *qt59-packages
+
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
       QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+
+  - os: linux
+    compiler: clang
+    env:
     - Q_OR_C_MAKE=qmake
       QT_VERSION=59
       WITH_UPDATER=NO
@@ -108,11 +151,21 @@ matrix:
         sources: *add-sources
         packages:
         - *qt59-packages
+
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=59
+    addons:
+      apt:
+        sources: *add-sources
+        packages:
+        - *qt59-packages
+
+  - os: linux
+    compiler: clang
+    env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=59
       WITH_UPDATER=NO
@@ -121,11 +174,24 @@ matrix:
         sources: *add-sources
         packages:
         - *qt59-packages
+
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
+    addons:
+      apt:
+        sources: *add-sources
+        packages: &qt56-packages
+        - *common-packages
+        - qt56base
+        - qt56multimedia
+        - qt56tools
+
+  - os: linux
+    compiler: gcc
+    env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=56
       WITH_UPDATER=NO # actually Qt 5.6, used to check minimum supported Qt works
@@ -137,6 +203,7 @@ matrix:
         - qt56base
         - qt56multimedia
         - qt56tools
+
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
   # add to the path here to pick up things as soon as its installed
