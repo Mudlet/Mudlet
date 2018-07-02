@@ -4428,8 +4428,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
     std::string dataIdentity;
 #endif
 
-    // The range deductions for two-byte sequences are take from:
-    // https://en.wikipedia.org/wiki/GBK#Encoding
+    // The encoding standard are taken from https://en.wikipedia.org/wiki/Big5
     size_t big5SequenceLength = 1;
     bool isValid = true;
     bool isToUseReplacementMark = false;
@@ -4450,9 +4449,6 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_BIG5_PROCESSING)
         qDebug().nospace() << "TBuffer::processBig5Sequence(...) 1-byte sequence as Big5 rejected!";
 #endif
-
-        // Proceed to handle 1 byte (as GB2312/GBK/GB18030 data) outside of checks...
-
     } else {
         // We have two bytes
         big5SequenceLength = 2;
@@ -4461,12 +4457,20 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
             if (isFromServer) {
 #if defined(DEBUG_BIG5_PROCESSING)
                 qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficent bytes in buffer to "
-                                      "complate Big5 sequence, need at least: "
+                                      "complete Big5 sequence, need at least: "
                                    << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos);
             }
             return false; // Bail out
+        } else {
+            // check if second byte range is valid
+            auto val2 = static_cast<quint8>(bufferData.at(pos + 1));
+            if (val2 < 0x40 || (val2 > 0x7E && val2 < 0xA1) || val2 > 0xFE) {
+                // second byte range is invalid
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
         }
 
     }
@@ -4475,7 +4479,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
     // the right ranges of individual values to be valid
 
     if (isValid) {
-        // Try and convert two or four byte sequence to Unicode using Qts own
+        // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
         QString codePoint;
@@ -4492,7 +4496,6 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                     isToUseReplacementMark = true;
                     break;
                 case 2:
-                    isNonBmpCharacter = true;
                     // Fall-through
                     [[clang::fallthrough]];
                 case 1:
