@@ -2,6 +2,8 @@ version: 1.0.{build}
 init:
 - cmd: mkdir C:\src\
 environment:
+  signing_password:
+    secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
   matrix:
   - QT_BASE_DIR: C:\Qt\5.11\mingw53_32
 install:
