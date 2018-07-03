@@ -2274,7 +2274,12 @@ TConsole* TConsole::createBuffer(const QString& name)
     std::string key = name.toLatin1().data();
     if (mSubConsoleMap.find(key) == mSubConsoleMap.end()) {
         auto pC = new TConsole(mpHost, false);
+        if (!pC) {
+            return nullptr;
+        }
         mSubConsoleMap[key] = pC;
+        pC->setObjectName(name);
+        pC->mConsoleName = QStringLiteral("Buffer - %1 - %2").arg(mpHost->getName(), name);
         pC->setWindowTitle(name);
         pC->setContentsMargins(0, 0, 0, 0);
         pC->hide();
@@ -2319,6 +2324,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         }
         mSubConsoleMap[key] = pC;
         pC->setObjectName(name);
+        pC->mConsoleName = QStringLiteral("Miniconsole - %1 - %2").arg(mpHost->getName(), name);
         pC->setFocusPolicy(Qt::NoFocus);
         pC->setUserWindow();
         pC->mUpperPane->setIsMiniConsole();
@@ -2328,7 +2334,6 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->mOldY = y;
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
-        std::string _n = name.toStdString();
         pC->setMiniConsoleFontSize(12);
         pC->show();
         return pC;

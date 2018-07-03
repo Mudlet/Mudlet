@@ -338,6 +338,7 @@ mudlet::mudlet()
     mpDebugArea->setCentralWidget(mpDebugConsole);
     mpDebugArea->setWindowTitle(tr("Central Debug Console"));
     mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
+    mpDebugConsole->mConsoleName = QStringLiteral("Central Debug Console");
 
     auto consoleCloser = new TConsoleMonitor(mpDebugArea);
     mpDebugArea->installEventFilter(consoleCloser);
@@ -1448,13 +1449,16 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
 
     if (!dockWindowMap.contains(name) && !dockWindowConsoleMap.contains(name)) {
         auto pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QString("dockWindow_%1_%2").arg(pHost->getName(), name));
+        const QString& hostName(pHost->getName());
+        pD->setObjectName(QString("dockWindow_%1_%2").arg(hostName, name));
         pD->setContentsMargins(0, 0, 0, 0);
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        pD->setWindowTitle(QString("%1 - %2").arg(name, pHost->getName()));
+        pD->setWindowTitle(tr("User Window - %1 - %2").arg(hostName, name));
         dockWindowMap[name] = pD;
         auto pC = new TConsole(pHost, false, pD);
+        pC->setFocusPolicy(Qt::NoFocus);
         pC->setContentsMargins(0, 0, 0, 0);
+        pC->mConsoleName = QStringLiteral("User window - %1 - %2").arg(hostName, name);
         pD->setWidget(pC);
         pC->show();
         pC->layerCommandLine->hide();
@@ -1502,9 +1506,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
     if (!dockWindowConsoleMap.contains(name)) {
         TConsole* pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
         if (pC) {
-            pC->mConsoleName = name;
             dockWindowConsoleMap[name] = pC;
-            std::string _n = name.toStdString();
             pC->setMiniConsoleFontSize(12);
             return true;
         }
@@ -1547,7 +1549,6 @@ bool mudlet::createBuffer(Host* pHost, const QString& name)
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
     if (!dockWindowConsoleMap.contains(name)) {
         TConsole* pC = pHost->mpConsole->createBuffer(name);
-        pC->mConsoleName = name;
         if (pC) {
             dockWindowConsoleMap[name] = pC;
             return true;

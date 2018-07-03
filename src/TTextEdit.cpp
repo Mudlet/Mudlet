@@ -1517,6 +1517,25 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(mudletEvent);
     }
+
+    if (mpHost && mpConsole != mpHost->mpConsole) {
+        // This does have a parent Host profile but it is NOT the main console
+        // for a profile instance
+
+        qDebug() << "TTextEdit::mouseReleaseEvent() INFO - considering which TConsole (and pane) is involved:" << mpConsole->mConsoleName << (mIsLowerPane ? "(lower pane)" : "(upper pane)");
+        if (mpConsole->mConsoleName.startsWith("Miniconsole - ") || mpConsole->mConsoleName.startsWith("User window - ")) {
+            qDebug() << "   This seems to be a miniConsole or a userWindow so better return the focus to the main TConsole instance...";
+            // The central debug console has a null Host::mpConsole
+            if (mpHost->mpConsole) {
+                // So return the focus to the main mpConsole - note a setFocus() call
+                // WITHOUT an argument calls the overloaded SLOT method instead:
+                mpHost->mpConsole->setFocus(Qt::OtherFocusReason);
+            }
+
+        } else {
+            qDebug() << "   This IS NOT a miniConsole or a userWindow so not adjusting the focus...";
+        }
+    }
 }
 
 void TTextEdit::showEvent(QShowEvent* event)
