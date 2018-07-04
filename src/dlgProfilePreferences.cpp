@@ -1493,7 +1493,7 @@ void dlgProfilePreferences::loadMap()
                            tr("Load Mudlet map"),
                            mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
                            tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
-                              "Do not change extensions (in braces) they are used programmatically!"));
+                              "Do not change extensions (in braces) as they are used programmatically"));
     if (fileName.isEmpty()) {
         return;
     }
