@@ -9482,6 +9482,36 @@ int TLuaInterpreter::getRoomsByPosition(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getGridMode
+int TLuaInterpreter::getGridMode(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no map present or loaded!");
+        return 2;
+    }
+
+    int id;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "getGridMode: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        id = lua_tonumber(L, 1);
+    }
+
+    TArea* area = host.mpMap->mpRoomDB->getArea(id);
+    if (!area) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "area %s doesn't exist", id);
+        return 2;
+    } else {
+        lua_pushboolean(L, area->gridMode);
+        return 1;
+    }
+}
+
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setGridMode
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
@@ -12408,6 +12438,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName);
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
     lua_register(pGlobalLua, "setGridMode", TLuaInterpreter::setGridMode);
+    lua_register(pGlobalLua, "getGridMode", TLuaInterpreter::getGridMode);
     lua_register(pGlobalLua, "solveRoomCollisions", TLuaInterpreter::solveRoomCollisions);
     lua_register(pGlobalLua, "addSpecialExit", TLuaInterpreter::addSpecialExit);
     lua_register(pGlobalLua, "removeSpecialExit", TLuaInterpreter::removeSpecialExit);
@@ -12550,21 +12581,23 @@ void TLuaInterpreter::initLuaGlobals()
     QString n;
     int error;
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#endif
-#ifdef Q_OS_MAC
+#elif defined(Q_OS_MAC)
     //macOS app bundle would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#endif
-#ifdef Q_OS_WIN32
-    //Windows Qt Creator builds with our SDK install the library into a well known directory
-    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+#elif defined(Q_OS_WIN32)
+    //Windows Qt Creator builds with our SDK install the library into a well
+    //known directory - but other possiblities might exist for those hacking
+    //around...
+    // When we were using an older Qt provided mingw:
+    // luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw530_32\lib\lua\5.1\?.dll]])");
 #endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");

@@ -496,7 +496,7 @@ bool TCommandLine::event(QEvent* event)
 
                 // Only process as a Control-C if it is EXACTLY those two keys
                 // and no other AND there is a selection active in the TConsole
-                mpConsole->mUpperPane->copySelectionToClipboard();
+                mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
 
