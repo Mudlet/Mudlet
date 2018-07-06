@@ -339,7 +339,7 @@ find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools 
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 
 if (Qt5Core_VERSION VERSION_LESS 5.7)
-  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later")
+  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later, yours is ${Qt5Core_VERSION}")
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
