@@ -1927,19 +1927,18 @@ void cTelnet::setKeepAlive(int socketHandle)
     alive.keepalivetime = timeout * 1000;
     alive.keepaliveinterval = 3000;
     DWORD dwBytesRet = 0;
-    int res = WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
+    WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
 
 #elif defined(Q_OS_LINUX)
     int enableKeepAlive = 1;
-    int res = setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &enableKeepAlive, sizeof(enableKeepAlive));
-
-    res = setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
+    setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &enableKeepAlive, sizeof(enableKeepAlive));
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
 
     int count = 3; // send up to 3 keepalive packets out, then disconnect if no response
-    res = setsockopt(socketHandle, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count));
+    setsockopt(socketHandle, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count));
 
     int interval = 2; // send a keepalive packet out every 2 seconds (after the 5 second idle period)
-    res = setsockopt(socketHandle, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+    setsockopt(socketHandle, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
 
 #elif defined(Q_OS_MACOS)
     constexpr int on = 1;
