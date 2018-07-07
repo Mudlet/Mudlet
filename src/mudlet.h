@@ -224,6 +224,11 @@ public:
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
+    // More modern Desktop styles no longer include icons on the buttons in
+    // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
+    // does use them - use this flag to determine whether we should apply our
+    // icons to override some of them:
+    bool mShowIconsOnDialogs;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces

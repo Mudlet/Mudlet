@@ -153,7 +153,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int);
-    void setConsoleFgColor(int, int, int);
+// Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> _getFgColor();
     std::list<int> _getBgColor();
     void _luaWrapLine(int);

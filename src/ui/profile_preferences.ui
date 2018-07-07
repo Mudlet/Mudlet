@@ -341,8 +341,7 @@
            </widget>
           </item>
           <item row="3" column="1" colspan="3">
-           <widget class="QComboBox" name="comboBox_logFileNameFormat">
-           </widget>
+           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
           </item>
           <item row="4" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_logFileName">
@@ -398,15 +397,9 @@
          <property name="title">
           <string>Input</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_5">
+         <layout class="QGridLayout" name="gridLayout_5" columnstretch="1,1,1,1">
           <item row="0" column="0" colspan="2">
            <widget class="QCheckBox" name="USE_UNIX_EOL">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
             <property name="toolTip">
              <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
             </property>
@@ -415,11 +408,15 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
+            <property name="text">
+             <string>Auto clear the input line after you sent text</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="show_sent_text_checkbox">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="toolTip">
              <string>Echo the text you send in the display box</string>
             </property>
@@ -428,18 +425,18 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="3">
-           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
-            <property name="enabled">
-             <bool>true</bool>
+          <item row="1" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>Auto clear the input line after you sent text</string>
+             <string>React to all keybindings on the same key</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_18">
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_commandSeparator">
             <property name="toolTip">
              <string/>
             </property>
@@ -451,21 +448,15 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">
+          <item row="2" column="1" colspan="3">
            <widget class="QLineEdit" name="command_separator_lineedit">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="placeholderText">
              <string>Enter text to separate commands with or leave blank to disable</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_38">
-            <property name="toolTip">
-             <string/>
-            </property>
+          <item row="3" column="0" colspan="3" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
             </property>
@@ -474,8 +465,11 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1" colspan="2">
+          <item row="3" column="3">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
             <property name="maximum">
              <number>300</number>
             </property>
@@ -1124,7 +1118,7 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_21">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_22">
+           <widget class="QLabel" name="label_foreground_color">
             <property name="text">
              <string>Foreground:</string>
             </property>
@@ -1132,6 +1126,9 @@
           </item>
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_foreground_color">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1144,7 +1141,7 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QLabel" name="label_21">
+           <widget class="QLabel" name="label_background_color">
             <property name="text">
              <string>Background:</string>
             </property>
@@ -1152,6 +1149,9 @@
           </item>
           <item row="0" column="3">
            <widget class="QPushButton" name="pushButton_background_color">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1161,7 +1161,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_31">
+           <widget class="QLabel" name="label_command_line_foreground_color">
             <property name="text">
              <string>Command line foreground:</string>
             </property>
@@ -1169,13 +1169,16 @@
           </item>
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_command_line_foreground_color">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string/>
             </property>
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QLabel" name="label_59">
+           <widget class="QLabel" name="label_command_line_background_color">
             <property name="text">
              <string>Command line background:</string>
             </property>
@@ -1183,13 +1186,16 @@
           </item>
           <item row="1" column="3">
            <widget class="QPushButton" name="pushButton_command_line_background_color">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string/>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="label_32">
+           <widget class="QLabel" name="label_command_foreground_color">
             <property name="text">
              <string>Command foreground:</string>
             </property>
@@ -1197,6 +1203,9 @@
           </item>
           <item row="2" column="1">
            <widget class="QPushButton" name="pushButton_command_foreground_color">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1206,7 +1215,7 @@
            </widget>
           </item>
           <item row="2" column="2">
-           <widget class="QLabel" name="label_37">
+           <widget class="QLabel" name="label_command_background_color">
             <property name="text">
              <string>Command background:</string>
             </property>
@@ -1214,6 +1223,9 @@
           </item>
           <item row="2" column="3">
            <widget class="QPushButton" name="pushButton_command_background_color">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1223,7 +1235,7 @@
            </widget>
           </item>
           <item row="3" column="0" colspan="4">
-           <widget class="QLabel" name="label_19">
+           <widget class="QLabel" name="label_ANSI_color_buttons_introduction">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -1239,7 +1251,7 @@
            </widget>
           </item>
           <item row="4" column="0">
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="label_black">
             <property name="text">
              <string>Black:</string>
             </property>
@@ -1247,6 +1259,9 @@
           </item>
           <item row="4" column="1">
            <widget class="QPushButton" name="pushButton_black">
+            <property name="toolTip">
+             <string>ANSI Color Number 0</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1256,14 +1271,17 @@
            </widget>
           </item>
           <item row="4" column="2">
-           <widget class="QLabel" name="label_68">
+           <widget class="QLabel" name="label_lBlack">
             <property name="text">
              <string>Light black:</string>
             </property>
            </widget>
           </item>
           <item row="4" column="3">
-           <widget class="QPushButton" name="pushButton_Lblack">
+           <widget class="QPushButton" name="pushButton_lBlack">
+            <property name="toolTip">
+             <string>ANSI Color Number 8</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1273,7 +1291,7 @@
            </widget>
           </item>
           <item row="5" column="0">
-           <widget class="QLabel" name="label_2">
+           <widget class="QLabel" name="label_red">
             <property name="text">
              <string>Red:</string>
             </property>
@@ -1281,6 +1299,9 @@
           </item>
           <item row="5" column="1">
            <widget class="QPushButton" name="pushButton_red">
+            <property name="toolTip">
+             <string>ANSI Color Number 1</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1290,14 +1311,17 @@
            </widget>
           </item>
           <item row="5" column="2">
-           <widget class="QLabel" name="label_69">
+           <widget class="QLabel" name="label_lRed">
             <property name="text">
              <string>Light red:</string>
             </property>
            </widget>
           </item>
           <item row="5" column="3">
-           <widget class="QPushButton" name="pushButton_Lred">
+           <widget class="QPushButton" name="pushButton_lRed">
+            <property name="toolTip">
+             <string>ANSI Color Number 9</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1307,7 +1331,7 @@
            </widget>
           </item>
           <item row="6" column="0">
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="label_green">
             <property name="text">
              <string>Green:</string>
             </property>
@@ -1315,6 +1339,9 @@
           </item>
           <item row="6" column="1">
            <widget class="QPushButton" name="pushButton_green">
+            <property name="toolTip">
+             <string>ANSI Color Number 2</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1324,14 +1351,17 @@
            </widget>
           </item>
           <item row="6" column="2">
-           <widget class="QLabel" name="label_70">
+           <widget class="QLabel" name="label_lGreen">
             <property name="text">
              <string>Light green:</string>
             </property>
            </widget>
           </item>
           <item row="6" column="3">
-           <widget class="QPushButton" name="pushButton_Lgreen">
+           <widget class="QPushButton" name="pushButton_lGreen">
+            <property name="toolTip">
+             <string>ANSI Color Number 10</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1341,7 +1371,7 @@
            </widget>
           </item>
           <item row="7" column="0">
-           <widget class="QLabel" name="label_4">
+           <widget class="QLabel" name="label_yellow">
             <property name="text">
              <string>Yellow:</string>
             </property>
@@ -1349,6 +1379,9 @@
           </item>
           <item row="7" column="1">
            <widget class="QPushButton" name="pushButton_yellow">
+            <property name="toolTip">
+             <string>ANSI Color Number 3</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1358,14 +1391,17 @@
            </widget>
           </item>
           <item row="7" column="2">
-           <widget class="QLabel" name="label_71">
+           <widget class="QLabel" name="label_lYellow">
             <property name="text">
              <string>Light yellow:</string>
             </property>
            </widget>
           </item>
           <item row="7" column="3">
-           <widget class="QPushButton" name="pushButton_Lyellow">
+           <widget class="QPushButton" name="pushButton_lYellow">
+            <property name="toolTip">
+             <string>ANSI Color Number 11</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1375,7 +1411,7 @@
            </widget>
           </item>
           <item row="8" column="0">
-           <widget class="QLabel" name="label_5">
+           <widget class="QLabel" name="label_blue">
             <property name="text">
              <string>Blue:</string>
             </property>
@@ -1383,6 +1419,9 @@
           </item>
           <item row="8" column="1">
            <widget class="QPushButton" name="pushButton_blue">
+            <property name="toolTip">
+             <string>ANSI Color Number 4</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1392,14 +1431,17 @@
            </widget>
           </item>
           <item row="8" column="2">
-           <widget class="QLabel" name="label_72">
+           <widget class="QLabel" name="label_lBlue">
             <property name="text">
              <string>Light blue:</string>
             </property>
            </widget>
           </item>
           <item row="8" column="3">
-           <widget class="QPushButton" name="pushButton_Lblue">
+           <widget class="QPushButton" name="pushButton_lBlue">
+            <property name="toolTip">
+             <string>ANSI Color Number 12</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1409,7 +1451,7 @@
            </widget>
           </item>
           <item row="9" column="0">
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="label_magenta">
             <property name="text">
              <string>Magenta:</string>
             </property>
@@ -1417,6 +1459,9 @@
           </item>
           <item row="9" column="1">
            <widget class="QPushButton" name="pushButton_magenta">
+            <property name="toolTip">
+             <string>ANSI Color Number 5</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1426,14 +1471,17 @@
            </widget>
           </item>
           <item row="9" column="2">
-           <widget class="QLabel" name="label_73">
+           <widget class="QLabel" name="label_lMagenta">
             <property name="text">
              <string>Light magenta:</string>
             </property>
            </widget>
           </item>
           <item row="9" column="3">
-           <widget class="QPushButton" name="pushButton_Lmagenta">
+           <widget class="QPushButton" name="pushButton_lMagenta">
+            <property name="toolTip">
+             <string>ANSI Color Number 13</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1443,7 +1491,7 @@
            </widget>
           </item>
           <item row="10" column="0">
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="label_cyan">
             <property name="text">
              <string>Cyan:</string>
             </property>
@@ -1451,6 +1499,9 @@
           </item>
           <item row="10" column="1">
            <widget class="QPushButton" name="pushButton_cyan">
+            <property name="toolTip">
+             <string>ANSI Color Number 6</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1460,14 +1511,17 @@
            </widget>
           </item>
           <item row="10" column="2">
-           <widget class="QLabel" name="label_74">
+           <widget class="QLabel" name="label_lCyan">
             <property name="text">
              <string>Light cyan:</string>
             </property>
            </widget>
           </item>
           <item row="10" column="3">
-           <widget class="QPushButton" name="pushButton_Lcyan">
+           <widget class="QPushButton" name="pushButton_lCyan">
+            <property name="toolTip">
+             <string>ANSI Color Number 14</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1477,7 +1531,7 @@
            </widget>
           </item>
           <item row="11" column="0">
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="label_white">
             <property name="text">
              <string>White:</string>
             </property>
@@ -1485,6 +1539,9 @@
           </item>
           <item row="11" column="1">
            <widget class="QPushButton" name="pushButton_white">
+            <property name="toolTip">
+             <string>ANSI Color Number 7</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1494,14 +1551,17 @@
            </widget>
           </item>
           <item row="11" column="2">
-           <widget class="QLabel" name="label_75">
+           <widget class="QLabel" name="label_lWhite">
             <property name="text">
              <string>Light white:</string>
             </property>
            </widget>
           </item>
           <item row="11" column="3">
-           <widget class="QPushButton" name="pushButton_Lwhite">
+           <widget class="QPushButton" name="pushButton_lWhite">
+            <property name="toolTip">
+             <string>ANSI Color Number 15</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1511,7 +1571,7 @@
            </widget>
           </item>
           <item row="12" column="2" colspan="2">
-           <widget class="QPushButton" name="reset_colors_button">
+           <widget class="QPushButton" name="pushButton_resetColors">
             <property name="text">
              <string>Reset all colors to default</string>
             </property>
