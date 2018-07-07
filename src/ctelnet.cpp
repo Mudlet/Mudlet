@@ -1916,6 +1916,7 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
 void cTelnet::setKeepAlive(int socketHandle)
 {
     constexpr int timeout = 2 * 60; //  /* send keepalive after 2 minutes */
+    int count = 3; // send up to 3 keepalive packets out, then disconnect if no response
 #if defined(Q_OS_WIN32)
     struct tcp_keepalive
     {
@@ -1933,8 +1934,6 @@ void cTelnet::setKeepAlive(int socketHandle)
     int enableKeepAlive = 1;
     setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &enableKeepAlive, sizeof(enableKeepAlive));
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
-
-    int count = 3; // send up to 3 keepalive packets out, then disconnect if no response
     setsockopt(socketHandle, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count));
 
     int interval = 2; // send a keepalive packet out every 2 seconds (after the 5 second idle period)
@@ -1944,5 +1943,6 @@ void cTelnet::setKeepAlive(int socketHandle)
     constexpr int on = 1;
     setsockopt(socketHandle, SOL_SOCKET,  SO_KEEPALIVE, &on, sizeof(on));
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
 #endif
 }
