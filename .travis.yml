@@ -6,7 +6,7 @@ sudo: false
 addons:
   apt:
     sources: &add-sources
-    - sourceline: 'ppa:beineri/opt-qt562-trusty'
+    - sourceline: 'ppa:beineri/opt-qt571-trusty'
     - sourceline: 'ppa:beineri/opt-qt593-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:jonathonf/php7'
@@ -100,15 +100,15 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-      QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
+    - QT_VERSION=57 # actually Qt 5.7, used to check minimum supported Qt works
     addons:
       apt:
         sources: *add-sources
-        packages: &qt56-packages
+        packages: &qt57-packages
         - *common-packages
-        - qt56base
-        - qt56multimedia
-        - qt56tools
+        - qt57base
+        - qt57multimedia
+        - qt57tools
 
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
