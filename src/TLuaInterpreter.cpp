@@ -11367,14 +11367,14 @@ void TLuaInterpreter::setOOBTable(
 
 // If the given global Lua table does not exist, create it. Returns
 // false if the table was unable to be created.
-static bool defineTableIfNotDefined(lua_State* L, const char* table) {
+static bool ensureTableExists(lua_State* L, const char* table) {
     lua_getglobal(L, table); //defined in Lua init
     if (!lua_istable(L, -1)) {
         lua_newtable(L);
         lua_setglobal(L, table);
         lua_getglobal(L, table);
         if (!lua_istable(L, -1)) {
-            qDebug() << "ERROR: " << table << " table not defined";
+            qDebug() << "ERROR: could not create table '" << table << "'";
             return false;
         }
     }
@@ -11384,7 +11384,7 @@ static bool defineTableIfNotDefined(lua_State* L, const char* table) {
 void TLuaInterpreter::setGMCPTable(QString& key, const QString& json)
 {
     static const char gmcp_table[] = "gmcp";
-    if (!defineTableIfNotDefined(pGlobalLua, gmcp_table)) {
+    if (!ensureTableExists(pGlobalLua, gmcp_table)) {
         return;
     }
     updateOOBTableAndRaiseEvent(key, json, QString(gmcp_table));
@@ -11400,7 +11400,7 @@ void TLuaInterpreter::raiseInlineGMCPEvent(QString& key, const QString& json)
 void TLuaInterpreter::setMSDPTable(QString& key, const QString& json)
 {
     static const char msdp_table[] = "msdp";
-    if (!defineTableIfNotDefined(pGlobalLua, msdp_table)) {
+    if (!ensureTableExists(pGlobalLua, msdp_table)) {
         return;
     }
     updateOOBTableAndRaiseEvent(key, json, QString(msdp_table));
