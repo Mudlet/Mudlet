@@ -11240,11 +11240,7 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
-void TLuaInterpreter::raiseProtocolEvent(
-    QString& key,
-    const QString& string_data,
-    const QString& protocol,
-    const QStringList& tokenList)
+void TLuaInterpreter::raiseProtocolEvent(QString& key, const QString& string_data, const QString& protocol, const QStringList& tokenList)
 {
     QString token = protocol;
     key.prepend(protocol + ".");
