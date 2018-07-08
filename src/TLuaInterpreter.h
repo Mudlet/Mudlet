@@ -75,7 +75,6 @@ public:
     TLuaInterpreter(Host* mpHost, int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
-    void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void msdp2Lua(char* src, int srclen);
     void initLuaGlobals();
     void initIndenterGlobals();
@@ -87,7 +86,17 @@ public:
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
+
+    // Updates the global Lua table "gmcp. + key" with the contents of json,
+    // afterwards raising events for users to trigger on.
     void setGMCPTable(QString&, const QString&);
+
+    // Similar to setGMCPTable, however this only raises events instead of
+    // updating any lua tables.  In addition to the usual "gmcp" all events
+    // are prefixed by "inline-", so calling this with a key of "Char.Vitals"
+    // raises an event called "inline-gmcp.Char.Vitals"
+    void raiseInlineGMCPEvent(QString& key, const QString& json);
+
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
     QString formatLuaCode(const QString &);
@@ -197,6 +206,7 @@ public:
     static int clearSpecialExits(lua_State*);
     static int solveRoomCollisions(lua_State*);
     static int setGridMode(lua_State* L);
+    static int getGridMode(lua_State* L);
     static int getCustomEnvColorTable(lua_State* L);
     static int setRoomName(lua_State*);
     static int getRoomName(lua_State*);
@@ -471,6 +481,22 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
+
+    // Takes an OOB key (formatted as A.B.C, eg. Char.Vitals), a payload
+    // formatted as json, and a protocol (eg "gmcp"), updating the global lua
+    // table of the same name as the protocol and raising events for users
+    // to listen to.
+    void updateOOBTableAndRaiseEvent(
+        QString& key, const QString& json, const QString& protocol);
+    void raiseProtocolEvent(
+        QString& key,
+        const QString& string_data,
+        const QString& protocol,
+        const QStringList& tokenList);
+    void setOOBTable(
+        QString& key, const QString& string_data,
+        const QStringList& tokenList);
+
 
     QMap<QNetworkReply*, QString> downloadMap;
 

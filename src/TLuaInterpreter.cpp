@@ -9493,6 +9493,36 @@ int TLuaInterpreter::getRoomsByPosition(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getGridMode
+int TLuaInterpreter::getGridMode(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no map present or loaded!");
+        return 2;
+    }
+
+    int id;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "getGridMode: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        id = lua_tonumber(L, 1);
+    }
+
+    TArea* area = host.mpMap->mpRoomDB->getArea(id);
+    if (!area) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "area %s doesn't exist", id);
+        return 2;
+    } else {
+        lua_pushboolean(L, area->gridMode);
+        return 1;
+    }
+}
+
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setGridMode
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
@@ -11833,50 +11863,55 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
-// No documentation available in wiki - internal function
-void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
+void TLuaInterpreter::raiseProtocolEvent(QString& key, const QString& string_data, const QString& protocol, const QStringList& tokenList)
 {
+    QString token = protocol;
+    key.prepend(protocol + ".");
+
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "gmcp"); //defined in Lua init
-    if (!lua_istable(L, -1)) {
-        lua_newtable(L);
-        lua_setglobal(L, "gmcp");
-        lua_getglobal(L, "gmcp");
-        if (!lua_istable(L, -1)) {
-            qDebug() << "ERROR: gmcp table not defined";
-            return;
+    for (int k = 0; k < tokenList.size(); k++) {
+        TEvent event;
+        token.append(".");
+        token.append(tokenList[k]);
+        event.mArgumentList.append(token);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(key);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        Host& host = getHostFromLua(L);
+        if (mudlet::debugMode) {
+            QString msg = QString("\n%1 event <").arg(protocol);
+            msg.append(token);
+            msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
+            host.mpConsole->printSystemMessage(msg);
+        }
+        host.raiseEvent(event);
+    }
+    // auto-detect IRE composer
+    if (tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit") {
+        QRegularExpression rx(QStringLiteral(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit"));
+        QRegularExpressionMatch match = rx.match(string_data);
+
+        if (match.capturedStart() != -1) {
+            QString title = match.captured(1);
+            QString initialText = match.captured(2);
+            initialText.replace(QStringLiteral(R"(\n)"), QStringLiteral("\n"));
+            Host& host = getHostFromLua(L);
+            if (host.mTelnet.mpComposer) {
+                return;
+            }
+
+            host.mTelnet.mpComposer = new dlgComposer(&host);
+            host.mTelnet.mpComposer->init(title, initialText);
+            host.mTelnet.mpComposer->raise();
+            host.mTelnet.mpComposer->show();
         }
     }
-    parseJSON(key, string_data, "gmcp");
 }
 
-// No documentation available in wiki - internal function
-void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
+void TLuaInterpreter::setOOBTable(
+    QString& key, const QString& string_data, const QStringList& tokenList)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "msdp");
-    if (!lua_istable(L, -1)) {
-        lua_newtable(L);
-        lua_setglobal(L, "msdp");
-        lua_getglobal(L, "msdp");
-        if (!lua_istable(L, -1)) {
-            qDebug() << "ERROR: msdp table not defined";
-            return;
-        }
-    }
-
-    parseJSON(key, string_data, "msdp");
-}
-
-// No documentation available in wiki - internal function
-void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
-{
-    // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
-    lua_State* L = pGlobalLua;
-    QStringList tokenList = key.split(".");
-    if (!lua_checkstack(L, tokenList.size() + 5)) {
-        return;
-    }
     int i = 0;
     for (int total = tokenList.size() - 1; i < total; ++i) {
         lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
@@ -11947,54 +11982,60 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         }
     }
     lua_settop(L, 0);
+}
 
-    // events: for key "foo.bar.top" we raise: gmcp.foo, gmcp.foo.bar and gmcp.foo.bar.top
-    // with the actual key given as parameter e.g. event=gmcp.foo, param="gmcp.foo.bar"
-
-    QString token = protocol;
-    if (protocol == "msdp") {
-        key.prepend("msdp.");
-    } else {
-        key.prepend("gmcp.");
-    }
-
-    for (int k = 0, total = tokenList.size(); k < total; ++k) {
-        TEvent event;
-        token.append(".");
-        token.append(tokenList[k]);
-        event.mArgumentList.append(token);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(key);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        Host& host = getHostFromLua(L);
-        if (mudlet::debugMode) {
-            QString msg = QString("\n%1 event <").arg(protocol);
-            msg.append(token);
-            msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
-            host.mpConsole->printSystemMessage(msg);
-        }
-        host.raiseEvent(event);
-    }
-    // auto-detect IRE composer
-    if (tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit") {
-        QRegularExpression rx(QStringLiteral(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit"));
-        QRegularExpressionMatch match = rx.match(string_data);
-
-        if (match.capturedStart() != -1) {
-            QString title = match.captured(1);
-            QString initialText = match.captured(2);
-            initialText.replace(QStringLiteral(R"(\n)"), QStringLiteral("\n"));
-            Host& host = getHostFromLua(L);
-            if (host.mTelnet.mpComposer) {
-                return;
-            }
-
-            host.mTelnet.mpComposer = new dlgComposer(&host);
-            host.mTelnet.mpComposer->init(title, initialText);
-            host.mTelnet.mpComposer->raise();
-            host.mTelnet.mpComposer->show();
+// If the given global Lua table does not exist, create it. Returns
+// false if the table was unable to be created.
+static bool ensureTableExists(lua_State* L, const char* table) {
+    lua_getglobal(L, table); //defined in Lua init
+    if (!lua_istable(L, -1)) {
+        lua_newtable(L);
+        lua_setglobal(L, table);
+        lua_getglobal(L, table);
+        if (!lua_istable(L, -1)) {
+            qDebug() << "ERROR: could not create table '" << table << "'";
+            return false;
         }
     }
+    return true;
+}
+
+void TLuaInterpreter::setGMCPTable(QString& key, const QString& json)
+{
+    static const char gmcp_table[] = "gmcp";
+    if (!ensureTableExists(pGlobalLua, gmcp_table)) {
+        return;
+    }
+    updateOOBTableAndRaiseEvent(key, json, QString(gmcp_table));
+}
+
+void TLuaInterpreter::raiseInlineGMCPEvent(QString& key, const QString& json)
+{
+    QStringList tokenList = key.split(".");
+    raiseProtocolEvent(key, json, "inline-gmcp", tokenList);
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::setMSDPTable(QString& key, const QString& json)
+{
+    static const char msdp_table[] = "msdp";
+    if (!ensureTableExists(pGlobalLua, msdp_table)) {
+        return;
+    }
+    updateOOBTableAndRaiseEvent(key, json, QString(msdp_table));
+}
+
+void TLuaInterpreter::updateOOBTableAndRaiseEvent(
+    QString& key, const QString& json, const QString& protocol)
+{
+    // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
+    lua_State* L = pGlobalLua;
+    QStringList tokenList = key.split(".");
+    if (!lua_checkstack(L, tokenList.size() + 5)) {
+        return;
+    }
+    setOOBTable(key, json, tokenList);
+    raiseProtocolEvent(key, json, protocol, tokenList);
     lua_pop(L, lua_gettop(L));
 }
 
@@ -12950,6 +12991,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName);
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
     lua_register(pGlobalLua, "setGridMode", TLuaInterpreter::setGridMode);
+    lua_register(pGlobalLua, "getGridMode", TLuaInterpreter::getGridMode);
     lua_register(pGlobalLua, "solveRoomCollisions", TLuaInterpreter::solveRoomCollisions);
     lua_register(pGlobalLua, "addSpecialExit", TLuaInterpreter::addSpecialExit);
     lua_register(pGlobalLua, "removeSpecialExit", TLuaInterpreter::removeSpecialExit);
@@ -13109,21 +13151,23 @@ void TLuaInterpreter::initLuaGlobals()
     QString n;
     int error;
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#endif
-#ifdef Q_OS_MAC
+#elif defined(Q_OS_MAC)
     //macOS app bundle would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#endif
-#ifdef Q_OS_WIN32
-    //Windows Qt Creator builds with our SDK install the library into a well known directory
-    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+#elif defined(Q_OS_WIN32)
+    //Windows Qt Creator builds with our SDK install the library into a well
+    //known directory - but other possiblities might exist for those hacking
+    //around...
+    // When we were using an older Qt provided mingw:
+    // luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw492_32\lib\lua\5.1\?.dll]])");
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw530_32\lib\lua\5.1\?.dll]])");
 #endif
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");

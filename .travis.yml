@@ -6,7 +6,7 @@ sudo: false
 addons:
   apt:
     sources: &add-sources
-    - sourceline: 'ppa:beineri/opt-qt562-trusty'
+    - sourceline: 'ppa:beineri/opt-qt571-trusty'
     - sourceline: 'ppa:beineri/opt-qt593-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:jonathonf/php7'
@@ -27,23 +27,11 @@ addons:
     - lua-sql-sqlite3
     - libpugixml-dev
 env:
-#  matrix:
-#  - Q_OR_C_MAKE=cmake
-#    QT_VERSION=59
-#    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
-#  - Q_OR_C_MAKE=qmake
-#    QT_VERSION=59
-#    WITH_FONTS=NO # actually Qt 5.9, non-default without fonts
-#  - Q_OR_C_MAKE=cmake
-#    QT_VERSION=59
-#    WITH_UPDATER=NO # actually Qt 5.9, non-default without updater
-#  - Q_OR_C_MAKE=qmake
-#    QT_VERSION=59
-#    WITH_UPDATER=NO # actually Qt 5.9, non-default without updater
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
   - secure: XxdhHVraWpXpWo4tluD7NwJtqQT1b6LKoxX6QWKzR0fvcKgqBy2jlXMu0KVtTYtVI7M1wFdjtwSixK1UGFZyDgEYYUnDTufq7E81TWJSQ5ZhxNRaDAyO2vkLNFpH7LkwVrV/fWCPKE9t3/WiowwQnXesm9MMxAzbd2mIaeyiccY=
   - secure: mi62VU0KxOahOaYulrqDiow3SscJPug842vhnuXzfjJ5AJU5V5gAcvECL85gQIPx5W3dXoNJnHdBUi9jOhnE3tuTML67oiieoVEmZfFF2pXtnHsdFlvzFtcGcmT+cVGF7GVyItlVLa5LcLJw6SNd3C3Dhib/Lu1cb/NdsFn0sZc=
+  - secure: CaZAZW5shaYve0gauA0rdRn/Bxdf5itfAFb7FuaOHmk999AQ/aB013huCcdeeBDhon2CxQ3BRLTkRzHR00DBA7rPgR1Y/4/kHa71xisUY7CqDlHYktQI69CpqGot2Bb1eE2Rs7ZQcYKhfMbMJacE6zNBZwUq0I0OWI1Ux3PKkJs=
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
 matrix:
@@ -53,6 +41,7 @@ matrix:
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
+
   - os: osx
     osx_image: xcode8
     compiler: clang
@@ -63,7 +52,7 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=qmake
-    - QT_VERSION=59
+      QT_VERSION=59
     addons:
       apt:
         sources: *add-sources
@@ -74,49 +63,54 @@ matrix:
         - qt59tools
         - qt59gamepad
         - qt59speech
+
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-    - QT_VERSION=59
+      QT_VERSION=59
     addons:
       apt:
         sources: *add-sources
         packages:
         - *qt59-packages
+
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
-    - QT_VERSION=59
+      QT_VERSION=59
     addons:
       apt:
         sources: *add-sources
         packages:
         - *qt59-packages
+
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
-    - QT_VERSION=59
+      QT_VERSION=59
     addons:
       apt:
         sources: *add-sources
         packages:
         - *qt59-packages
+
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-    - QT_VERSION=56 # actually Qt 5.6, used to check minimum supported Qt works
+    - QT_VERSION=57 # actually Qt 5.7, used to check minimum supported Qt works
     addons:
       apt:
         sources: *add-sources
-        packages: &qt56-packages
+        packages: &qt57-packages
         - *common-packages
-        - qt56base
-        - qt56multimedia
-        - qt56tools
+        - qt57base
+        - qt57multimedia
+        - qt57tools
+
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-; fi
   # add to the path here to pick up things as soon as its installed

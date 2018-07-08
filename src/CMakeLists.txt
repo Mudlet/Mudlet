@@ -332,7 +332,7 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
+find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 
 # This is not present before Qt 5.7:
 find_package(Qt5 COMPONENTS Gamepad QUIET)
@@ -340,8 +340,8 @@ find_package(Qt5 COMPONENTS Gamepad QUIET)
 # This is not present before Qt 5.9:
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.6)
-  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+if (Qt5Core_VERSION VERSION_LESS 5.7)
+  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later, yours is ${Qt5Core_VERSION}")
 elif(Qt5Core_VERSION VERSION_LESS 5.9)
   # Qt Gamepad was a Technology Preview in 5.7
   # Qt Gamepad was a Technology Preview 2 in 5.8
