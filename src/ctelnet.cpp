@@ -1198,6 +1198,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
         mpProgressDialog->show();
         return;
     }
+
+    mudDataChunks.push({DataChunkType::GMCP, msg.toStdString(), false});
     arg.remove('\n');
     // remove \r's from the data, as yajl doesn't like it
     arg.remove(QChar('\r'));
@@ -1393,42 +1395,39 @@ void cTelnet::postMessage(QString msg)
 
 //forward data for further processing
 
+// Patch for servers that need GA/EOR for prompt fixups
+void cTelnet::applyGAFix()
+{
+    int j = 0;
+    int s = mMudData.size();
+    while (j < s) {
+        // search for leading <LF> but skip leading ANSI control sequences
+        if (mMudData[j] == 0x1B) {
+            while (j < s) {
+                if (mMudData[j] == 'm') {
+                    goto NEXT;
+                    break;
+                }
+                j++;
+            }
+        }
+        if (mMudData[j] == '\n') {
+            mMudData.erase(j, 1);
+            break;
+        } else {
+            break;
+        }
+    NEXT:
+        j++;
+    }
+}
 
-void cTelnet::gotPrompt(string& mud_data)
+void cTelnet::processPromptChunk(string& mud_data)
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
-
     if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        //////////////////////////////////////////////////////////////////////
-        //
-        // Patch for servers that need GA/EOR for prompt fixups
-        //
-
-        int j = 0;
-        int s = mMudData.size();
-        while (j < s) {
-            // search for leading <LF> but skip leading ANSI control sequences
-            if (mMudData[j] == 0x1B) {
-                while (j < s) {
-                    if (mMudData[j] == 'm') {
-                        goto NEXT;
-                        break;
-                    }
-                    j++;
-                }
-            }
-            if (mMudData[j] == '\n') {
-                mMudData.erase(j, 1);
-                break;
-            } else {
-                break;
-            }
-        NEXT:
-            j++;
-        }
-        //
-        ////////////////////////////
+        applyGAFix();
     }
 
     postData();
@@ -1436,11 +1435,12 @@ void cTelnet::gotPrompt(string& mud_data)
     mIsTimerPosting = false;
 }
 
-void cTelnet::gotRest(string& mud_data)
+void cTelnet::processChunk(string& mud_data)
 {
     if (mud_data.empty()) {
         return;
     }
+
     if (!mGA_Driver) {
         size_t i = mud_data.rfind('\n');
         if (i != string::npos) {
@@ -1461,16 +1461,13 @@ void cTelnet::gotRest(string& mud_data)
             }
         }
 
-    } else if (mGA_Driver) {
-        mMudData += mud_data;
-        postData();
-        mMudData = "";
     } else {
         mMudData += mud_data;
-        if (!mIsTimerPosting) {
-            mpPostingTimer->start();
-            mIsTimerPosting = true;
+        if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
+            applyGAFix();
         }
+        postData();
+        mMudData = "";
     }
 }
 
@@ -1534,17 +1531,6 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         qDebug() << "Listening for new compression sequences";
         return -1;
     }
-    /* TODO: Remove this commented code once it is deemed safe. -MH
-	   else
-	   {
-	    if( zval <= 0 )
-	    {
-	        initStreamDecompressor();
-	        qDebug() << "Listening for new compression sequences";
-	        return -1;
-	    }
-	   }
-	 */
     return outSize;
 }
 
@@ -1650,6 +1636,8 @@ void cTelnet::slot_processReplayChunk()
                 //4. IAC DO/DONT/WILL/WONT <command code>
                 iac2 = false;
                 command += ch;
+                mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
+                cleandata = "";
                 processTelnetCommand(command);
                 command = "";
             } else if (iac && (!insb) && (ch == TN_SB)) {
@@ -1666,6 +1654,8 @@ void cTelnet::slot_processReplayChunk()
                 command += ch;
                 if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
                 {
+                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
+                    cleandata = "";
                     processTelnetCommand(command);
                     command = "";
                     iac = false;
@@ -1681,6 +1671,8 @@ void cTelnet::slot_processReplayChunk()
             {
                 iac = false;
                 command += ch;
+                mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
+                cleandata = "";
                 processTelnetCommand(command);
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
@@ -1704,14 +1696,12 @@ void cTelnet::slot_processReplayChunk()
                 cleandata.push_back('\n'); //part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
             }
             recvdGA = false;
-            gotPrompt(cleandata);
+            mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), true});
             cleandata = "";
         }
     } //for
 
-    if (!cleandata.empty()) {
-        gotRest(cleandata);
-    }
+    processChunks();
 
     mpHost->mpConsole->finalize();
     if (loadingReplay) {
@@ -1780,6 +1770,8 @@ void cTelnet::handle_socket_signal_readyRead()
                     //4. IAC DO/DONT/WILL/WONT <command code>
                     iac2 = false;
                     command += ch;
+                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
+                    cleandata = "";
                     processTelnetCommand(command);
                     command = "";
                 } else if (iac && (!insb) && (ch == TN_SB)) {
@@ -1814,7 +1806,7 @@ void cTelnet::handle_socket_signal_readyRead()
                                 if (_compress) {
                                     mNeedDecompression = true;
                                     // from this position in stream onwards, data will be compressed by zlib
-                                    gotRest(cleandata);
+                                    processChunk(cleandata);
                                     cleandata = "";
                                     initStreamDecompressor();
                                     buffer += i + 3; //bugfix: BenH
@@ -1842,6 +1834,8 @@ void cTelnet::handle_socket_signal_readyRead()
                     command += ch;
                     if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
                     {
+                        mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
+                        cleandata = "";
                         processTelnetCommand(command);
                         command = "";
                         iac = false;
@@ -1857,6 +1851,8 @@ void cTelnet::handle_socket_signal_readyRead()
                 {
                     iac = false;
                     command += ch;
+                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
+                    cleandata = "";
                     processTelnetCommand(command);
                     //this could have set receivedGA to true; we'll handle that later
                     command = "";
@@ -1883,7 +1879,7 @@ void cTelnet::handle_socket_signal_readyRead()
                     }
                     cleandata.push_back('\xff');
                     recvdGA = false;
-                    gotPrompt(cleandata);
+                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), true});
                     cleandata = "";
                 } else {
                     if (mLF_ON_GA) //TODO: reenable option in preferences
@@ -1895,11 +1891,38 @@ void cTelnet::handle_socket_signal_readyRead()
         } //for
     } while (datalen == 100000);
 
-    if (!cleandata.empty()) {
-        gotRest(cleandata);
-    }
+    processChunks();
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();
+}
+
+void cTelnet::processChunks()
+{
+    while (!mudDataChunks.empty()) {
+        auto& chunk = mudDataChunks.front();
+        if (chunk.type == DataChunkType::GMCP) {
+            QString data = QString::fromStdString(chunk.data);
+            QString var;
+            QString arg;
+            if (data.indexOf('\n') > -1) {
+                var = data.section(QChar::LineFeed, 0, 0);
+                arg = data.section(QChar::LineFeed, 1);
+            } else {
+                var = data.section(QChar::Space, 0, 0);
+                arg = data.section(QChar::Space, 1);
+            }
+            arg.remove('\n');
+            arg.remove(QChar('\r'));
+            mpHost->mLuaInterpreter.raiseInlineGMCPEvent(var, arg);
+        } else if (chunk.type == DataChunkType::IN_BAND) {
+            if (chunk.ends_with_prompt) {
+                processChunk(chunk.data);
+            } else {
+                processPromptChunk(chunk.data);
+            }
+        }
+        mudDataChunks.pop();
+    }
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
