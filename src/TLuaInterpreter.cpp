@@ -665,7 +665,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 {
     int ansiFg;
 
-    std::string window = "main";
+    std::string windowName = "main";
 
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "isAnsiBgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -676,7 +676,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
-    result = host.mpConsole->getBgColor(window);
+    result = host.mpConsole->getBgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
         return 0;
@@ -817,7 +817,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     string windowName = "main";
     if (lua_gettop(L)) {
         if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, "wrapLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "wrapLine: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, 1));
             return lua_error(L);
         } else {
             windowName = lua_tostring(L, s);
@@ -827,7 +827,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
 
     int lineNumber;
     if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "wrapLine: bad argument #2 type (line as number expected, got %s!)", luaL_typename(L, s));
+        lua_pushfstring(L, "wrapLine: bad argument #%d type (line as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         lineNumber = lua_tointeger(L, s);
@@ -963,20 +963,20 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
-    string window = "";
+    string windowName = "";
     if (lua_gettop(L) == 0) {
-        window = "main";
+        windowName = "main";
     } else {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getCurrentLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
-            window = lua_tostring(L, 1);
+            windowName = lua_tostring(L, 1);
         }
     }
 
     Host& host = getHostFromLua(L);
-    QString line = host.mpConsole->getCurrentLine(window);
+    QString line = host.mpConsole->getCurrentLine(windowName);
     lua_pushstring(L, line.toUtf8().constData());
     return 1;
 }
