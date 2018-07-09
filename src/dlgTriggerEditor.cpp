@@ -607,7 +607,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     if (mAutosaveInterval > 0) {
 #if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
-        startTimer(mAutosaveInterval * 1000);
+        startTimer(mAutosaveInterval * 1000 * 60);
 #else
         startTimer(mAutosaveInterval * 1min);
 #endif
@@ -6335,7 +6335,7 @@ void dlgTriggerEditor::timerEvent(QTimerEvent *event)
 
 void dlgTriggerEditor::autoSave()
 {
-    mpHost->saveProfile(nullptr, QStringLiteral("autosave"));
+    mpHost->saveProfile(QString(), QStringLiteral("autosave"));
 }
 
 void dlgTriggerEditor::enterEvent(QEvent* pE)
