@@ -1356,7 +1356,8 @@ void TTrigger::execute()
             // if the trigger is a temporary expiring one,
             // don't expire if it returned true
             auto result = mpLua->callLuaFunctionReturnBool(this);
-            if (result.second) {
+            // if the function ran okay and returned true, it wants to extend the expiry count
+            if (result.first && result.second) {
                 mExpiryCount++;
             }
         }

@@ -11741,9 +11741,16 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 }
 
 // No documentation available in wiki - internal function
+// returns true if function ran without errors
+// as well as the boolean return value from the function
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 {
     lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return make_pair(false, false);
+    }
+
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
     bool returnValue = false;
@@ -11780,7 +11787,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         if (error == 0) {
             return make_pair(true, returnValue);
         } else {
-            return make_pair(true, returnValue);
+            return make_pair(false, returnValue);
         }
     } else {
         QString _n = "error in anonymous Lua function";
@@ -11816,7 +11823,6 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
     }
 
     lua_getglobal(L, function.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
@@ -11869,7 +11875,6 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     }
 
     lua_getglobal(L, function.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
@@ -12005,7 +12010,6 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     }
 
     lua_getglobal(L, function.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
@@ -12062,7 +12066,6 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     }
 
     lua_getglobal(L, function.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
