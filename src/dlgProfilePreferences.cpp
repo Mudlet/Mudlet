@@ -184,8 +184,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                           .arg("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
                                                "shown icons on menus, others, however do not. This control allows the user to override "
                                                "the setting, if needed, as follows:"
-                                               "<ul><li><b>Unchecked</b> '<i>off</i>' = Force menus to be drawn without icons.</li>"
-                                               "<li><b>Checked</b> '<i>on</i>' = Force menus to be drawn with icons.</li>"
+                                               "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
+                                               "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
                                                "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                                "<p><i>This setting is only processed when individual menus are created and changes may not "
                                                "propogate everywhere until Mudlet is restarted.</i></p>"));
