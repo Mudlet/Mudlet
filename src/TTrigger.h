@@ -184,7 +184,7 @@ private:
     QColor mBgColor;
     bool mIsColorizerTrigger;
     bool mModuleMember;
-    // -1: don't self-destruct, 0: delete, 1+: number of times it can still match
+    // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
     int mExpiryCount;
 };
 

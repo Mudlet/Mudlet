@@ -5703,7 +5703,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     int triggerID;
-    int expiryCount = -1;
+    int expirationCount = -1;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #1 type (exact match pattern as string expected, got %s!)", luaL_typename(L, 1));
@@ -5712,19 +5712,19 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
     QString exactMatchPattern = QString::fromUtf8(lua_tostring(L, 1));
 
     if (lua_isnumber(L, 3)) {
-        expiryCount = lua_tonumber(L, 3);
+        expirationCount = lua_tonumber(L, 3);
 
-        if (expiryCount < 1) {
+        if (expirationCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expirationCount);
             return 2;
         }
     }
 
     if (lua_isstring(L, 2)) {
-        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString::fromUtf8(lua_tostring(L, 2)), expiryCount);
+        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString::fromUtf8(lua_tostring(L, 2)), expirationCount);
     } else if (lua_isfunction(L, 2)) {
-        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(), expiryCount);
+        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(), expirationCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5759,7 +5759,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
@@ -5803,7 +5803,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 3);
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
@@ -5840,7 +5840,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
@@ -5890,7 +5890,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
@@ -5938,7 +5938,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
@@ -6050,7 +6050,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
@@ -6303,7 +6303,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiry count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
@@ -11732,7 +11732,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
         }
     } else {
         QString _n = "error in anonymous Lua function";
-        QString _n2 = "func reference not found by Lua, func can not be called";
+        QString _n2 = "func reference not found by Lua, func cannot be called";
         string e = "Lua error:";
         logError(e, _n, _n2);
     }
@@ -11791,7 +11791,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         }
     } else {
         QString _n = "error in anonymous Lua function";
-        QString _n2 = "func reference not found by Lua, func can not be called";
+        QString _n2 = "func reference not found by Lua, func cannot be called";
         string e = "Lua error:";
         logError(e, _n, _n2);
     }

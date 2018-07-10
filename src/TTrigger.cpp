@@ -1010,7 +1010,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                     TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 expired.\n").arg(mName) >> 0;
                 }
             } else if (mudlet::debugMode) {
-                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 has %n match(es) left.\n", "", mExpiryCount).arg(mName) >> 0;
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 will fire %n more time(s).\n", "", mExpiryCount).arg(mName) >> 0;
             }
         }
 
