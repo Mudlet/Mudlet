@@ -82,7 +82,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
       <source>[MOTD] %1%2</source>
-      <translation type="unfinished"/>
+      <translation>[MOTD] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
@@ -119,7 +119,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
@@ -129,13 +129,13 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
       <location filename="../src/ircmessageformatter.cpp" line="314"/>
       <source>[ERROR] %1</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
@@ -423,12 +423,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2684"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation>Vermindere den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
+      <translation>Verringere den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2688"/>
       <source>Lock room for speed walks</source>
-      <translation>Sperre den Raum für Schnellgänge</translation>
+      <translation>Sperre den Raum für Schnellreisen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
@@ -563,7 +563,8 @@ den markierten Raum (%1), verschieben nach:</translation>
       <location filename="../src/T2DMap.cpp" line="3359"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>Wähle das Symbol, das für diesen Raum zu verwenden ist:</numerusform>
         <numerusform>Wähle das Symbol, das für diese Räume zu verwenden ist:</numerusform>
       </translation>
     </message>
@@ -888,7 +889,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="122"/>
       <source>Non Debug Console</source>
-      <translation>Nicht Debug-Konsole</translation>
+      <translation>Konsole</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="374"/>
