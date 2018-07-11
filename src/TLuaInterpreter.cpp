@@ -5702,6 +5702,8 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    int triggerID;
+    int expirationCount = -1;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #1 type (exact match pattern as string expected, got %s!)", luaL_typename(L, 1));
@@ -5709,11 +5711,20 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
     }
     QString exactMatchPattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    int triggerID;
+    if (lua_isnumber(L, 3)) {
+        expirationCount = lua_tonumber(L, 3);
+
+        if (expirationCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expirationCount);
+            return 2;
+        }
+    }
+
     if (lua_isstring(L, 2)) {
-        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString::fromUtf8(lua_tostring(L, 2)));
+        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString::fromUtf8(lua_tostring(L, 2)), expirationCount);
     } else if (lua_isfunction(L, 2)) {
-        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString());
+        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(), expirationCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5734,6 +5745,8 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    int triggerID;
+    int expiryCount = -1;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #1 type (pattern as string expected, got %s!)", luaL_typename(L, 1));
@@ -5741,11 +5754,20 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
     }
     QString pattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    int triggerID;
+        if (lua_isnumber(L, 3)) {
+        expiryCount = lua_tonumber(L, 3);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    }
+
     if (lua_isstring(L, 2)) {
-        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString::fromUtf8(lua_tostring(L, 2)));
+        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString::fromUtf8(lua_tostring(L, 2)), expiryCount);
     } else if (lua_isfunction(L, 2)) {
-        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString());
+        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5768,17 +5790,28 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     QString substringPattern;
+    int triggerID;
+    int expiryCount = -1;
+
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempTrigger: bad argument #1 type (substring pattern as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     substringPattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    int triggerID;
+    if (lua_isnumber(L, 3)) {
+        expiryCount = lua_tonumber(L, 3);
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    }
+
     if (lua_isstring(L, 2)) {
-        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString::fromUtf8(lua_tostring(L, 2)));
+        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString::fromUtf8(lua_tostring(L, 2)), expiryCount);
     } else if (lua_isfunction(L, 2)) {
-        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString());
+        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5800,10 +5833,22 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     int triggerID;
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 2)) {
+        expiryCount = lua_tonumber(L, 2);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    }
+
     if (lua_isstring(L, 1)) {
-        triggerID = pLuaInterpreter->startTempPromptTrigger(QString::fromUtf8(lua_tostring(L, 1)));
+        triggerID = pLuaInterpreter->startTempPromptTrigger(QString::fromUtf8(lua_tostring(L, 1)), expiryCount);
     } else if (lua_isfunction(L, 1)) {
-        triggerID = pLuaInterpreter->startTempPromptTrigger(QString());
+        triggerID = pLuaInterpreter->startTempPromptTrigger(QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5837,11 +5882,23 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     }
     int backgroundColor = lua_tointeger(L, 2);
 
-    int triggerID;
+    int triggerID;    
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 4)) {
+        expiryCount = lua_tonumber(L, 4);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    }
+
     if (lua_isstring(L, 3)) {
-        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString::fromUtf8(lua_tostring(L, 3)));
+        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString::fromUtf8(lua_tostring(L, 3)), expiryCount);
     } else if (lua_isfunction(L, 3)) {
-        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString());
+        triggerID = pLuaInterpreter->startTempColorTrigger(foregroundColor, backgroundColor, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5874,10 +5931,22 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     int from = lua_tointeger(L, 1);
     int howMany = lua_tointeger(L, 2);
     int triggerID;
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 4)) {
+        expiryCount = lua_tonumber(L, 4);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    }
+
     if (lua_isstring(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString::fromUtf8(lua_tostring(L, 3)));
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString::fromUtf8(lua_tostring(L, 3)), expiryCount);
     } else if (lua_isfunction(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString());
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -5974,6 +6043,18 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     int fireLength = lua_tonumber(L, 12);
     int lineDelta = lua_tonumber(L, 13);
 
+    int expiryCount = -1;
+
+    if (lua_isnumber(L, 14)) {
+        expiryCount = lua_tonumber(L, 14);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    }
+
     QString pattern = QString::fromUtf8(lua_tostring(L, 2));
     QStringList regexList;
     QList<int> propertyList;
@@ -6005,6 +6086,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         pT->setSound(soundFile);
     }
     pT->setIsColorizerTrigger(highlight); //highlight
+    pT->setExpiryCount(expiryCount);
     if (highlight) {
         pT->setFgColor(hlFgColor);
         pT->setBgColor(hlBgColor);
@@ -6207,6 +6289,8 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    int triggerID;
+    int expiryCount = -1;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #1 type (regex pattern as string expected, got %s!)", luaL_typename(L, 1));
@@ -6214,11 +6298,20 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     }
     QString regexPattern = QString::fromUtf8(lua_tostring(L, 1));
 
-    int triggerID;
+    if (lua_isnumber(L, 3)) {
+        expiryCount = lua_tonumber(L, 3);
+
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    }
+
     if (lua_isstring(L, 2)) {
-        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString::fromUtf8(lua_tostring(L, 2)));
+        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString::fromUtf8(lua_tostring(L, 2)), expiryCount);
     } else if (lua_isfunction(L, 2)) {
-        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString());
+        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -11680,12 +11773,71 @@ bool TLuaInterpreter::call_luafunction(void* pT)
         }
     } else {
         QString _n = "error in anonymous Lua function";
-        QString _n2 = "func reference not found by Lua, func can not be called";
+        QString _n2 = "func reference not found by Lua, func cannot be called";
         string e = "Lua error:";
         logError(e, _n, _n2);
     }
 
     return false;
+}
+
+// No documentation available in wiki - internal function
+// returns true if function ran without errors
+// as well as the boolean return value from the function
+std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return make_pair(false, false);
+    }
+
+    lua_pushlightuserdata(L, pT);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    bool returnValue = false;
+
+    if (lua_isfunction(L, -1)) {
+        int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+        if (error != 0) {
+            int nbpossible_errors = lua_gettop(L);
+            for (int i = 1; i <= nbpossible_errors; i++) {
+                string e = "";
+                if (lua_isstring(L, i)) {
+                    e = "Lua error:";
+                    e += lua_tostring(L, i);
+                    QString _n = "error in anonymous Lua function";
+                    QString _n2 = "no debug data available";
+                    logError(e, _n, _n2);
+                    if (mudlet::debugMode) {
+                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> 0;
+                    }
+                }
+            }
+        } else {
+            auto index = lua_gettop(L);
+            if (lua_isboolean(L, index)) {
+                returnValue = lua_toboolean(L, index);
+            }
+
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK anonymous Lua function ran without errors\n" >> 0;
+            }
+        }
+        lua_pop(L, lua_gettop(L));
+        //lua_settop(L, 0);
+        if (error == 0) {
+            return make_pair(true, returnValue);
+        } else {
+            return make_pair(false, returnValue);
+        }
+    } else {
+        QString _n = "error in anonymous Lua function";
+        QString _n2 = "func reference not found by Lua, func cannot be called";
+        string e = "Lua error:";
+        logError(e, _n, _n2);
+    }
+
+    return make_pair(false, false);
 }
 
 // No documentation available in wiki - internal function
@@ -11712,7 +11864,6 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
     }
 
     lua_getglobal(L, function.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
@@ -11738,6 +11889,64 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
         return false;
     }
 }
+
+// No documentation available in wiki - internal function
+std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return make_pair(false, false);
+    }
+
+    bool returnValue = false;
+
+    if (!mCaptureGroupList.empty()) {
+        lua_newtable(L);
+
+        // set values
+        int i = 1; // Lua indexes start with 1 as a general convention
+        for (auto it = mCaptureGroupList.begin(); it != mCaptureGroupList.end(); it++, i++) {
+            //if( (*it).length() < 1 ) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
+            lua_pushnumber(L, i);
+            lua_pushstring(L, (*it).c_str());
+            lua_settable(L, -3);
+        }
+        lua_setglobal(L, "matches");
+    }
+
+    lua_getglobal(L, function.toUtf8().constData());
+    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                logError(e, mName, function);
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> 0;
+                }
+            }
+        }
+    } else {
+        auto index = lua_gettop(L);
+        if (lua_isboolean(L, index)) {
+            returnValue = lua_toboolean(L, index);
+        }
+
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+    if (error == 0) {
+        return make_pair(true, returnValue);
+    } else {
+        return make_pair(false, returnValue);
+    }
+}
+
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::logError(std::string& e, const QString& name, const QString& function)
@@ -11842,7 +12051,6 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     }
 
     lua_getglobal(L, function.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, function.toUtf8().constData());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
@@ -11866,6 +12074,67 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         return true;
     } else {
         return false;
+    }
+}
+
+// No documentation available in wiki - internal function
+std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return make_pair(false, false);
+    }
+
+    bool returnValue = false;
+
+    if (!mMultiCaptureGroupList.empty()) {
+        int k = 1;       // Lua indexes start with 1 as a general convention
+        lua_newtable(L); //multimatches
+        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
+            // multimatches{ trigger_idx{ table_matches{ ... } } }
+            lua_pushnumber(L, k);
+            lua_newtable(L); //regex-value => table matches
+            int i = 1;       // Lua indexes start with 1 as a general convention
+            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
+                lua_pushnumber(L, i);
+                lua_pushstring(L, (*it).c_str());
+                lua_settable(L, -3); //match in matches
+            }
+            lua_settable(L, -3); //matches in regex
+        }
+        lua_setglobal(L, "multimatches");
+    }
+
+    lua_getglobal(L, function.toUtf8().constData());
+    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                logError(e, mName, function);
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> 0;
+                }
+            }
+        }
+    } else {
+        auto index = lua_gettop(L);
+        if (lua_isboolean(L, index)) {
+            returnValue = lua_toboolean(L, index);
+        }
+
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+    if (error == 0) {
+        return make_pair(true, returnValue);
+    } else {
+        return make_pair(false, returnValue);
     }
 }
 
@@ -12979,7 +13248,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, QString& function
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -12994,11 +13263,12 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -13013,11 +13283,12 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -13032,11 +13303,12 @@ int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& funct
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempPromptTrigger(const QString& function)
+int TLuaInterpreter::startTempPromptTrigger(const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList = {QString()};
@@ -13049,11 +13321,12 @@ int TLuaInterpreter::startTempPromptTrigger(const QString& function)
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& function)
+int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     //    QStringList sList;
@@ -13071,11 +13344,12 @@ int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& 
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& function)
+int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     //    QStringList sList;
@@ -13092,11 +13366,12 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function)
+int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT;
     QStringList sList;
@@ -13112,6 +13387,7 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
     pT->setScript(function);
     int id = pT->getID();
     pT->setName(QString::number(id));
+    pT->setExpiryCount(expiryCount);
     return id;
 }
 
