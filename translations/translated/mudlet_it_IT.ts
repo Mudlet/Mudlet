@@ -695,110 +695,110 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="63"/>
       <source>ISO 8859-2 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-2 (Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="82"/>
       <location filename="../src/TBuffer.cpp" line="367"/>
       <source>ISO 8859-3 (South European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-3 (South European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="101"/>
       <source>ISO 8859-4 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-4 (Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="120"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-5 (Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="139"/>
       <source>ISO 8859-6 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-6 (Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="158"/>
       <source>ISO 8859-7 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-7 (Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="177"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-8 (Hebrew Visual)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="196"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-9 (Turkish)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="215"/>
       <source>ISO 8859-10 (Nordic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-10 (Nordic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="234"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-11 (Latin/Thai)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="253"/>
       <source>ISO 8859-13 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-13 (Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="272"/>
       <source>ISO 8859-14 (Celtic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-14 (Celtic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="291"/>
       <source>ISO 8859-15 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-15 (Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="310"/>
       <source>ISO 8859-16 (Romanian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-16 (Romanian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="329"/>
       <source>CP850 (Western Europe)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP850 (Western Europe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="348"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP866 (Cyrillic/Russian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="386"/>
       <source>KOI8-R (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-R (Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="405"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-U (Cyrillic/Ukrainian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="424"/>
@@ -810,55 +810,55 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="443"/>
       <source>WINDOWS-1250 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1250 (Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="462"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1251 (Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="481"/>
       <source>WINDOWS-1252 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1252 (Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="500"/>
       <source>WINDOWS-1253 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1253 (Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="519"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1254 (Turkish)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="538"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1255 (Hebrew)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="557"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1256 (Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="576"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1257 (Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="595"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (Vietnamese)</translation>
     </message>
   </context>
   <context>
@@ -866,12 +866,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="106"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Console di Debug</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="122"/>
       <source>Non Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Console</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="374"/>
@@ -1354,7 +1354,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2016"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>ID Area: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
@@ -1364,12 +1364,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
       <source>Room id: %1</source>
-      <translation type="unfinished"/>
+      <translation>ID Stanza: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2044"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Fine Rapporto</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2050"/>
@@ -1425,7 +1425,7 @@ imported at user request.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2210"/>
       <source>Map import</source>
-      <translation type="unfinished"/>
+      <translation>Importa mappa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2237"/>
@@ -1762,7 +1762,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="32"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Area Senza Nome</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="33"/>
@@ -1772,7 +1772,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="500"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>L'area con ID=%1 esiste già!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="519"/>
@@ -2082,12 +2082,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/updater.cpp" line="153"/>
       <location filename="../src/updater.cpp" line="215"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Aggiorna</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="307"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>Riavvia per aggiornare</translation>
     </message>
   </context>
   <context>
@@ -2141,7 +2141,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>Licenza</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
@@ -2154,7 +2154,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
@@ -2174,12 +2174,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>Orizzontale</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="155"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>Verticale</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
@@ -2219,12 +2219,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
       <source>90° rotation to the left</source>
-      <translation type="unfinished"/>
+      <translation>Ruota 90° a sinistra</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="241"/>
       <source>90° rotation to the right</source>
-      <translation type="unfinished"/>
+      <translation>Ruota 90° a destra</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
@@ -2234,7 +2234,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
@@ -2287,7 +2287,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="124"/>
       <source>Regex</source>
-      <translation type="unfinished"/>
+      <translation>Regex</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="129"/>
@@ -2297,7 +2297,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
@@ -2404,57 +2404,57 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Ciano:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Bianco:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Giallo:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Nero chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Rosso chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Verde chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Giallo chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blu chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Ciano chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Bianco chiaro:</translation>
     </message>
   </context>
   <context>
@@ -2467,7 +2467,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="114"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Annulla</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="127"/>
@@ -2494,7 +2494,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2063"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Elimina</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2092"/>
@@ -2541,7 +2541,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Indirizzo server:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2280"/>
@@ -2566,7 +2566,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2369"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>Opzionale</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2375"/>
@@ -2586,7 +2586,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2399"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Password del personaggio. NOTA: la password è salvata in chiaro</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2409"/>
@@ -2634,7 +2634,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Colore:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="77"/>
@@ -2644,7 +2644,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="105"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>Termina con una freccia:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="138"/>
@@ -2659,12 +2659,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="194"/>
       <source>Destination:</source>
-      <translation type="unfinished"/>
+      <translation>Destinazione:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="232"/>
       <source>    Direction/Command:</source>
-      <translation type="unfinished"/>
+      <translation>    Direzione/Comando:</translation>
     </message>
   </context>
   <context>
@@ -2697,17 +2697,17 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>Termina con una freccia:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Stile:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Colore:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
@@ -2813,7 +2813,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
       <source> Command</source>
-      <translation type="unfinished"/>
+      <translation> Comando</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -3038,60 +3038,64 @@ Count</source>
       <source>Please enter the URL or IP address of the MUD server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Inserire l'URL o l'indirizzo IP del server del MUD.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="223"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
-      <translation type="unfinished"/>
+      <translation>Devi inserire un numero. Non sono consentiti altri caratteri.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="250"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="280"/>
       <source>This character is not permitted. Use one of the following:
 &quot;%1&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Questo carattere non è consentito. Utilizzare uno dei seguenti:
+&quot;%1&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="291"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Questo nome profilo è già in uso.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="342"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>Non è possibile rinominare il tuo profilo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="350"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Non è possibile creare la cartella per il nuovo profilo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="446"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>nome profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="543"/>
       <source>Deleting &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Cancella &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="946"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="960"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Questo profilo è attualmente caricato - devi disconnetterti prima di cambiare i parametri di connessione.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1576"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Inserire il nome del profilo, l'indirizzo del server e la porta di connessione prima di collegarti.</translation>
     </message>
   </context>
   <context>
@@ -3109,17 +3113,17 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="127"/>
       <source>$ Starting Mudlet IRC Client...</source>
-      <translation type="unfinished"/>
+      <translation>$ Avvio Mudlet IRC Client...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="128"/>
       <source>$ Host: %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>$ Server: %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="129"/>
       <source>$ Nick: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Nickname: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="130"/>
@@ -3139,12 +3143,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="191"/>
       <source>Restarting IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Riavvio IRC Client</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="360"/>
       <source>[HELP] Available Commands: %1</source>
-      <translation type="unfinished"/>
+      <translation>[AIUTO] Comandi Disponibili: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="362"/>
@@ -3184,12 +3188,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="589"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation type="unfinished"/>
+      <translation>! Il Nickname %1 è riservato. Il tuo nuovo Nickname è: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="601"/>
       <source>Your nick has changed.</source>
-      <translation type="unfinished"/>
+      <translation>Il tuo Nickname è cambiato.</translation>
     </message>
   </context>
   <context>
@@ -3236,7 +3240,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasti</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="51"/>
@@ -3298,7 +3302,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="126"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Gli aggiornamenti automatici sono disattivati nelle versioni di sviluppo per evitare che un aggiornamento sovrascriva Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="142"/>
@@ -3443,12 +3447,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1680"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Backup mappa - attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1690"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>Non è possibile fare il backup della mappa - salvataggio fallito.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1715"/>
@@ -3468,32 +3472,32 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1737"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mappa copiata nel profilo %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1749"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>Mappa copiata, segnalo agli altri profili di ricaricarla.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1785"/>
       <source>Where should Mudlet save log files?</source>
-      <translation type="unfinished"/>
+      <translation>Dove Mudlet può salvare i file di log?</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2080"/>
       <source>%1 selected - press to change</source>
-      <translation type="unfinished"/>
+      <translation>%1 selezionato - clicca per cambiare</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2083"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Clicca per selezionare la destinazione</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2319"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile aggiornare i temi: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2436"/>
@@ -3900,7 +3904,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1719"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>nord-ovest</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1720"/>
@@ -3996,18 +4000,18 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="284"/>
       <source>Show Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="287"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5792"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Bottoni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="288"/>
       <source>Show Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Bottoni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="292"/>
@@ -4023,28 +4027,28 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="297"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5613"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="298"/>
       <source>Show Timers</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="301"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5675"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="302"/>
       <source>Show Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="305"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="306"/>
@@ -4060,12 +4064,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="310"/>
       <source>Show Variables</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Variabili</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="313"/>
       <source>Activate</source>
-      <translation type="unfinished"/>
+      <translation>Attiva</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="314"/>
@@ -4075,18 +4079,18 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="324"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="325"/>
       <source>Add new Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi Trigger, Script, Alias o Filtro</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="328"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="330"/>
       <source>Delete Item</source>
-      <translation type="unfinished"/>
+      <translation>Cancella</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="329"/>
@@ -4096,24 +4100,24 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="336"/>
       <source>Add Group</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi Gruppo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="337"/>
       <source>Add new Group</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo Gruppo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
       <source>Save Item</source>
-      <translation type="unfinished"/>
+      <translation>Salva</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="341"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7611"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7630"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="343"/>
@@ -4130,7 +4134,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="348"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8013"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copia</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="353"/>
@@ -4217,7 +4221,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="511"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="514"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni di Ricerca</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="518"/>
@@ -4462,7 +4466,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5324"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7694"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5363"/>
@@ -4572,7 +4576,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7165"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Esporta Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7165"/>
@@ -4625,7 +4629,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7566"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Backup Profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7566"/>
@@ -4786,7 +4790,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="233"/>
       <source>Search results</source>
-      <translation type="unfinished"/>
+      <translation>Risultati di ricerca</translation>
     </message>
     <message>
       <location filename="../src/ui/irc.ui" line="238"/>
@@ -4809,7 +4813,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
@@ -5031,12 +5035,12 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
     <message>
       <location filename="../src/main.cpp" line="292"/>
       <source>Report bugs to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Segnalare i bug a: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="293"/>
       <source>Project home page: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Home page del progetto: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
@@ -5121,12 +5125,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="122"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="129"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Aiuto</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="138"/>
@@ -5151,27 +5155,27 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
       <source>Alt+C</source>
-      <translation type="unfinished"/>
+      <translation>Alt+C</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="171"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Disconnetti</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>disconnect from the current MUD server</source>
-      <translation type="unfinished"/>
+      <translation>disconnettiti dal MUD corrente</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="177"/>
       <source>Alt+D</source>
-      <translation type="unfinished"/>
+      <translation>Alt+D</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Riconnetti</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="185"/>
@@ -5181,7 +5185,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
       <source>Alt+R</source>
-      <translation type="unfinished"/>
+      <translation>Alt+R</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
@@ -5318,7 +5322,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="303"/>
       <source>Show map</source>
-      <translation type="unfinished"/>
+      <translation>Mostra mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
@@ -5328,7 +5332,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="309"/>
       <source>Alt+M</source>
-      <translation type="unfinished"/>
+      <translation>Alt+M</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="314"/>
@@ -5343,7 +5347,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="320"/>
       <source>Alt+O</source>
-      <translation type="unfinished"/>
+      <translation>Alt+O</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
@@ -5388,7 +5392,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="357"/>
       <source>Alt+V</source>
-      <translation type="unfinished"/>
+      <translation>Alt+V</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="362"/>
@@ -5398,7 +5402,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
       <source>Alt+L</source>
-      <translation type="unfinished"/>
+      <translation>Alt+L</translation>
     </message>
   </context>
   <context>
@@ -5406,37 +5410,37 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="143"/>
       <source>^</source>
-      <translation type="unfinished"/>
+      <translation>^</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
       <source>◀</source>
-      <translation type="unfinished"/>
+      <translation>◀</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="298"/>
       <source>▼</source>
-      <translation type="unfinished"/>
+      <translation>▼</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="338"/>
       <source>▲</source>
-      <translation type="unfinished"/>
+      <translation>▲</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="378"/>
       <source>►</source>
-      <translation type="unfinished"/>
+      <translation>►</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="424"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="461"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
@@ -5446,12 +5450,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>Area:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="571"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Stanze</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
@@ -5534,12 +5538,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Disinstalla</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="141"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Installa</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="148"/>
@@ -5569,7 +5573,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="207"/>
       <source>Connect to a MUD</source>
-      <translation type="unfinished"/>
+      <translation>Connetti al MUD</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="215"/>
@@ -5580,7 +5584,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/modifica trigger</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
@@ -5591,7 +5595,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="222"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/modifica alias</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="227"/>
@@ -5602,7 +5606,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="228"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/modifica timer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="233"/>
@@ -5629,7 +5633,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="245"/>
       <location filename="../src/mudlet.cpp" line="400"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="246"/>
@@ -5660,7 +5664,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="263"/>
       <location filename="../src/mudlet.cpp" line="401"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Mappa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="264"/>
@@ -5690,7 +5694,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Blocco note</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="285"/>
@@ -5726,7 +5730,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="307"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Riconnetti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="308"/>
@@ -5774,22 +5778,22 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="355"/>
       <location filename="../src/mudlet.cpp" line="356"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Attiva/disattiva Schermo Intero</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="398"/>
       <source>Actions</source>
-      <translation type="unfinished"/>
+      <translation>Azioni</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="402"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Aiuto</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="403"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferenze</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="406"/>
@@ -5841,7 +5845,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile leggere il file %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="820"/>
@@ -5892,7 +5897,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2784"/>
       <source>*.dat</source>
-      <translation type="unfinished"/>
+      <translation>*.dat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3003"/>
@@ -5956,12 +5961,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="44"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Installa</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="57"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Disinstalla</translation>
     </message>
   </context>
   <context>
@@ -5982,12 +5987,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
       <source>General</source>
-      <translation type="unfinished"/>
+      <translation>Generale</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
       <source>Icon sizes</source>
-      <translation type="unfinished"/>
+      <translation>Dimensione icone</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="73"/>
@@ -6025,7 +6030,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="145"/>
       <source>Show main toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Mostra barra degli strumenti</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="180"/>
@@ -6070,7 +6075,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="238"/>
       <source>Enable GMCP</source>
-      <translation type="unfinished"/>
+      <translation>Abilita GMCP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="245"/>
@@ -6080,7 +6085,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="248"/>
       <source>Enable MSDP</source>
-      <translation type="unfinished"/>
+      <translation>Abilita MSDP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
@@ -6136,7 +6141,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="370"/>
       <source>.txt</source>
-      <translation type="unfinished"/>
+      <translation>.txt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="390"/>
@@ -6452,103 +6457,103 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1244"/>
       <location filename="../src/ui/profile_preferences.ui" line="1881"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Nero:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1261"/>
       <location filename="../src/ui/profile_preferences.ui" line="1898"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Nero chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1278"/>
       <location filename="../src/ui/profile_preferences.ui" line="1915"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rosso:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1295"/>
       <location filename="../src/ui/profile_preferences.ui" line="1932"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Rosso chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1312"/>
       <location filename="../src/ui/profile_preferences.ui" line="1949"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Verde:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1329"/>
       <location filename="../src/ui/profile_preferences.ui" line="1966"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Verde chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1346"/>
       <location filename="../src/ui/profile_preferences.ui" line="1983"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Giallo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1363"/>
       <location filename="../src/ui/profile_preferences.ui" line="2000"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Giallo chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1380"/>
       <location filename="../src/ui/profile_preferences.ui" line="2017"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blu:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1397"/>
       <location filename="../src/ui/profile_preferences.ui" line="2034"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Azzurro chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1414"/>
       <location filename="../src/ui/profile_preferences.ui" line="2051"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1431"/>
       <location filename="../src/ui/profile_preferences.ui" line="2068"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1448"/>
       <location filename="../src/ui/profile_preferences.ui" line="2085"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Ciano:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1465"/>
       <location filename="../src/ui/profile_preferences.ui" line="2102"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Ciano chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1482"/>
       <location filename="../src/ui/profile_preferences.ui" line="2119"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Bianco:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1499"/>
       <location filename="../src/ui/profile_preferences.ui" line="2136"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Bianco chiaro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1516"/>
       <location filename="../src/ui/profile_preferences.ui" line="2153"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Ripristina i colori predefiniti</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1540"/>
@@ -6563,7 +6568,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1552"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>Salva la mappa corrente:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1562"/>
@@ -6655,7 +6660,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1713"/>
       <source>Download</source>
-      <translation type="unfinished"/>
+      <translation>Download</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1726"/>
@@ -6730,7 +6735,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1864"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Colore di sfondo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2177"/>
@@ -6776,12 +6781,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2257"/>
       <source>irc.example.net</source>
-      <translation type="unfinished"/>
+      <translation>irc.example.net</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2264"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Porta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2271"/>
@@ -6791,7 +6796,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2278"/>
       <source>MudletUser123</source>
-      <translation type="unfinished"/>
+      <translation>MudletUser123</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2285"/>
@@ -6806,17 +6811,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2299"/>
       <source>Nickname:</source>
-      <translation type="unfinished"/>
+      <translation>Nickname:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2309"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2319"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Motori di Ricerca</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2331"/>
@@ -6826,7 +6831,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2337"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Disabilita aggiornamenti automatici</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2347"/>
@@ -6836,7 +6841,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2404"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Salva</translation>
     </message>
   </context>
   <context>
@@ -6887,7 +6892,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
       <source>NW exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita NO...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="106"/>
@@ -6962,7 +6967,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
       <source>N exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita N...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="246"/>
@@ -6979,7 +6984,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="376"/>
       <source>NE exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita NE...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="513"/>
@@ -6989,7 +6994,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="516"/>
       <source>Up exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita Alto...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="558"/>
@@ -7023,12 +7028,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="659"/>
       <source>W exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita O...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
@@ -7053,7 +7058,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
       <source>E exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita E...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1000"/>
@@ -7073,7 +7078,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1155"/>
       <source>SW exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita SO...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1298"/>
@@ -7083,7 +7088,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1301"/>
       <source>S exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita S...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1438"/>
@@ -7093,7 +7098,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1441"/>
       <source>SE exit...</source>
-      <translation type="unfinished"/>
+      <translation>Uscita SE...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
@@ -7188,7 +7193,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Uscite speciali:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2010"/>
@@ -7238,7 +7243,8 @@ None</source>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
       <source>Door
 Open</source>
-      <translation type="unfinished"/>
+      <translation>Porta
+Aperta</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2084"/>
@@ -7249,7 +7255,8 @@ Open</source>
       <location filename="../src/ui/room_exits.ui" line="2089"/>
       <source>Door
 Closed</source>
-      <translation type="unfinished"/>
+      <translation>Porta
+Chiusa</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2093"/>
@@ -7260,7 +7267,8 @@ Closed</source>
       <location filename="../src/ui/room_exits.ui" line="2098"/>
       <source>Door
 Locked</source>
-      <translation type="unfinished"/>
+      <translation>Porta
+Bloccata</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2102"/>
@@ -7324,7 +7332,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
@@ -7339,7 +7347,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -7386,7 +7394,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="63"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="73"/>
