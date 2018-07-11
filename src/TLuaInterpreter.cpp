@@ -547,9 +547,8 @@ int TLuaInterpreter::selectCurrentLine(lua_State* L)
         luaSendText = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "selectCurrentLine: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "selectCurrentLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
         }
@@ -564,19 +563,18 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 {
     int ansiFg;
 
-    std::string console = "main";
+    std::string windowName = "main";
 
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "isAnsiFgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "isAnsiFgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         ansiFg = lua_tointeger(L, 1);
     }
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
-    result = host.mpConsole->getFgColor(console);
+    result = host.mpConsole->getFgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
         return 0;
@@ -667,19 +665,18 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 {
     int ansiFg;
 
-    std::string console = "main";
+    std::string windowName = "main";
 
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "isAnsiBgColor: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "isAnsiBgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         ansiFg = lua_tointeger(L, 1);
     }
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
-    result = host.mpConsole->getBgColor(console);
+    result = host.mpConsole->getBgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
         return 0;
@@ -773,9 +770,8 @@ int TLuaInterpreter::getFgColor(lua_State* L)
         luaSendText = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "getFgColor: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "getFgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
         }
@@ -798,9 +794,8 @@ int TLuaInterpreter::getBgColor(lua_State* L)
         luaSendText = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "getBgColor: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "getBgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         } else {
             luaSendText = lua_tostring(L, 1);
         }
@@ -819,30 +814,27 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
     int s = 1;
-    int n = lua_gettop(L);
-    string a1 = "main";
-    if (n > 1) {
+    string windowName = "main";
+    if (lua_gettop(L)) {
         if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "wrapLine: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "wrapLine: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, 1));
+            return lua_error(L);
         } else {
-            a1 = lua_tostring(L, s);
+            windowName = lua_tostring(L, s);
             s++;
         }
     }
 
-    int luaNumOfMatch;
+    int lineNumber;
     if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "wrapLine: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "wrapLine: bad argument #%d type (line as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     } else {
-        luaNumOfMatch = lua_tointeger(L, s);
+        lineNumber = lua_tointeger(L, s);
     }
 
     Host& host = getHostFromLua(L);
-    host.mpConsole->luaWrapLine(a1, luaNumOfMatch);
+    host.mpConsole->luaWrapLine(windowName, lineNumber);
     return 0;
 }
 
@@ -856,22 +848,21 @@ int TLuaInterpreter::spawn(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
 int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 {
-    int luaNumOfMatch;
+    int captureGroup;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "selectCaptureGroup: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "selectCaptureGroup: bad argument #1 type (capture group as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaNumOfMatch = lua_tointeger(L, 1);
+        captureGroup = lua_tointeger(L, 1);
     }
     Host& host = getHostFromLua(L);
-    if (luaNumOfMatch < 1) {
+    if (captureGroup < 1) {
         lua_pushnumber(L, -1);
         return 1;
     }
     // We want capture groups to start with 1 instead of 0 so predecrement
     // luaNumOfMatch :
-    if (--luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
+    if (--captureGroup < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
         TLuaInterpreter* pL = host.getLuaInterpreter();
         auto iti = pL->mCaptureGroupPosList.begin();
         auto its = pL->mCaptureGroupList.begin();
@@ -880,13 +871,13 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 
         for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
             begin = *iti;
-            if (i >= luaNumOfMatch) {
+            if (i >= captureGroup) {
                 break;
             }
         }
         for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
             s = *its;
-            if (i >= luaNumOfMatch) {
+            if (i >= captureGroup) {
                 break;
             }
         }
@@ -908,18 +899,16 @@ int TLuaInterpreter::getLines(lua_State* L)
 {
     int luaFrom;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getLines: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "getLines: bad argument #1 type (starting line to get as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         luaFrom = lua_tointeger(L, 1);
     }
 
     int luaTo;
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "getLines: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "getLines: bad argument #2 type (end line to get as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     } else {
         luaTo = lua_tointeger(L, 2);
     }
@@ -927,7 +916,7 @@ int TLuaInterpreter::getLines(lua_State* L)
     QStringList strList = host.mpConsole->getLines(luaFrom, luaTo);
 
     lua_newtable(L);
-    for (int i = 0; i < strList.size(); i++) {
+    for (int i = 0, total = strList.size(); i < total; ++i) {
         lua_pushnumber(L, i + 1);
         lua_pushstring(L, strList.at(i).toUtf8().constData());
         lua_settable(L, -3);
@@ -974,21 +963,20 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
-    string luaSendText = "";
+    string windowName = "";
     if (lua_gettop(L) == 0) {
-        luaSendText = "main";
+        windowName = "main";
     } else {
         if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "getCurrentLine: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "getCurrentLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         } else {
-            luaSendText = lua_tostring(L, 1);
+            windowName = lua_tostring(L, 1);
         }
     }
 
     Host& host = getHostFromLua(L);
-    QString line = host.mpConsole->getCurrentLine(luaSendText);
+    QString line = host.mpConsole->getCurrentLine(windowName);
     lua_pushstring(L, line.toUtf8().constData());
     return 1;
 }
@@ -10008,46 +9996,40 @@ int TLuaInterpreter::Echo(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoPopup
 int TLuaInterpreter::echoPopup(lua_State* L)
 {
-    string a1 = "";
-    string a2;
-    QStringList _hintList;
-    QStringList _commandList;
+    QString windowName;
+    QString text;
+    QStringList hintList;
+    QStringList commandList;
     bool customFormat = false;
     int s = 1;
     int n = lua_gettop(L);
     // console name is an optional first argument
     if (n > 4) {
         if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "echoPopup: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "echoPopup: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         } else {
-            a1 = lua_tostring(L, s);
+            windowName = QString::fromUtf8(lua_tostring(L, s));
             s++;
         }
     }
     if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "echoPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "echoPopup: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
     } else {
-        a2 = lua_tostring(L, s);
+        text = QString::fromUtf8(lua_tostring(L, s));
         s++;
     }
 
-    if (!lua_istable(L, s))
-
-    {
-        lua_pushstring(L, "echoPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+    if (!lua_istable(L, s)) {
+        lua_pushfstring(L, "echoPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING) {
                 QString cmd = lua_tostring(L, -1);
-                _commandList << cmd;
+                commandList << cmd;
             }
             // removes value, but keeps key for next iteration
             lua_pop(L, 1);
@@ -10055,16 +10037,15 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         s++;
     }
     if (!lua_istable(L, s)) {
-        lua_pushstring(L, "echoPopup: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "echoPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         while (lua_next(L, s) != 0) {
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING) {
                 QString hint = lua_tostring(L, -1);
-                _hintList << hint;
+                hintList << hint;
             }
             // removes value, but keeps key for next iteration
             lua_pop(L, 1);
@@ -10076,18 +10057,15 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    QString txt = a2.c_str();
-    QString name = a1.c_str();
-    if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
-        lua_error(L);
-        return 1;
+    if (commandList.size() != hintList.size()) {
+        lua_pushfstring(L, "echoPopup: commands and hints list aren't the same size");
+        return lua_error(L);
     }
 
-    if (a1.empty()) {
-        host.mpConsole->echoLink(txt, _commandList, _hintList, customFormat);
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        host.mpConsole->echoLink(text, commandList, hintList, customFormat);
     } else {
-        mudlet::self()->echoLink(&host, name, txt, _commandList, _hintList, customFormat);
+        mudlet::self()->echoLink(&host, windowName, text, commandList, hintList, customFormat);
     }
 
     return 0;
@@ -10201,17 +10179,15 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
 // Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::pasteWindow(lua_State* L)
 {
-    string luaName;
+    QString window;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "pasteWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "pasteWindow: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaName = lua_tostring(L, 1);
+        window = QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString name(luaName.c_str());
-    mudlet::self()->pasteWindow(&host, name);
+    mudlet::self()->pasteWindow(&host, window);
     return 0;
 }
 
@@ -10548,7 +10524,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
         lua_pushfstring(L, "installPackage: bad argument #1 (package location path and file name as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
-        location =  QString::fromUtf8(lua_tostring(L, 1));
+        location = QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
     host.installPackage(location, 0);
