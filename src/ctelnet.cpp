@@ -1936,36 +1936,62 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
 }
 
 // credit: https://github.com/qflow/websockets
+// Also see: https://stackoverflow.com/a/5435430/4805858
+// particularly the comment: "Note that keepalive won't detect a failure until
+// at least the configured keepalive_time + (keepalive_intrvl*keepalive_probes).
+// I think by default if you don't change the settings this can default to over
+// an hour!" – bdk Mar 25 '11 at 17:50
 void cTelnet::setKeepAlive(int socketHandle)
 {
-    constexpr int timeout = 2 * 60; //  /* send keepalive after 2 minutes */
-    int count = 3; // send up to 3 keepalive packets out, then disconnect if no response
+    // Switch the keep-alive option on:
+    constexpr int on = 1;
+    // allow 75 seconds to set up connection {is default}:
+    constexpr int init = 75;
+    // send keepalive after 2 minutes of inactivity (after the init period)
+    // {2 hours is default}:
+    constexpr int timeout = 120;
+    // send a keepalive packet every 75 seconds {is default}:
+    constexpr int interval = 75;
+    // send up to 10 keepalive packets out - then disconnect if no response:
+    constexpr int count = 10;
 #if defined(Q_OS_WIN32)
+
+    // Windows is hardwired to use 10 for the count value (TCP_KEEPCNT) in Vista
+    // and later. It also does not seem to have an TCP_KEEPINIT type setting.
+    // https://msdn.microsoft.com/en-us/library/windows/desktop/dd877220(v=vs.85).aspx
+    Q_UNUSED(count)
+    Q_UNUSED(init)
     struct tcp_keepalive
     {
-        u_long onoff;
-        u_long keepalivetime;
-        u_long keepaliveinterval;
+        u_long onoff; // off = 0; on = not 0; default off
+        u_long keepalivetime; // milliseconds, default = 7,200,000 = 2 hours
+        u_long keepaliveinterval; // milliseconds, default = 1000 = 1 second
     } alive;
-    alive.onoff = TRUE;
+    alive.onoff = on;
     alive.keepalivetime = timeout * 1000;
-    alive.keepaliveinterval = 3000;
+    alive.keepaliveinterval = interval * 1000;
     DWORD dwBytesRet = 0;
     WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
 
-#elif defined(Q_OS_LINUX)
-    int enableKeepAlive = 1;
-    setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &enableKeepAlive, sizeof(enableKeepAlive));
-    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
-    setsockopt(socketHandle, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#else // else condition: Not Windows
 
-    int interval = 2; // send a keepalive packet out every 2 seconds (after the 5 second idle period)
-    setsockopt(socketHandle, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+    setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
+#else // else condition: Not Windows and Not (Linux or MacOs) = FreeBSD:
+    // FreeBSD always has the Keep-alive option enabled
+    Q_UNUSED(on)
+#endif
+    // The effect is that 75 seconds is allowed to set up the connection,
+    // then after another TWO minutes with no traffic a keep-alive is sent
+    // - which should wake up the far end, if it does not another one is sent
+    // after a further 75 seconds and if NO response is received after TEN of
+    // those keep alives then Mudlet will close the socket itself - declaring
+    // the remote end dead... we are hoping that that does not happen so that
+    // the FIRST keep-alive does what it is supposed to!
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINIT, &init, sizeof(init)); // Time to establish connection on new, unconnected sockets, in seconds
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout)); // Start keepalives after this interval, in seconds
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)); // Interval between keep-alives, in seconds
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)); // Number of failed keep alives before forcing a close
 
-#elif defined(Q_OS_MACOS)
-    constexpr int on = 1;
-    setsockopt(socketHandle, SOL_SOCKET,  SO_KEEPALIVE, &on, sizeof(on));
-    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
-    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
 #endif
 }
