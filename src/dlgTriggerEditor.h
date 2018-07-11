@@ -165,6 +165,7 @@ public:
     void showInfo(const QString&);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void leaveEvent(QEvent *event) override;
     void enterEvent(QEvent* pE) override;
     bool eventFilter(QObject*, QEvent* event) override;
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
@@ -302,6 +303,7 @@ private:
     void addTrigger(bool isFolder);
     void addAction(bool isFolder);
     void addKey(bool);
+    void timerEvent(QTimerEvent *event) override;
 
     void selectTriggerByID(int id);
     void selectTimerByID(int id);
@@ -453,6 +455,10 @@ private:
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued;
     void runScheduledCleanReset();
+    void autoSave();
+
+    // profile autosave interval in minutes
+    int mAutosaveInterval;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
