@@ -72,19 +72,31 @@ public:
     TLuaInterpreter(Host* mpHost, int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
-    void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void msdp2Lua(char* src, int srclen);
     void initLuaGlobals();
     void initIndenterGlobals();
     bool call(const QString& function, const QString& mName);
+    std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
+    std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void*);
+    bool call_luafunction(void* pT);
+    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
+
+    // Updates the global Lua table "gmcp. + key" with the contents of json,
+    // afterwards raising events for users to trigger on.
     void setGMCPTable(QString&, const QString&);
+
+    // Similar to setGMCPTable, however this only raises events instead of
+    // updating any lua tables.  In addition to the usual "gmcp" all events
+    // are prefixed by "inline-", so calling this with a key of "Char.Vitals"
+    // raises an event called "inline-gmcp.Char.Vitals"
+    void raiseInlineGMCPEvent(QString& key, const QString& json);
+
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
     QString formatLuaCode(const QString &);
@@ -106,13 +118,13 @@ public:
     int startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
-    int startTempTrigger(const QString&, const QString&);
-    int startTempBeginOfLineTrigger(const QString&, const QString&);
-    int startTempExactMatchTrigger(const QString&, const QString&);
-    int startTempLineTrigger(int, int, const QString&);
-    int startTempRegexTrigger(const QString&, const QString&);
-    int startTempColorTrigger(int, int, const QString&);
-    int startTempPromptTrigger(const QString& function);
+    int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
+    int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempLineTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
@@ -449,6 +461,22 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
+
+    // Takes an OOB key (formatted as A.B.C, eg. Char.Vitals), a payload
+    // formatted as json, and a protocol (eg "gmcp"), updating the global lua
+    // table of the same name as the protocol and raising events for users
+    // to listen to.
+    void updateOOBTableAndRaiseEvent(
+        QString& key, const QString& json, const QString& protocol);
+    void raiseProtocolEvent(
+        QString& key,
+        const QString& string_data,
+        const QString& protocol,
+        const QStringList& tokenList);
+    void setOOBTable(
+        QString& key, const QString& string_data,
+        const QStringList& tokenList);
+
 
     QMap<QNetworkReply*, QString> downloadMap;
 

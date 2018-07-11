@@ -105,6 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
 , mCleanResetQueued(false)
+, mAutosaveInterval{}
 {
     // init generated dialog
     setupUi(this);
@@ -603,6 +604,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
     showHiddenVars = false;
     widget_searchTerm->updateGeometry();
+
+    if (mAutosaveInterval > 0) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+        startTimer(mAutosaveInterval * 1000 * 60);
+#else
+        startTimer(mAutosaveInterval * 1min);
+#endif
+    }
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVar(bool status)
@@ -708,11 +717,12 @@ void dlgTriggerEditor::readSettings()
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
-
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
     move(pos);
+
+    mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -724,6 +734,7 @@ void dlgTriggerEditor::writeSettings()
     QSettings settings("mudlet", "Mudlet");
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
+    settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
 }
 
 void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
@@ -6313,6 +6324,20 @@ void dlgTriggerEditor::saveOpenChanges()
     };
 }
 
+void dlgTriggerEditor::timerEvent(QTimerEvent *event)
+{
+    Q_UNUSED(event);
+
+    if (isActiveWindow()) {
+        autoSave();
+    }
+}
+
+void dlgTriggerEditor::autoSave()
+{
+    mpHost->saveProfile(QString(), QStringLiteral("autosave"));
+}
+
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
     if (mNeedUpdateData) {
@@ -6376,7 +6401,20 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 
 void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
+    Q_UNUSED(pE);
+
     saveOpenChanges();
+    autoSave();
+}
+
+// this doesn't seem 100% right - I couldn't find a "window lost focus" event
+// The focusOutEvent above is not it - that is for keyboard focus
+void dlgTriggerEditor::leaveEvent(QEvent *event)
+{
+    Q_UNUSED(event);
+
+    saveOpenChanges();
+    autoSave();
 }
 
 void dlgTriggerEditor::changeView(int view)
@@ -7555,7 +7593,7 @@ void dlgTriggerEditor::runScheduledCleanReset()
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
-    std::tuple<bool, QString, QString> result = mpHost->saveProfile(nullptr, true);
+    std::tuple<bool, QString, QString> result = mpHost->saveProfile(nullptr, nullptr, true);
 
     if (std::get<0>(result) == false) {
         QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));

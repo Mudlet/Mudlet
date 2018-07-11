@@ -616,6 +616,12 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
 };
 // clang-format on
 
+// a map of supported MXP elements and attributes
+const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
+    {QStringLiteral("send"), {"href", "hint", "prompt"}},
+    {QStringLiteral("br"), {}}
+};
+
 TChar::TChar()
 {
     fgR = 255;
@@ -1941,6 +1947,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     _tn = _tn.toUpper();
                     if (_tn == "VERSION") {
                         mpHost->sendRaw(QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
+                    } else if (_tn == QLatin1String("SUPPORT")) {
+                        auto response = processSupportsRequest(currentToken.c_str());
+                        mpHost->sendRaw(QStringLiteral("\n\x1b[1z<SUPPORTS %1>\n").arg(response));
                     }
                     if (_tn == "BR") {
                         ch = '\n';
@@ -2066,7 +2075,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             _tp = currentToken.substr(_fs).c_str();
                         }
                         QString _t1 = _tp.toUpper();
-                        const TMxpElement& _element = mMXP_Elements[_tn];
+                        const TMxpElement& _element =  mMXP_Elements[_tn];
                         QString _t2 = _element.href;
                         QString _t3 = _element.hint;
                         bool _userTag = true;
@@ -4559,4 +4568,72 @@ void TBuffer::encodingChanged(const QString& newEncoding)
             mMainIncomingCodec = nullptr;
         }
     }
+}
+
+QString TBuffer::processSupportsRequest(const QString& elements)
+{
+    // strip initial SUPPORT and tokenize all of the requested elements
+    auto elementsList = elements.trimmed().remove(0, 7).split(QStringLiteral(" "), QString::SkipEmptyParts);
+    QStringList result;
+
+    auto reportEntireElement = [](auto element, auto& result) {
+        result.append("+" + element);
+
+        for (const auto& attribute : mSupportedMxpElements.value(element)) {
+            result.append("+" + element + QStringLiteral(".") + attribute);
+        }
+
+        return result;
+    };
+
+    auto reportAllElements = [reportEntireElement](auto& result) {
+        auto elementsIterator = mSupportedMxpElements.constBegin();
+        while (elementsIterator != mSupportedMxpElements.constEnd()) {
+
+            result = reportEntireElement(elementsIterator.key(), result);
+        }
+
+        return result;
+    };
+
+    // empty <SUPPORT> - report all known elements
+    if (elementsList.isEmpty()) {
+        result = reportAllElements(result);
+    } else {
+        // otherwise it's <SUPPORT element1 element2 element3>
+        for (auto& element : elementsList) {
+            // prune any enclosing quotes
+            if (element.startsWith(QChar('"'))) {
+                element = element.remove(0, 1);
+            }
+            if (element.endsWith(QChar('"'))) {
+                element.chop(1);
+            }
+
+            if (!element.contains(QChar('.'))) {
+                if (mSupportedMxpElements.contains(element)) {
+                    result = reportEntireElement(element, result);
+                } else {
+                    result.append("-" + element);
+                }
+            } else {
+                auto elementName = element.section(QChar('.'), 0, 0);
+                auto attributeName = element.section(QChar('.'), 1, 1);
+
+                if (!mSupportedMxpElements.contains(elementName)) {
+                    result.append("-" + element);
+                } else if (attributeName == QLatin1String("*")) {
+                    result = reportEntireElement(elementName, result);
+                } else {
+                    if (mSupportedMxpElements.value(elementName).contains(attributeName)) {
+                        result.append("+" + element + "." + attributeName);
+                    } else {
+                        result.append("-" + element + "." + attributeName);
+                    }
+                }
+            }
+        }
+    }
+
+    return result.join(QLatin1String(" "));
 }

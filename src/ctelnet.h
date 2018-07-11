@@ -41,6 +41,17 @@
 #include <queue>
 #include <string>
 
+#if defined (Q_OS_MACOS) || defined(Q_OS_LINUX)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+#elif defined(Q_OS_WIN32)
+#include <Winsock2.h>
+#include <ws2tcpip.h>
+#include "mstcpip.h"
+#endif
+
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
@@ -157,10 +168,13 @@ private:
 
     void processTelnetCommand(const std::string& command);
     void sendTelnetOption(char type, char option);
-    void gotRest(std::string&);
-    void gotPrompt(std::string&);
+    void applyGAFix();
+    void processChunk(std::string&);
+    void processPromptChunk(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void setKeepAlive(int socketHandle);
+    void processChunks();
 
     QPointer<Host> mpHost;
     QTcpSocket socket;
@@ -217,6 +231,22 @@ private:
     bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
+
+    enum class DataChunkType {
+        IN_BAND,
+        GMCP
+    };
+
+    struct MudDataChunk {
+        DataChunkType type;
+        std::string data;
+        bool ends_with_prompt;
+    };
+
+    // We break mud data up into chunks by GA signal and Telnet
+    // control sequences, storing in-band data and GMCP in the
+    // queue to be processed in order to enable inline events.
+    std::queue<MudDataChunk> mudDataChunks;
 };
 
 #endif // MUDLET_CTELNET_H

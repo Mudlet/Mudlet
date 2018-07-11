@@ -219,7 +219,7 @@ Host::~Host()
     mErrorLogFile.close();
 }
 
-void Host::saveModules(int sync)
+void Host::saveModules(int sync, bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
@@ -247,7 +247,7 @@ void Host::saveModules(int sync)
             if (!packageDir.exists()) {
                 packageDir.mkpath(packagePathName);
             }
-        } else {
+        } else if (backup) {
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
         }
 
@@ -371,7 +371,7 @@ void Host::resetProfile()
 // takes a directory to save in or an empty string for the default location
 // as well as a boolean whenever to sync the modules or not
 // returns true+filepath if successful or false+error message otherwise
-std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, bool syncModules)
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
     emit profileSaveStarted();
     qApp->processEvents();
@@ -384,7 +384,13 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
-    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+    QString filename_xml;
+    if (saveName.isEmpty()) {
+        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+    } else {
+        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, saveName);
+    }
+
     QDir dir_xml;
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
@@ -397,7 +403,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     auto writer = new XMLexport(this);
     writers.insert(QStringLiteral("profile"), writer);
     writer->exportHost(filename_xml);
-    saveModules(syncModules ? 1 : 0);
+    saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
     return std::make_tuple(true, filename_xml, QString());
 }
 
