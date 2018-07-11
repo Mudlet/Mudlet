@@ -47,12 +47,12 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 uitgenodigd naar %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation type="unfinished"/>
+      <translation>! %2 uitgenodigd naar %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
@@ -67,7 +67,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 heeft %2 eruit gezet</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
