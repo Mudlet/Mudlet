@@ -504,6 +504,11 @@ else()
     target_link_libraries(mudlet ${ZIP_LIBRARIES})
 endif()
 
+if(WIN32)
+    target_link_libraries(mudlet ws2_32
+    )
+endif()
+
 if(APPLE)
   target_link_libraries(mudlet
           luazip

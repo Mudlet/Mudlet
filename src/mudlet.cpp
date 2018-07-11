@@ -121,7 +121,6 @@ mudlet* mudlet::self()
     return _self;
 }
 
-
 mudlet::mudlet()
 : QMainWindow()
 , mFontManager()

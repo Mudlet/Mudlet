@@ -41,6 +41,17 @@
 #include <queue>
 #include <string>
 
+#if defined (Q_OS_MACOS) || defined(Q_OS_LINUX)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+#elif defined(Q_OS_WIN32)
+#include <Winsock2.h>
+#include <ws2tcpip.h>
+#include "mstcpip.h"
+#endif
+
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
@@ -162,6 +173,7 @@ private:
     void processPromptChunk(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void setKeepAlive(int socketHandle);
     void processChunks();
 
     QPointer<Host> mpHost;

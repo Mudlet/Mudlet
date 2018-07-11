@@ -299,6 +299,9 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
+
+    setKeepAlive(socket.socketDescriptor());
+
     QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
     postMessage(msg);
     QString func = "onConnect";
@@ -1930,4 +1933,39 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentList.append(protocol);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
+}
+
+// credit: https://github.com/qflow/websockets
+void cTelnet::setKeepAlive(int socketHandle)
+{
+    constexpr int timeout = 2 * 60; //  /* send keepalive after 2 minutes */
+    int count = 3; // send up to 3 keepalive packets out, then disconnect if no response
+#if defined(Q_OS_WIN32)
+    struct tcp_keepalive
+    {
+        u_long onoff;
+        u_long keepalivetime;
+        u_long keepaliveinterval;
+    } alive;
+    alive.onoff = TRUE;
+    alive.keepalivetime = timeout * 1000;
+    alive.keepaliveinterval = 3000;
+    DWORD dwBytesRet = 0;
+    WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
+
+#elif defined(Q_OS_LINUX)
+    int enableKeepAlive = 1;
+    setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &enableKeepAlive, sizeof(enableKeepAlive));
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
+    setsockopt(socketHandle, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count));
+
+    int interval = 2; // send a keepalive packet out every 2 seconds (after the 5 second idle period)
+    setsockopt(socketHandle, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+
+#elif defined(Q_OS_MACOS)
+    constexpr int on = 1;
+    setsockopt(socketHandle, SOL_SOCKET,  SO_KEEPALIVE, &on, sizeof(on));
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#endif
 }

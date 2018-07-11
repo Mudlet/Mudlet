@@ -45,6 +45,7 @@
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
+#include <QTimer>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
