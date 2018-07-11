@@ -748,7 +748,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="196"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-9 (Турецкий / Turkish)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="215"/>
@@ -778,79 +778,79 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="291"/>
       <source>ISO 8859-15 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-15 (Западные языки / Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="310"/>
       <source>ISO 8859-16 (Romanian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-16 (Румынский / Romanian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="329"/>
       <source>CP850 (Western Europe)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP850 (Западная Европа / Western Europe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="348"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP866 (Kириллица, Rусский / Cyrillic, Russian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="386"/>
       <source>KOI8-R (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-R (Кириллица / Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="405"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-U (Kириллица, Украинский / Cyrillic, Ukrainian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="424"/>
       <source>MACINTOSH</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>MACINTOSH</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="443"/>
       <source>WINDOWS-1250 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>Windows-1250 (Центральная Европа/Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="462"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1251 (Кириллица / Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="481"/>
       <source>WINDOWS-1252 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1252 (Западные языки / Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="500"/>
       <source>WINDOWS-1253 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1253 (Греческий / Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="519"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1254 (Турецкий)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="538"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1255 (Иврит)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="557"/>
@@ -916,7 +916,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Earlier search result.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Прошлый результат поиска.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="475"/>
@@ -1408,7 +1408,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>Downloading XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Скачивается XML карта для использования в %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
@@ -1429,7 +1429,7 @@ imported at user request.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2209"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Импорт XML карты для использования в %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2210"/>
@@ -1451,7 +1451,8 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2291"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ Ошибка ] - при закачки карты произошла ошибка:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2305"/>
@@ -2208,7 +2209,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
       <source>Floating Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Плавающая Панель Инструментов</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
@@ -2327,7 +2328,8 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="345"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ Информация ] - Идёт подключение к %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="349"/>
@@ -2639,7 +2641,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Параметры линии:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -2884,12 +2886,12 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
       <source>Symbol
 (All Fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Символ (все шрифты)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
       <source>Codepoints</source>
-      <translation type="unfinished"/>
+      <translation>Коды</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
@@ -3248,7 +3250,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Ключи</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="51"/>
@@ -3273,7 +3275,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="95"/>
       <source>Select</source>
-      <translation type="unfinished"/>
+      <translation>Выбор</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
@@ -3305,7 +3307,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="108"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>журнал</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="126"/>
@@ -3416,7 +3418,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1522"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить Mudlet карту</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1522"/>
