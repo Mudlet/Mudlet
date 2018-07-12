@@ -11,11 +11,14 @@ Remove-Item * -include *.cpp, *.o
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
 } else {
+  Write-Output "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git C:\projects\installers
   cd C:\projects\installers\windows
-  nuget install secure-file -ExcludeVersion
+  
+  Write-Output "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
 
+  Write-Output "=== Setting up directories ==="
   # credit to http://markwal.github.io/programming/2015/07/28/squirrel-for-windows.html
   $SQUIRRELWIN = "C:\projects\squirrel-packaging-prep"
   $SQUIRRELWINBIN = "$SQUIRRELWIN\lib\net45\"
@@ -24,12 +27,17 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
       New-Item "$SQUIRRELWINBIN" -ItemType "directory"
   }
 
+  Write-Output "=== Moving things to where Squirel expects them ==="
   # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
+  Write-Output "=== Creating Nuget package ==="
   nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
-  .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
+  Write-Output "=== Creating installers from Nuget package ==="
+  .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
+  Write-Output "=== Removing old directory content of release folder ==="
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
+  Write-Output "=== Copying installer over for appveyor ==="
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
  <#
