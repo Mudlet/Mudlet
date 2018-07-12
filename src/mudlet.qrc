@@ -49,9 +49,11 @@
         <file>icons/edit-copy.png</file>
         <file>icons/edit-clear-locationbar-rtl.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
+        <file>icons/edit-cut.png</file>
         <file>icons/edit-delete.png</file>
-        <file>icons/edit-delete-shred.png</file>
         <file>icons/edit-paste.png</file>
+        <file>icons/edit-select-all.png</file>
+        <file>icons/edit-web-search.png</file>
         <file>icons/errors.png</file>
         <file>icons/export.png</file>
         <file>icons/filter-grey-locked.png</file>
@@ -123,6 +125,7 @@
         <file>icons/preferences-web-browser-cache.png</file>
         <file>icons/rating.png</file>
         <file>icons/red-bomb.png</file>
+        <file>icons/run-build-clean.png</file>
         <file>icons/searchOptions-caseSensitive.png</file>
         <file>icons/searchOptions-none.png</file>
         <file>icons/searchOptions-unspecified.png</file>

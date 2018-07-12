@@ -327,7 +327,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
     connect(addTriggerAction, SIGNAL(triggered()), this, SLOT(slot_add_new()));
 
-    QAction* deleteTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/edit-delete-shred.png")), tr("Delete Item"), this);
+    QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(QStringLiteral(":/icons/edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))), tr("Delete Item"), this);
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
     deleteTriggerAction->setToolTip(QStringLiteral("<html><head/><body><p>%1 (%2)</p></body></html>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
     deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -348,7 +348,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
 
     QAction* copyAction = new QAction(tr("Copy"), this);
-    copyAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
     copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -363,7 +362,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copy_xml);
 
     QAction* pasteAction = new QAction(tr("Paste"), this);
-    pasteAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))));
     pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
     pasteAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -376,6 +374,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->addAction(pasteAction);
     treeWidget_keys->addAction(pasteAction);
     connect(pasteAction, &QAction::triggered, this, &dlgTriggerEditor::slot_paste_xml);
+
+    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        copyAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+        pasteAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))));
+    }
 
     QAction* importAction = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
@@ -8047,14 +8050,23 @@ void dlgTriggerEditor::slot_editorContextMenu()
     edbee::TextEditorController* controller = mpSourceEditorEdbee->controller();
 
     auto menu = new QMenu();
+    auto formatAction = new QAction(tr("Format All"), menu);
     // appropriate shortcuts are automatically supplied by edbee here
-    menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
-    menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
-    menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
-    menu->addSeparator();
-    menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon(), menu));
+    if (qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
+        menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
+        menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
+        menu->addSeparator();
+        menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon(), menu));
+    } else {
+        menu->addAction(controller->createAction("cut", tr("Cut"), QIcon::fromTheme(QStringLiteral("edit-cut"), QIcon(QStringLiteral(":/icons/edit-cut.png"))), menu));
+        menu->addAction(controller->createAction("copy", tr("Copy"), QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))), menu));
+        menu->addAction(controller->createAction("paste", tr("Paste"), QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))), menu));
+        menu->addSeparator();
+        menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon::fromTheme(QStringLiteral("edit-select-all"), QIcon(QStringLiteral(":/icons/edit-select-all.png"))), menu));
+        formatAction->setIcon(QIcon::fromTheme(QStringLiteral("run-build-clean"), QIcon::fromTheme(QStringLiteral("run-build-clean"))));
+    }
 
-    auto formatAction = new QAction(QIcon(), tr("Format All"), menu);
     connect(formatAction, &QAction::triggered, [=]() {
         auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
         // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66
