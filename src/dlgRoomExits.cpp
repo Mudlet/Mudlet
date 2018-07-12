@@ -124,7 +124,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
 
         case 7:
             if (!mpEditItem->text(7).trimmed().length()) {
-                mpEditItem->setText(7, tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (1 of 5)"));
+                mpEditItem->setText(7, tr("<command or Lua script>", "This string is also used programmatically - ensure all instances are the same"));
             }
             specialExits->closePersistentEditor(mpEditItem, mEditColumn);
             //            qDebug()<<"Closed PE on item:"<<mpEditItem->text(7)<<"column:"<<mEditColumn;
@@ -238,7 +238,7 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setCheckState(6, Qt::Unchecked); //Doortype: locked
     pI->setToolTip(6,
                    QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-    pI->setText(7, tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (2 of 5)")); //Exit command
+    pI->setText(7, tr("<command or Lua script>", "This string is also used programmatically - ensure all instances are the same")); //Exit command
     pI->setTextAlignment(7, Qt::AlignLeft);
     specialExits->addTopLevelItem(pI);
 }
@@ -278,7 +278,7 @@ void dlgRoomExits::save()
             door = 0;
         }
         QString value = pI->text(7);
-        if (value != tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (3 of 5)") && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) != nullptr) {
+        if (value != tr("<command or Lua script>", "This string is also used programmatically - ensure all instances are the same") && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) != nullptr) {
             originalExitCmds.remove(value);
             if (pI->checkState(1) == Qt::Unchecked) {
                 value = value.prepend(QStringLiteral("0"));
@@ -2277,7 +2277,7 @@ void dlgRoomExits::slot_checkModified()
  *                   pI->text(0).toInt(),
  *                   qPrintable(pI->text(7)));
  */
-            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (4 of 5)") || pI->text(0).toInt() <= 0)
+            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically - ensure all instances are the same") || pI->text(0).toInt() <= 0)
                 continue; // Ignore new or to be deleted entries
             currentCount++;
         }
@@ -2297,7 +2297,7 @@ void dlgRoomExits::slot_checkModified()
  *                           pI->text(0).toInt(),
  *                           qPrintable(pI->text(7)));
  */
-                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (5 of 5)") || pI->text(0).toInt() <= 0)
+                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically - ensure all instances are the same") || pI->text(0).toInt() <= 0)
                         continue; // Ignore new or to be deleted entries
                     QString currentCmd = pI->text(7);
                     TExit currentExit;
