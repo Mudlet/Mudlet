@@ -1977,10 +1977,11 @@ void cTelnet::setKeepAlive(int socketHandle)
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
     setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
-#else // else condition: Not Windows and Not (Linux or MacOs) = FreeBSD:
-    // FreeBSD always has the Keep-alive option enabled
+#elif defined(Q_OS_FREEBSD)
+    // FreeBSD always has the Keep-alive option enabled, so the above not needed
     Q_UNUSED(on)
 #endif
+
     // The effect is that 75 seconds is allowed to set up the connection,
     // then after another TWO minutes with no traffic a keep-alive is sent
     // - which should wake up the far end, if it does not another one is sent
@@ -1988,10 +1989,25 @@ void cTelnet::setKeepAlive(int socketHandle)
     // those keep alives then Mudlet will close the socket itself - declaring
     // the remote end dead... we are hoping that that does not happen so that
     // the FIRST keep-alive does what it is supposed to!
-    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINIT, &init, sizeof(init)); // Time to establish connection on new, unconnected sockets, in seconds
-    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout)); // Start keepalives after this interval, in seconds
-    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)); // Interval between keep-alives, in seconds
-    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)); // Number of failed keep alives before forcing a close
-
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+    Q_UNUSED(init)
+#elif defined(Q_OS_FREEBSD)
+    // Only an option on FreeBSD:
+    // Time to establish connection on new, unconnected sockets, in seconds
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINIT, &init, sizeof(init));
 #endif
+
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    // Start keepalives after this interval of idleness, in seconds
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
+#elif defined(Q_OS_MACOS)
+    // TCP_KEEPIDLE is called TCP_KEEPALIVE on MacOs
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#endif
+
+    // Interval between keep-alives, in seconds:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+    // Number of failed keep alives before forcing a close:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#endif // defined(Q_OS_WIN32)
 }
