@@ -41,29 +41,21 @@
 #include <queue>
 #include <string>
 
-#if defined (Q_OS_MACOS) || defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if defined(Q_OS_WIN32)
+#include <Winsock2.h>
+#include <ws2tcpip.h>
+#include "mstcpip.h"
+#else
 #include <sys/socket.h>
-/* The Linux documentation for setsockopt(2), e.g.
- * https://linux.die.net/man/2/setsockopt suggests that "sys/types.h" is
- * optional for that OS but:
- * "Notes:
- * POSIX.1-2001 does not require the inclusion of <sys/types.h>, and this header
- * file is not required on Linux. However, some historical (BSD) implementations
- * required this header file, and portable applications are probably wise to
- * include it."
- *
- * Certainly it is noted in the man page for it on my FreeBSD system, and, given
- * the common heritage of the MacOs networking code to BSDs it is likely to be
- * suggested for there as well.
+/*
+ * The Linux documentation for setsockopt(2), indicates that "sys/types.h" is
+ * optional for that OS but is suggested for portability with other OSes also
+ * derived from BSD code - it is included in the corresponding FreeBSD manpage!
  */
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
-#elif defined(Q_OS_WIN32)
-#include <Winsock2.h>
-#include <ws2tcpip.h>
-#include "mstcpip.h"
 #endif
 
 class QNetworkAccessManager;
