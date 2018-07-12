@@ -1985,7 +1985,7 @@ void cTelnet::setKeepAlive(int socketHandle)
 #endif
 
     // The effect is that (on FreeBSD) "init" seconds is allowed to set up the
-    // connection, then after another "timeout" minutes with no traffic a
+    // connection, then after (all OSes) "timeout" seconds with no traffic a
     // keep-alive is sent - which should wake up the far end, if it does not
     // another one is sent after a further "interval" seconds and if NO response
     // is received after "count" of those keep alives then Mudlet will close the
