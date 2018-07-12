@@ -4508,6 +4508,11 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                     // Fall-through
                     [[clang::fallthrough]];
                 case 1:
+                    if (codePoint.contains(QChar::ReplacementCharacter)) {
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                        break;
+                    }
 #if defined(DEBUG_BIG5_PROCESSING)
                     qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size()
                                    << " QChar(s) long [" << codePoint << "] and is in the " << dataIdentity.c_str() << " range";
