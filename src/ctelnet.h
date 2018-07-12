@@ -174,9 +174,8 @@ private:
 
     void processTelnetCommand(const std::string& command);
     void sendTelnetOption(char type, char option);
-    void applyGAFix();
-    void processChunk(std::string&);
-    void processPromptChunk(std::string&);
+    void gotRest(std::string&);
+    void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
@@ -237,22 +236,6 @@ private:
     bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
-
-    enum class DataChunkType {
-        IN_BAND,
-        GMCP
-    };
-
-    struct MudDataChunk {
-        DataChunkType type;
-        std::string data;
-        bool ends_with_prompt;
-    };
-
-    // We break mud data up into chunks by GA signal and Telnet
-    // control sequences, storing in-band data and GMCP in the
-    // queue to be processed in order to enable inline events.
-    std::queue<MudDataChunk> mudDataChunks;
 };
 
 #endif // MUDLET_CTELNET_H

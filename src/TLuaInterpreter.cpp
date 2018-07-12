@@ -11390,55 +11390,50 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
-void TLuaInterpreter::raiseProtocolEvent(QString& key, const QString& string_data, const QString& protocol, const QStringList& tokenList)
+// No documentation available in wiki - internal function
+void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 {
-    QString token = protocol;
-    key.prepend(protocol + ".");
-
     lua_State* L = pGlobalLua;
-    for (int k = 0; k < tokenList.size(); k++) {
-        TEvent event;
-        token.append(".");
-        token.append(tokenList[k]);
-        event.mArgumentList.append(token);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(key);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        Host& host = getHostFromLua(L);
-        if (mudlet::debugMode) {
-            QString msg = QString("\n%1 event <").arg(protocol);
-            msg.append(token);
-            msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
-            host.mpConsole->printSystemMessage(msg);
-        }
-        host.raiseEvent(event);
-    }
-    // auto-detect IRE composer
-    if (tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit") {
-        QRegularExpression rx(QStringLiteral(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit"));
-        QRegularExpressionMatch match = rx.match(string_data);
-
-        if (match.capturedStart() != -1) {
-            QString title = match.captured(1);
-            QString initialText = match.captured(2);
-            initialText.replace(QStringLiteral(R"(\n)"), QStringLiteral("\n"));
-            Host& host = getHostFromLua(L);
-            if (host.mTelnet.mpComposer) {
-                return;
-            }
-
-            host.mTelnet.mpComposer = new dlgComposer(&host);
-            host.mTelnet.mpComposer->init(title, initialText);
-            host.mTelnet.mpComposer->raise();
-            host.mTelnet.mpComposer->show();
+    lua_getglobal(L, "gmcp"); //defined in Lua init
+    if (!lua_istable(L, -1)) {
+        lua_newtable(L);
+        lua_setglobal(L, "gmcp");
+        lua_getglobal(L, "gmcp");
+        if (!lua_istable(L, -1)) {
+            qDebug() << "ERROR: gmcp table not defined";
+            return;
         }
     }
+    parseJSON(key, string_data, "gmcp");
 }
 
-void TLuaInterpreter::setOOBTable(
-    QString& key, const QString& string_data, const QStringList& tokenList)
+// No documentation available in wiki - internal function
+void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
 {
     lua_State* L = pGlobalLua;
+    lua_getglobal(L, "msdp");
+    if (!lua_istable(L, -1)) {
+        lua_newtable(L);
+        lua_setglobal(L, "msdp");
+        lua_getglobal(L, "msdp");
+        if (!lua_istable(L, -1)) {
+            qDebug() << "ERROR: msdp table not defined";
+            return;
+        }
+    }
+
+    parseJSON(key, string_data, "msdp");
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
+{
+    // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
+    lua_State* L = pGlobalLua;
+    QStringList tokenList = key.split(".");
+    if (!lua_checkstack(L, tokenList.size() + 5)) {
+        return;
+    }
     int i = 0;
     for (int total = tokenList.size() - 1; i < total; ++i) {
         lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
@@ -11509,60 +11504,54 @@ void TLuaInterpreter::setOOBTable(
         }
     }
     lua_settop(L, 0);
-}
 
-// If the given global Lua table does not exist, create it. Returns
-// false if the table was unable to be created.
-static bool ensureTableExists(lua_State* L, const char* table) {
-    lua_getglobal(L, table); //defined in Lua init
-    if (!lua_istable(L, -1)) {
-        lua_newtable(L);
-        lua_setglobal(L, table);
-        lua_getglobal(L, table);
-        if (!lua_istable(L, -1)) {
-            qDebug() << "ERROR: could not create table '" << table << "'";
-            return false;
+    // events: for key "foo.bar.top" we raise: gmcp.foo, gmcp.foo.bar and gmcp.foo.bar.top
+    // with the actual key given as parameter e.g. event=gmcp.foo, param="gmcp.foo.bar"
+
+    QString token = protocol;
+    if (protocol == "msdp") {
+        key.prepend("msdp.");
+    } else {
+        key.prepend("gmcp.");
+    }
+
+    for (int k = 0, total = tokenList.size(); k < total; ++k) {
+        TEvent event;
+        token.append(".");
+        token.append(tokenList[k]);
+        event.mArgumentList.append(token);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(key);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        Host& host = getHostFromLua(L);
+        if (mudlet::debugMode) {
+            QString msg = QString("\n%1 event <").arg(protocol);
+            msg.append(token);
+            msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
+            host.mpConsole->printSystemMessage(msg);
+        }
+        host.raiseEvent(event);
+    }
+    // auto-detect IRE composer
+    if (tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit") {
+        QRegularExpression rx(QStringLiteral(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit"));
+        QRegularExpressionMatch match = rx.match(string_data);
+
+        if (match.capturedStart() != -1) {
+            QString title = match.captured(1);
+            QString initialText = match.captured(2);
+            initialText.replace(QStringLiteral(R"(\n)"), QStringLiteral("\n"));
+            Host& host = getHostFromLua(L);
+            if (host.mTelnet.mpComposer) {
+                return;
+            }
+
+            host.mTelnet.mpComposer = new dlgComposer(&host);
+            host.mTelnet.mpComposer->init(title, initialText);
+            host.mTelnet.mpComposer->raise();
+            host.mTelnet.mpComposer->show();
         }
     }
-    return true;
-}
-
-void TLuaInterpreter::setGMCPTable(QString& key, const QString& json)
-{
-    static const char gmcp_table[] = "gmcp";
-    if (!ensureTableExists(pGlobalLua, gmcp_table)) {
-        return;
-    }
-    updateOOBTableAndRaiseEvent(key, json, QString(gmcp_table));
-}
-
-void TLuaInterpreter::raiseInlineGMCPEvent(QString& key, const QString& json)
-{
-    QStringList tokenList = key.split(".");
-    raiseProtocolEvent(key, json, "inline-gmcp", tokenList);
-}
-
-// No documentation available in wiki - internal function
-void TLuaInterpreter::setMSDPTable(QString& key, const QString& json)
-{
-    static const char msdp_table[] = "msdp";
-    if (!ensureTableExists(pGlobalLua, msdp_table)) {
-        return;
-    }
-    updateOOBTableAndRaiseEvent(key, json, QString(msdp_table));
-}
-
-void TLuaInterpreter::updateOOBTableAndRaiseEvent(
-    QString& key, const QString& json, const QString& protocol)
-{
-    // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
-    lua_State* L = pGlobalLua;
-    QStringList tokenList = key.split(".");
-    if (!lua_checkstack(L, tokenList.size() + 5)) {
-        return;
-    }
-    setOOBTable(key, json, tokenList);
-    raiseProtocolEvent(key, json, protocol, tokenList);
     lua_pop(L, lua_gettop(L));
 }
 
