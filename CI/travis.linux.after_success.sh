@@ -23,7 +23,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
       --form file=@Mudlet.tgz \
       --form version="master branch head" \
       --form description="$(git log -1|head -1)" \
-      --ca-file="${HOME}/ca-file.pem" \
+      --cacert="${HOME}/ca-file.pem" \
       https://scan.coverity.com/builds?project=Mudlet%2FMudlet
     CURL_RESULT=$?
     echo curl returned $CURL_RESULT
