@@ -102,9 +102,11 @@ T2DMap::T2DMap(QWidget* parent)
     QStringList headerLabels;
     headerLabels << tr("Room Id") << tr("Room Name");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
-    mMultiSelectionListWidget.setToolTip(
-            tr("<html><head/><body><p>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the "
-               "relevant header to sort by that method.  Note that the name column willl only show if at least one of the rooms has a name.</p></body></html>"));
+    mMultiSelectionListWidget.setToolTip(QStringLiteral("<html><head/><body>%p</body></html>")
+                                         .arg(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
+                                                 "rooms are named) to add or remove the room from the selection.  Click on the "
+                                                 "relevant header to sort by that method.  Note that the name column willl only "
+                                                 "show if at least one of the rooms has a name.</p>")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
     mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection
@@ -745,35 +747,36 @@ void T2DMap::paintEvent(QPaintEvent* e)
         } else if (mCustomLineSelectedRoom > 0 && !mCustomLineSelectedExit.isEmpty()) {
             TRoom* pSR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
             if (pSR) {
-                if (mCustomLineSelectedExit == "NW" || mCustomLineSelectedExit == "nw") {
+                if (mCustomLineSelectedExit == QLatin1String("NW") || mCustomLineSelectedExit == QLatin1String("nw")) {
                     customLineDestinationTarget = pSR->getNorthwest();
-                } else if (mCustomLineSelectedExit == "N" || mCustomLineSelectedExit == "n") {
+                } else if (mCustomLineSelectedExit == QLatin1String("N") || mCustomLineSelectedExit == QLatin1String("n")) {
                     customLineDestinationTarget = pSR->getNorth();
-                } else if (mCustomLineSelectedExit == "NE" || mCustomLineSelectedExit == "ne") {
+                } else if (mCustomLineSelectedExit == QLatin1String("NE") || mCustomLineSelectedExit == QLatin1String("ne")) {
                     customLineDestinationTarget = pSR->getNortheast();
-                } else if (mCustomLineSelectedExit == "UP" || mCustomLineSelectedExit == "up") {
+                } else if (mCustomLineSelectedExit == QLatin1String("UP") || mCustomLineSelectedExit == QLatin1String("up")) {
                     customLineDestinationTarget = pSR->getUp();
-                } else if (mCustomLineSelectedExit == "W" || mCustomLineSelectedExit == "w") {
+                } else if (mCustomLineSelectedExit == QLatin1String("W") || mCustomLineSelectedExit == QLatin1String("w")) {
                     customLineDestinationTarget = pSR->getWest();
-                } else if (mCustomLineSelectedExit == "E" || mCustomLineSelectedExit == "e") {
+                } else if (mCustomLineSelectedExit == QLatin1String("E") || mCustomLineSelectedExit == QLatin1String("e")) {
                     customLineDestinationTarget = pSR->getEast();
-                } else if (mCustomLineSelectedExit == "DOWN" || mCustomLineSelectedExit == "down") {
+                } else if (mCustomLineSelectedExit == QLatin1String("DOWN") || mCustomLineSelectedExit == QLatin1String("down")) {
                     customLineDestinationTarget = pSR->getDown();
-                } else if (mCustomLineSelectedExit == "SW" || mCustomLineSelectedExit == "sw") {
+                } else if (mCustomLineSelectedExit == QLatin1String("SW") || mCustomLineSelectedExit == QLatin1String("sw")) {
                     customLineDestinationTarget = pSR->getSouthwest();
-                } else if (mCustomLineSelectedExit == "S" || mCustomLineSelectedExit == "s") {
+                } else if (mCustomLineSelectedExit == QLatin1String("S") || mCustomLineSelectedExit == QLatin1String("s")) {
                     customLineDestinationTarget = pSR->getSouth();
-                } else if (mCustomLineSelectedExit == "SE" || mCustomLineSelectedExit == "se") {
+                } else if (mCustomLineSelectedExit == QLatin1String("SE") || mCustomLineSelectedExit == QLatin1String("se")) {
                     customLineDestinationTarget = pSR->getSoutheast();
-                } else if (mCustomLineSelectedExit == "IN" || mCustomLineSelectedExit == "in") {
+                } else if (mCustomLineSelectedExit == QLatin1String("IN") || mCustomLineSelectedExit == QLatin1String("in")) {
                     customLineDestinationTarget = pSR->getIn();
-                } else if (mCustomLineSelectedExit == "OUT" || mCustomLineSelectedExit == "out") {
+                } else if (mCustomLineSelectedExit == QLatin1String("OUT") || mCustomLineSelectedExit == QLatin1String("out")) {
                     customLineDestinationTarget = pSR->getOut();
                 } else {
                     QMapIterator<int, QString> otherExitIt = pSR->getOtherMap();
                     while (otherExitIt.hasNext()) {
                         otherExitIt.next();
-                        if (otherExitIt.value().startsWith("0") || otherExitIt.value().startsWith("1")) {
+                        if (otherExitIt.value().startsWith(QLatin1String("0"))
+                                || otherExitIt.value().startsWith(QLatin1String("1"))) {
                             if (otherExitIt.value().mid(1) == mCustomLineSelectedExit) {
                                 customLineDestinationTarget = otherExitIt.key();
                                 break;
@@ -833,7 +836,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             exitList.clear();
             oneWayExits.clear();
             if (!pR->customLines.empty()) {
-                if (!pR->customLines.contains("N")) {
+                if (!pR->customLines.contains(QLatin1String("N"))) {
                     exitList.push_back(pR->getNorth());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getNorth());
                     if (pER) {
@@ -842,7 +845,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         }
                     }
                 }
-                if (!pR->customLines.contains("NW")) {
+                if (!pR->customLines.contains(QLatin1String("NW"))) {
                     exitList.push_back(pR->getNorthwest());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getNorthwest());
                     if (pER) {
@@ -851,7 +854,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         }
                     }
                 }
-                if (!pR->customLines.contains("E")) {
+                if (!pR->customLines.contains(QLatin1String("E"))) {
                     exitList.push_back(pR->getEast());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getEast());
                     if (pER) {
@@ -860,7 +863,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         }
                     }
                 }
-                if (!pR->customLines.contains("SE")) {
+                if (!pR->customLines.contains(QLatin1String("SE"))) {
                     exitList.push_back(pR->getSoutheast());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getSoutheast());
                     if (pER) {
@@ -869,7 +872,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         }
                     }
                 }
-                if (!pR->customLines.contains("S")) {
+                if (!pR->customLines.contains(QLatin1String("S"))) {
                     exitList.push_back(pR->getSouth());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getSouth());
                     if (pER) {
@@ -878,7 +881,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         }
                     }
                 }
-                if (!pR->customLines.contains("SW")) {
+                if (!pR->customLines.contains(QLatin1String("SW"))) {
                     exitList.push_back(pR->getSouthwest());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getSouthwest());
                     if (pER) {
@@ -887,7 +890,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         }
                     }
                 }
-                if (!pR->customLines.contains("W")) {
+                if (!pR->customLines.contains(QLatin1String("W"))) {
                     exitList.push_back(pR->getWest());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getWest());
                     if (pER) {
@@ -896,7 +899,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         }
                     }
                 }
-                if (!pR->customLines.contains("NE")) {
+                if (!pR->customLines.contains(QLatin1String("NE"))) {
                     exitList.push_back(pR->getNortheast());
                     TRoom* pER = mpMap->mpRoomDB->getRoom(pR->getNortheast());
                     if (pER) {
@@ -2214,35 +2217,35 @@ void T2DMap::createLabel(QRectF labelRect)
     mHelpMsg.clear();
 
     QMessageBox msgBox;
-    msgBox.setText("Text label or image label?");
-    QPushButton* textButton = msgBox.addButton(tr("Text Label"), QMessageBox::ActionRole);
-    QPushButton* imageButton = msgBox.addButton(tr("Image Label"), QMessageBox::ActionRole);
+    msgBox.setText(tr("Text label or image label?", "2D Mapper create label dialog text"));
+    QPushButton* textButton = msgBox.addButton(tr("Text Label", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
+    QPushButton* imageButton = msgBox.addButton(tr("Image Label", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
     msgBox.setStandardButtons(QMessageBox::Cancel);
     msgBox.exec();
     if (msgBox.clickedButton() == textButton) {
-        QString title = "Enter label text.";
+        QString title = tr("Enter label text.","2D Mapper create label dialog title/text");
         _font = QFontDialog::getFont(nullptr);
         t = QInputDialog::getText(nullptr, title, title);
         if (t.length() < 1) {
             t = "no text";
         }
         label.text = t;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, "Background color");
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, "Foreground color");
+        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"));
+        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"));
     } else if (msgBox.clickedButton() == imageButton) {
         label.bgColor = QColor(50, 50, 150, 100);
         label.fgColor = QColor(255, 255, 50, 255);
-        label.text = "";
-        imagePath = QFileDialog::getOpenFileName(nullptr, "Select image");
+        label.text.clear();
+        imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
     } else {
         return;
     }
 
     QMessageBox msgBox2;
     msgBox2.setStandardButtons(QMessageBox::Cancel);
-    msgBox2.setText("Draw label as background or on top of everything?");
-    QPushButton* textButton2 = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
-    QPushButton* imageButton2 = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
+    msgBox2.setText(tr("Draw label as background or on top of everything?", "2D Mapper create label dialog text"));
+    QPushButton* textButton2 = msgBox2.addButton(tr("Background", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
+    QPushButton* imageButton2 = msgBox2.addButton(tr("Foreground", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
     msgBox2.exec();
     bool showOnTop = false;
     if (msgBox2.clickedButton() == textButton2) {
@@ -2488,7 +2491,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             if (!event->modifiers().testFlag(Qt::ControlModifier)) {
                 // If control key NOT down then clear selection, and put up helpful text
-                mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...");
+                mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
                 mMultiSelectionSet.clear();
             }
 
@@ -2603,7 +2606,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             while (itRoom.hasNext()) {
                 auto _item = new QTreeWidgetItem;
                 int multiSelectionRoomId = itRoom.next();
-                // Pad with spaces so sorting works
+                // Using QStringLiteral so we can pad text form with spaces so sorting works:
                 _item->setText(0, QStringLiteral("%1").arg(multiSelectionRoomId, 7));
                 _item->setTextAlignment(0, Qt::AlignRight);
                 TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
@@ -2646,21 +2649,28 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (pR) {
-                QAction* action = new QAction("undo", this);
-                action->setToolTip(tr("Undo last point"));
+                QAction* action = new QAction(tr("undo",
+                                                 "2D Mapper context menu (drawing custom exit line) item"), this);
+                action->setToolTip(tr("Undo last point",
+                                      "2D Mapper context menu (drawing custom exit line) item tool-tip"));
                 if (pR->customLines.value(mCustomLinesRoomExit).count() > 1) {
                     connect(action, SIGNAL(triggered()), this, SLOT(slot_undoCustomLineLastPoint()));
                 } else {
                     action->setEnabled(false);
                 }
 
-                QAction* action2 = new QAction("properties", this);
-                action2->setText("properties...");
-                action2->setToolTip(tr("Change the properties of this line"));
+                QAction* action2 = new QAction(tr("properties",
+                                                  "2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)"), this);
+                action2->setText(tr("properties...",
+                                    "2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)"));
+                action2->setToolTip(tr("Change the properties of this line",
+                                       "2D Mapper context menu (drawing custom exit line) item tool-tip"));
                 connect(action2, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
-                QAction* action3 = new QAction("finish", this);
-                action3->setToolTip(tr("Finish drawing this line"));
+                QAction* action3 = new QAction(tr("finish",
+                                                  "2D Mapper context menu (drawing custom exit line) item"), this);
+                action3->setToolTip(tr("Finish drawing this line",
+                                       "2D Mapper context menu (drawing custom exit line) item tool-tip"));
                 connect(action3, SIGNAL(triggered()), this, SLOT(slot_doneCustomLine()));
 
                 mPopupMenu = true;
@@ -2681,10 +2691,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             auto pArea = mpMap->mpRoomDB->getArea(mAID);
 
             if (!playerRoom || !pArea) {
-                auto createMap = new QAction(tr("create new map"), this);
+                auto createMap = new QAction(tr("create new map", "2D Mapper context menu (no map found) item"), this);
                 connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
 
-                auto loadMap = new QAction(tr("load map"), this);
+                auto loadMap = new QAction(tr("load map", "2D Mapper context menu (no map found) item"), this);
                 connect(loadMap, &QAction::triggered, this, &T2DMap::slot_loadMap);
 
                 mPopupMenu = true;
@@ -2696,76 +2706,88 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 return;
             }
 
-            QAction* action = new QAction("move", this);
-            action->setToolTip(tr("Move room"));
+            QAction* action = new QAction(tr("move", "2D Mapper context menu (room) item"), this);
+            action->setToolTip(tr("Move room", "2D Mapper context menu (room) item tool-tip"));
             connect(action, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
 
-            QAction* action2 = new QAction("delete", this);
-            action2->setToolTip(tr("Delete room"));
+            QAction* action2 = new QAction(tr("delete", "2D Mapper context menu (room) item"), this);
+            action2->setToolTip(tr("Delete room", "2D Mapper context menu (room) item tool-tip"));
             connect(action2, SIGNAL(triggered()), this, SLOT(slot_deleteRoom()));
 
-            QAction* action3 = new QAction("color", this);
-            action3->setToolTip(tr("Change room color"));
+            QAction* action3 = new QAction(tr("color", "2D Mapper context menu (room) item"), this);
+            action3->setToolTip(tr("Change room color", "2D Mapper context menu (room) item tool-tip"));
             connect(action3, SIGNAL(triggered()), this, SLOT(slot_changeColor()));
 
-            QAction* action4 = new QAction("spread", this);
-            action4->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms"));
+            QAction* action4 = new QAction(tr("spread", "2D Mapper context menu (room) item"), this);
+            action4->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms",
+                                   "2D Mapper context menu (room) item tool-tip"));
             connect(action4, SIGNAL(triggered()), this, SLOT(slot_spread()));
 
-            QAction* action9 = new QAction("shrink", this);
-            action9->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms"));
+            QAction* action9 = new QAction(tr("shrink", "2D Mapper context menu (room) item"), this);
+            action9->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms",
+                                   "2D Mapper context menu (room) item tool-tip"));
             connect(action9, SIGNAL(triggered()), this, SLOT(slot_shrink()));
 
-            QAction* action6 = new QAction("lock", this);
-            action6->setToolTip(tr("Lock room for speed walks"));
+            QAction* action6 = new QAction(tr("lock", "2D Mapper context menu (room) item"), this);
+            action6->setToolTip(tr("Lock room for speed walks", "2D Mapper context menu (room) item tool-tip"));
             connect(action6, SIGNAL(triggered()), this, SLOT(slot_lockRoom()));
 
-            QAction* action17 = new QAction("unlock", this);
-            action17->setToolTip(tr("Unlock room for speed walks"));
+            QAction* action17 = new QAction(tr("unlock", "2D Mapper context menu (room) item"), this);
+            action17->setToolTip(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tool-tip"));
             connect(action17, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
 
-            QAction* action7 = new QAction("weight", this);
-            action7->setToolTip(tr("Set room weight"));
+            QAction* action7 = new QAction(tr("weight", "2D Mapper context menu (room) item"), this);
+            action7->setToolTip(tr("Set room weight", "2D Mapper context menu (room) item tool-tip"));
             connect(action7, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
 
-            QAction* action8 = new QAction("exits", this);
-            action8->setToolTip(tr("Set room exits"));
+            QAction* action8 = new QAction(tr("exits", "2D Mapper context menu (room) item"), this);
+            action8->setToolTip(tr("Set room exits", "2D Mapper context menu (room) item tool-tip"));
             connect(action8, SIGNAL(triggered()), this, SLOT(slot_setExits()));
 
-            QAction* action10 = new QAction("symbol", this);
-            action10->setToolTip(tr("Set one or more symbols or letters to mark special rooms"));
+            QAction* action10 = new QAction(tr("symbol", "2D Mapper context menu (room) item"), this);
+            action10->setToolTip(tr("Set one or more symbols or letters to mark special rooms",
+                                    "2D Mapper context menu (room) item tool-tip"));
             connect(action10, SIGNAL(triggered()), this, SLOT(slot_setSymbol()));
 
-            QAction* action12 = new QAction("move to", this);
-            action12->setToolTip(tr("Move selected group to a given position"));
+            QAction* action12 = new QAction(tr("move to", "2D Mapper context menu (room) item"), this);
+            action12->setToolTip(tr("Move selected group to a given position",
+                                    "2D Mapper context menu (room) item tool-tip"));
             connect(action12, SIGNAL(triggered()), this, SLOT(slot_movePosition()));
 
-            QAction* action13 = new QAction("area", this);
-            action13->setToolTip(tr("Set room area ID"));
+            QAction* action13 = new QAction(tr("area", "2D Mapper context menu (room) item"), this);
+            action13->setToolTip(tr("Set room's area number",
+                                    "2D Mapper context menu (room) item tool-tip"));
             connect(action13, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
-            QAction* action14 = new QAction("custom exit lines", this);
-
+            QAction* action14 = new QAction(tr("custom exit lines",
+                                               "2D Mapper context menu (room) item"), this);
             if (pArea->gridMode) {
                 // Disable custom exit lines in grid mode as they aren't visible anyway
-                action14->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode"));
+                action14->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode",
+                                        "2D Mapper context menu (room) item tool-tip (disabled state)"));
                 action14->setEnabled(false);
             } else {
-                action14->setToolTip(tr("Replace an exit line with a custom line"));
+                action14->setToolTip(tr("Replace an exit line with a custom line",
+                                        "2D Mapper context menu (room) item tool-tip (enabled state)"));
                 connect(action14, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
             }
 
-            QAction* action15 = new QAction("create Label", this);
-            action15->setToolTip(tr("Create labels to show text or images."));
+            QAction* action15 = new QAction(tr("create Label",
+                                               "2D Mapper context menu (room) item"), this);
+            action15->setToolTip(tr("Create labels to show text or images.",
+                                    "2D Mapper context menu (room) item tool-tip"));
             connect(action15, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
 
-            QAction* action16 = new QAction("set location", this);
+            QAction* action16 = new QAction(tr("set location",
+                                               "2D Mapper context menu (room) item"), this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
-                action16->setToolTip(tr("Set player current location to here"));
+                action16->setToolTip(tr("Set player current location to here",
+                                        "2D Mapper context menu (room) item tool-tip (enabled state)"));
                 connect(action16, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
             } else {
                 action16->setEnabled(false);
-                action16->setToolTip(tr("Cannot set location when not exactly one room selected"));
+                action16->setToolTip(tr("Cannot set location when not exactly one room selected",
+                                        "2D Mapper context menu (room) item tool-tip (disabled state)"));
             }
 
             mPopupMenu = true;
@@ -2792,11 +2814,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             popup->popup(mapToGlobal(event->pos()));
         } else if (mLabelHilite) {
-            QAction* action = new QAction("move", this);
-            action->setToolTip(tr("Move label"));
+            QAction* action = new QAction(tr("move", "2D Mapper context menu (label) item"), this);
+            action->setToolTip(tr("Move label", "2D Mapper context menu item (label) tool-tip"));
             connect(action, SIGNAL(triggered()), this, SLOT(slot_moveLabel()));
-            QAction* action2 = new QAction("delete", this);
-            action2->setToolTip(tr("Delete label"));
+            QAction* action2 = new QAction(tr("delete", "2D Mapper context menu (label) item"), this);
+            action2->setToolTip(tr("Delete label", "2D Mapper context menu (label) item tool-tip"));
             connect(action2, SIGNAL(triggered()), this, SLOT(slot_deleteLabel()));
             mPopupMenu = true;
             popup->addAction(action);
@@ -2812,46 +2834,58 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (mCustomLineSelectedRoom > 0) {
                 TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
                 if (pR) {
-                    QAction* action = new QAction("add point", this);
+                    QAction* action = new QAction(tr("add point", "2D Mapper context menu (custom line editing) item"), this);
                     if (mCustomLineSelectedPoint > -1)
                     // The first user manipulable point IS zero - line is
                     // drawn to it from a point around room symbol dependent
                     // on the exit direction - and we can now add even to it
                     {
                         connect(action, SIGNAL(triggered()), this, SLOT(slot_customLineAddPoint()));
-                        action->setToolTip(tr("Divide segment by adding a new point mid-way along"));
+                        action->setToolTip(tr("Divide segment by adding a new point mid-way along",
+                                              "2D Mapper context menu (custom line editing) item tool-tip (enabled state)"));
                     } else {
                         action->setEnabled(false);
-                        action->setToolTip(tr("Select a point first, then add a new point mid-way along the segment towards room"));
+                        action->setToolTip(tr("Select a point first, then add a new point mid-way along the segment towards room",
+                                              "2D Mapper context menu (custom line editing) item tool-tip (disabled state, i.e must do the suggested action first)"));
                     }
 
-                    QAction* action2 = new QAction("remove point", this);
+                    QAction* action2 = new QAction(tr("remove point",
+                                                      "2D Mapper context menu (custom line editing) item"), this);
                     // Permit this to be enabled if the current point is 0 or
                     // greater, but not if there is no others
                     if (mCustomLineSelectedPoint > -1) {
                         if (pR->customLines.value(mCustomLineSelectedExit).count() > 1) {
                             connect(action2, SIGNAL(triggered()), this, SLOT(slot_customLineRemovePoint()));
                             if ((mCustomLineSelectedPoint + 1) < pR->customLines.value(mCustomLineSelectedExit).count()) {
-                                action2->setToolTip(tr("Merge pair of segments by removing this point"));
+                                action2->setToolTip(tr("Merge pair of segments by removing this point",
+                                                       "2D Mapper context menu (custom line editing) item tool-tip (enabled state but will be able to be done again on this item)"));
                             } else {
-                                action2->setToolTip(tr("Remove last segment by removing this point"));
+                                action2->setToolTip(tr("Remove last segment by removing this point",
+                                                       "2D Mapper context menu (custom line editing) item tool-tip (enabled state but is the last time this action can be done on this item)"));
                             }
                         } else {
                             action2->setEnabled(false);
-                            action2->setToolTip(tr(R"(use "delete line" to remove the only segment ending in an editable point)"));
+                            action2->setToolTip(tr(R"(use "delete line" to remove the only segment ending in an editable point)",
+                                                   R"(2D Mapper context menu (custom line editing) item tool-tip (disabled state this action can not be done again on this item but something else can be the quoted action "delete line" should match the translation for that action))"));
                         }
                     } else {
                         action2->setEnabled(false);
-                        action2->setToolTip(tr("Select a point first, then remove it"));
+                        action2->setToolTip(tr("Select a point first, then remove it",
+                                               "2D Mapper context menu (custom line editing) item tool-tip (disabled state, need to do something before it can be used)"));
                     }
 
-                    QAction* action3 = new QAction("properties", this);
-                    action3->setText("properties...");
-                    action3->setToolTip(tr("Change the properties of this custom line"));
+                    QAction* action3 = new QAction(tr("properties",
+                                                      "2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)"), this);
+                    action3->setText(tr("properties...",
+                                        "2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise"));
+                    action3->setToolTip(tr("Change the properties of this custom line",
+                                           "2D Mapper context menu (custom line editing) item tool-tip"));
                     connect(action3, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
-                    QAction* action4 = new QAction("delete line", this);
-                    action4->setToolTip(tr("Delete all of this custom line"));
+                    QAction* action4 = new QAction(tr("delete line",
+                                                      "2D Mapper context menu (custom line editing) item"), this);
+                    action4->setToolTip(tr("Delete all of this custom line",
+                                           "2D Mapper context menu (custom line editing) item tool-tip"));
                     connect(action4, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
 
                     mPopupMenu = true;
@@ -2892,10 +2926,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         while (it2.hasNext()) {
             it2.next();
             QStringList actionInfo = it2.value();
-            auto action = new QAction(actionInfo[2], this);
-            if (actionInfo[1] == "") { //no parent
+            auto action = new QAction(actionInfo.at(2), this);
+            if (actionInfo.at(1).isEmpty()) { //no parent
                 popup->addAction(action);
-            } else if (userMenus.contains(actionInfo[1])) {
+            } else if (userMenus.contains(actionInfo.at(1))) {
                 userMenus[actionInfo[1]]->addAction(action);
             } else {
                 delete action;
@@ -2932,7 +2966,7 @@ void T2DMap::slot_customLineProperties()
         if (pR->customLines.contains(exit)) {
             QUiLoader loader;
 
-            QFile file(":/ui/custom_lines_properties.ui");
+            QFile file(QStringLiteral(":/ui/custom_lines_properties.ui"));
             file.open(QFile::ReadOnly);
             auto * d = qobject_cast<QDialog*>(loader.load(&file, this));
             file.close();
@@ -2941,49 +2975,49 @@ void T2DMap::slot_customLineProperties()
                 return;
             }
             d->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_custom_exit_properties.png")));
-            auto * le_toId = d->findChild<QLineEdit*>("toId");
-            auto * le_fromId = d->findChild<QLineEdit*>("fromId");
-            auto * le_cmd = d->findChild<QLineEdit*>("cmd");
+            auto * le_toId = d->findChild<QLineEdit*>(QStringLiteral("toId"));
+            auto * le_fromId = d->findChild<QLineEdit*>(QStringLiteral("fromId"));
+            auto * le_cmd = d->findChild<QLineEdit*>(QStringLiteral("cmd"));
 
-            mpCurrentLineStyle = d->findChild<QComboBox*>("lineStyle");
-            mpCurrentLineColor = d->findChild<QPushButton*>("lineColor");
-            mpCurrentLineArrow = d->findChild<QCheckBox*>("arrow");
+            mpCurrentLineStyle = d->findChild<QComboBox*>(QStringLiteral("lineStyle"));
+            mpCurrentLineColor = d->findChild<QPushButton*>(QStringLiteral("lineColor"));
+            mpCurrentLineArrow = d->findChild<QCheckBox*>(QStringLiteral("arrow"));
             if (!le_toId || !le_cmd || !le_fromId || !mpCurrentLineStyle || !mpCurrentLineColor || !mpCurrentLineArrow) {
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to find an element in the dialog!");
                 return;
             }
             le_cmd->setText(exit);
             le_fromId->setText(QString::number(pR->getId()));
-            if (exit == "NW") {
+            if (exit == QLatin1String("NW")) {
                 le_toId->setText(QString::number(pR->getNorthwest()));
-            } else if (exit == "N") {
+            } else if (exit == QLatin1String("N")) {
                 le_toId->setText(QString::number(pR->getNorth()));
-            } else if (exit == "NE") {
+            } else if (exit == QLatin1String("NE")) {
                 le_toId->setText(QString::number(pR->getNortheast()));
-            } else if (exit == "UP") {
+            } else if (exit == QLatin1String("UP")) {
                 le_toId->setText(QString::number(pR->getUp()));
-            } else if (exit == "W") {
+            } else if (exit == QLatin1String("W")) {
                 le_toId->setText(QString::number(pR->getWest()));
-            } else if (exit == "E") {
+            } else if (exit == QLatin1String("E")) {
                 le_toId->setText(QString::number(pR->getEast()));
-            } else if (exit == "DOWN") {
+            } else if (exit == QLatin1String("DOWN")) {
                 le_toId->setText(QString::number(pR->getDown()));
-            } else if (exit == "SW") {
+            } else if (exit == QLatin1String("SW")) {
                 le_toId->setText(QString::number(pR->getSouthwest()));
-            } else if (exit == "S") {
+            } else if (exit == QLatin1String("S")) {
                 le_toId->setText(QString::number(pR->getSouth()));
-            } else if (exit == "SE") {
+            } else if (exit == QLatin1String("SE")) {
                 le_toId->setText(QString::number(pR->getSoutheast()));
-            } else if (exit == "IN") {
+            } else if (exit == QLatin1String("IN")) {
                 le_toId->setText(QString::number(pR->getIn()));
-            } else if (exit == "OUT") {
+            } else if (exit == QLatin1String("OUT")) {
                 le_toId->setText(QString::number(pR->getOut()));
             } else {
                 bool isFound = false;
                 QMapIterator<int, QString> otherExitIt = pR->getOtherMap();
                 while (otherExitIt.hasNext()) {
                     otherExitIt.next();
-                    if (otherExitIt.value().startsWith("0") || otherExitIt.value().startsWith("1")) {
+                    if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
                         if (otherExitIt.value().mid(1) == exit) {
                             le_toId->setText(QString::number(otherExitIt.key()));
                             isFound = true;
@@ -3016,8 +3050,7 @@ void T2DMap::slot_customLineProperties()
             mCurrentLineColor.setGreen(pR->customLinesColor.value(exit).at(1));
             mCurrentLineColor.setBlue(pR->customLinesColor.value(exit).at(2));
 
-            QString _styleSheet = QString("background-color:" + mCurrentLineColor.name());
-            mpCurrentLineColor->setStyleSheet(_styleSheet);
+            mpCurrentLineColor->setStyleSheet(QStringLiteral("background-color: %1").arg(mCurrentLineColor.name()));
             connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
 
             if (d->exec() == QDialog::Accepted) {
@@ -3064,21 +3097,21 @@ void T2DMap::slot_customLineAddPoint()
         // point inserted before the first must be placed halfway between
         // the offset point and the previosu first point
         QPointF customLineStartPoint;
-        if (mCustomLineSelectedExit == "N") {
+        if (mCustomLineSelectedExit == QLatin1String("N")) {
             customLineStartPoint = QPointF(pR->x, pR->y + 0.5);
-        } else if (mCustomLineSelectedExit == "S") {
+        } else if (mCustomLineSelectedExit == QLatin1String("S")) {
             customLineStartPoint = QPointF(pR->x, pR->y - 0.5);
-        } else if (mCustomLineSelectedExit == "E") {
+        } else if (mCustomLineSelectedExit == QLatin1String("E")) {
             customLineStartPoint = QPointF(pR->x + 0.5, pR->y);
-        } else if (mCustomLineSelectedExit == "W") {
+        } else if (mCustomLineSelectedExit == QLatin1String("W")) {
             customLineStartPoint = QPointF(pR->x - 0.5, pR->y);
-        } else if (mCustomLineSelectedExit == "NE") {
+        } else if (mCustomLineSelectedExit == QLatin1String("NE")) {
             customLineStartPoint = QPointF(pR->x + 0.5, pR->y + 0.5);
-        } else if (mCustomLineSelectedExit == "NW") {
+        } else if (mCustomLineSelectedExit == QLatin1String("NW")) {
             customLineStartPoint = QPointF(pR->x - 0.5, pR->y + 0.5);
-        } else if (mCustomLineSelectedExit == "SE") {
+        } else if (mCustomLineSelectedExit == QLatin1String("SE")) {
             customLineStartPoint = QPointF(pR->x + 0.5, pR->y - 0.5);
-        } else if (mCustomLineSelectedExit == "SW") {
+        } else if (mCustomLineSelectedExit == QLatin1String("SW")) {
             customLineStartPoint = QPointF(pR->x - 0.5, pR->y - 0.5);
         } else {
             customLineStartPoint = QPointF(pR->x, pR->y);
@@ -3276,7 +3309,9 @@ void T2DMap::slot_movePosition()
     pLEx->setText(QString::number(pR_start->x));
     pLEy->setText(QString::number(pR_start->y));
     pLEz->setText(QString::number(pR_start->z));
-    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on\nthe highlighted room (%1) to:").arg(mMultiSelectionHighlightRoomId));
+    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on\nthe highlighted room (%1) to:",
+                                 "Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number")
+                              .arg(mMultiSelectionHighlightRoomId));
     // Record the starting coordinates - can be a help when working out how to move a block of rooms!
     QLabel* pLa1 = new QLabel(tr("x coordinate (was %1):").arg(pR_start->x));
     QLabel* pLa2 = new QLabel(tr("y coordinate (was %1):").arg(pR_start->y));
@@ -3295,15 +3330,20 @@ void T2DMap::slot_movePosition()
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
 
     auto pB_ok = new QPushButton(pButtonBar);
-    pB_ok->setText("Ok");
+    pB_ok->setText(tr("Ok", "dialog (room(s) move) button"));
     pL2->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), pD, SLOT(accept()));
 
     auto pB_abort = new QPushButton(pButtonBar);
-    pB_abort->setText("Cancel");
+    pB_abort->setText(tr("Cancel", "dialog (room(s) move) button"));
     connect(pB_abort, SIGNAL(clicked()), pD, SLOT(reject()));
     pL2->addWidget(pB_abort);
     pL->addWidget(pButtonBar, 4, 0, 1, 2, Qt::AlignCenter);
+
+    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        pB_ok->setIcon(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":\icons\dialog-ok-apply.png"))));
+        pB_abort->setIcon(QIcon::fromTheme(QStringLiteral("dialog-cancel"), QIcon(QStringLiteral(":\icons\dialog-cancel.png"))));
+    }
 
     if (pD->exec() == QDialog::Accepted) {
         int dx = pLEx->text().toInt() - pR_start->x;
@@ -3384,26 +3424,43 @@ void T2DMap::slot_setSymbol()
         if (usedSymbols.isEmpty()) {
             // No existing symbols
             newSymbol = QInputDialog::getText(this,
-                                              tr("Enter room symbol"),
+                                              tr("Enter room symbol",
+                                                 "Title for room symbol selection/entry dialog (used in three places)"),
                                               tr("Enter the symbol to use \n"
-                                                 "for this/these room(s):", "", mMultiSelectionSet.size()),
+                                                 "for this/these %n room(s):",
+                                                 // Intentional comment to separate arguments!
+                                                 "this is for when applying a new room symbol to one or more rooms "
+                                                 "and none have a symbol at present; use line feeds to format text "
+                                                 "into a reasonable rectangle, %n is the number of rooms involved",
+                                                 mMultiSelectionSet.size()),
                                               QLineEdit::Normal,
                                               QStringLiteral(""),
                                               & isOk,
                                               Qt::Dialog);
         } else if (usedSymbols.size() == 1) {
             newSymbol = QInputDialog::getText(this,
-                                              tr("Enter room symbol"),
+                                              tr("Enter room symbol",
+                                                 "Title for room symbol selection/entry dialog (used in three places)"),
+                                              // Intentional comment to separate arguments!
                                               ( mMultiSelectionSet.size() > 1 )
                                                   ? tr("The only used symbol is \"%1\" in one or\n"
-                                                       "more of the selected rooms, delete this to\n"
+                                                       "more of the selected %n room(s), delete this to\n"
                                                        "clear it from all selected rooms or replace\n"
-                                                       "with a new symbol to use for all the rooms:")
+                                                       "with a new symbol to use for all the rooms:",
+                                                       // Intentional comment to separate arguments!
+                                                       "this is for when applying a new room symbol to one or more rooms "
+                                                       "and some have the SAME symbol (others may have none) at present, "
+                                                       "%n is the total number of rooms involved and is at least two,"
+                                                       "use line feeds to format text into a reasonable rectangle",
+                                                       mMultiSelectionSet.size())
                                                     .arg(usedSymbols.keys().first())
                                                   : tr("The symbol is \"%1\" in the selected room,\n"
                                                        "delete this to clear the symbol or replace\n"
-                                                       "it with a new symbol for this room:")
-                                                    .arg(usedSymbols.keys().first()),
+                                                       "it with a new symbol for this room:"
+                                                       // Intentional comment to separate arguments!
+                                                       "this is for when applying a new room symbol to one room "
+                                                       "use line feeds to format text into a reasonable rectangle")
+                                                       .arg(usedSymbols.keys().first()),
                                               QLineEdit::Normal,
                                               usedSymbols.keys().first(),
                                               & isOk,
@@ -3425,22 +3482,29 @@ void T2DMap::slot_setSymbol()
                 while (itSymbolUsed.hasNext()) {
                     itSymbolUsed.next();
                     if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                        displayStrings.append(tr("%1 {count:%2}")
+                        displayStrings.append(tr("%1 {count:%2}",
+                                                 // Intentional comment to separate arguments!
+                                                 "this is a selectable entry in a comboBox, "
+                                                 "%1 is a room symbol (may be MORE than one grapheme) "
+                                                 "%2 is the count of how many times that symbol is used "
+                                                 "in the selected rooms on the map")
                                               .arg(itSymbolUsed.key())
                                               .arg(QString::number(itSymbolUsed.value())));
                     }
                 }
             }
             newSymbol = QInputDialog::getItem(this,                    // QWidget * parent
-                                              tr("Enter room symbol"), // const QString & title
-                                              tr("Choose an existing symbol from\n"
-                                                 "the list (sorted by most commonly\n"
-                                                 "used first) or enter one or more\n"
-                                                 "new graphemes (\"visible characters\"),\n"
-                                                 "to set; or a space to clear; all\n"
-                                                 "selected rooms:",
-                                                 // Intentional comment to separate two strings!
-                                                 "Use line feeds to format text into a reasonable rectangle."), // const QString & label
+                                              tr("Enter room symbol",
+                                                 "Title for room symbol selection/entry dialog (used in three places)"),
+                                              tr("Choose:\n"
+                                                 " • an existing symbol from the list below (sorted by most commonly used first)\n"
+                                                 " • enter one or more graphemes (\"visible characters\") as a new symbol\n"
+                                                 " • enter a space to clear any existing symbols\n"
+                                                 "for all of the %n selected room(s):",
+                                                 // Intentional comment to separate arguments!
+                                                 "Use line feeds to format text into a reasonable rectangle if needed, "
+                                                 "%n is the number of rooms involved.",
+                                                 mMultiSelectionSet.size()), // const QString & label
                                               displayStrings,                                                   // QStringList & items
                                               0,                                                                // int current = 0
                                               true,                                                             // bool editable = true
@@ -3531,15 +3595,20 @@ void T2DMap::slot_changeColor()
     pL2->addWidget(pB_newColor);
 
     auto pB_ok = new QPushButton(pButtonBar);
-    pB_ok->setText("ok");
+    pB_ok->setText(tr("Ok", "dialog (room(s) change color) button"));
     pL2->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), pD, SLOT(accept()));
 
     auto pB_abort = new QPushButton(pButtonBar);
-    pB_abort->setText("abort");
+    pB_abort->setText(tr("Cancel", "dialog (room(s) change color) button"));
     connect(pB_abort, SIGNAL(clicked()), pD, SLOT(reject()));
     pL2->addWidget(pB_abort);
     pL->addWidget(pButtonBar);
+
+    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        pB_ok->setIcon(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":\icons\dialog-ok-apply.png"))));
+        pB_abort->setIcon(QIcon::fromTheme(QStringLiteral("dialog-cancel"), QIcon(QStringLiteral(":\icons\dialog-cancel.png"))));
+    }
 
     QMapIterator<int, QColor> it(mpMap->customEnvColors);
     while (it.hasNext()) {
@@ -4399,7 +4468,7 @@ void T2DMap::slot_setCustomLine()
         b_->setDisabled(true);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("NW") || pR->customLines.contains("nw"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("NW")) || pR->customLines.contains(QLatin1String("nw")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4412,7 +4481,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("N") || pR->customLines.contains("n"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("N")) || pR->customLines.contains(QLatin1String("n")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4425,7 +4494,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("NE") || pR->customLines.contains("ne"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("NE")) || pR->customLines.contains(QLatin1String("ne")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4438,7 +4507,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("UP") || pR->customLines.contains("up"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("UP")) || pR->customLines.contains(QLatin1String("up")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4451,7 +4520,7 @@ void T2DMap::slot_setCustomLine()
         b_->setDisabled(true);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("W") || pR->customLines.contains("w"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("W")) || pR->customLines.contains(QLatin1String("w")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4464,7 +4533,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("E") || pR->customLines.contains("e"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("E")) || pR->customLines.contains(QLatin1String("e")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4477,7 +4546,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("DOWN") || pR->customLines.contains("down"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("DOWN")) || pR->customLines.contains(QLatin1String("down")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4490,7 +4559,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("SW") || pR->customLines.contains("sw"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("SW")) || pR->customLines.contains(QLatin1String("sw")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4503,7 +4572,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("S") || pR->customLines.contains("s"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("S")) || pR->customLines.contains(QLatin1String("s")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4516,7 +4585,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("SE") || pR->customLines.contains("se"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("SE")) || pR->customLines.contains(QLatin1String("se")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4529,11 +4598,11 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("IN") || pR->customLines.contains("in"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("IN")) || pR->customLines.contains(QLatin1String("in")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
-    b_ = d->findChild<QPushButton*>("out");
+    b_ = d->findChild<QPushButton*>(QStringLiteral("out"));
     if (!b_) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "out" exit line button!)");
         return;
@@ -4542,7 +4611,7 @@ void T2DMap::slot_setCustomLine()
         b_->setCheckable(false);
     } else {
         b_->setCheckable(true);
-        b_->setChecked(pR->customLines.contains("OUT") || pR->customLines.contains("out"));
+        b_->setChecked(pR->customLines.contains(QLatin1String("OUT")) || pR->customLines.contains(QLatin1String("out")));
         connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
@@ -4569,7 +4638,7 @@ void T2DMap::slot_setCustomLine()
         pI->setTextAlignment(2, Qt::AlignLeft);
     }
 
-    b_ = d->findChild<QPushButton*>("button_cancel");
+    b_ = d->findChild<QPushButton*>(QStringLiteral("button_cancel"));
     if (!b_) {
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "cancel" button!)");
         return;
@@ -4577,6 +4646,7 @@ void T2DMap::slot_setCustomLine()
     connect(b_, SIGNAL(clicked()), d, SLOT(reject()));
     connect(d, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
 
+    // FIXME: Move to using a non-text method of setting line style so that it can be made non-text language based
     QStringList _lineStyles;
     _lineStyles << "solid line"
                 << "dot line"
@@ -4586,7 +4656,7 @@ void T2DMap::slot_setCustomLine()
     mpCurrentLineStyle->addItems(_lineStyles);
     mpCurrentLineStyle->setCurrentText(mCurrentLineStyle);
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
-    mpCurrentLineColor->setStyleSheet("background-color:" + mCurrentLineColor.name());
+    mpCurrentLineColor->setStyleSheet(QStringLiteral("background-color: %1").arg(mCurrentLineColor.name()));
     connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
     connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
     mpCustomLinesDialog = d; // Don't assign the pointer value to the class memeber until ready to go
@@ -4606,7 +4676,7 @@ void T2DMap::slot_customLineColor()
 
     if (color.isValid()) {
         mCurrentLineColor = color;
-        QString styleSheet = QString("background-color:" + color.name());
+        QString styleSheet = QStringLiteral("background-color: %1").arg(color.name());
         mpCurrentLineColor->setStyleSheet(styleSheet);
     }
 }
@@ -4647,29 +4717,29 @@ void T2DMap::slot_setCustomLine2()
     if (!pR) {
         return;
     }
-    if (exit == "NW") {
+    if (exit == QLatin1String("NW")) {
         mCustomLinesRoomTo = pR->getNorthwest(); // mCustomLinesRoomTo - wasn't being set!
-    } else if (exit == "N") {
+    } else if (exit == QLatin1String("N")) {
         mCustomLinesRoomTo = pR->getNorth();
-    } else if (exit == "NE") {
+    } else if (exit == QLatin1String("NE")) {
         mCustomLinesRoomTo = pR->getNortheast();
-    } else if (exit == "UP") {
+    } else if (exit == QLatin1String("UP")) {
         mCustomLinesRoomTo = pR->getUp();
-    } else if (exit == "W") {
+    } else if (exit == QLatin1String("W")) {
         mCustomLinesRoomTo = pR->getWest();
-    } else if (exit == "E") {
+    } else if (exit == QLatin1String("E")) {
         mCustomLinesRoomTo = pR->getEast();
-    } else if (exit == "DOWN") {
+    } else if (exit == QLatin1String("DOWN")) {
         mCustomLinesRoomTo = pR->getDown();
-    } else if (exit == "SW") {
+    } else if (exit == QLatin1String("SW")) {
         mCustomLinesRoomTo = pR->getSouthwest();
-    } else if (exit == "S") {
+    } else if (exit == QLatin1String("S")) {
         mCustomLinesRoomTo = pR->getSouth();
-    } else if (exit == "SE") {
+    } else if (exit == QLatin1String("SE")) {
         mCustomLinesRoomTo = pR->getSoutheast();
-    } else if (exit == "IN") {
+    } else if (exit == QLatin1String("IN")) {
         mCustomLinesRoomTo = pR->getIn();
-    } else if (exit == "OUT") {
+    } else if (exit == QLatin1String("OUT")) {
         mCustomLinesRoomTo = pR->getOut();
     } else {
         qWarning(R"(T2DMap::slot_setCustomLine2(): unable to identify exit "%s"to use!)", qPrintable(exit));
@@ -4682,17 +4752,17 @@ void T2DMap::slot_setCustomLine2()
     _colorList << mCurrentLineColor.red() << mCurrentLineColor.green() << mCurrentLineColor.blue();
     pR->customLinesColor[exit] = _colorList;
     /*
-	 *    qDebug("   COLOR(r,g,b): %i,%i,%i",
-	 *            mCurrentLineColor.red(),
-	 *            mCurrentLineColor.green(),
-	 *            mCurrentLineColor.blue() );
-	 */
+     *    qDebug("   COLOR(r,g,b): %i,%i,%i",
+     *            mCurrentLineColor.red(),
+     *            mCurrentLineColor.green(),
+     *            mCurrentLineColor.blue() );
+     */
     pR->customLinesStyle[exit] = mCurrentLineStyle;
     //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
     pR->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
 
-    mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
+    mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...", "2D Mapper big, bottom of screen help message");
     // This message was previously being put up AFTER first click to set first segment was made....
     update();
 }
@@ -4719,16 +4789,16 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     //    qDebug("T2DMap::slot_setCustomLine2B() SPECIAL EXIT: %s", qPrintable(exit));
     pR->customLinesColor[exit] = _colorList;
     /*
-	 *     qDebug("   COLOR(r,g,b): %i,%i,%i",
-	 *            mCurrentLineColor.red(),
-	 *            mCurrentLineColor.green(),
-	 *            mCurrentLineColor.blue() );
-	 */
+     *     qDebug("   COLOR(r,g,b): %i,%i,%i",
+     *            mCurrentLineColor.red(),
+     *            mCurrentLineColor.green(),
+     *            mCurrentLineColor.blue() );
+     */
     pR->customLinesStyle[exit] = mCurrentLineStyle;
     //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
     pR->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
-    mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
+    mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...", "2D Mapper big, bottom of screen help message");
     // This message was previously being put up AFTER first click to set first segment was made....
     update();
 }
@@ -4739,7 +4809,7 @@ void T2DMap::slot_createLabel()
         return;
     }
 
-    mHelpMsg = tr("Left-click and drag a square for the size and position of your label");
+    mHelpMsg = tr("Left-click and drag a square for the size and position of your label", "2D Mapper big, bottom of screen help message");
     mSizeLabel = true;
     mMultiSelection = true;
     update();
@@ -4977,7 +5047,7 @@ void T2DMap::paintMap()
     //            oneWayExits.clear();
     //            if( pR->customLines.size() > 0 )
     //            {
-    //                if( ! pR->customLines.contains("N") )
+    //                if( ! pR->customLines.contains(QLatin1String("N") )
     //                {
     //                    exitList.push_back( pR->north );
     //                    if( mpMap->rooms.contains(pR->north) )
@@ -4989,7 +5059,7 @@ void T2DMap::paintMap()
     //                        }
     //                    }
     //                }
-    //                if( !pR->customLines.contains("NW") )
+    //                if( !pR->customLines.contains(QLatin1String("NW") )
     //                {
     //                    exitList.push_back( pR->northwest );
     //                    if( mpMap->rooms.contains(pR->northwest) )
@@ -5001,7 +5071,7 @@ void T2DMap::paintMap()
     //                        }
     //                    }
     //                }
-    //                if( !pR->customLines.contains("E") )
+    //                if( !pR->customLines.contains(QLatin1String("E") )
     //                {
     //                    exitList.push_back( pR->east );
     //                    if( mpMap->rooms.contains(pR->east) )
@@ -5013,7 +5083,7 @@ void T2DMap::paintMap()
     //                        }
     //                    }
     //                }
-    //                if( !pR->customLines.contains("SE") )
+    //                if( !pR->customLines.contains(QLatin1String("SE") )
     //                {
     //                    exitList.push_back( pR->southeast );
     //                    if( mpMap->rooms.contains(pR->southeast) )
@@ -5025,7 +5095,7 @@ void T2DMap::paintMap()
     //                        }
     //                    }
     //                }
-    //                if( !pR->customLines.contains("S") )
+    //                if( !pR->customLines.contains(QLatin1String("S") )
     //                {
     //                    exitList.push_back( pR->south );
     //                    if( mpMap->rooms.contains(pR->south) )
@@ -5037,7 +5107,7 @@ void T2DMap::paintMap()
     //                        }
     //                    }
     //                }
-    //                if( !pR->customLines.contains("SW") )
+    //                if( !pR->customLines.contains(QLatin1String("SW") )
     //                {
     //                    exitList.push_back( pR->southwest );
     //                    if( mpMap->rooms.contains(pR->southwest) )
@@ -5049,7 +5119,7 @@ void T2DMap::paintMap()
     //                        }
     //                    }
     //                }
-    //                if( !pR->customLines.contains("W") )
+    //                if( !pR->customLines.contains(QLatin1String("W") )
     //                {
     //                    exitList.push_back( pR->west );
     //                    if( mpMap->rooms.contains(pR->west) )
@@ -5061,7 +5131,7 @@ void T2DMap::paintMap()
     //                        }
     //                    }
     //                }
-    //                if( !pR->customLines.contains("NE") )
+    //                if( !pR->customLines.contains(QLatin1String("NE") )
     //                {
     //                    exitList.push_back( pR->northeast );
     //                    if( mpMap->rooms.contains(pR->northeast) )
