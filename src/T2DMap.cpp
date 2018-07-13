@@ -2027,7 +2027,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
             TArea* _paid = mpMap->mpRoomDB->getArea(_iaid);
             QString _paid_name = mpMap->mpRoomDB->getAreaNamesMap().value(_iaid);
             if (_paid) {
-                infoText = tr("Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n")
+                infoText = tr("Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n",
+                              "%1 is the (text) name of the area, %2 is the number for it, %3 to %8 are pairs (min <-> max) of extremes for eaach of x,y and z coordinates")
                                    .arg(_paid_name,
                                         QString::number(_iaid),
                                         QString::number(_paid->min_x),
@@ -2055,7 +2056,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
             // If one or more rooms are selected - make the text slightly orange.
             switch (selectionSize) {
             case 0:
-                infoText.append(tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n")
+                infoText.append(tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n",
+                                   "This text is for when NO rooms are selected - %1 is the room number of and %2-%4 are the x,y and z coordinates for the current Player Room")
                                 .arg(QString::number(__rid), QString::number(_prid->x),
                                      QString::number(_prid->y), QString::number(_prid->z)));
                 if (playerArea != mAID) {
@@ -2066,7 +2068,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 break;
             case 1:
                 infoText.append(
-                        tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n")
+                        tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n",
+                           "This text is for when ONE room is selected - %1 is the room number of and %2-%4 are the x,y and z coordinates for the selected Room")
                             .arg(QString::number(__rid), QString::number(_prid->x),
                                  QString::number(_prid->y), QString::number(_prid->z)));
                 f.setBold(true);
@@ -2077,10 +2080,14 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
                 break;
             default:
-                infoText.append(tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n")
+                infoText.append(tr("Room ID: %1 (%n Selected) Position on Map: (%2,%3,%4)\n",
+                                   "This text is for when TWO or MORE rooms are selected - %1 is the room number of"
+                                   "and %2-%4 are the x,y and z coordinates are for the room nearest the middle of "
+                                   "the selection and it has the yellow cross-hairs, %n is the count of rooms "
+                                   "selected and will ALWAYS be greater than 1",
+                                   selectionSize)
                                 .arg(QString::number(__rid), QString::number(_prid->x),
-                                     QString::number(_prid->y), QString::number(_prid->z),
-                                     QString::number(selectionSize)));
+                                     QString::number(_prid->y), QString::number(_prid->z)));
                 f.setBold(true);
                 if (infoColor.lightness() > 127) {
                     infoColor = QColor(255, 223, 191); // Slightly orange white
@@ -2092,7 +2099,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
 #ifdef QT_DEBUG
-        infoText.append(tr("render time: %1S mO: (%2,%3,%4)")
+        infoText.append(tr("render time: %1S mO: (%2,%3,%4)",
+                           "debug information that is not expected to be used in release versions, "
+                           "%1 is a decimal time period and %2-%4 x,y and z coordinates for the same "
+                           "room as in previous three texts (but y will be the negative of the previous ones)")
                         .arg(__time.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
                         .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
 #endif
