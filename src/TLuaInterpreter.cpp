@@ -9584,7 +9584,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
     TArea* area = host.mpMap->mpRoomDB->getArea(id);
     if (!area) {
         lua_pushnil(L);
-        lua_pushfstring(L, "area %s doesn't exist", id);
+        lua_pushfstring(L, "area with id %d does not exist", id);
         return 2;
     } else {
         lua_pushboolean(L, area->gridMode);
