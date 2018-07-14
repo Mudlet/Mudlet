@@ -176,8 +176,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                               "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
                                                               "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
                                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                              "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
-                                                              "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
+                                                              "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                              "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
                                                               "full support for languages other than English.</i></p>"));
     checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mShowIconsOnMenuCheckedState);
     checkBox_showIconsOnMenus->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
