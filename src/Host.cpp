@@ -1234,7 +1234,8 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         mAutoAmbigousWidthGlyphsSetting = true;
 
         if ( encoding == QLatin1String("GBK")
-           ||encoding == QLatin1String("GB18030")) {
+             || encoding == QLatin1String("GB18030")
+             || encoding == QLatin1String("Big5")) {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
