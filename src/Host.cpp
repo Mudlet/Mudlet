@@ -77,7 +77,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsLoggingTimestamps(false)
 , mLogDir(QString())
 , mLogFileName(QString())
-, mLogFileNameFormat(QLatin1String("yyyy-MM-dd#hh-mm-ss"))
+, mLogFileNameFormat(QLatin1String("yyyy-MM-dd#HH-mm-ss")) // In the past we have used "yyyy-MM-dd#hh-mm-ss" but we always want a 24-hour clock
 , mResetProfile(false)
 , mScreenHeight(25)
 , mScreenWidth(90)
@@ -232,7 +232,7 @@ void Host::saveModules(int sync, bool backup)
         it.next();
         QStringList entry = it.value();
         QString filename_xml = entry[0];
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (1 of 6)
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
         QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         QString moduleName = it.key();
         QString zipName;
@@ -383,7 +383,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         directory_xml = saveFolder;
     }
 
-    // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
+    // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (2 of 6)
     QString filename_xml;
     if (saveName.isEmpty()) {
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));

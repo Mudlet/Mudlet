@@ -243,8 +243,9 @@ public:
     QString mLogFileName;
     // The first argument to QDateTime::toString(...) to generate a date/time
     // dependent filename unless it is empty in which case the above value is
-    // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" is set as a
-    // default in the constructor:
+    // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" has been
+    // changed to "yyyy-MM-dd#HH-mm-ss" and is set as a default in the
+    // constructor:
     QString mLogFileNameFormat;
 
     bool mResetProfile;
