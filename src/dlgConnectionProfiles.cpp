@@ -996,7 +996,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         } else if (entry == QLatin1String("autosave.xml")) {
             QFileInfo fileInfo(dir, entry);
             auto lastModified = fileInfo.lastModified();
-            profile_history->addItem(QIcon::fromTheme(QStringLiteral("filesave")), lastModified.toString(Qt::SystemLocaleLongDate), QVariant(entry));
+            profile_history->addItem(QIcon::fromTheme(QStringLiteral("document-save"), QIcon(QStringLiteral(":/icons/document-save.png"))), lastModified.toString(Qt::SystemLocaleLongDate), QVariant(entry));
         } else {
             profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
