@@ -735,7 +735,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             if (mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (3 of 6)
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
                 QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
@@ -772,7 +772,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (4 of 6)
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
                 QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
@@ -1039,7 +1039,7 @@ void TConsole::slot_toggleReplayRecording()
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (5 of 6)
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (5 of 6)
         QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
@@ -1550,7 +1550,7 @@ bool TConsole::saveMap(const QString& location)
     QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
 
     if (location.isEmpty()) {
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (6 of 6)
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (6 of 6)
         filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     } else {
         filename_map = location;
