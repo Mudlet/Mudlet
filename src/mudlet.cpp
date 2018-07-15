@@ -913,6 +913,13 @@ void mudlet::slot_close_profile_requested(int tab)
     mHostDockConsoleMap.remove(pH);
     mHostConsoleMap.remove(pH);
 
+    if (pH->mpNotePad) {
+        pH->mpNotePad->save();
+        pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+        pH->mpNotePad->close();
+        pH->mpNotePad = nullptr;
+    }
+
     for (TToolBar* pTB : hostToolBarMap) {
         if (pTB) {
             pTB->setAttribute(Qt::WA_DeleteOnClose);
@@ -982,6 +989,13 @@ void mudlet::slot_close_profile()
                 }
                 mHostDockConsoleMap.remove(pH);
                 mHostConsoleMap.remove(pH);
+
+                if (pH->mpNotePad) {
+                    pH->mpNotePad->save();
+                    pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+                    pH->mpNotePad->close();
+                    pH->mpNotePad = nullptr;
+                }
 
                 for (TToolBar* pTB : hostTToolBarMap) {
                     if (pTB) {
@@ -2262,6 +2276,7 @@ void mudlet::closeEvent(QCloseEvent* event)
                 pC->mpHost->mpNotePad->save();
                 pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
                 pC->mpHost->mpNotePad->close();
+                pC->mpHost->mpNotePad = nullptr;
             }
 
             // close console
@@ -2298,10 +2313,12 @@ void mudlet::forceClose()
                 host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
                 host->mpEditorDialog->close();
             }
+
             if (host->mpNotePad) {
                 host->mpNotePad->save();
                 host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
                 host->mpNotePad->close();
+                host->mpNotePad = nullptr;
             }
 
             if (mpIrcClientMap.contains(host)) {
@@ -2750,7 +2767,6 @@ void mudlet::slot_notes()
         QTextCharFormat format;
         format.setFont(pHost->mDisplayFont);
         pNotes->notesEdit->setCurrentCharFormat(format);
-        pNotes->restore();
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
     }
