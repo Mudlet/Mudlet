@@ -4595,8 +4595,8 @@ QString TBuffer::processSupportsRequest(const QString& elements)
     auto reportAllElements = [reportEntireElement](auto& result) {
         auto elementsIterator = mSupportedMxpElements.constBegin();
         while (elementsIterator != mSupportedMxpElements.constEnd()) {
-
             result = reportEntireElement(elementsIterator.key(), result);
+            ++elementsIterator;
         }
 
         return result;
