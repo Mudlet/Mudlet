@@ -105,6 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
 , mCleanResetQueued(false)
+, mSavingAs(false)
 , mAutosaveInterval{}
 {
     // init generated dialog
@@ -6417,7 +6418,15 @@ void dlgTriggerEditor::leaveEvent(QEvent *event)
     Q_UNUSED(event);
 
     saveOpenChanges();
-    autoSave();
+
+    // delay autosave for next event loop in case the user has pressed 'Save profile as' and
+    // the focus was lost due to a file export dialog. In this case, don't want
+    // autosave kicking in and blocking the save profile
+    QTimer::singleShot(0, this, [this]() {
+        if (!mSavingAs) {
+            autoSave();
+        }
+    });
 }
 
 void dlgTriggerEditor::changeView(int view)
@@ -7605,6 +7614,7 @@ void dlgTriggerEditor::slot_profileSaveAction()
 
 void dlgTriggerEditor::slot_profileSaveAsAction()
 {
+    mSavingAs = true;
     QString fileName = QFileDialog::getSaveFileName(this, tr("Backup Profile"), QDir::homePath(), tr("trigger files (*.trigger *.xml)"));
 
     if (fileName.isEmpty()) {
@@ -7617,6 +7627,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     }
 
     mpHost->saveProfileAs(fileName);
+    mSavingAs = false;
 }
 
 bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
