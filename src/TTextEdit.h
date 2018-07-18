@@ -25,6 +25,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
+#include "TBuffer.h"
+
 #include "pre_guard.h"
 #include <QMap>
 #include <QPointer>
@@ -35,7 +38,6 @@
 #include <string>
 
 class Host;
-class TBuffer;
 class TConsole;
 class TChar;
 
@@ -53,13 +55,11 @@ public:
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    void drawFrame(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&);
-    void updateLastLine();
     uint getGraphemeBaseCharacter(const QString& str);
     void drawLine(QPainter &painter, int lineNumber, int rowOfScreen);
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style);
-    void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
+    void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -125,11 +125,6 @@ private:
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
-    bool mHighlight_on;
-    bool mHighlightingBegin;
-    bool mHighlightingEnd;
-    bool mInit_OK;
-    bool mInversOn;
     bool mIsDebugConsole;
     bool mIsMiniConsole;
     // Each TConsole instance uses two instances of this class, one above the
@@ -138,7 +133,6 @@ private:
     // which one this instance is:
     const bool mIsLowerPane;
     int mLastRenderBottom;
-    int mLeftMargin;
     bool mMouseTracking;
     bool mCtrlSelecting;
     int mDragStartY;

@@ -28,6 +28,7 @@
 
 #include "HostManager.h"
 #include "FontManager.h"
+#include "TBuffer.h" // Needed for TChar details
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -129,7 +130,8 @@ public:
     bool pasteWindow(Host* pHost, const QString& name);
     bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(Host*, const QString& name, QString& path);
-    bool setTextFormat(Host*, const QString& name, int, int, int, int, int, int, bool, bool, bool, bool);
+    bool setTextFormat(Host*, const QString& name, const QColor &bgColor, const QColor &fgColor, const TChar::AttributeFlags attributes = TChar::None);
+    bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
     bool setLabelClickCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelDoubleClickCallback(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelReleaseCallback(Host*, const QString&, const QString&, const TEvent&);
@@ -143,10 +145,7 @@ public:
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
     int selectSection(Host*, const QString& name, int, int);
-    void setBold(Host*, const QString& name, bool);
-    void setLink(Host* pHost, const QString& name, const QString& linkText, QStringList& linkFunction, QStringList&);
-    void setItalics(Host*, const QString& name, bool);
-    void setUnderline(Host*, const QString& name, bool);
+    void setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList&);
     void setStrikeOut(Host*, const QString& name, bool);
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
@@ -341,6 +340,7 @@ public:
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
+
 
 public slots:
     void processEventLoopHack_timerRun();

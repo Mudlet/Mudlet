@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
- *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -181,6 +181,13 @@ public:
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void show_vars();
     void setThemeAndOtherSettings(const QString&);
+    // Helper to ensure the foreground color for a button is always
+    // readable/contrasts with the background when the latter is colored@
+    static QString generateButtonStyleSheet(const QColor& color);
+    // Reader of the above - is a bit simple and may not work if the
+    // stylesheetText has more that one item being styled with a "color" and
+    // "background-color" attribute:
+    static QColor parseButtonStyleSheetColors(const QString& styleSheetText, const bool isToGetForeground = false);
 
     enum class EditorViewType {
         cmTriggerView = 0x01,
@@ -202,12 +209,11 @@ public slots:
     void slot_var_changed(QTreeWidgetItem*);
     void slot_show_vars();
     void slot_viewErrorsAction();
-    void slot_set_pattern_type_color(int);
+    void slot_setupPatternControls(const int);
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
     void slot_item_selected_save(QTreeWidgetItem* pItem);
-    void slot_choseButtonColor();
     void slot_export();
     void slot_import();
     void slot_viewStatsAction();
@@ -388,6 +394,13 @@ private:
     void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
 
     void createSearchOptionIcon();
+    void clearEditorNotification() const;
+    void runScheduledCleanReset();
+    void autoSave();
+    // Helper to color the text in (and possible the control value) that the pattern area:
+    QColor itemTypeColor(const int);
+    void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
+
 
     QToolBar* toolBar;
     QToolBar* toolBar2;
@@ -447,15 +460,12 @@ private:
     // TODO: Add other searchOptions
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
-    void clearEditorNotification() const;
 
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued;
-    void runScheduledCleanReset();
-    void autoSave();
 
     // profile autosave interval in minutes
     int mAutosaveInterval;

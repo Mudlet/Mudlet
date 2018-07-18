@@ -61,9 +61,7 @@ public:
     TConsole(Host*, bool isDebugConsole, QWidget* parent = nullptr);
     void reset();
     void resetMainConsole();
-    void echoUserWindow(const QString&);
     Host* getHost();
-    TCommandLine* mpCommandLine;
     void replace(const QString&);
     void insertHTML(const QString&);
     void insertText(const QString&);
@@ -112,7 +110,9 @@ public:
     bool selectSection(int, int);
     void skipLine();
     void setFgColor(int, int, int);
+    void setFgColor(const QColor&);
     void setBgColor(int, int, int);
+    void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
@@ -121,7 +121,6 @@ public:
     void print(const QString&, QColor fgColor, QColor bgColor);
     void print(const QString& msg);
     void print(const char*);
-    void printDebug(QColor&, QColor&, const QString&);
     void printSystemMessage(const QString& msg);
     void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
@@ -143,11 +142,9 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);    
     bool setMiniConsoleFont(const QString& font);
-    void setBold(bool);
-    void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
-    void setItalics(bool);
-    void setUnderline(bool);
-    void setStrikeOut(bool);
+    void setLink(const QStringList& linkFunction, const QStringList& linkHint);
+    // Cannot be called setAttributes as that would mask an inherited method
+    void setDisplayAttributes(const TChar::AttributeFlags, const bool);
     void finalize();
     void runTriggers(int);
     void showStatistics();
@@ -168,6 +165,8 @@ public:
     QSize getMainWindowSize() const;
 
     void toggleLogging(bool);
+
+    TCommandLine* mpCommandLine;
 
     QPointer<Host> mpHost;
 

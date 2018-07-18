@@ -184,6 +184,7 @@ public:
     void xmlSaved(const QString &xmlName);
     bool currentlySavingProfile();
     void waitForProfileSave();
+    QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;

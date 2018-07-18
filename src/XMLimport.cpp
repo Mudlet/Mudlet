@@ -23,6 +23,7 @@
 #include "XMLimport.h"
 
 
+#include "dlgColorTrigger.h"
 #include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
 #include "TMap.h"
@@ -1054,8 +1055,6 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
     pT->mFilterTrigger = (attributes().value("isFilterTrigger") == "yes");
     pT->mSoundTrigger = (attributes().value("isSoundTrigger") == "yes");
     pT->mColorTrigger = (attributes().value("isColorTrigger") == "yes");
-    pT->mColorTriggerBg = (attributes().value("isColorTriggerBg") == "yes");
-    pT->mColorTriggerFg = (attributes().value("isColorTriggerFg") == "yes");
 
 
     while (!atEnd()) {
@@ -1105,6 +1104,11 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                                          << pT->getName() << " there were " << pT->mRegexCodeList.count() << " 'regexCodeList' sub-elements and " << pT->mRegexCodePropertyList.count()
                                          << " 'regexCodePropertyList' sub-elements so "
                                             "something is broken!";
+                }
+                // Fixup the first 16 incorrect ANSI colour numbers from old
+                // code if there are any
+                if (!pT->mRegexCodeList.isEmpty()) {
+                    remapColorsToAnsiNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
                 }
             } else if (name() == "TriggerGroup" || name() == "Trigger") {
                 readTriggerGroup(pT);
@@ -1597,4 +1601,99 @@ QString XMLimport::readScriptElement()
     }
 
     return localScript;
+}
+
+// Unlike the reverse operation in the XMLexport this can modify the supplied patternList:
+void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<int> & typeList)
+{
+    // The regexp is slightly modified compared to the one we once used to allow
+    // it to capture a '-' sign as part of the color numbers as we use -2 for
+    // ignored which was/is not handled by code before Mudlet 3.12.x (and we
+    // might have more  negative numbers in the future!)
+    QRegularExpression regex = QRegularExpression(QStringLiteral("FG(-?\\d+)BG(-?\\d+)"));
+    QMutableStringListIterator itPattern(patternList);
+    QListIterator<int> itType(typeList);
+    while (itPattern.hasNext() && itType.hasNext()) {
+        if (itType.next() == REGEX_COLOR_PATTERN) {
+            QRegularExpressionMatch match = regex.match(itPattern.next());
+            // Although we define two '('...')' capture groups the count/size is
+            // 3 (0 is the whole string)!
+            if (match.capturedTexts().size() == 3) {
+                bool isFgOk = false;
+                bool isBgOk = false;
+                int ansifg = TTrigger::scmIgnored;
+                int ansibg = TTrigger::scmIgnored;
+                int fg = match.captured(1).toInt(&isFgOk);
+                if (!isFgOk) {
+                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
+                    fg = TTrigger::scmDefault;
+                } else {
+                    // clang-format off
+                    switch (fg) {
+                    case -2:    ansifg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
+                    case 0:     ansifg = TTrigger::scmDefault;  break; // Default colour
+                    case 1:     ansifg = 8;     break; // Light black (dark gray)
+                    case 2:     ansifg = 0;     break; // Black
+                    case 3:     ansifg = 9;     break; // Light red
+                    case 4:     ansifg = 1;     break; // Red
+                    case 5:     ansifg = 10;    break; // Light green
+                    case 6:     ansifg = 2;     break; // Green
+                    case 7:     ansifg = 11;    break; // Light yellow
+                    case 8:     ansifg = 3;     break; // Yellow
+                    case 9:     ansifg = 12;    break; // Light blue
+                    case 10:    ansifg = 4;     break; // Blue
+                    case 11:    ansifg = 13;    break; // Light magenta
+                    case 12:    ansifg = 5;     break; // Magenta
+                    case 13:    ansifg = 14;    break; // Light cyan
+                    case 14:    ansifg = 6;     break; // Cyan
+                    case 15:    ansifg = 15;    break; // Light white
+                    case 16:    ansifg = 7;     break; // White (light gray)
+                    default:
+                        ansifg = fg;
+                    }
+                    // clang-format on
+                }
+
+                int bg = match.captured(2).toInt(&isBgOk);
+                if (!isBgOk) {
+                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                    bg = TTrigger::scmDefault;
+                } else {
+                    // clang-format off
+                    switch (bg) {
+                    case -2:    ansibg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
+                    case 0:     ansibg = TTrigger::scmDefault;  break; // Default colour
+                    case 1:     ansibg = 8;     break; // Light black (dark gray)
+                    case 2:     ansibg = 0;     break; // Black
+                    case 3:     ansibg = 9;     break; // Light red
+                    case 4:     ansibg = 1;     break; // Red
+                    case 5:     ansibg = 10;    break; // Light green
+                    case 6:     ansibg = 2;     break; // Green
+                    case 7:     ansibg = 11;    break; // Light yellow
+                    case 8:     ansibg = 3;     break; // Yellow
+                    case 9:     ansibg = 12;    break; // Light blue
+                    case 10:    ansibg = 4;     break; // Blue
+                    case 11:    ansibg = 13;    break; // Light magenta
+                    case 12:    ansibg = 5;     break; // Magenta
+                    case 13:    ansibg = 14;    break; // Light cyan
+                    case 14:    ansibg = 6;     break; // Cyan
+                    case 15:    ansibg = 15;    break; // Light white
+                    case 16:    ansibg = 7;     break; // White (light gray)
+                    default:
+                        ansibg = bg;
+                    }
+                    // clang-format on
+                }
+
+                // Use a different string than before so that we can be certain
+                // we have fixed up all cases where it is used - and it is more
+                // understandable if it gets revealed in the Editor!
+                itPattern.setValue(TTrigger::createColorPatternText(ansifg, ansibg));
+            }
+
+        } else {
+            // Must advance the pattern interator if it isn't a colour pattern
+            itPattern.next();
+        }
+    }
 }

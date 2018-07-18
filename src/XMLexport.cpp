@@ -709,8 +709,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         trigger.append_attribute("isFilterTrigger") = pT->mFilterTrigger ? "yes" : "no";
         trigger.append_attribute("isSoundTrigger") = pT->mSoundTrigger ? "yes" : "no";
         trigger.append_attribute("isColorTrigger") = pT->mColorTrigger ? "yes" : "no";
-        trigger.append_attribute("isColorTriggerFg") = pT->mColorTriggerFg ? "yes" : "no";
-        trigger.append_attribute("isColorTriggerBg") = pT->mColorTriggerBg ? "yes" : "no";
+        trigger.append_attribute("isColorTriggerFg") = (pT->mColorTriggerFgAnsi != TTrigger::scmIgnored) ? "yes" : "no";
+        trigger.append_attribute("isColorTriggerBg") = (pT->mColorTriggerBgAnsi != TTrigger::scmIgnored) ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
 
@@ -729,8 +729,11 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toUtf8().constData());
 
             auto regexCodeList = trigger.append_child("regexCodeList");
-            for (int i = 0; i < pT->mRegexCodeList.size(); ++i) {
-                regexCodeList.append_child("string").text().set(pT->mRegexCodeList.at(i).toUtf8().constData());
+            // Revert the first 16 ANSI colour codes back to the wrong values
+            // that are still used in the save files
+            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+            for (int i = 0; i < unfixedAnsiColourPatternList.size(); ++i) {
+                regexCodeList.append_child("string").text().set(unfixedAnsiColourPatternList.at(i).toUtf8().constData());
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
@@ -1036,4 +1039,130 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
 void XMLexport::writeScriptElement(const QString& script, pugi::xml_node xmlElement)
 {
     xmlElement.append_child("script").text().set(script.toUtf8().constData());
+}
+
+// Unlike the reverse operation in XMLimport we cannot modify the supplied patternlist
+QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, const QList<int> & typeList)
+{
+
+    QStringList results;
+    QRegularExpression regex = QRegularExpression(QStringLiteral("(^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QStringListIterator itPattern(patternList);
+    QListIterator<int> itType(typeList);
+    while (itPattern.hasNext() && itType.hasNext()) {
+        if (itType.next() == REGEX_COLOR_PATTERN) {
+            if (!itPattern.next().isEmpty()) {
+                QRegularExpressionMatch match = regex.match(itPattern.peekPrevious());
+                // Although we define two '('...')' capture groups the count/size is
+                // 3 (0 is the whole string)!
+                if (match.hasMatch() && match.capturedTexts().size() == 3) {
+                    bool isFgOk = false;
+                    int fg = 0;
+                    if (match.captured(1) == QLatin1String("DEFAULT")) {
+                        // Use the old value for default which is 0 (though we use
+                        // -1 internally)
+                        isFgOk = true;
+                    } else if (match.captured(1) == QLatin1String("IGNORE")) {
+                        // Ignore is NOT handled by old system but use -2 (the value
+                        // we use internally now)
+                        isFgOk = true;
+                        fg = -2;
+                    } else {
+                        fg = match.captured(1).toInt(&isFgOk);
+                        if (isFgOk) {
+                            // clang-format off
+                            switch (fg) {
+                            case 0:     fg = 2;     break; // black
+                            case 1:     fg = 4;     break; // red
+                            case 2:     fg = 6;     break; // green
+                            case 3:     fg = 8;     break; // yellow
+                            case 4:     fg = 10;    break; // blue
+                            case 5:     fg = 12;    break; // magenta
+                            case 6:     fg = 14;    break; // cyan
+                            case 7:     fg = 16;    break; // white (light gray)
+                            case 8:     fg = 1;     break; // light black (dark gray)
+                            case 9:     fg = 3;     break; // light red
+                            case 10:    fg = 5;     break; // light green
+                            case 11:    fg = 7;     break; // light yellow
+                            case 12:    fg = 9;     break; // light blue
+                            case 13:    fg = 11;    break; // light magenta
+                            case 14:    fg = 13;    break; // light cyan
+                            case 15:    fg = 15;    break; // light white
+                            default:
+                                   ; // No-op for other color codes
+                            }
+                            // clang-format on
+                        } else {
+                            // Oops failure - return to default color
+                            fg = 0;
+                        }
+                    }
+
+                    bool isBgOk = false;
+                    int bg = 0;
+                    if (match.captured(2) == QLatin1String("DEFAULT")) {
+                        // Use the old value for default which is 0 (though we use
+                        // -1 internally)
+                        isBgOk = true;
+                    } else if (match.captured(2) == QLatin1String("IGNORE")) {
+                        // Ignore is NOT handled by old system but use -2 (the value
+                        // we use internally)
+                        isFgOk = true;
+                        bg = -2;
+                    } else {
+                        bg = match.captured(2).toInt(&isBgOk);
+                        if (isBgOk) {
+                            // clang-format off
+                            switch (bg) {
+                            case 0:     bg = 2;     break; // black
+                            case 1:     bg = 4;     break; // red
+                            case 2:     bg = 6;     break; // green
+                            case 3:     bg = 8;     break; // yellow
+                            case 4:     bg = 10;    break; // blue
+                            case 5:     bg = 12;    break; // magenta
+                            case 6:     bg = 14;    break; // cyan
+                            case 7:     bg = 16;    break; // white (light gray)
+                            case 8:     bg = 1;     break; // light black (dark gray)
+                            case 9:     bg = 3;     break; // light red
+                            case 10:    bg = 5;     break; // light green
+                            case 11:    bg = 7;     break; // light yellow
+                            case 12:    bg = 9;     break; // light blue
+                            case 13:    bg = 11;    break; // light magenta
+                            case 14:    bg = 13;    break; // light cyan
+                            case 15:    bg = 15;    break; // light white
+                            default:
+                                   ; // No-op for other color codes
+                            }
+                            // clang-format on
+                        } else {
+                            // Oops failure - return to default color
+                            bg = 0;
+                        }
+                    }
+
+                    if (!isFgOk) {
+                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
+                    }
+                    if (!isBgOk) {
+                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                    }
+
+                    results << QStringLiteral("FG%1BG%2").arg(QString::number(fg), QString::number(bg));
+                } else {
+                    // No match - so insert previous string - which will cause
+                    // a failure when it gets loaded as a REGEX_COLOR_PATTERN
+                    // again...
+                    results << itPattern.peekPrevious();
+                }
+            } else {
+                // Empty pattern
+                results << QString();
+            }
+        } else {
+            // Copy across the pattern as it isn't a colour pattern
+            results << itPattern.next();
+        }
+    }
+
+    return results;
 }
