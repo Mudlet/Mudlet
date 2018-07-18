@@ -622,7 +622,6 @@ void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
     }
 }
 
-// used by 'save profile as'
 bool XMLexport::exportProfile(const QString& exportFileName)
 {
     auto mudletPackage = writeXmlHeader();
@@ -640,7 +639,6 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     return false;
 }
 
-// used by package manager
 bool XMLexport::exportPackage(const QString& exportFileName)
 {
     auto mudletPackage = writeXmlHeader();
