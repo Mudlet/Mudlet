@@ -419,7 +419,7 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
     auto writer = new XMLexport(this);
     writers.insert(QStringLiteral("profile"), writer);
-    writer->exportGenericPackage(file);
+    writer->exportProfile(file);
     return std::make_tuple(true, file, QString());
 }
 

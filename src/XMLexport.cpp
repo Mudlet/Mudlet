@@ -622,7 +622,8 @@ void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
     }
 }
 
-bool XMLexport::exportGenericPackage(const QString& exportFileName)
+// used by 'save profile as'
+bool XMLexport::exportProfile(const QString& exportFileName)
 {
     auto mudletPackage = writeXmlHeader();
 
@@ -635,6 +636,20 @@ bool XMLexport::exportGenericPackage(const QString& exportFileName)
 
         return true;
     }
+
+    return false;
+}
+
+// used by package manager
+bool XMLexport::exportPackage(const QString& exportFileName)
+{
+    auto mudletPackage = writeXmlHeader();
+
+    if (writeGenericPackage(mpHost, mudletPackage)) {
+        return saveXml(exportFileName);
+    }
+
+    return false;
 }
 
 bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage)
