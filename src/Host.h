@@ -143,7 +143,7 @@ public:
     int createStopWatch();
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
-    void reloadModule(const QString& moduleName);
+    void reloadModule(const QString& reloadModuleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -354,6 +354,9 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
 
+private slots:
+    void slot_modulesFinishedWriting();
+
 private:
     QScopedPointer<LuaInterface> mLuaInterface;
 
@@ -420,6 +423,8 @@ private:
     QHash<QString, XMLexport*> writers;
 
     void installPackageFonts(const QString &packageName);
+
+    void reloadModules(int sync, const QStringList& modulesToSync) const;
 };
 
 #endif // MUDLET_HOST_H

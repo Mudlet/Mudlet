@@ -205,6 +205,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"DuckDuckGo", "https://duckduckgo.com/?q="},
                     {"Google",     "https://www.google.com/search?q="}
     });
+
+    connect(this, &Host::profileSaveFinished, this, &Host::slot_modulesFinishedWriting);
 }
 
 Host::~Host()
@@ -272,25 +274,29 @@ void Host::saveModules(int sync, bool backup)
             //FIXME: error checking
         }
     }
+    reloadModules(sync, modulesToSync);
+}
+
+void Host::reloadModules(int sync, const QStringList& modulesToSync) const
+{
     modulesToWrite.clear();
     if (sync) {
         //synchronize modules across sessions
         QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
-        QMapIterator<Host*, TConsole*> it2(activeSessions);
-        while (it2.hasNext()) {
-            it2.next();
-            Host* host = it2.key();
+        QMapIterator<Host*, TConsole*> sessionIterator(activeSessions);
+        while (sessionIterator.hasNext()) {
+            sessionIterator.next();
+            Host* host = sessionIterator.key();
             if (host->mHostName == mHostName) {
                 continue;
             }
             QMap<QString, int> modulePri = host->mModulePriorities;
-            QMapIterator<QString, int> it3(modulePri);
+            QMapIterator<QString, int> modulePriosIterator(modulePri);
             QMap<int, QStringList> moduleOrder;
-            while (it3.hasNext()) {
-                it3.next();
-                //QStringList moduleEntry = moduleOrder[it3.value()];
-                //moduleEntry.append(it3.key());
-                moduleOrder[it3.value()].append(it3.key()); // = moduleEntry;
+            while (modulePriosIterator.hasNext()) {
+                modulePriosIterator.next();
+                // setup the map to be in format of priority:name
+                moduleOrder[modulePriosIterator.value()].append(modulePriosIterator.key());
             }
             QMapIterator<int, QStringList> it4(moduleOrder);
             while (it4.hasNext()) {
@@ -307,25 +313,28 @@ void Host::saveModules(int sync, bool backup)
     }
 }
 
-void Host::reloadModule(const QString& moduleName)
+void Host::reloadModule(const QString& reloadModuleName)
 {
+    qDebug() << "reloading" << reloadModuleName;
     QMap<QString, QStringList> installedModules = mInstalledModules;
-    QMapIterator<QString, QStringList> it(installedModules);
-    while (it.hasNext()) {
-        it.next();
-        QStringList entry = it.value();
-        if (it.key() == moduleName) {
-            uninstallPackage(it.key(), 2);
-            installPackage(entry[0], 2);
+    QMapIterator<QString, QStringList> moduleIterator(installedModules);
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        const auto& moduleName = moduleIterator.key();
+        const auto& moduleLocation = moduleIterator.value()[0];
+
+        if (moduleName == reloadModuleName) {
+            uninstallPackage(moduleName, 2);
+            installPackage(moduleLocation, 2);
         }
     }
     //iterate through mInstalledModules again and reset the entry flag to be correct.
     //both the installedModules and mInstalled should be in the same order now as well
-    QMapIterator<QString, QStringList> it2(mInstalledModules);
-    while (it2.hasNext()) {
-        it2.next();
-        QStringList entry = installedModules[it2.key()];
-        mInstalledModules[it2.key()] = entry;
+    moduleIterator.toFront();
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        QStringList entry = installedModules[moduleIterator.key()];
+        mInstalledModules[moduleIterator.key()] = entry;
     }
 }
 
@@ -425,6 +434,7 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
+    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
@@ -756,12 +766,11 @@ bool Host::installPackage(const QString& fileName, int module)
     QDialog* pUnzipDialog = Q_NULLPTR;
 
     //     Module notes:
-    //     For the module install, a module flag of 0 is a package, a flag
-    //     of 1 means the module is being installed for the first time via
-    //     the UI, a flag of 2 means the module is being synced (so it's "installed"
-    //     already), a flag of 3 means the module is being installed from
-    //     a script.  This separation is necessary to be able to reuse code
-    //     while avoiding infinite loops from script installations.
+    //     For the module install, a module flag of 0 is a package,
+    // a flag of 1 means the module is being installed for the first time via the UI,
+    // a flag of 2 means the module is being synced (so it's "installed" already),
+    // a flag of 3 means the module is being installed from a script.
+    //     This separation is necessary to be able to reuse code while avoiding infinite loops from script installations.
 
     if (fileName.isEmpty()) {
         return false;
@@ -1275,4 +1284,9 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
+}
+
+void Host::slot_modulesFinishedWriting()
+{
+    qDebug() << "sync modules, bitch";
 }
