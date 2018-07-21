@@ -1227,7 +1227,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         mIsCommandPopup = false;
 
 
-        QAction* action = new QAction("copy", this);
+        QAction* action = new QAction(tr("Copy"), this);
         // According to the Qt Documentation:
         // "This text is used for the tooltip."
         // "If no tooltip is specified, the action's text is used."
@@ -1238,17 +1238,22 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         // in the QAction constructor:
         action->setToolTip(QString());
         connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
-        QAction* action2 = new QAction("copy HTML", this);
+        QAction* action2 = new QAction(tr("Copy HTML"), this);
         action2->setToolTip(QString());
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
-        QAction* action3 = new QAction("select all", this);
+        QAction* action3 = new QAction(tr("Select All"), this);
         action3->setToolTip(QString());
         connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
 
         QString selectedEngine = mpHost->getSearchEngine().first;
-        QAction* action4 = new QAction(("search on " + selectedEngine), this);
+        QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
         action4->setToolTip(QString());
         connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+        if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+            action->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+            action3->setIcon(QIcon::fromTheme(QStringLiteral("edit-select-all"), QIcon(QStringLiteral(":/icons/edit-select-all.png"))));
+            action4->setIcon(QIcon::fromTheme(QStringLiteral("edit-web-search"), QIcon(QStringLiteral(":/icons/edit-web-search.png"))));
+        }
 
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true); // Not the default...
@@ -1294,11 +1299,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     QWidget::mousePressEvent(event);
 }
 
-void TTextEdit::slot_copySelectionToClipboard()
-{
-    copySelectionToClipboard();
-}
-
 void TTextEdit::slot_selectAll()
 {
     mPA = QPoint(0, 0);
@@ -1307,25 +1307,20 @@ void TTextEdit::slot_selectAll()
     update();
 }
 
-void TTextEdit::slot_copySelectionToClipboardHTML()
-{
-    copySelectionToClipboardHTML();
-}
-
 void TTextEdit::slot_searchSelectionOnline()
 {
     searchSelectionOnline();
 }
 
 
-void TTextEdit::copySelectionToClipboard()
+void TTextEdit::slot_copySelectionToClipboard()
 {
     QString selectedText = getSelectedText();
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
 
-void TTextEdit::copySelectionToClipboardHTML()
+void TTextEdit::slot_copySelectionToClipboardHTML()
 {
     if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
         swap(mPA, mPB);
@@ -1401,17 +1396,17 @@ void TTextEdit::copySelectionToClipboardHTML()
     // <div></div> tags required around outside of the body <span></spans> for
     // strict HTML 4 as we do not use <p></p>s or anything else
 
-    for (int y = mPA.y(); y <= mPB.y(); y++) {
+    // Is this a single line then we do NOT need to pad the first (and thus
+    // only) line to the right:
+    bool isSingleLine = (mPA.y() == mPB.y());
+    for (int y = mPA.y(), total = mPB.y(); y <= total; ++y) {
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             return;
         }
-        int x = 0;
         if (y == mPA.y()) { // First line of selection
-            x = mPA.x();
-            text.append(mpBuffer->bufferToHtml(QPoint(x, y), QPoint(-1, y), mShowTimeStamps, x));
+            text.append(mpBuffer->bufferToHtml(mPA, QPoint(-1, y), mShowTimeStamps, (isSingleLine ? 0 : mPA.x())));
         } else if (y == mPB.y()) { // Last line of selection
-            x = mPB.x();
-            text.append(mpBuffer->bufferToHtml(QPoint(0, y), QPoint(x, y), mShowTimeStamps));
+            text.append(mpBuffer->bufferToHtml(QPoint(0, y), mPB, mShowTimeStamps));
         } else { // inside lines of selection
             text.append(mpBuffer->bufferToHtml(QPoint(0, y), QPoint(-1, y), mShowTimeStamps));
         }
@@ -1452,7 +1447,9 @@ QString TTextEdit::getSelectedText(char newlineChar)
     QString text;
 
     // for each selected line
-    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
+    bool isSingleLine = (mPA.y() == mPB.y());
+    // CHECKME: the <= together with the +1 in the test looks suspecious:
+    for (int y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
         // stop if we are at the end of the buffer lines
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             mSelectedRegion = QRegion(0, 0, 0, 0);
@@ -1465,9 +1462,12 @@ QString TTextEdit::getSelectedText(char newlineChar)
         if (y == mPA.y()) {
             // start from the column where the selection started
             x = mPA.x();
-            // insert the number of spaces to push the first line to the right
-            // so it lines up with the following lines
-            text.append(QStringLiteral(" ").repeated(x));
+            if (!isSingleLine) {
+                // insert the number of spaces to push the first line to the right
+                // so it lines up with the following lines - but only if there
+                // is MORE than a single line:
+                text.append(QStringLiteral(" ").repeated(x));
+            }
         }
         // while we are not at the end of the buffer line
         while (x < static_cast<int>(mpBuffer->buffer[y].size())) {

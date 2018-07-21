@@ -105,6 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
 , mCleanResetQueued(false)
+, mAutosaveInterval{}
 {
     // init generated dialog
     setupUi(this);
@@ -326,7 +327,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
     connect(addTriggerAction, SIGNAL(triggered()), this, SLOT(slot_add_new()));
 
-    QAction* deleteTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/edit-delete-shred.png")), tr("Delete Item"), this);
+    QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(QStringLiteral(":/icons/edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))), tr("Delete Item"), this);
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
     deleteTriggerAction->setToolTip(QStringLiteral("<html><head/><body><p>%1 (%2)</p></body></html>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
     deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -347,7 +348,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
 
     QAction* copyAction = new QAction(tr("Copy"), this);
-    copyAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
     copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -362,7 +362,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copy_xml);
 
     QAction* pasteAction = new QAction(tr("Paste"), this);
-    pasteAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))));
     pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
     pasteAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -375,6 +374,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->addAction(pasteAction);
     treeWidget_keys->addAction(pasteAction);
     connect(pasteAction, &QAction::triggered, this, &dlgTriggerEditor::slot_paste_xml);
+
+    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        copyAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+        pasteAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))));
+    }
 
     QAction* importAction = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
@@ -603,6 +607,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
     showHiddenVars = false;
     widget_searchTerm->updateGeometry();
+
+    if (mAutosaveInterval > 0) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+        startTimer(mAutosaveInterval * 1000 * 60);
+#else
+        startTimer(mAutosaveInterval * 1min);
+#endif
+    }
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVar(bool status)
@@ -708,11 +720,12 @@ void dlgTriggerEditor::readSettings()
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
-
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
     move(pos);
+
+    mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -724,6 +737,7 @@ void dlgTriggerEditor::writeSettings()
     QSettings settings("mudlet", "Mudlet");
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
+    settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
 }
 
 void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
@@ -6313,6 +6327,20 @@ void dlgTriggerEditor::saveOpenChanges()
     };
 }
 
+void dlgTriggerEditor::timerEvent(QTimerEvent *event)
+{
+    Q_UNUSED(event);
+
+    if (isActiveWindow()) {
+        autoSave();
+    }
+}
+
+void dlgTriggerEditor::autoSave()
+{
+    mpHost->saveProfile(QString(), QStringLiteral("autosave"));
+}
+
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
     if (mNeedUpdateData) {
@@ -6376,7 +6404,20 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 
 void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
+    Q_UNUSED(pE);
+
     saveOpenChanges();
+    autoSave();
+}
+
+// this doesn't seem 100% right - I couldn't find a "window lost focus" event
+// The focusOutEvent above is not it - that is for keyboard focus
+void dlgTriggerEditor::leaveEvent(QEvent *event)
+{
+    Q_UNUSED(event);
+
+    saveOpenChanges();
+    autoSave();
 }
 
 void dlgTriggerEditor::changeView(int view)
@@ -7555,7 +7596,7 @@ void dlgTriggerEditor::runScheduledCleanReset()
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
-    std::tuple<bool, QString, QString> result = mpHost->saveProfile(nullptr, true);
+    std::tuple<bool, QString, QString> result = mpHost->saveProfile(nullptr, nullptr, true);
 
     if (std::get<0>(result) == false) {
         QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
@@ -8009,14 +8050,23 @@ void dlgTriggerEditor::slot_editorContextMenu()
     edbee::TextEditorController* controller = mpSourceEditorEdbee->controller();
 
     auto menu = new QMenu();
+    auto formatAction = new QAction(tr("Format All"), menu);
     // appropriate shortcuts are automatically supplied by edbee here
-    menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
-    menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
-    menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
-    menu->addSeparator();
-    menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon(), menu));
+    if (qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        menu->addAction(controller->createAction("cut", tr("Cut"), QIcon(), menu));
+        menu->addAction(controller->createAction("copy", tr("Copy"), QIcon(), menu));
+        menu->addAction(controller->createAction("paste", tr("Paste"), QIcon(), menu));
+        menu->addSeparator();
+        menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon(), menu));
+    } else {
+        menu->addAction(controller->createAction("cut", tr("Cut"), QIcon::fromTheme(QStringLiteral("edit-cut"), QIcon(QStringLiteral(":/icons/edit-cut.png"))), menu));
+        menu->addAction(controller->createAction("copy", tr("Copy"), QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))), menu));
+        menu->addAction(controller->createAction("paste", tr("Paste"), QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))), menu));
+        menu->addSeparator();
+        menu->addAction(controller->createAction("sel_all", tr("Select All"), QIcon::fromTheme(QStringLiteral("edit-select-all"), QIcon(QStringLiteral(":/icons/edit-select-all.png"))), menu));
+        formatAction->setIcon(QIcon::fromTheme(QStringLiteral("run-build-clean"), QIcon::fromTheme(QStringLiteral("run-build-clean"))));
+    }
 
-    auto formatAction = new QAction(QIcon(), tr("Format All"), menu);
     connect(formatAction, &QAction::triggered, [=]() {
         auto formattedText = mpHost->mLuaInterpreter.formatLuaCode(mpSourceEditorEdbeeDocument->text());
         // workaround for crash if undo is used, see https://github.com/edbee/edbee-lib/issues/66

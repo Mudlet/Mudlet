@@ -34,8 +34,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
-    error("Mudlet requires Qt 5.6 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 7)) {
+    error("Mudlet requires Qt 5.7 or later")
 }
 
 # Including IRC Library
@@ -139,7 +139,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.10.2
+VERSION = 3.11.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -273,10 +273,9 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
     isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw492_32"
+        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw530_32"
     }
-    LIBS += -L"C:\\mingw32\\bin" \
-        -L"C:\\mingw32\\lib" \
+    LIBS +=  \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.6 \
@@ -287,9 +286,10 @@ unix:!macx {
         -lglut \
         -lglu32 \
         -lpugixml \
+        -lWs2_32 \
         -L"$${MINGW_BASE_DIR}\\bin"
-    INCLUDEPATH += "C:\\mingw32\\include" \
-                   "C:\\Libraries\\boost_1_60_0" \
+    INCLUDEPATH += \
+                   "C:\\Libraries\\boost_1_67_0" \
                    "$${MINGW_BASE_DIR}\\include" \
                    "$${MINGW_BASE_DIR}\\lib\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
@@ -733,7 +733,7 @@ LUA_LCF.files = \
     $${PWD}/../3rdparty/lcf/lua_get_ast.lua \
     $${PWD}/../3rdparty/lcf/lua_get_formatter_ast.lua \
     $${PWD}/../3rdparty/lcf/lua_reformat.lua \
-    $${PWD}/../3rdparty/lcf/readme.txt \
+    $${PWD}/../3rdparty/lcf/readme.md \
     $${PWD}/../3rdparty/lcf/reformat.lua \
 # The path for the root directory has already been specified
 
@@ -760,210 +760,179 @@ LUA_LCF_L2_WORKSHOP_FILE.files = \
     $${PWD}/../3rdparty/lcf/workshop/file/text_file_as_string.lua
 LUA_LCF_L2_WORKSHOP_FILE.path = $${LUA_LCF_L1_WORKSHOP.path}/file
 
-LUA_LCF_L3_WORKSHOP_FORMATS_LUA.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/save.lua
+LUA_LCF_L3_WORKSHOP_FORMATS_LUA.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/is_identifier.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/keywords.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/quote_string.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/run_formatter.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/transform_ast.lua
 LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path = $${LUA_LCF_L1_WORKSHOP.path}/formats/lua
 
-LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/is_identifier.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/keywords.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax.lua
-LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/load
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_AST__TRANSFORMER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/align_nodes.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/move_comments.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/restruc_nodes.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/run.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_AST__TRANSFORMER.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/ast_transformer
 
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_boolean.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_function.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_nil.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_number.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_string.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/type_table.lua
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD.path}/syntax
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_AST__TRANSFORMER_HANDLERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/assignment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/else_part.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/elseif_part.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/expression.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/function_call.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/function_params.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/generic_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/if_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/if_part.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/key_val.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/local_assignment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/local_named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/named_function.lua\
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/numeric_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/repeat_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/type_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/var_ref.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/ast_transformer/handlers/while_block.lua \
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_AST__TRANSFORMER_HANDLERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_AST__TRANSFORMER.path}/handlers
 
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_EXPRESSIONS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/bracket_expr.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/expression.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/expr_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/vararg.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/expressions/var_link.lua
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_EXPRESSIONS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path}/expressions
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_FORMATTER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/get_result.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/process_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/process_block_multiline.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/process_block_oneline.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/process_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/process_list_variative.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/process_node.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/represent.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/representation_is_allowed.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/run.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/variate.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_FORMATTER.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/formatter
 
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_STATEMENTS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/break_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/call_assign.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/do_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/empty_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/function_body.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/generic_for_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/goto_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/if_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/label_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/local_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/named_function.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/numeric_for_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/repeat_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/return_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/statements.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/statements/while_block.lua
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_STATEMENTS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path}/statements
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/expression.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_FORMATTER.path}/handlers
 
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/comment.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/name_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/name.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/opt_spc.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/word.lua
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX.path}/words
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_EXPRESSIONS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/expressions/function_call.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/expressions/string.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/expressions/table.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/expressions/type_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/expressions/var_ref.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_EXPRESSIONS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS.path}/expressions
 
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS_PARTICLES.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/load/syntax/words/particles/long_bracket.lua
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS_PARTICLES.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS.path}/particles
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_STATEMENTS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/assignment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/break_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/comment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/goto_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/label_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/local_assignment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/return_statement.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_STATEMENTS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS.path}/statements
 
-LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string.lua
-LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/save
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_STATEMENTS_BLOCKS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/do_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/generic_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/if_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/local_named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/numeric_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/repeat_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/statements/blocks/while_block.lua
+LUA_LCF_L7_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_STATEMENTS_BLOCKS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_STATEMENTS.path}/blocks
 
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/init.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/get_result.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/interface.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_block_multiline.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_block_oneline.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_list_variative.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/process_node.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/representation_is_allowed.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/represent.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/run.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/variate.lua
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.path}/formatter
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_WRAPPERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/bracket_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/colon_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/dot_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/dot_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/expr_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/func_args.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/function_params.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/name_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/name_parts.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/par_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/handlers/wrappers/ref_list.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_WRAPPERS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS.path}/wrappers
 
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expression.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/interface.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements.lua
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path}/handlers
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_STATE__KEEPER.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/enter_level.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/get_child_state.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/get_state.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/init.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/interface.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/leave_level.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/set_child_state.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/formatter/state_keeper/set_state.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_STATE__KEEPER.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_FORMATTER.path}/state_keeper
 
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/function_call.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/name.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/vararg.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/var_link.lua
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path}/expressions
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_QUOTE__STRING.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/quote_string/custom_quotes.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/quote_string/dump.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/quote_string/intact.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/quote_string/linear.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/quote_string/quote_char.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_QUOTE__STRING.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/quote_string
 
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS_DATA__TYPES.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/boolean.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/nil.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/number.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/string.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/table.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/expressions/data_types/type_function.lua
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS_DATA__TYPES.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS.path}/data_types
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/expression.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/type_boolean.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/type_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/type_nil.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/type_number.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/type_string.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/type_table.lua
+LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/syntax
 
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/assignment.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/break_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/comment.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/goto_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/label_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/local_assignment.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/return_statement.lua
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path}/statements
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_QUALIFIERS.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/qualifiers/var_or_call.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_QUALIFIERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/syntax
 
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS_BLOCKS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/do_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/generic_for_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/if_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/local_named_function.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/named_function.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/numeric_for_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/repeat_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/statements/blocks/while_block.lua
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS_BLOCKS.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS.path}/blocks
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_STATEMENTS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/assign_or_call.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/break_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/do_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/empty_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/function_body.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/generic_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/if_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/local_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/named_function.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/numeric_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/repeat_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/return_statement.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/while_block.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_STATEMENTS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/statements
 
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_WRAPPERS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/bracket_expr.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/colon_name.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/dot_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/dot_name.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/expr_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/func_args.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/function_params.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/name_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/name_parts.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/par_expr.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/handlers/wrappers/ref_list.lua
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_WRAPPERS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS.path}/wrappers
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/comment.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/opt_spc.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/syntel.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/vararg.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/word.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/words
 
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/interface.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/move_comments.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/process_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/process_node.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/remove_whitespaces.lua
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path}/preprocess
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS_PARTICLES.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/particles/long_bracket.lua.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS_PARTICLES.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS.path}/partcles
 
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expression.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/interface.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements.lua
-LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.path = $${LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS.path}/handlers
-
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_EXPRESSIONS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/bracket_expr.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/colon_name.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/dot_name.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/expr_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/func_args.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/function_params.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/interface.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/key_val.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/name_list.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/par_expr.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/table.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/type_function.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/expressions/var_link.lua
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_EXPRESSIONS.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.path}/expressions
-
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_STATEMENTS.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/call_assign.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/do_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/elseif_part.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/else_part.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/generic_for_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/goto_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/if_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/if_part.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/interface.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/label_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/local_assignment.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/local_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/named_function.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/numeric_for_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/repeat_block.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/return_statement.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/preprocess/handlers/statements/while_block.lua
-LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_STATEMENTS.path = $${LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS.path}/statements
-
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_STATE__KEEPER.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/enter_level.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/get_child_state.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/get_state.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/init.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/interface.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/leave_level.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/set_child_state.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/formatter/state_keeper/set_state.lua
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_STATE__KEEPER.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER.path}/state_keeper
-
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_QUOTE__STRING.files = \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/custom_quotes.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/dump.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/intact.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/linear.lua \
-    $${PWD}/../3rdparty/lcf/workshop/formats/lua/save/quote_string/quote_char.lua
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_QUOTE__STRING.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE.path}/quote_string
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WRAPPERS.files = \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/bracket_expr.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/colon_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/dot_name.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/expr_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/name_list.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/par_expr.lua
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WRAPPERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/words
 
 LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save.lua
 LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE.path = $${LUA_LCF_L1_WORKSHOP.path}/formats/lua_table
@@ -993,14 +962,22 @@ LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE__CODE_SAVE.files = \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua_table_code/save/serialize_ast.lua
 LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE__CODE_SAVE.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE__CODE.path}/save
 
+LUA_LCF_L3_WORKSHOP_FORMATS_SH.files = $${PWD}/../3rdparty/lcf/formats/sh/load.lua
+LUA_LCF_L3_WORKSHOP_FORMATS_SH.path = $${LUA_LCF_L1_WORKSHOP.path}/formats/sh
+
 LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT.files = $${PWD}/../3rdparty/lcf/workshop/frontend/text/print_msg_with_delta_time.lua
 LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT.path = $${LUA_LCF_L1_WORKSHOP.path}/frontend/text
 
 LUA_LCF_L2_WORKSHOP_LUA.files =  $${PWD}/../3rdparty/lcf/workshop/lua/data_types.lua
 LUA_LCF_L2_WORKSHOP_LUA.path = $${LUA_LCF_L1_WORKSHOP.path}/lua
 
-LUA_LCF_L3_WORKSHOP_LUA_CODE.files = $${PWD}/../3rdparty/lcf/workshop/lua/code/get_ast.lua
+LUA_LCF_L3_WORKSHOP_LUA_CODE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/lua/code/ast_as_code.lua \
+    $${PWD}/../3rdparty/lcf/workshop/lua/code/get_ast.lua
 LUA_LCF_L3_WORKSHOP_LUA_CODE.path = $${LUA_LCF_L1_WORKSHOP.path}/lua/code
+
+LUA_LCF_L3_WORKSHOP_LUA_STRING.files = $${PWD}/../3rdparty/lcf/workshop/lua/string/quote.lua
+LUA_LCF_L3_WORKSHOP_LUA_STRING.path = $${LUA_LCF_L1_WORKSHOP.path}/lua/string
 
 LUA_LCF_L2_WORKSHOP_MECHS.files = \
     $${PWD}/../3rdparty/lcf/workshop/mechs/generic_loader.lua \
@@ -1143,10 +1120,10 @@ LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT.files = \
     $${PWD}/../3rdparty/lcf/workshop/mechs/text_block/text/store_textline.lua
 LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT.path = $${LUA_LCF_L3_WORKSHOP_MECHS_TEXT__BLOCKS.path}/text
 
-LUA_LCF_L2_WORKSHOP_NUMBERS.files = \
+LUA_LCF_L2_WORKSHOP_NUMBER.files = \
     $${PWD}/../3rdparty/lcf/workshop/number/represent_size.lua \
     $${PWD}/../3rdparty/lcf/workshop/number/represent_time.lua
-LUA_LCF_L2_WORKSHOP_NUMBERS.path = $${LUA_LCF_L1_WORKSHOP.path}/number
+LUA_LCF_L2_WORKSHOP_NUMBER.path = $${LUA_LCF_L1_WORKSHOP.path}/number
 
 LUA_LCF_L2_WORKSHOP_STRING.files = \
     $${PWD}/../3rdparty/lcf/workshop/string/content_attributes.lua \
@@ -1157,6 +1134,9 @@ LUA_LCF_L2_WORKSHOP_STRING.files = \
     $${PWD}/../3rdparty/lcf/workshop/string/trim_tail.lua
 LUA_LCF_L2_WORKSHOP_STRING.path = $${LUA_LCF_L1_WORKSHOP.path}/string
 
+LUA_LCF_L3_WORKSHOP_STRING_LINES.files = $${PWD}/../3rdparty/lcf/workshop/string/lines/get_next_line.lua
+LUA_LCF_L3_WORKSHOP_STRING_LINES.path = $${LUA_LCF_L2_WORKSHOP_STRING.path}/lines
+
 LUA_LCF_L2_WORKSHOP_STRUC.files = $${PWD}/../3rdparty/lcf/workshop/struc/compile.lua
 LUA_LCF_L2_WORKSHOP_STRUC.path = $${LUA_LCF_L1_WORKSHOP.path}/struc
 
@@ -1166,14 +1146,16 @@ LUA_LCF_L2_WORKSHOP_SYSTEM.files = \
 LUA_LCF_L2_WORKSHOP_SYSTEM.path = $${LUA_LCF_L1_WORKSHOP.path}/system
 
 LUA_LCF_L2_WORKSHOP_TABLE.files = \
+    $${PWD}/../3rdparty/lcf/workshop/table/as_string.lua \
     $${PWD}/../3rdparty/lcf/workshop/table/clone.lua \
     $${PWD}/../3rdparty/lcf/workshop/table/get_key_vals.lua \
     $${PWD}/../3rdparty/lcf/workshop/table/map_values.lua \
     $${PWD}/../3rdparty/lcf/workshop/table/merge.lua \
     $${PWD}/../3rdparty/lcf/workshop/table/new.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/ordered_pass.lua \
+    $${PWD}/../3rdparty/lcf/workshop/table/replace.lua \
     $${PWD}/../3rdparty/lcf/workshop/table/patch.lua \
-    $${PWD}/../3rdparty/lcf/workshop/table/unfold.lua \
-    $${PWD}/../3rdparty/lcf/workshop/table/ordered_pass.lua
+    $${PWD}/../3rdparty/lcf/workshop/table/unfold.lua
 LUA_LCF_L2_WORKSHOP_TABLE.path = $${LUA_LCF_L1_WORKSHOP.path}/table
 
 LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.files = $${PWD}/../3rdparty/lcf/workshop/table/ordered_pass/default_comparator.lua
@@ -1265,26 +1247,20 @@ unix:!macx {
         LUA_LCF_L1_WORKSHOP \
         LUA_LCF_L2_WORKSHOP_FILE \
         LUA_LCF_L3_WORKSHOP_FORMATS_LUA \
-        LUA_LCF_L4_WORKSHOP_FORMATS_LUA_LOAD \
-        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX \
-        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_EXPRESSIONS \
-        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_STATEMENTS \
-        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS \
-        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_LOAD_SYNTAX_WORDS_PARTICLES \
-        LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SAVE \
-        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER \
-        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS \
-        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS \
-        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_EXPRESSIONS_DATA__TYPES \
-        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS \
-        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_STATEMENTS_BLOCKS \
-        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_HANDLERS_WRAPPERS \
-        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS \
-        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS \
-        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_EXPRESSIONS \
-        LUA_LCF_L8_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_PREPROCESS_HANDLERS_STATEMENTS \
-        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SAVE_FORMATTER_STATE__KEEPER \
-        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SAVE_QUOTE__STRING \
+        LUA_LCF_L4_WORKSHOP_FORMATS_LUA_FORMATTER \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_EXPRESSIONS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_STATEMENTS \
+        LUA_LCF_L7_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_STATEMENTS_BLOCKS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_FORMATTER_HANDLERS_WRAPPERS \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_FORMATTER_STATE__KEEPER \
+        LUA_LCF_L4_WORKSHOP_FORMATS_LUA_QUOTE__STRING \
+        LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_QUALIFIERS \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_STATEMENTS \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS \
+        LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS_PARTICLES \
+        LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WRAPPERS \
         LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE \
         LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE_SAVE \
         LUA_LCF_L5_WORKSHOP_FORMATS_LUA__TABLE_SAVE_INSTALL__NODE__HANDLERS \
@@ -1293,6 +1269,7 @@ unix:!macx {
         LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT \
         LUA_LCF_L2_WORKSHOP_LUA \
         LUA_LCF_L3_WORKSHOP_LUA_CODE \
+        LUA_LCF_L3_WORKSHOP_LUA_STRING \
         LUA_LCF_L2_WORKSHOP_MECHS \
         LUA_LCF_L3_WORKSHOP_MECHS_COMMAND__LINE__PROCESSOR \
         LUA_LCF_L3_WORKSHOP_MECHS_GENERIC__FILE__CONVERTER \
@@ -1311,8 +1288,9 @@ unix:!macx {
         LUA_LCF_L3_WORKSHOP_MECHS_TEXT__BLOCKS \
         LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_LINE \
         LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT \
-        LUA_LCF_L2_WORKSHOP_NUMBERS \
+        LUA_LCF_L2_WORKSHOP_NUMBER \
         LUA_LCF_L2_WORKSHOP_STRING \
+        LUA_LCF_L3_WORKSHOP_STRING_LINES \
         LUA_LCF_L2_WORKSHOP_STRUC \
         LUA_LCF_L2_WORKSHOP_SYSTEM \
         LUA_LCF_L2_WORKSHOP_TABLE \

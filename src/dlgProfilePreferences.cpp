@@ -57,10 +57,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // init generated dialog
     setupUi(this);
 
-    // This is currently empty so can be hidden until needed, but provides a
-    // location on the last (Special Options) tab where
-    // temporary/development/testing controls can be placed if needed...
-    groupBox_debug->hide();
+    // The groupBox_debug is no longer empty, (it contains
+    // checkBox_showIconsOnMenus) so can no longer be "hidden until needed"
+    // it still provides a location on the last (Special Options) tab where
+    // temporary/development/testing controls can be placed if needed, they
+    // should be added to the (QGridLayout*) returned by:
+    // qobject_cast<QGridLayout*>(groupBox_debug->layout())
 
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
@@ -174,9 +176,19 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                               "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
                                                               "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
                                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                              "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
-                                                              "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
+                                                              "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                              "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
                                                               "full support for languages other than English.</i></p>"));
+    checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mShowIconsOnMenuCheckedState);
+    checkBox_showIconsOnMenus->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
+                                               "shown icons on menus, others, however do not. This control allows the user to override "
+                                               "the setting, if needed, as follows:"
+                                               "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
+                                               "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
+                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
+                                               "<p><i>This setting is only processed when individual menus are created and changes may not "
+                                               "propogate everywhere until Mudlet is restarted.</i></p>"));
 
     connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
     connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
@@ -561,12 +573,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
         mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
-        auto * pdebugLayout = qobject_cast<QFormLayout*>(groupBox_debug->layout());
+        auto * pdebugLayout = qobject_cast<QGridLayout*>(groupBox_debug->layout());
         if (pdebugLayout) {
-            pdebugLayout->addRow(pLabel_mapSymbolFontFudge, mpDoubleSpinBox_mapSymbolFontFudge);
-            groupBox_debug->show();
+            int existingRows = pdebugLayout->rowCount();
+            pdebugLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
+            pdebugLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
         } else {
-            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QFormLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
+            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QGridLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
         }
 
         label_mapSymbolsFont->setEnabled(true);
@@ -615,28 +628,28 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
 
     connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
-    connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
-    connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
-    connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
+    connect(pushButton_lBlack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
     connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
-    connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
-    connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
-    connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
+    connect(pushButton_lRed, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
+    connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
+    connect(pushButton_lGreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
     connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
-    connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
-    connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
-    connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
+    connect(pushButton_lYellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
+    connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
+    connect(pushButton_lBlue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
     connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
-    connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+    connect(pushButton_lMagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+    connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
+    connect(pushButton_lCyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
     connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
-    connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
+    connect(pushButton_lWhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
 
     connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
     connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
     connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
     connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
 
-    connect(reset_colors_button, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
+    connect(pushButton_resetColors, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
     connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
 
     connect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(setDisplayFont()));
@@ -684,35 +697,34 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 {
     disconnect(buttonDownloadMap, SIGNAL(clicked()));
 
-    disconnect(pushButton_command_line_foreground_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_line_background_color, SIGNAL(clicked()));
-
-    disconnect(pushButton_black, SIGNAL(clicked()));
-    disconnect(pushButton_Lblack, SIGNAL(clicked()));
-    disconnect(pushButton_green, SIGNAL(clicked()));
-    disconnect(pushButton_Lgreen, SIGNAL(clicked()));
-    disconnect(pushButton_red, SIGNAL(clicked()));
-    disconnect(pushButton_Lred, SIGNAL(clicked()));
-    disconnect(pushButton_blue, SIGNAL(clicked()));
-    disconnect(pushButton_Lblue, SIGNAL(clicked()));
-    disconnect(pushButton_yellow, SIGNAL(clicked()));
-    disconnect(pushButton_Lyellow, SIGNAL(clicked()));
-    disconnect(pushButton_cyan, SIGNAL(clicked()));
-    disconnect(pushButton_Lcyan, SIGNAL(clicked()));
-    disconnect(pushButton_magenta, SIGNAL(clicked()));
-    disconnect(pushButton_Lmagenta, SIGNAL(clicked()));
-    disconnect(pushButton_white, SIGNAL(clicked()));
-    disconnect(pushButton_Lwhite, SIGNAL(clicked()));
-
     disconnect(pushButton_foreground_color, SIGNAL(clicked()));
     disconnect(pushButton_background_color, SIGNAL(clicked()));
+    disconnect(pushButton_command_line_foreground_color, SIGNAL(clicked()));
+    disconnect(pushButton_command_line_background_color, SIGNAL(clicked()));
     disconnect(pushButton_command_foreground_color, SIGNAL(clicked()));
     disconnect(pushButton_command_background_color, SIGNAL(clicked()));
+
+    disconnect(pushButton_black, SIGNAL(clicked()));
+    disconnect(pushButton_lBlack, SIGNAL(clicked()));
+    disconnect(pushButton_red, SIGNAL(clicked()));
+    disconnect(pushButton_lRed, SIGNAL(clicked()));
+    disconnect(pushButton_green, SIGNAL(clicked()));
+    disconnect(pushButton_lGreen, SIGNAL(clicked()));
+    disconnect(pushButton_yellow, SIGNAL(clicked()));
+    disconnect(pushButton_lYellow, SIGNAL(clicked()));
+    disconnect(pushButton_blue, SIGNAL(clicked()));
+    disconnect(pushButton_lBlue, SIGNAL(clicked()));
+    disconnect(pushButton_magenta, SIGNAL(clicked()));
+    disconnect(pushButton_lMagenta, SIGNAL(clicked()));
+    disconnect(pushButton_cyan, SIGNAL(clicked()));
+    disconnect(pushButton_lCyan, SIGNAL(clicked()));
+    disconnect(pushButton_white, SIGNAL(clicked()));
+    disconnect(pushButton_lWhite, SIGNAL(clicked()));
 
     // The "new" style connect(...) does not have the same range of overloaded
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
-    disconnect(reset_colors_button, &QAbstractButton::clicked, 0, 0);
+    disconnect(pushButton_resetColors, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)));
@@ -909,54 +921,51 @@ void dlgProfilePreferences::setColors()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
-        pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
-        pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
-        pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
-        pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
-        pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
-        pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
-        pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
-        pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
-        pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
-        pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
-        pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
-        pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
-        pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
-        pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
-        pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
-        pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
-        pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
-
-        pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
-        pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
-        pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
-        pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
+        setButtonColor(pushButton_foreground_color, pHost->mFgColor);
+        setButtonColor(pushButton_background_color, pHost->mBgColor);
+        setButtonColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
+        setButtonColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
+        setButtonColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
+        setButtonColor(pushButton_command_background_color, pHost->mCommandBgColor);
+        setButtonColor(pushButton_black, pHost->mBlack);
+        setButtonColor(pushButton_lBlack, pHost->mLightBlack);
+        setButtonColor(pushButton_red, pHost->mRed);
+        setButtonColor(pushButton_lRed, pHost->mLightRed);
+        setButtonColor(pushButton_green, pHost->mGreen);
+        setButtonColor(pushButton_lGreen, pHost->mLightGreen);
+        setButtonColor(pushButton_blue, pHost->mBlue);
+        setButtonColor(pushButton_lBlue, pHost->mLightBlue);
+        setButtonColor(pushButton_yellow, pHost->mYellow);
+        setButtonColor(pushButton_lYellow, pHost->mLightYellow);
+        setButtonColor(pushButton_cyan, pHost->mCyan);
+        setButtonColor(pushButton_lCyan, pHost->mLightCyan);
+        setButtonColor(pushButton_magenta, pHost->mMagenta);
+        setButtonColor(pushButton_lMagenta, pHost->mLightMagenta);
+        setButtonColor(pushButton_white, pHost->mWhite);
+        setButtonColor(pushButton_lWhite, pHost->mLightWhite);
     } else {
         pushButton_foreground_color->setStyleSheet(QString());
         pushButton_background_color->setStyleSheet(QString());
-
-        pushButton_black->setStyleSheet(QString());
-        pushButton_Lblack->setStyleSheet(QString());
-        pushButton_green->setStyleSheet(QString());
-        pushButton_Lgreen->setStyleSheet(QString());
-        pushButton_red->setStyleSheet(QString());
-        pushButton_Lred->setStyleSheet(QString());
-        pushButton_blue->setStyleSheet(QString());
-        pushButton_Lblue->setStyleSheet(QString());
-        pushButton_yellow->setStyleSheet(QString());
-        pushButton_Lyellow->setStyleSheet(QString());
-        pushButton_cyan->setStyleSheet(QString());
-        pushButton_Lcyan->setStyleSheet(QString());
-        pushButton_magenta->setStyleSheet(QString());
-        pushButton_Lmagenta->setStyleSheet(QString());
-        pushButton_white->setStyleSheet(QString());
-        pushButton_Lwhite->setStyleSheet(QString());
-
         pushButton_command_line_foreground_color->setStyleSheet(QString());
         pushButton_command_line_background_color->setStyleSheet(QString());
         pushButton_command_foreground_color->setStyleSheet(QString());
         pushButton_command_background_color->setStyleSheet(QString());
+        pushButton_black->setStyleSheet(QString());
+        pushButton_lBlack->setStyleSheet(QString());
+        pushButton_red->setStyleSheet(QString());
+        pushButton_lRed->setStyleSheet(QString());
+        pushButton_green->setStyleSheet(QString());
+        pushButton_lGreen->setStyleSheet(QString());
+        pushButton_yellow->setStyleSheet(QString());
+        pushButton_lYellow->setStyleSheet(QString());
+        pushButton_blue->setStyleSheet(QString());
+        pushButton_lBlue->setStyleSheet(QString());
+        pushButton_magenta->setStyleSheet(QString());
+        pushButton_lMagenta->setStyleSheet(QString());
+        pushButton_cyan->setStyleSheet(QString());
+        pushButton_lCyan->setStyleSheet(QString());
+        pushButton_white->setStyleSheet(QString());
+        pushButton_lWhite->setStyleSheet(QString());
     }
 }
 
@@ -1084,9 +1093,18 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
         c = color;
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();
+            // update the display properly when color selections change.
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            if (!mudlet::self()->mConsoleMap[pHost]->mUpperPane->mIsTailMode) {
+                // The upper pane having mIsTailMode true means lower pane is hidden
+                mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+                mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
+            }
         }
 
-        b->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(color.name()));
+        // Also set a contrasting foreground color so text will always be visible
+        setButtonColor(b, color);
     }
 }
 
@@ -1199,7 +1217,7 @@ void dlgProfilePreferences::setColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblack, pHost->mLightBlack);
+        setColor(pushButton_lBlack, pHost->mLightBlack);
     }
 }
 
@@ -1215,7 +1233,7 @@ void dlgProfilePreferences::setColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lred, pHost->mLightRed);
+        setColor(pushButton_lRed, pHost->mLightRed);
     }
 }
 
@@ -1231,27 +1249,12 @@ void dlgProfilePreferences::setColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lgreen, pHost->mLightGreen);
-    }
-}
-
-void dlgProfilePreferences::setColorBlue()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_blue, pHost->mBlue);
-    }
-}
-
-void dlgProfilePreferences::setColorLightBlue()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_Lblue, pHost->mLightBlue);
+        setColor(pushButton_lGreen, pHost->mLightGreen);
     }
 }
 
 void dlgProfilePreferences::setColorYellow()
+
 {
     Host* pHost = mpHost;
     if (pHost) {
@@ -1263,7 +1266,41 @@ void dlgProfilePreferences::setColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lyellow, pHost->mLightYellow);
+        setColor(pushButton_lYellow, pHost->mLightYellow);
+    }
+}
+
+void dlgProfilePreferences::setColorBlue()
+
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_blue, pHost->mBlue);
+    }
+}
+
+void dlgProfilePreferences::setColorLightBlue()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_lBlue, pHost->mLightBlue);
+    }
+}
+
+void dlgProfilePreferences::setColorMagenta()
+
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_magenta, pHost->mMagenta);
+    }
+}
+
+void dlgProfilePreferences::setColorLightMagenta()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_lMagenta, pHost->mLightMagenta);
     }
 }
 
@@ -1279,23 +1316,7 @@ void dlgProfilePreferences::setColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lcyan, pHost->mLightCyan);
-    }
-}
-
-void dlgProfilePreferences::setColorMagenta()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_magenta, pHost->mMagenta);
-    }
-}
-
-void dlgProfilePreferences::setColorLightMagenta()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_Lmagenta, pHost->mLightMagenta);
+        setColor(pushButton_lCyan, pHost->mLightCyan);
     }
 }
 
@@ -1311,7 +1332,7 @@ void dlgProfilePreferences::setColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lwhite, pHost->mLightWhite);
+        setColor(pushButton_lWhite, pHost->mLightWhite);
     }
 }
 
@@ -1485,7 +1506,7 @@ void dlgProfilePreferences::loadMap()
                            tr("Load Mudlet map"),
                            mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
                            tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
-                              "Do not change extensions (in braces) they are used programmatically!"));
+                              "Do not change extensions (in braces) as they are used programmatically"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -2070,6 +2091,18 @@ void dlgProfilePreferences::slot_save_and_exit()
     // they changed things at the same time:
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+    mudlet::self()->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
+    switch (checkBox_showIconsOnMenus->checkState()) {
+    case Qt::Unchecked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
+        break;
+    case Qt::Checked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+        break;
+    case Qt::PartiallyChecked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mudlet::self()->mShowIconsOnMenuOriginally);
+    }
 
     close();
 }
@@ -2823,4 +2856,10 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
         comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
         label_logFileNameExtension->setText(QStringLiteral(".txt"));
     }
+}
+
+void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)
+{
+    button->setStyleSheet(QStringLiteral("QPushButton{color: %1; background-color: %2;}").arg(color.lightness() > 127 ? QStringLiteral("black") : QStringLiteral("white"),
+                                                                                              color.name()));
 }

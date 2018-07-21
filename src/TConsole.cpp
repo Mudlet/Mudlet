@@ -735,7 +735,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             if (mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (3 of 6)
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
                 QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
@@ -772,7 +772,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (4 of 6)
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
                 QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
@@ -1039,7 +1039,7 @@ void TConsole::slot_toggleReplayRecording()
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (5 of 6)
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (5 of 6)
         QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
@@ -1177,15 +1177,18 @@ void TConsole::setConsoleBgColor(int r, int g, int b)
 {
     mBgColor = QColor(r, g, b);
     mUpperPane->setConsoleBgColor(r, g, b);
+    mLowerPane->setConsoleBgColor(r, g, b);
     changeColors();
 }
 
-void TConsole::setConsoleFgColor(int r, int g, int b)
-{
-    mFgColor = QColor(r, g, b);
-    mUpperPane->setConsoleFgColor(r, g, b);
-    changeColors();
-}
+// Not used:
+//void TConsole::setConsoleFgColor(int r, int g, int b)
+//{
+//    mFgColor = QColor(r, g, b);
+//    mUpperPane->setConsoleFgColor(r, g, b);
+//    mLowerPane->setConsoleFgColor(r, g, b);
+//    changeColors();
+//}
 
 /*std::string TConsole::getCurrentTime()
    {
@@ -1547,7 +1550,7 @@ bool TConsole::saveMap(const QString& location)
     QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
 
     if (location.isEmpty()) {
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (6 of 6)
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (6 of 6)
         filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     } else {
         filename_map = location;
@@ -2421,6 +2424,14 @@ bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int 
         mSubConsoleMap[key]->setPalette(mainPalette);
         mSubConsoleMap[key]->mUpperPane->mBgColor = QColor(r, g, b, alpha);
         mSubConsoleMap[key]->mLowerPane->mBgColor = QColor(r, g, b, alpha);
+        // update the display properly when color selections change.
+        mSubConsoleMap[key]->mUpperPane->updateScreenView();
+        mSubConsoleMap[key]->mUpperPane->forceUpdate();
+        if (!mSubConsoleMap[key]->mUpperPane->mIsTailMode) {
+            // The upper pane having mIsTailMode true means lower pane is hidden
+            mSubConsoleMap[key]->mLowerPane->updateScreenView();
+            mSubConsoleMap[key]->mLowerPane->forceUpdate();
+        }
         return true;
     } else if (mLabelMap.find(key) != mLabelMap.end()) {
         QPalette mainPalette;

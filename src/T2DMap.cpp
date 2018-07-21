@@ -31,6 +31,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -2618,6 +2619,25 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
 
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
+            auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
+            auto pArea = mpMap->mpRoomDB->getArea(mAID);
+
+            if (!playerRoom || !pArea) {
+                auto createMap = new QAction(tr("create new map"), this);
+                connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
+
+                auto loadMap = new QAction(tr("load map"), this);
+                connect(loadMap, &QAction::triggered, this, &T2DMap::slot_loadMap);
+
+                mPopupMenu = true;
+
+                popup->addAction(createMap);
+                popup->addAction(loadMap);
+
+                popup->popup(mapToGlobal(event->pos()));
+                return;
+            }
+
             auto moveRoom = new QAction("move", this);
             moveRoom->setToolTip(tr("Move room"));
             connect(moveRoom, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
@@ -2671,7 +2691,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (!pArea) {
                 return;
             }
-            if (pArea->gridMode) {
+
+          if (pArea->gridMode) {
                 // Disable custom exit lines in grid mode as they aren't visible anyway
                 customExitLine->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode"));
                 customExitLine->setEnabled(false);
@@ -3804,6 +3825,59 @@ void T2DMap::slot_setRoomWeight()
         }
         mpMap->mMapGraphNeedsUpdate = true;
         repaint();
+    }
+}
+
+void T2DMap::slot_loadMap() {
+    if (!mpHost) {
+        return;
+    }
+
+    QString fileName = QFileDialog::getOpenFileName(
+                           this,
+                           tr("Load Mudlet map"),
+                           mudlet::getMudletPath(mudlet::profileMapsPath, mpHost->getName()),
+                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
+                              "Do not change extensions (in braces) as they are used programmatically"));
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
+        mpHost->mpConsole->importMap(fileName);
+    } else {
+        mpHost->mpConsole->loadMap(fileName);
+    }
+}
+
+void T2DMap::slot_newMap()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    auto roomID = mpHost->mpMap->createNewRoomID();
+
+    if (!mpHost->mpMap->addRoom(roomID)) {
+        return;
+    }
+
+    mpHost->mpMap->setRoomArea(roomID, -1, false);
+    mpHost->mpMap->setRoomCoordinates(roomID, 0, 0, 0);
+    mpHost->mpMap->mMapGraphNeedsUpdate = true;
+
+    auto room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
+    mpHost->mpMap->mRoomIdHash[mpHost->getName()] = roomID;
+    mpHost->mpMap->mNewMove = true;
+    if (mpHost->mpMap->mpM) {
+        mpHost->mpMap->mpM->update();
+    }
+
+    if (mpHost->mpMap->mpMapper->mp2dMap) {
+        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
+        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
     }
 }
 

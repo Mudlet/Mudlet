@@ -105,6 +105,7 @@ cTelnet::cTelnet(Host* pH)
         mAcceptableEncodings << QStringLiteral("UTF-8");
         mAcceptableEncodings << QStringLiteral("GBK");
         mAcceptableEncodings << QStringLiteral("GB18030");
+        mAcceptableEncodings << QStringLiteral("Big5");
         mAcceptableEncodings << QStringLiteral("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
@@ -113,6 +114,7 @@ cTelnet::cTelnet(Host* pH)
         mFriendlyEncodings << QStringLiteral("UTF-8");
         mFriendlyEncodings << QStringLiteral("GBK");
         mFriendlyEncodings << QStringLiteral("GB18030");
+        mFriendlyEncodings << QStringLiteral("Big5");
         mFriendlyEncodings << QStringLiteral("ISO 8859-1");
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
@@ -299,6 +301,9 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
+
+    setKeepAlive(socket.socketDescriptor());
+
     QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
     postMessage(msg);
     QString func = "onConnect";
@@ -1896,4 +1901,84 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentList.append(protocol);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
+}
+
+// credit: https://github.com/qflow/websockets
+// Also see: https://stackoverflow.com/a/5435430/4805858
+// particularly the comment: "Note that keepalive won't detect a failure until
+// at least the configured keepalive_time + (keepalive_intrvl*keepalive_probes).
+// I think by default if you don't change the settings this can default to over
+// an hour!" – bdk Mar 25 '11 at 17:50
+void cTelnet::setKeepAlive(int socketHandle)
+{
+    // Switch the keep-alive option on:
+    int on = 1;
+    // allow 75 seconds to set up connection {*nix-like OS default}:
+    int init = 75;
+    // send keepalive after 2 minutes of inactivity (after the init period)
+    // {2 hours is default}:
+    constexpr int timeout = 2 * 60;
+    // send a keepalive packet every 75 seconds {*nix-like 0S default}:
+    int interval = 75;
+    // send up to 10 keepalive packets out - then disconnect if no response:
+    int count = 10;
+#if defined(Q_OS_WIN32)
+    // Both Windows 32 and 64 bit despite the "32"
+
+    // Windows is hardwired to use 10 for the count value (TCP_KEEPCNT) in Vista
+    // and later.
+    // https://msdn.microsoft.com/en-us/library/windows/desktop/dd877220(v=vs.85).aspx
+    Q_UNUSED(count)
+    Q_UNUSED(init)
+    struct tcp_keepalive
+    {
+        u_long onoff; // off = 0; on = not 0; default off
+        u_long keepalivetime; // milliseconds, default = 7,200,000 = 2 hours
+        u_long keepaliveinterval; // milliseconds, default = 1000 = 1 second
+    } alive;
+    alive.onoff = on;
+    alive.keepalivetime = timeout * 1000;
+    alive.keepaliveinterval = interval * 1000;
+    DWORD dwBytesRet = 0;
+    WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
+
+#else // For OSes other than Windows:
+
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+    setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
+#else
+    // FreeBSD always has the Keep-alive option enabled, so the above is not
+    // needed
+    Q_UNUSED(on)
+#endif
+
+    // The effect is that (on FreeBSD) "init" seconds is allowed to set up the
+    // connection, then after (all OSes) "timeout" seconds with no traffic a
+    // keep-alive is sent - which should wake up the far end, if it does not
+    // another one is sent after a further "interval" seconds and if NO response
+    // is received after "count" of those keep alives then Mudlet will close the
+    // socket itself - declaring the remote end dead... we are hoping that that
+    // does not happen so that the FIRST keep-alive does what it is supposed to!
+
+    // Time to establish connection on new, unconnected sockets, in seconds
+#if defined(Q_OS_FREEBSD)
+    // Only an option on FreeBSD:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINIT, &init, sizeof(init));
+#else
+    Q_UNUSED(init)
+#endif
+
+    // Start keepalives after this interval of idleness, in seconds:
+#if defined(Q_OS_MACOS)
+    // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#else
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
+#endif
+
+    // Interval between keep-alives, in seconds:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+    // Number of failed keep alives before forcing a close:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#endif // defined(Q_OS_WIN32)
 }

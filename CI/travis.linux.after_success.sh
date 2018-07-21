@@ -6,6 +6,13 @@ set -e
 if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
 
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+    if $(git diff --name-only | grep -q "mudlet.ts"); then
+      git checkout development
+      git config user.name "mudlet-machine-account"
+      git config user.email "39947211+mudlet-machine-account@users.noreply.github.com"
+      git commit -m "Update strings to translate [skip ci]" translations/mudlet.ts
+      #git push "https://${MUDLET_MACHINE_ACCOUNT_API_KEY}@github.com/Mudlet/Mudlet.git" development
+    fi
     # instead of deployment, we upload to coverity for cron jobs
     cd build
     tar czf Mudlet.tgz cov-int
@@ -16,6 +23,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
       --form file=@Mudlet.tgz \
       --form version="master branch head" \
       --form description="$(git log -1|head -1)" \
+      --cacert "${HOME}/ca-file.pem" \
       https://scan.coverity.com/builds?project=Mudlet%2FMudlet
     CURL_RESULT=$?
     echo curl returned $CURL_RESULT

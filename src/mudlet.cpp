@@ -121,7 +121,6 @@ mudlet* mudlet::self()
     return _self;
 }
 
-
 mudlet::mudlet()
 : QMainWindow()
 , mFontManager()
@@ -155,6 +154,15 @@ mudlet::mudlet()
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mShowIconsOnDialogs(true)
 {
+    mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+    mpSettings = getQSettings();
+    readEarlySettings(*mpSettings);
+    if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
+        // If the setting is not the "tri-state" one then force the setting,
+        // have to invert the sense because the attribute is a negative one:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
+    }
+
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
     setContentsMargins(0, 0, 0, 0);
@@ -446,7 +454,7 @@ mudlet::mudlet()
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
     mpSettings = getQSettings();
-    readSettings(*mpSettings);
+    readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
 
@@ -905,6 +913,13 @@ void mudlet::slot_close_profile_requested(int tab)
     mHostDockConsoleMap.remove(pH);
     mHostConsoleMap.remove(pH);
 
+    if (pH->mpNotePad) {
+        pH->mpNotePad->save();
+        pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+        pH->mpNotePad->close();
+        pH->mpNotePad = nullptr;
+    }
+
     for (TToolBar* pTB : hostToolBarMap) {
         if (pTB) {
             pTB->setAttribute(Qt::WA_DeleteOnClose);
@@ -974,6 +989,13 @@ void mudlet::slot_close_profile()
                 }
                 mHostDockConsoleMap.remove(pH);
                 mHostConsoleMap.remove(pH);
+
+                if (pH->mpNotePad) {
+                    pH->mpNotePad->save();
+                    pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+                    pH->mpNotePad->close();
+                    pH->mpNotePad = nullptr;
+                }
 
                 for (TToolBar* pTB : hostTToolBarMap) {
                     if (pTB) {
@@ -2254,6 +2276,7 @@ void mudlet::closeEvent(QCloseEvent* event)
                 pC->mpHost->mpNotePad->save();
                 pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
                 pC->mpHost->mpNotePad->close();
+                pC->mpHost->mpNotePad = nullptr;
             }
 
             // close console
@@ -2290,10 +2313,12 @@ void mudlet::forceClose()
                 host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
                 host->mpEditorDialog->close();
             }
+
             if (host->mpNotePad) {
                 host->mpNotePad->save();
                 host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
                 host->mpNotePad->close();
+                host->mpNotePad = nullptr;
             }
 
             if (mpIrcClientMap.contains(host)) {
@@ -2319,7 +2344,17 @@ void mudlet::forceClose()
     close();
 }
 
-void mudlet::readSettings(const QSettings& settings)
+// readSettings has been split into two because some settings will need to be
+// known BEFORE (early) the GUI is constructed and some AFTERWARDS (late)
+void mudlet::readEarlySettings(const QSettings& settings)
+{
+    // In the near future the user's locale preferences will need to be read
+    // as soon as possible as well!
+
+    mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
+}
+
+void mudlet::readLateSettings(const QSettings& settings)
 {
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
@@ -2463,6 +2498,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
+    settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2731,7 +2767,6 @@ void mudlet::slot_notes()
         QTextCharFormat format;
         format.setFont(pHost->mDisplayFont);
         pNotes->notesEdit->setCurrentCharFormat(format);
-        pNotes->restore();
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
     }
