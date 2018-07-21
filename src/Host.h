@@ -355,9 +355,13 @@ signals:
     void profileSaveFinished();
 
 private slots:
-    void slot_modulesFinishedWriting();
+    void slot_reloadModules();
 
 private:
+    void installPackageFonts(const QString &packageName);
+
+    QStringList mModulesToSync;
+
     QScopedPointer<LuaInterface> mLuaInterface;
 
     TriggerUnit mTriggerUnit;
@@ -421,10 +425,6 @@ private:
 
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
-
-    void installPackageFonts(const QString &packageName);
-
-    void reloadModules(int sync, const QStringList& modulesToSync) const;
 };
 
 #endif // MUDLET_HOST_H

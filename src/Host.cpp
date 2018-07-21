@@ -205,8 +205,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"DuckDuckGo", "https://duckduckgo.com/?q="},
                     {"Google",     "https://www.google.com/search?q="}
     });
-
-    connect(this, &Host::profileSaveFinished, this, &Host::slot_modulesFinishedWriting);
 }
 
 Host::~Host()
@@ -224,19 +222,80 @@ Host::~Host()
 void Host::saveModules(int sync, bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
-    QStringList modulesToSync;
-    QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
-    QDir savePath = QDir(dirName);
-    if (!savePath.exists()) {
-        savePath.mkpath(dirName);
+    mModulesToSync.clear();
+    QString savePath = mudlet::getMudletPath(mudlet::moduleBackupsPath);
+    auto savePathDir = QDir(savePath);
+    if (!savePathDir.exists()) {
+        savePathDir.mkpath(savePath);
     }
     while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
-        QString filename_xml = entry[0];
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
-        QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         QString moduleName = it.key();
+        QString filename_xml = entry[0];
+
+        if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
+        } else if (backup) {
+            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
+            QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+            savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
+        }
+
+        auto writer = new XMLexport(this);
+        writers.insert(filename_xml, writer);
+        writer->writeModuleXML(moduleName, filename_xml);
+
+        if (entry[1].toInt()) {
+            mModulesToSync << moduleName;
+        }
+    }
+    modulesToWrite.clear();
+
+    if (sync) {
+        connect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
+    }
+}
+
+void Host::slot_reloadModules()
+{
+    //synchronize modules across sessions
+    QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
+    QMapIterator<Host*, TConsole*> sessionIterator(activeSessions);
+    while (sessionIterator.hasNext()) {
+        sessionIterator.next();
+        Host* host = sessionIterator.key();
+        if (host->mHostName == mHostName) {
+            continue;
+        }
+        QMap<QString, int> modulePri = host->mModulePriorities;
+        QMapIterator<QString, int> modulePriosIterator(modulePri);
+        QMap<int, QStringList> moduleOrder;
+        while (modulePriosIterator.hasNext()) {
+            modulePriosIterator.next();
+            // setup the map to be in format of priority:name
+            moduleOrder[modulePriosIterator.value()].append(modulePriosIterator.key());
+        }
+        QMapIterator<int, QStringList> it4(moduleOrder);
+        while (it4.hasNext()) {
+            it4.next();
+            QStringList moduleList = it4.value();
+            for (int i = 0; i < moduleList.size(); i++) {
+                QString moduleName = moduleList[i];
+                if (mModulesToSync.contains(moduleName)) {
+                    host->reloadModule(moduleName);
+                }
+            }
+        }
+    }
+
+    // update the module zips
+    QMapIterator<QString, QStringList> it(modulesToWrite);
+    while (it.hasNext()) {
+        it.next();
+        QStringList entry = it.value();
+        QString moduleName = it.key();
+        QString filename_xml = entry[0];
+
         QString zipName;
         zip* zipFile = nullptr;
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
@@ -249,73 +308,25 @@ void Host::saveModules(int sync, bool backup)
             if (!packageDir.exists()) {
                 packageDir.mkpath(packagePathName);
             }
-        } else if (backup) {
-            savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
-        }
 
-        auto writer = new XMLexport(this);
-        writers.insert(filename_xml, writer);
-        writer->writeModuleXML(moduleName, filename_xml);
-
-        if (entry[1].toInt()) {
-            modulesToSync << moduleName;
-        }
-
-        if (!zipName.isEmpty()) {
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
-            QTime t;
-            t.start();
-            //            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
-            int err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
+            err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
             //FIXME: error checking
             if (zipFile) {
                 err = zip_close(zipFile);
+                //FIXME: error checking
             }
-            //FIXME: error checking
         }
     }
-    reloadModules(sync, modulesToSync);
+
+    // disconnect the one-time event so we're not always reloading modules whenever a profile save happens
+    mModulesToSync.clear();
+    QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
 }
 
-void Host::reloadModules(int sync, const QStringList& modulesToSync) const
-{
-    modulesToWrite.clear();
-    if (sync) {
-        //synchronize modules across sessions
-        QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
-        QMapIterator<Host*, TConsole*> sessionIterator(activeSessions);
-        while (sessionIterator.hasNext()) {
-            sessionIterator.next();
-            Host* host = sessionIterator.key();
-            if (host->mHostName == mHostName) {
-                continue;
-            }
-            QMap<QString, int> modulePri = host->mModulePriorities;
-            QMapIterator<QString, int> modulePriosIterator(modulePri);
-            QMap<int, QStringList> moduleOrder;
-            while (modulePriosIterator.hasNext()) {
-                modulePriosIterator.next();
-                // setup the map to be in format of priority:name
-                moduleOrder[modulePriosIterator.value()].append(modulePriosIterator.key());
-            }
-            QMapIterator<int, QStringList> it4(moduleOrder);
-            while (it4.hasNext()) {
-                it4.next();
-                QStringList moduleList = it4.value();
-                for (int i = 0; i < moduleList.size(); i++) {
-                    QString moduleName = moduleList[i];
-                    if (modulesToSync.contains(moduleName)) {
-                        host->reloadModule(moduleName);
-                    }
-                }
-            }
-        }
-    }
-}
 
 void Host::reloadModule(const QString& reloadModuleName)
 {
-    qDebug() << "reloading" << reloadModuleName;
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> moduleIterator(installedModules);
     while (moduleIterator.hasNext()) {
@@ -1284,9 +1295,4 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
-}
-
-void Host::slot_modulesFinishedWriting()
-{
-    qDebug() << "sync modules, bitch";
 }
