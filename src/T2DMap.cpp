@@ -618,8 +618,13 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QList<int> oneWayExits;
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
     if (!pPlayerRoom) {
-        p.drawText(_w / 2, _h / 2, "No map or no valid position.");
-
+        p.save();
+        p.fillRect(0, 0, width(), height(), Qt::transparent);
+        auto font(p.font());
+        font.setPointSize(10);
+        p.setFont(font);
+        p.drawText(0, 0, _w, _h, Qt::AlignCenter | Qt::TextWordWrap, tr("No map or no valid position."));
+        p.restore();
         return;
     }
 
