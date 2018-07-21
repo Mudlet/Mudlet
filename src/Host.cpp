@@ -275,10 +275,10 @@ void Host::slot_reloadModules()
             // setup the map to be in format of priority:name
             moduleOrder[modulePriosIterator.value()].append(modulePriosIterator.key());
         }
-        QMapIterator<int, QStringList> it4(moduleOrder);
-        while (it4.hasNext()) {
-            it4.next();
-            QStringList moduleList = it4.value();
+        QMapIterator<int, QStringList> it(moduleOrder);
+        while (it.hasNext()) {
+            it.next();
+            QStringList moduleList = it.value();
             for (int i = 0; i < moduleList.size(); i++) {
                 QString moduleName = moduleList[i];
                 if (mModulesToSync.contains(moduleName)) {
@@ -289,6 +289,15 @@ void Host::slot_reloadModules()
     }
 
     // update the module zips
+    updateModuleZips();
+
+    // disconnect the one-time event so we're not always reloading modules whenever a profile save happens
+    mModulesToSync.clear();
+    QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
+}
+
+void Host::updateModuleZips() const
+{
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
         it.next();
@@ -299,8 +308,8 @@ void Host::slot_reloadModules()
         QString zipName;
         zip* zipFile = nullptr;
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
-            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+            QString packagePathName = getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+            filename_xml = getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
             zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
             zipName = filename_xml;
@@ -318,10 +327,6 @@ void Host::slot_reloadModules()
             }
         }
     }
-
-    // disconnect the one-time event so we're not always reloading modules whenever a profile save happens
-    mModulesToSync.clear();
-    QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
 }
 
 

@@ -425,6 +425,8 @@ private:
 
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
+
+    void updateModuleZips() const;
 };
 
 #endif // MUDLET_HOST_H
