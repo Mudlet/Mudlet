@@ -308,8 +308,8 @@ void Host::updateModuleZips() const
         QString zipName;
         zip* zipFile = nullptr;
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-            QString packagePathName = getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
-            filename_xml = getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
             zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
             zipName = filename_xml;
