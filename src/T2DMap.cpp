@@ -2204,26 +2204,26 @@ void T2DMap::createLabel(QRectF labelRect)
     mHelpMsg.clear();
 
     QMessageBox msgBox;
-    msgBox.setText("Text label or image label?");
+    msgBox.setText(tr("Type of label?"));
     QPushButton* textButton = msgBox.addButton(tr("Text Label"), QMessageBox::ActionRole);
     QPushButton* imageButton = msgBox.addButton(tr("Image Label"), QMessageBox::ActionRole);
     msgBox.setStandardButtons(QMessageBox::Cancel);
     msgBox.exec();
     if (msgBox.clickedButton() == textButton) {
-        QString title = "Enter label text.";
+        QString title = tr("Enter label text.");
         _font = QFontDialog::getFont(nullptr);
         t = QInputDialog::getText(nullptr, title, title);
         if (t.length() < 1) {
             t = "no text";
         }
         label.text = t;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, "Background color");
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, "Foreground color");
+        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color"));
+        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color"));
     } else if (msgBox.clickedButton() == imageButton) {
         label.bgColor = QColor(50, 50, 150, 100);
         label.fgColor = QColor(255, 255, 50, 255);
         label.text = "";
-        imagePath = QFileDialog::getOpenFileName(nullptr, "Select image");
+        imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"));
     } else {
         return;
     }
@@ -2231,13 +2231,13 @@ void T2DMap::createLabel(QRectF labelRect)
     QMessageBox msgBox2;
     msgBox2.setStandardButtons(QMessageBox::Cancel);
     msgBox2.setText("Draw label as background or on top of everything?");
-    QPushButton* textButton2 = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
-    QPushButton* imageButton2 = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
+    QPushButton* backgroundButton = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
+    QPushButton* foregroundButton = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
     msgBox2.exec();
     bool showOnTop = false;
-    if (msgBox2.clickedButton() == textButton2) {
+    if (msgBox2.clickedButton() == backgroundButton) {
         showOnTop = false;
-    } else if (msgBox2.clickedButton() == imageButton2) {
+    } else if (msgBox2.clickedButton() == foregroundButton) {
         showOnTop = true;
     } else {
         return;
