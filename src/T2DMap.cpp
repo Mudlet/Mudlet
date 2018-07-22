@@ -2198,7 +2198,7 @@ void T2DMap::createLabel(QRectF labelRect)
     // N/U:     QRectF selectedRegion = labelRect;
     TMapLabel label;
     QFont _font;
-    QString t = "no text";
+    QString t = QLatin1String("no text");
     QString imagePath;
 
     mHelpMsg.clear();
@@ -2214,7 +2214,7 @@ void T2DMap::createLabel(QRectF labelRect)
         _font = QFontDialog::getFont(nullptr);
         t = QInputDialog::getText(nullptr, title, title);
         if (t.length() < 1) {
-            t = "no text";
+            t = QLatin1String("no text");
         }
         label.text = t;
         label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color"));
@@ -2230,7 +2230,7 @@ void T2DMap::createLabel(QRectF labelRect)
 
     QMessageBox msgBox2;
     msgBox2.setStandardButtons(QMessageBox::Cancel);
-    msgBox2.setText("Draw label as background or on top of everything?");
+    msgBox2.setText(tr("Draw label as background or on top of everything?"));
     QPushButton* backgroundButton = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
     QPushButton* foregroundButton = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
     msgBox2.exec();
