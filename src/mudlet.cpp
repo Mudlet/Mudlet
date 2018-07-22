@@ -323,9 +323,6 @@ mudlet::mudlet()
     mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
-    mpActionStopAllTriggers = new QAction(QIcon(QStringLiteral(":/icons/edit-bomb.png")), tr("Stop All Triggers"), this);
-    mpActionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
-
     mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     mpActionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction(mpActionAbout);

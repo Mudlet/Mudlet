@@ -475,7 +475,6 @@ private:
     QPointer<QAction> mpActionTimers;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
-    QPointer<QAction> mpActionStopAllTriggers;
 
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;
