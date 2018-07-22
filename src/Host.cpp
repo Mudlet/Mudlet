@@ -268,18 +268,15 @@ void Host::slot_reloadModules()
             continue;
         }
         QMap<QString, int> modulePri = host->mModulePriorities;
-        QMapIterator<QString, int> modulePriosIterator(modulePri);
         QMap<int, QStringList> moduleOrder;
-        while (modulePriosIterator.hasNext()) {
-            modulePriosIterator.next();
-            // setup the map to be in format of priority:name
-            moduleOrder[modulePriosIterator.value()].append(modulePriosIterator.key());
+        for (auto it = modulePri.keyBegin(); it != modulePri.keyEnd(); ++it) {
+            moduleOrder[modulePri[*it]].append(*it);
         }
         QMapIterator<int, QStringList> it(moduleOrder);
         while (it.hasNext()) {
             it.next();
             QStringList moduleList = it.value();
-            for (int i = 0; i < moduleList.size(); i++) {
+            for (int i = 0, total = moduleList.size(); i < total; ++i) {
                 QString moduleName = moduleList[i];
                 if (mModulesToSync.contains(moduleName)) {
                     host->reloadModule(moduleName);
