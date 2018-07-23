@@ -241,7 +241,7 @@ void Host::saveModules(int sync, bool backup)
             QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
-            zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
+            zipFile = zip_open(entry[0].toStdString().c_str(), ZIP_CREATE, &err);
             zipName = filename_xml;
             QDir packageDir = QDir(packagePathName);
             if (!packageDir.exists()) {
