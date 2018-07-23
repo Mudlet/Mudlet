@@ -234,8 +234,7 @@ void Host::saveModules(int sync, bool backup)
         QString moduleName = it.key();
         QString filename_xml = entry[0];
 
-        if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-        } else if (backup) {
+        if (backup) {
             // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
             QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
             savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
