@@ -1051,7 +1051,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             }
             while (xind < static_cast<int>(mpBuffer->buffer[yind].size())) {
                 QChar c = mpBuffer->lineBuffer[yind].at(xind);
-                if (c == ' ') {
+                if (c == QChar::Space) {
                     break;
                 }
                 xind++;
@@ -1075,7 +1075,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             if (xind > 0) {
                 mPA.setX(xind + 1);
             } else {
-                mPA.setX(qMax(0, xind));
+                mPA.setX(0);
             }
             mPA.setY(yind);
             highlight();
@@ -1321,9 +1321,13 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
             return;
         }
         if (y == mPA.y()) { // First line of selection
-            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, -1, mPA.x(), (isSingleLine ? 0 : mPA.x())));
+            if (isSingleLine) {
+                text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, mPB.x() + 1, mPA.x(), 0));
+            } else { // Not single line
+                text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, -1, mPA.x(), mPA.x()));
+            }
         } else if (y == mPB.y()) { // Last line of selection
-            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, mPB.x()));
+            text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y, mPB.x() + 1));
         } else { // inside lines of selection
             text.append(mpBuffer->bufferToHtml(mShowTimeStamps, y));
         }

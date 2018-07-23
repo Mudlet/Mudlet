@@ -54,9 +54,9 @@ public slots:
 
 
 private:
-    void setupBasicButtons(TTrigger*, const bool);
-    void setupBasicButton(QPushButton*, const int, const QColor&, const QString&);
-    void setupGreyedOutBasicButton(QPushButton*, const int, const QColor&, const QString&);
+    void setupBasicButtons(const bool, const bool firstTime = false);
+    void setupBasicButton(QPushButton*, const int, const QColor&, const QString&, const bool firstTime = false);
+    void setupGreyedOutBasicButton(QPushButton*, const int, const QColor&, const QString&, const bool firstTime = false);
 
     QSignalMapper* mSignalMapper;
     TTrigger* mpTrigger;

@@ -45,11 +45,11 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     // The ignore button means do not consider this fore or back ground (as per
     // mIsBackground) for the colour trigger - only use the other one (which
     // must be set)
-    connect(buttonBox->button(QDialogButtonBox::Ignore), SIGNAL(pressed()), this, SLOT(slot_resetColorClicked()));
+    connect(buttonBox->button(QDialogButtonBox::Ignore), &QAbstractButton::pressed, this, &dlgColorTrigger::slot_resetColorClicked);
     buttonBox->button(QDialogButtonBox::Ignore)->setText(tr("Ignore"));
     // The reset button means trigger only if the text is not set to anything
     // so is in the "default" colour - what ever THAT is
-    connect(buttonBox->button(QDialogButtonBox::Reset), SIGNAL(pressed()), this, SLOT(slot_defaultColorClicked()));
+    connect(buttonBox->button(QDialogButtonBox::Reset), &QAbstractButton::pressed, this, &dlgColorTrigger::slot_defaultColorClicked);
     buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Default"));
     connect(mSignalMapper, SIGNAL(mapped(int)), this, SLOT(slot_basicColorClicked(int)));
 
@@ -57,20 +57,20 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     // buttons: one and ONLY one is always checked. Do NOT use toggled() as that
     // is also raised when the controls are altered programmatically - which
     // we will be doing in the slots
-    connect(groupBox_basicColors, SIGNAL(clicked(bool)), this, SLOT(slot_basicColorGroupSelected()));
-    connect(groupBox_rgbScale, SIGNAL(clicked(bool)), this, SLOT(slot_rgbColorGroupSelected()));
-    connect(groupBox_grayScale, SIGNAL(clicked(bool)), this, SLOT(slot_grayColorGroupSelected()));
+    connect(groupBox_basicColors, &QGroupBox::clicked, this, &dlgColorTrigger::slot_basicColorGroupSelected);
+    connect(groupBox_rgbScale, &QGroupBox::clicked, this, &dlgColorTrigger::slot_rgbColorGroupSelected);
+    connect(groupBox_grayScale, &QGroupBox::clicked, this, &dlgColorTrigger::slot_grayColorGroupSelected);
 
-    connect(pushButton_setUsingRgbValue, SIGNAL(clicked(bool)), this, SLOT(slot_rgbColorClicked()));
-    connect(pushButton_setUsingGrayValue, SIGNAL(clicked(bool)), this, SLOT(slot_grayColorClicked()));
+    connect(pushButton_setUsingRgbValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_rgbColorClicked);
+    connect(pushButton_setUsingGrayValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_grayColorClicked);
 
     if ((mIsBackground && (pT->mColorTriggerBgAnsi >= 16 && pT->mColorTriggerBgAnsi <= 255))
             || (!mIsBackground && (pT->mColorTriggerFgAnsi >= 16 && pT->mColorTriggerFgAnsi <= 255))) {
 
         // Grey out the basic buttons for color in range 16 to 255:
-        setupBasicButtons(pT, false);
+        setupBasicButtons(false);
     } else {
-        setupBasicButtons(pT, true);
+        setupBasicButtons(true);
     }
 
     // These will correctly set the colours on the value label in their area:
@@ -185,81 +185,91 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
 
     // We set up the controls into the default state before wiring up the slots
     // that get run on changing the controls:
-    connect(horizontalSlider_red, SIGNAL(valueChanged(const int)), this, SLOT(slot_rgbColorChanged()));
-    connect(horizontalSlider_green, SIGNAL(valueChanged(const int)), this, SLOT(slot_rgbColorChanged()));
-    connect(horizontalSlider_blue, SIGNAL(valueChanged(const int)), this, SLOT(slot_rgbColorChanged()));
-    connect(horizontalSlider_gray, SIGNAL(valueChanged(const int)), this, SLOT(slot_grayColorChanged(const int)));
+    connect(horizontalSlider_red, &QAbstractSlider::valueChanged, this, &dlgColorTrigger::slot_rgbColorChanged);
+    connect(horizontalSlider_green, &QAbstractSlider::valueChanged, this, &dlgColorTrigger::slot_rgbColorChanged);
+    connect(horizontalSlider_blue, &QAbstractSlider::valueChanged, this, &dlgColorTrigger::slot_rgbColorChanged);
+    connect(horizontalSlider_gray, &QAbstractSlider::valueChanged, this, &dlgColorTrigger::slot_grayColorChanged);
 }
 
-void dlgColorTrigger::setupBasicButtons(TTrigger* pT, const bool state)
+void dlgColorTrigger::setupBasicButtons(const bool state, const bool firstTime)
 {
     if (state) {
 
         // The color to be selected is initially one of the basic 16 color set
         // so show the colors for them:
-        setupBasicButton(pushButton_black, 0, mpTrigger->mpHost->mBlack, tr("Black"));
-        setupBasicButton(pushButton_red, 1, mpTrigger->mpHost->mRed, tr("Red"));
-        setupBasicButton(pushButton_green, 2, mpTrigger->mpHost->mGreen, tr("Green"));
-        setupBasicButton(pushButton_yellow, 3, mpTrigger->mpHost->mYellow, tr("Yellow"));
-        setupBasicButton(pushButton_blue, 4, mpTrigger->mpHost->mBlue, tr("Blue"));
-        setupBasicButton(pushButton_magenta, 5, mpTrigger->mpHost->mMagenta, tr("Magenta"));
-        setupBasicButton(pushButton_cyan, 6, mpTrigger->mpHost->mCyan, tr("Cyan"));
-        setupBasicButton(pushButton_white, 7, mpTrigger->mpHost->mWhite, tr("White (Light gray)"));
+        setupBasicButton(pushButton_black, 0, mpTrigger->mpHost->mBlack, tr("Black"), firstTime);
+        setupBasicButton(pushButton_red, 1, mpTrigger->mpHost->mRed, tr("Red"), firstTime);
+        setupBasicButton(pushButton_green, 2, mpTrigger->mpHost->mGreen, tr("Green"), firstTime);
+        setupBasicButton(pushButton_yellow, 3, mpTrigger->mpHost->mYellow, tr("Yellow"), firstTime);
+        setupBasicButton(pushButton_blue, 4, mpTrigger->mpHost->mBlue, tr("Blue"), firstTime);
+        setupBasicButton(pushButton_magenta, 5, mpTrigger->mpHost->mMagenta, tr("Magenta"), firstTime);
+        setupBasicButton(pushButton_cyan, 6, mpTrigger->mpHost->mCyan, tr("Cyan"), firstTime);
+        setupBasicButton(pushButton_white, 7, mpTrigger->mpHost->mWhite, tr("White (Light gray)"), firstTime);
 
-        setupBasicButton(pushButton_Lblack, 8, mpTrigger->mpHost->mLightBlack, tr("Light black (Dark gray)"));
-        setupBasicButton(pushButton_Lred, 9, mpTrigger->mpHost->mLightRed, tr("Light red"));
-        setupBasicButton(pushButton_Lgreen, 10, mpTrigger->mpHost->mLightGreen, tr("Light green"));
-        setupBasicButton(pushButton_Lyellow, 11, mpTrigger->mpHost->mLightYellow, tr("Light yellow"));
-        setupBasicButton(pushButton_Lblue, 12, mpTrigger->mpHost->mLightBlue, tr("Light blue"));
-        setupBasicButton(pushButton_Lmagenta, 13, mpTrigger->mpHost->mLightMagenta, tr("Light magenta"));
-        setupBasicButton(pushButton_Lcyan, 14, mpTrigger->mpHost->mLightCyan, tr("Light cyan"));
-        setupBasicButton(pushButton_Lwhite, 15, mpTrigger->mpHost->mLightWhite, tr("Light white"));
+        setupBasicButton(pushButton_Lblack, 8, mpTrigger->mpHost->mLightBlack, tr("Light black (Dark gray)"), firstTime);
+        setupBasicButton(pushButton_Lred, 9, mpTrigger->mpHost->mLightRed, tr("Light red"), firstTime);
+        setupBasicButton(pushButton_Lgreen, 10, mpTrigger->mpHost->mLightGreen, tr("Light green"), firstTime);
+        setupBasicButton(pushButton_Lyellow, 11, mpTrigger->mpHost->mLightYellow, tr("Light yellow"), firstTime);
+        setupBasicButton(pushButton_Lblue, 12, mpTrigger->mpHost->mLightBlue, tr("Light blue"), firstTime);
+        setupBasicButton(pushButton_Lmagenta, 13, mpTrigger->mpHost->mLightMagenta, tr("Light magenta"), firstTime);
+        setupBasicButton(pushButton_Lcyan, 14, mpTrigger->mpHost->mLightCyan, tr("Light cyan"), firstTime);
+        setupBasicButton(pushButton_Lwhite, 15, mpTrigger->mpHost->mLightWhite, tr("Light white"), firstTime);
     } else {
         // Not one of the basic 16 colors so grey out the colors:
-        setupGreyedOutBasicButton(pushButton_black, 0, mpTrigger->mpHost->mBlack, tr("Black"));
-        setupGreyedOutBasicButton(pushButton_red, 1, mpTrigger->mpHost->mRed, tr("Red"));
-        setupGreyedOutBasicButton(pushButton_green, 2, mpTrigger->mpHost->mGreen, tr("Green"));
-        setupGreyedOutBasicButton(pushButton_yellow, 3, mpTrigger->mpHost->mYellow, tr("Yellow"));
-        setupGreyedOutBasicButton(pushButton_blue, 4, mpTrigger->mpHost->mBlue, tr("Blue"));
-        setupGreyedOutBasicButton(pushButton_magenta, 5, mpTrigger->mpHost->mMagenta, tr("Magenta"));
-        setupGreyedOutBasicButton(pushButton_cyan, 6, mpTrigger->mpHost->mCyan, tr("Cyan"));
-        setupGreyedOutBasicButton(pushButton_white, 7, mpTrigger->mpHost->mWhite, tr("White (Light gray)"));
+        setupGreyedOutBasicButton(pushButton_black, 0, mpTrigger->mpHost->mBlack, tr("Black"), firstTime);
+        setupGreyedOutBasicButton(pushButton_red, 1, mpTrigger->mpHost->mRed, tr("Red"), firstTime);
+        setupGreyedOutBasicButton(pushButton_green, 2, mpTrigger->mpHost->mGreen, tr("Green"), firstTime);
+        setupGreyedOutBasicButton(pushButton_yellow, 3, mpTrigger->mpHost->mYellow, tr("Yellow"), firstTime);
+        setupGreyedOutBasicButton(pushButton_blue, 4, mpTrigger->mpHost->mBlue, tr("Blue"), firstTime);
+        setupGreyedOutBasicButton(pushButton_magenta, 5, mpTrigger->mpHost->mMagenta, tr("Magenta"), firstTime);
+        setupGreyedOutBasicButton(pushButton_cyan, 6, mpTrigger->mpHost->mCyan, tr("Cyan"), firstTime);
+        setupGreyedOutBasicButton(pushButton_white, 7, mpTrigger->mpHost->mWhite, tr("White (Light gray)"), firstTime);
 
-        setupGreyedOutBasicButton(pushButton_Lblack, 8, mpTrigger->mpHost->mLightBlack, tr("Light black (Dark gray)"));
-        setupGreyedOutBasicButton(pushButton_Lred, 9, mpTrigger->mpHost->mLightRed, tr("Light red"));
-        setupGreyedOutBasicButton(pushButton_Lgreen, 10, mpTrigger->mpHost->mLightGreen, tr("Light green"));
-        setupGreyedOutBasicButton(pushButton_Lyellow, 11, mpTrigger->mpHost->mLightYellow, tr("Light yellow"));
-        setupGreyedOutBasicButton(pushButton_Lblue, 12, mpTrigger->mpHost->mLightBlue, tr("Light blue"));
-        setupGreyedOutBasicButton(pushButton_Lmagenta, 13, mpTrigger->mpHost->mLightMagenta, tr("Light magenta"));
-        setupGreyedOutBasicButton(pushButton_Lcyan, 14, mpTrigger->mpHost->mLightCyan, tr("Light cyan"));
-        setupGreyedOutBasicButton(pushButton_Lwhite, 15, mpTrigger->mpHost->mLightWhite, tr("Light white"));
+        setupGreyedOutBasicButton(pushButton_Lblack, 8, mpTrigger->mpHost->mLightBlack, tr("Light black (Dark gray)"), firstTime);
+        setupGreyedOutBasicButton(pushButton_Lred, 9, mpTrigger->mpHost->mLightRed, tr("Light red"), firstTime);
+        setupGreyedOutBasicButton(pushButton_Lgreen, 10, mpTrigger->mpHost->mLightGreen, tr("Light green"), firstTime);
+        setupGreyedOutBasicButton(pushButton_Lyellow, 11, mpTrigger->mpHost->mLightYellow, tr("Light yellow"), firstTime);
+        setupGreyedOutBasicButton(pushButton_Lblue, 12, mpTrigger->mpHost->mLightBlue, tr("Light blue"), firstTime);
+        setupGreyedOutBasicButton(pushButton_Lmagenta, 13, mpTrigger->mpHost->mLightMagenta, tr("Light magenta"), firstTime);
+        setupGreyedOutBasicButton(pushButton_Lcyan, 14, mpTrigger->mpHost->mLightCyan, tr("Light cyan"), firstTime);
+        setupGreyedOutBasicButton(pushButton_Lwhite, 15, mpTrigger->mpHost->mLightWhite, tr("Light white"), firstTime);
     }
 }
 
-void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText)
+void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText, const bool firstTime)
 {
-    connect(pButton, SIGNAL(clicked()), mSignalMapper, SLOT(map()), Qt::UniqueConnection);
-    mSignalMapper->setMapping(pButton, ansiColor);
+    if (firstTime) {
+        // TODO: Eliminate use of QSignalMapper and use a lambda function
+        connect(pButton, SIGNAL(clicked()), mSignalMapper, SLOT(map()));
+        mSignalMapper->setMapping(pButton, ansiColor);
+    }
 
-    pButton->setText(QStringLiteral("%1 [%2]").arg(colorText, QString::number(ansiColor)));
+    pButton->setText(tr("%1 [%2]",
+                        "Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places")
+                     .arg(colorText, QString::number(ansiColor)));
     pButton->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(color));
 }
 
-void dlgColorTrigger::setupGreyedOutBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText)
+void dlgColorTrigger::setupGreyedOutBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText, const bool firstTime)
 {
-    connect(pButton, SIGNAL(clicked()), mSignalMapper, SLOT(map()), Qt::UniqueConnection);
-    mSignalMapper->setMapping(pButton, ansiColor);
+    if (firstTime) {
+        // TODO: Eliminate use of QSignalMapper and use a lambda function
+        connect(pButton, SIGNAL(clicked()), mSignalMapper, SLOT(map()));
+        mSignalMapper->setMapping(pButton, ansiColor);
+    }
 
     QColor intermediate(color);
     QColor greyed = QColor::fromHsv(intermediate.hue(), intermediate.saturation() / 4, intermediate.lightness() / 2);
 
-    pButton->setText(QStringLiteral("%1 [%2]").arg(colorText, QString::number(ansiColor)));
+    pButton->setText(tr("%1 [%2]",
+                        "Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places")
+                     .arg(colorText, QString::number(ansiColor)));
     pButton->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(greyed));
 }
 
 void dlgColorTrigger::slot_basicColorGroupSelected()
 {
-    setupBasicButtons(mpTrigger, true);
+    setupBasicButtons(true);
 
     groupBox_basicColors->setChecked(true);
     groupBox_rgbScale->setChecked(false);
@@ -270,7 +280,7 @@ void dlgColorTrigger::slot_basicColorGroupSelected()
 
 void dlgColorTrigger::slot_rgbColorGroupSelected()
 {
-    setupBasicButtons(mpTrigger, false);
+    setupBasicButtons(false);
 
     groupBox_basicColors->setChecked(false);
     groupBox_rgbScale->setChecked(true);
@@ -281,7 +291,7 @@ void dlgColorTrigger::slot_rgbColorGroupSelected()
 
 void dlgColorTrigger::slot_grayColorGroupSelected()
 {
-    setupBasicButtons(mpTrigger, false);
+    setupBasicButtons(false);
 
     groupBox_basicColors->setChecked(false);
     groupBox_rgbScale->setChecked(false);

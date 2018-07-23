@@ -642,8 +642,8 @@ TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags fla
 }
 
 TChar::TChar(Host* pH)
-: mIsSelected(false)
-, mFlags(None)
+: mFlags(None)
+, mIsSelected(false)
 , mLinkIndex(0)
 {
     if (pH) {
@@ -703,10 +703,20 @@ TBuffer::TBuffer(Host* pH)
 , mIgnoreTag(false)
 , mSkip()
 , mParsingVar(false)
+, mOpenMainQuote()
 , mMXP_SEND_NO_REF_MODE(false)
+, mEchoText(false)
 , gotESC(false)
 , gotHeader(false)
 , codeRet(0)
+, mWaitingForHighColorCode(false)
+, mWaitingForMillionsColorCode(false)
+, mIsHighOrMillionsColorMode(false)
+, mIsHighOrMillionsColorModeForeground(false)
+, mIsHighOrMillionsColorModeBackground(false)
+, mIsDefaultColor()
+, isUserScrollBack()
+, currentFgColorProperty()
 , mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
@@ -727,23 +737,11 @@ TBuffer::TBuffer(Host* pH)
 , mBgColor(pH->mBgColor)
 , mpHost(pH)
 , mBold(false)
-, mFlashSlow(false)
-, mFlashFast(false)
 , mItalics(false)
 , mOverline(false)
 , mReverse(false)
 , mStrikeOut(false)
 , mUnderline(false)
-, mWaitingForHighColorCode(false)
-, mWaitingForMillionsColorCode(false)
-, mIsHighOrMillionsColorMode(false)
-, mIsHighOrMillionsColorModeForeground(false)
-, mIsHighOrMillionsColorModeBackground(false)
-, mOpenMainQuote()
-, mEchoText(false)
-, mIsDefaultColor()
-, isUserScrollBack()
-, currentFgColorProperty()
 , mCode()
 , lastLoggedFromLine(0)
 , lastloggedToLine(0)
@@ -2238,7 +2236,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 
     for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
         if (text.at(i) == '\n') {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
@@ -2347,7 +2344,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 // it makes it harder to pick out usages of this specific method:
 bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
 {
-    if (text.size() < 1) {
+    if (text.isEmpty()) {
         return false;
     }
     int x = P.x();
@@ -2413,7 +2410,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
     bool hasAppended = false;
     int y = P.y();
     int x = P.x();
-    if (chunk.buffer.size() < 1) {
+    if (chunk.buffer.empty()) {
         return;
     }
     if (y < 0 || y > getLastLineNumber()) {
@@ -2776,12 +2773,13 @@ bool TBuffer::moveCursor(QPoint& where)
 
     if (static_cast<int>(buffer[y].size()) - 1 > x) {
         TChar c;
+        // CHECKME: should "buffer[cookedY].size() - 1" be bracketed - which would change the -1 to +1 in the following:
         expandLine(y, x - buffer[y].size() - 1, c);
     }
     return true;
 }
 
-QString badLineError = QString("ERROR: invalid line number");
+static QString badLineError = QStringLiteral("ERROR: invalid line number");
 
 QString& TBuffer::line(int n)
 {
@@ -2826,7 +2824,7 @@ void TBuffer::expandLine(int y, int count, TChar& pC)
     int size = buffer[y].size() - 1;
     for (int i = size, total = size + count; i < total; ++i) {
         buffer[y].push_back(pC);
-        lineBuffer[y].append(" ");
+        lineBuffer[y].append(QChar::Space);
     }
 }
 
@@ -3017,7 +3015,8 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x++).mFlags &~(attributes)) | (state ? attributes : TChar::None);
+                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags &~(attributes)) | (state ? attributes : TChar::None);
+                ++x;
             }
         }
         return true;
@@ -3050,13 +3049,13 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
         for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
+                // Override position start column if on first line to given start column
                 x = x1;
             }
             while (x < static_cast<int>(buffer.at(y).size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
+                if (y >= y2 && x >= x2) {
+                    // Escape if on or past last line and past last character on the last line
+                    return true;
                 }
 
                 buffer.at(y).at(x++).mFgColor = newColor;
@@ -3092,13 +3091,13 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
         for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
+                // Override position start column if on first line to given start column
                 x = x1;
             }
             while (x < static_cast<int>(buffer.at(y).size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
+                if (y >= y2 && x >= x2) {
+                    // Escape if on or past last line and on or past last character on last line
+                    return true;
                 }
 
                 buffer.at(y).at(x++).mBgColor = newColor;
@@ -3127,7 +3126,9 @@ QStringList TBuffer::getEndLines(int n)
 // Note: spacePadding is expected to be non-zero on ONLY the first call to this
 // method - it is needed to pad the first line out when the first line of a
 // selection is not a complete line of text and there are more lines to follow
-QString TBuffer::bufferToHtml(const bool showTimeStamp, const int row, const int endColumn, const int startColumn,  int spacePadding)
+QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int row /*= -1*/,
+                              const int endColumn /*= -1*/, const int startColumn /*= 0*/,
+                              int spacePadding /*= 0*/)
 {
     int pos = startColumn;
     QString s;
@@ -3136,14 +3137,19 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp, const int row, const int
         return s;
     }
 
-    if ((pos < 0) || (pos >= static_cast<int>(buffer.at(row).size()))) {
+    // std:deque uses std::deque:size_type as index type which is an unsigned
+    // long int, but row (and pos) are signed ints...!
+    unsigned long cookedRow = static_cast<unsigned long>(row);
+
+    if ((pos < 0) || (pos >= static_cast<int>(buffer.at(cookedRow).size()))) {
         pos = 0;
     }
 
     int lastPos = endColumn;
-    if (lastPos < 0 || lastPos > static_cast<int>(buffer.at(row).size())) {
-        // lastPos is now at ONE PAST the last valid one to use to index into row
-        lastPos = static_cast<int>(buffer.at(row).size());
+    if (lastPos < 0 || lastPos > static_cast<int>(buffer.at(cookedRow).size())) {
+        // lastPos is now at ONE PAST the last valid one to use to index into
+        // row - this can have been triggered by a -1 argument
+        lastPos = static_cast<int>(buffer.at(cookedRow).size());
     }
 
     TChar::AttributeFlags currentFlags = TChar::None;
@@ -3178,26 +3184,26 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp, const int row, const int
         // Pad out with spaces to the right so a partial first line lines up
     }
 
-    for (; pos < lastPos; ++pos) {
+    for (unsigned long cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
         // Do we need to start a new span?
         if (firstSpan
-            || buffer.at(row).at(pos).mFgColor != currentFgColor
-            || buffer.at(row).at(pos).mBgColor != currentBgColor
-            || buffer.at(row).at(pos).mFlags & TChar::TestMask != currentFlags) {
+            || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor
+            || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
+            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
 
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
                 s.append(QLatin1String("</span>"));
             }
-            currentFgColor = buffer.at(row).at(pos).mFgColor;
-            currentBgColor = buffer.at(row).at(pos).mBgColor;
-            currentFlags = buffer.at(row).at(pos).mFlags & TChar::TestMask;
+            currentFgColor = buffer.at(cookedRow).at(cookedPos).mFgColor;
+            currentBgColor = buffer.at(cookedRow).at(cookedPos).mBgColor;
+            currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
 
             // clang-format off
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9>")
+                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
@@ -3215,7 +3221,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp, const int row, const int
                                      : QString())
                               : QString()));
             } else {
-                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9>")
+                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7

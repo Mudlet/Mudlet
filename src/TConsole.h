@@ -258,7 +258,6 @@ public:
     int mCurrentSearchResult;
     QList<int> mSearchResults;
     QString mSearchQuery;
-    bool mSaveLayoutRequested;
     QWidget* mpButtonMainLayer;
 
 signals:

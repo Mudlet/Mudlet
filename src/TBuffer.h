@@ -271,16 +271,6 @@ private:
     QPointer<Host> mpHost;
 
     bool mBold;
-    // This next pair impliment a 4 phase periodic redraw alternating
-    // between using the foreground and background colours for the foreground
-    // every 200mSec (so that the fast one is at 2.5Hz, 150 a minute which is
-    // the miminum)
-    // Phase:                  |      0|      1|      2|      3|
-    // Elapsed time:           |  0-199|200-399|400-599|600-799|
-    // elements with fast flash| Fore  | Back  | Fore  | Back  |
-    // elements with slow flash|     Fore      |     Back      |
-    bool mFlashSlow;
-    bool mFlashFast;
     bool mItalics;
     bool mOverline;
     bool mReverse;

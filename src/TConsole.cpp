@@ -84,7 +84,6 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
-, mpButtonMainLayer(nullptr)
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -93,12 +92,14 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mWindowIsHidden(false)
 , mWrapAt(100)
 , networkLatency(new QLineEdit)
+, mIsPromptLine(false)
 , mUserAgreedToCloseConsole(false)
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
 , mCurrentSearchResult(0)
-, mSearchQuery("")
+, mSearchQuery()
+, mpButtonMainLayer(nullptr)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -1040,7 +1041,7 @@ void TConsole::changeColors()
 {
     mDisplayFont.setFixedPitch(true);
     if (mIsDebugConsole) {
-        mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
+        mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoAntialias | QFont::PreferQuality));
         mDisplayFont.setFixedPitch(true);
         mUpperPane->setFont(mDisplayFont);
         mLowerPane->setFont(mDisplayFont);
@@ -1052,7 +1053,7 @@ void TConsole::changeColors()
         mLowerPane->setPalette(palette);
     } else if (mIsSubConsole) {
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-        mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
+        mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoAntialias | QFont::PreferQuality));
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -1063,7 +1064,7 @@ void TConsole::changeColors()
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
-        auto letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
+        auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
@@ -1091,7 +1092,7 @@ void TConsole::changeColors()
         if (mpHost->mNoAntiAlias) {
             mpHost->mDisplayFont.setStyleStrategy(QFont::NoAntialias);
         } else {
-            mpHost->mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality));
+            mpHost->mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
         }
         mpHost->mDisplayFont.setFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
@@ -1107,7 +1108,7 @@ void TConsole::changeColors()
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
-        auto letterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
+        auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
