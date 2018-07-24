@@ -286,7 +286,7 @@ void dlgPackageExporter::slot_export_package()
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
         }
-        err = zip_add(archive, fname.toStdString().c_str(), s);
+        err = zip_file_add(archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE);
         if (err == -1) {
             int sep = 0;
             zip_error_get(archive, &err, &sep);
