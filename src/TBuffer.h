@@ -87,7 +87,7 @@ public:
         mBgColor=newBackGroundColor;
     }
     // Only considers the following flags: Bold, Italic, Overline, Reverse,
-    // Strikeout, Underline, SlowBlink, FastBlink, does not consider Echo:
+    // Strikeout, Underline, does not consider Echo:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor; }
     void setBackground(const QColor& newColor) { mBgColor = newColor; }

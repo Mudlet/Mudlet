@@ -3139,7 +3139,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
 
     // std:deque uses std::deque:size_type as index type which is an unsigned
     // long int, but row (and pos) are signed ints...!
-    unsigned long cookedRow = static_cast<unsigned long>(row);
+    auto cookedRow = static_cast<unsigned long>(row);
 
     if ((pos < 0) || (pos >= static_cast<int>(buffer.at(cookedRow).size()))) {
         pos = 0;
@@ -3184,7 +3184,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         // Pad out with spaces to the right so a partial first line lines up
     }
 
-    for (unsigned long cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
+    for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
         // Do we need to start a new span?
         if (firstSpan
             || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor
