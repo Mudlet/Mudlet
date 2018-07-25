@@ -97,14 +97,14 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(shiftUp, &QAbstractButton::pressed, glWidget, &GLWidget::shiftUp);
     connect(shiftDown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftDown);
     connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
-    connect(showArea, SIGNAL(activated(QString)), mp2dMap, SLOT(slot_switchArea(QString)));
+    connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
     connect(defaultView, &QAbstractButton::pressed, glWidget, &GLWidget::defaultView);
     connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
     connect(sideView, &QAbstractButton::pressed, glWidget, &GLWidget::sideView);
     connect(topView, &QAbstractButton::pressed, glWidget, &GLWidget::topView);
     connect(togglePanel, &QAbstractButton::pressed, this, &dlgMapper::slot_togglePanel);
-    connect(lineSize, SIGNAL(valueChanged(int)), this, SLOT(slot_lineSize(int)));
-    connect(roomSize, SIGNAL(valueChanged(int)), this, SLOT(slot_roomSize(int)));
+    connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
+    connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
     connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
     connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
     connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);

@@ -195,8 +195,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
     connect(mudlet::self(), &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
     connect(mudlet::self(), &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
-    connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
-    connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
+    // Because QComboBox::currentIndexChanged has multiple (overloaded) forms we
+    // have to state which one we want to use for these two:
+    connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
+    connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -653,7 +655,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
 
     connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::setDisplayFont);
-    connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
+    connect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::setFontSize);
 
     connect(pushButton_black_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlack2);
     connect(pushButton_Lblack_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlack2);
@@ -689,83 +691,84 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
-    connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
+    connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
 {
-    disconnect(buttonDownloadMap, SIGNAL(clicked()));
-
-    disconnect(pushButton_foreground_color, SIGNAL(clicked()));
-    disconnect(pushButton_background_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_line_foreground_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_line_background_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_foreground_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_background_color, SIGNAL(clicked()));
-
-    disconnect(pushButton_black, SIGNAL(clicked()));
-    disconnect(pushButton_lBlack, SIGNAL(clicked()));
-    disconnect(pushButton_red, SIGNAL(clicked()));
-    disconnect(pushButton_lRed, SIGNAL(clicked()));
-    disconnect(pushButton_green, SIGNAL(clicked()));
-    disconnect(pushButton_lGreen, SIGNAL(clicked()));
-    disconnect(pushButton_yellow, SIGNAL(clicked()));
-    disconnect(pushButton_lYellow, SIGNAL(clicked()));
-    disconnect(pushButton_blue, SIGNAL(clicked()));
-    disconnect(pushButton_lBlue, SIGNAL(clicked()));
-    disconnect(pushButton_magenta, SIGNAL(clicked()));
-    disconnect(pushButton_lMagenta, SIGNAL(clicked()));
-    disconnect(pushButton_cyan, SIGNAL(clicked()));
-    disconnect(pushButton_lCyan, SIGNAL(clicked()));
-    disconnect(pushButton_white, SIGNAL(clicked()));
-    disconnect(pushButton_lWhite, SIGNAL(clicked()));
-
     // The "new" style connect(...) does not have the same range of overloaded
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
+
+    disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
+
+    disconnect(pushButton_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_background_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_line_background_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_background_color, &QAbstractButton::clicked, nullptr, nullptr);
+
+    disconnect(pushButton_black, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lBlack, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_red, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lRed, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_green, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lGreen, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_yellow, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lYellow, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_blue, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lBlue, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_magenta, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lMagenta, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_cyan, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lCyan, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_white, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lWhite, &QAbstractButton::clicked, nullptr, nullptr);
+
     disconnect(pushButton_resetColors, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)));
-    disconnect(fontSize, SIGNAL(currentIndexChanged(int)));
+    disconnect(fontComboBox, qOverload<const QFont&>(&QFontComboBox::currentFontChanged), nullptr, nullptr);
+    disconnect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
 
-    disconnect(pushButton_black_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lblack_2, SIGNAL(clicked()));
-    disconnect(pushButton_green_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lgreen_2, SIGNAL(clicked()));
-    disconnect(pushButton_red_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lred_2, SIGNAL(clicked()));
-    disconnect(pushButton_blue_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lblue_2, SIGNAL(clicked()));
-    disconnect(pushButton_yellow_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lyellow_2, SIGNAL(clicked()));
-    disconnect(pushButton_cyan_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lcyan_2, SIGNAL(clicked()));
-    disconnect(pushButton_magenta_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lmagenta_2, SIGNAL(clicked()));
-    disconnect(pushButton_white_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lwhite_2, SIGNAL(clicked()));
+    disconnect(pushButton_black_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lblack_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_green_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lgreen_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_red_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lred_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_blue_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lblue_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_yellow_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lyellow_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_cyan_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lcyan_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_magenta_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lmagenta_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_white_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lwhite_2, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(pushButton_foreground_color_2, SIGNAL(clicked()));
-    disconnect(pushButton_background_color_2, SIGNAL(clicked()));
+    disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(mEnableGMCP, SIGNAL(clicked()));
-    disconnect(mEnableMSDP, SIGNAL(clicked()));
+    disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMSDP, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(mFORCE_MCCP_OFF, SIGNAL(clicked()));
-    disconnect(mFORCE_GA_OFF, SIGNAL(clicked()));
+    disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(mpMenu, SIGNAL(triggered(QAction*)));
-    disconnect(pushButton_copyMap, SIGNAL(clicked()));
-    disconnect(pushButton_loadMap, SIGNAL(clicked()));
-    disconnect(pushButton_saveMap, SIGNAL(clicked()));
+    disconnect(mpMenu.data(), &QMenu::triggered, nullptr, nullptr);
+    disconnect(pushButton_copyMap, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_loadMap, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_saveMap, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)));
-    disconnect(pushButton_whereToLog, SIGNAL(clicked()));
-    disconnect(pushButton_resetLogDir, SIGNAL(clicked()));
-    disconnect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)));
-    disconnect(mIsToLogInHtml, SIGNAL(clicked(bool)));
+    disconnect(comboBox_encoding, &QComboBox::currentTextChanged, nullptr, nullptr);
+    disconnect(pushButton_whereToLog, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_resetLogDir, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
+    disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -2823,7 +2826,7 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
 // of access to the setting/controls completely - once there is a profile loaded
 // access to the settings/controls can be overriden by a context menu action on
 // any TConsole instance:
-void dlgProfilePreferences::slot_changeShowMenuBar(const int newIndex)
+void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
     if (!newIndex && !comboBox_toolBarVisibility->currentIndex()) {
         // This control has been set to the "Never" setting but so is the other
@@ -2832,7 +2835,7 @@ void dlgProfilePreferences::slot_changeShowMenuBar(const int newIndex)
     }
 }
 
-void dlgProfilePreferences::slot_changeShowToolBar(const int newIndex)
+void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
 {
     if (!newIndex && !comboBox_menuBarVisibility->currentIndex()) {
         // This control has been set to the "Never" setting but so is the other

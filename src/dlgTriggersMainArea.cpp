@@ -27,7 +27,7 @@ dlgTriggersMainArea::dlgTriggersMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_trigger_name, SIGNAL(editingFinished()), this, SLOT(slot_editing_name_finished()));
+    connect(lineEdit_trigger_name, &QLineEdit::editingFinished, this, &dlgTriggersMainArea::slot_editing_name_finished);
 }
 
 void dlgTriggersMainArea::trimName()

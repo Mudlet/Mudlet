@@ -472,21 +472,13 @@ mudlet::mudlet()
         setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
     }
 
-#ifdef QT_GAMEPAD_LIB
-    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
-    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, slot_gamepadButtonRelease);
-    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadConnected, this, slot_gamepadConnected);
-    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadDisconnected, this, slot_gamepadDisconnected);
-    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, slot_gamepadAxisEvent);
-    connect(QGamepadManager::instance(),
-            SIGNAL(gamepadButtonPressEvent(int, QGamepadManager::GamepadButton, double)),
-            this,
-            SLOT(slot_gamepadButtonPress(int, QGamepadManager::GamepadButton, double)));
-    connect(QGamepadManager::instance(), SIGNAL(gamepadButtonReleaseEvent(int, QGamepadManager::GamepadButton)), this, SLOT(slot_gamepadButtonRelease(int, QGamepadManager::GamepadButton)));
-    connect(QGamepadManager::instance(), SIGNAL(gamepadAxisEvent(int, QGamepadManager::GamepadAxis, double)), this, SLOT(slot_gamepadAxisEvent(int, QGamepadManager::GamepadAxis, double)));
-    connect(QGamepadManager::instance(), SIGNAL(gamepadConnected(int)), this, SLOT(slot_gamepadConnected(int)));
-    connect(QGamepadManager::instance(), SIGNAL(gamepadDisconnected(int)), this, SLOT(slot_gamepadDisconnected(int)));
-#endif
+#if defined(QT_GAMEPAD_LIB)
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, &mudlet::slot_gamepadButtonPress);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, &mudlet::slot_gamepadButtonRelease);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadConnected, this, &mudlet::slot_gamepadConnected);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadDisconnected, this, &mudlet::slot_gamepadDisconnected);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, &mudlet::slot_gamepadAxisEvent);
+#endif // if defined(QT_GAMEPAD_LIB)
     // Edbee has a singleton that needs some initialisation
     initEdbee();
 
@@ -3636,7 +3628,7 @@ void mudlet::slot_update_installed()
 // can't comment out method entirely as moc chokes on it, so leave a stub
 #if !defined(Q_OS_MACOS)
     // disable existing functionality to show the updates window
-    dactionUpdate->disconnect(SIGNAL(triggered()));
+    disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
     QObject::connect(dactionUpdate, &QAction::triggered, [=]() {

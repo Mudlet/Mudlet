@@ -269,7 +269,7 @@ void T2DMap::shiftZdown()
 }
 
 
-void T2DMap::slot_switchArea(QString name)
+void T2DMap::slot_switchArea(const QString& name)
 {
     Host* pHost = mpHost;
     if (!pHost || !mpMap) {
@@ -2897,6 +2897,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 continue;
             }
             mapper->setMapping(action, it2.key());
+            // TODO: QSignalMapper is not compatible with the functor (Qt5)
+            // style of QObject::connect(...) - it has been declared obsolete
+            // and should be replaced with lamba functions to perform what the
+            // slot method did...
             connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
