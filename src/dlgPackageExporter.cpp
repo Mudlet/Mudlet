@@ -274,8 +274,8 @@ void dlgPackageExporter::slot_export_package()
     QDir dir(tempDir);
     QStringList contents = dir.entryList();
     for (int i = 0; i < contents.size(); i++) {
-        QString fname = contents[i];
-        if (fname == "." || fname == "..") {
+        QString moduleFile = contents[i];
+        if (moduleFile == "." || moduleFile == "..") {
             continue;
         }
         QString fullName = tempDir + "/" + contents[i];
@@ -286,7 +286,7 @@ void dlgPackageExporter::slot_export_package()
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
         }
-        err = zip_file_add(archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE);
+        err = zip_file_add(archive, moduleFile.toStdString().c_str(), s, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
         if (err == -1) {
             int sep = 0;
             zip_error_get(archive, &err, &sep);
