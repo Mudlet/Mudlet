@@ -184,9 +184,9 @@ mudlet::mudlet()
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
-    connect(mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
+    connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     mpTabBar->setMovable(true);
-    connect(mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
+    connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
@@ -361,7 +361,7 @@ mudlet::mudlet()
         mpMainToolBar->addAction(actionFullScreeniew);
         actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
-        connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
+        connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::toggleFullScreenView);
     }
     // This is the only place the tabBar font is set and it influences the
     // height of the tabs used - since we now want to adjust the appearance of
@@ -375,25 +375,25 @@ mudlet::mudlet()
 
     mainPane->show();
 
-    connect(mpActionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
-    connect(mpActionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
-    connect(mpActionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
-    connect(mpActionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
-    connect(mpActionAliases, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
-    connect(mpActionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
-    connect(mpActionKeys, SIGNAL(triggered()), this, SLOT(show_key_dialog()));
-    connect(mpActionVariables, SIGNAL(triggered()), this, SLOT(show_variable_dialog()));
-    connect(mpActionButtons, SIGNAL(triggered()), this, SLOT(show_action_dialog()));
-    connect(mpActionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
-    connect(mpActionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
-    connect(mpActionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-    connect(mpActionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
-    connect(mpActionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
-    connect(mpActionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
-    connect(mpActionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(mpActionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
-    connect(mpActionPackageManager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
-    connect(mpActionModuleManager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
+    connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
+    connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
+    connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(mpActionTimers.data(), &QAction::triggered, this, &mudlet::show_timer_dialog);
+    connect(mpActionAliases.data(), &QAction::triggered, this, &mudlet::show_alias_dialog);
+    connect(mpActionScripts.data(), &QAction::triggered, this, &mudlet::show_script_dialog);
+    connect(mpActionKeys.data(), &QAction::triggered, this, &mudlet::show_key_dialog);
+    connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::show_variable_dialog);
+    connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::show_action_dialog);
+    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::show_options_dialog);
+    connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
+    connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
+    connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
+    connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
+    connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
+    connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
+    connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
+    connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
 
     QAction* mactionConnect = new QAction(tr("Connect"), this);
     QAction* mactionTriggers = new QAction(tr("Triggers"), this);
@@ -409,51 +409,51 @@ mudlet::mudlet()
     QAction* mactionAbout = new QAction(tr("About"), this);
     QAction* mactionCloseProfile = new QAction(tr("Close"), this);
 
-    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
-    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
-    connect(dactionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
-    connect(dactionDisconnect, SIGNAL(triggered()), this, SLOT(slot_disconnect()));
-    connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
-    connect(dactionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
+    connect(mactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
+    connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
+    connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
+    connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
+    connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
-    connect(mactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
-    connect(dactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
-    connect(dactionVideo, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_video()));
-    connect(dactionForum, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_forum()));
-    connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
-    connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
-    connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
+    connect(mactionHelp, &QAction::triggered, this, &mudlet::show_help_dialog);
+    connect(dactionHelp, &QAction::triggered, this, &mudlet::show_help_dialog);
+    connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
+    connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
+    connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(actionLive_Help_Chat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(actionShow_Map, &QAction::triggered, this, &mudlet::slot_mapper);
 #if !defined(INCLUDE_UPDATER)
     dactionUpdate->setVisible(false);
 #endif
-    connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
-    connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
-    connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
-    connect(dactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
+    connect(actionPackage_manager, &QAction::triggered, this, &mudlet::slot_package_manager);
+    connect(actionPackage_Exporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
+    connect(actionModule_manager, &QAction::triggered, this, &mudlet::slot_module_manager);
+    connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
 
-    connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
-    connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
-    connect(mactionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(mactionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
-    connect(mactionAlias, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
-    connect(mactionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
-    connect(mactionKeys, SIGNAL(triggered()), this, SLOT(show_key_dialog()));
-    connect(mactionButtons, SIGNAL(triggered()), this, SLOT(show_action_dialog()));
+    connect(mactionTriggers, &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(mactionMapper, &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(mactionTimers, &QAction::triggered, this, &mudlet::show_timer_dialog);
+    connect(mactionAlias, &QAction::triggered, this, &mudlet::show_alias_dialog);
+    connect(mactionScripts, &QAction::triggered, this, &mudlet::show_script_dialog);
+    connect(mactionKeys, &QAction::triggered, this, &mudlet::show_key_dialog);
+    connect(mactionButtons, &QAction::triggered, this, &mudlet::show_action_dialog);
 
-    connect(mactionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
-    connect(dactionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
+    connect(mactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
+    connect(dactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
 
-    connect(mactionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
-    connect(dactionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
+    connect(mactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
+    connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
 
-    connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-    connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
+    connect(mactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
+    connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
-    connect(mpMainToolBar, SIGNAL(visibilityChanged(bool)), this, SLOT(slot_handleToolbarVisibilityChanged(bool)));
+    connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -631,12 +631,12 @@ void mudlet::slot_module_manager()
         }
 
         layoutModules();
-        connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
-        connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
-        connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
-        connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
-        connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
-        connect(mpModuleDlg, SIGNAL(destroyed()), this, SLOT(slot_module_manager_destroyed()));
+        connect(moduleUninstallButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_uninstall_module);
+        connect(moduleInstallButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_install_module);
+        connect(moduleHelpButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_help_module);
+        connect(moduleTable.data(), &QTableWidget::itemClicked, this, &mudlet::slot_module_clicked);
+        connect(moduleTable.data(), &QTableWidget::itemChanged, this, &mudlet::slot_module_changed);
+        connect(mpModuleDlg.data(), &QObject::destroyed, this, &mudlet::slot_module_manager_destroyed);
         mpModuleDlg->setWindowTitle(tr("Module Manager - %1").arg(mpModuleTableHost->getName()));
         mpModuleDlg->setAttribute(Qt::WA_DeleteOnClose);
     }
@@ -809,8 +809,8 @@ void mudlet::slot_package_manager()
         }
 
         packageList->addItems(pH->mInstalledPackages);
-        connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
-        connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
+        connect(uninstallButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_uninstall_package);
+        connect(installButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_install_package);
         mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
         mpPackageManagerDlg->setAttribute(Qt::WA_DeleteOnClose);
     }
@@ -1182,7 +1182,7 @@ void mudlet::registerTimer(TTimer* pTT, QTimer* pQT)
 {
     if (!mTimerMap.contains(pQT)) {
         mTimerMap[pQT] = pTT;
-        connect(pQT, SIGNAL(timeout()), this, SLOT(slot_timer_fires()));
+        connect(pQT, &QTimer::timeout, this, &mudlet::slot_timer_fires);
     }
 }
 
@@ -2501,7 +2501,7 @@ void mudlet::writeSettings()
 void mudlet::slot_show_connection_dialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, SIGNAL(signal_establish_connection(QString, int)), this, SLOT(slot_connection_dlg_finished(QString, int)));
+    connect(pDlg, &dlgConnectionProfiles::signal_establish_connection, this, &mudlet::slot_connection_dlg_finished);
     pDlg->fillout_form();
 
     connect(pDlg, &QDialog::accepted, [=]() { enableToolbarButtons(); });
@@ -2620,10 +2620,10 @@ void mudlet::show_options_dialog()
 
     if (!mpProfilePreferencesDlg) {
         mpProfilePreferencesDlg = new dlgProfilePreferences(this, pHost);
-        connect(mpActionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-        connect(mpActionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
-        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlg->setAttribute(Qt::WA_DeleteOnClose);
     }
     mpProfilePreferencesDlg->raise();
@@ -2726,7 +2726,7 @@ void mudlet::check_for_mappingscript()
         QDialog* dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
         file.close();
 
-        connect(dialog, SIGNAL(accepted()), this, SLOT(slot_open_mappingscripts_page()));
+        connect(dialog, &QDialog::accepted, this, &mudlet::slot_open_mappingscripts_page);
 
         dialog->show();
         dialog->raise();
@@ -2945,7 +2945,7 @@ void mudlet::slot_send_pass()
 
 void mudlet::processEventLoopHack()
 {
-    QTimer::singleShot(1, this, SLOT(processEventLoopHack_timerRun()));
+    QTimer::singleShot(1, this, &mudlet::processEventLoopHack_timerRun);
 }
 
 void mudlet::processEventLoopHack_timerRun()
@@ -3131,15 +3131,15 @@ bool mudlet::replayStart()
     mpLabelReplaySpeedDisplay = new QLabel(this);
     mpActionSpeedDisplay = mpToolBarReplay->addWidget(mpLabelReplaySpeedDisplay);
 
-    connect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-    connect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+    connect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
+    connect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
 
     mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1000);
     mpTimerReplay->setSingleShot(false);
-    connect(mpTimerReplay, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+    connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
 
     mpLabelReplayTime->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
 
@@ -3169,8 +3169,8 @@ void mudlet::replayOver()
         return;
     }
 
-    disconnect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-    disconnect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+    disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
+    disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
     mpToolBarReplay->removeAction(mpActionReplaySpeedDown);
     mpToolBarReplay->removeAction(mpActionSpeedDisplay);

@@ -58,7 +58,7 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
 
     connect(this, SIGNAL(finished(int)), interpreter, SLOT(slotDeleteSender()));
     connect(this, SIGNAL(finished(int)), this, SLOT(slotFinish()));
-    connect(this, SIGNAL(readyReadStandardOutput()), this, SLOT(slotReceivedData()));
+    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slotReceivedData);
 
     setReadChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);

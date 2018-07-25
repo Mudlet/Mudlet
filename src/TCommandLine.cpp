@@ -632,7 +632,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             for (int i = 0; i < mHunspellSuggestionNumber; i++) {
                 QAction* pA;
                 pA = popup->addAction(sl[i]);
-                connect(pA, SIGNAL(triggered()), this, SLOT(slot_popupMenu()));
+                connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             }
             mpHunspellSuggestionList = sl;
             mPopupPosition = event->pos();
