@@ -685,7 +685,6 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     drawBackground(painter, borderRect, mBgColor);
     QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
     drawBackground(painter, borderRect2, mBgColor);
-    qDebug() << "TTextEdit::paintEvent(...) INFO paint rectangle is:" << rect << "on:" << mpConsole->mConsoleName << (mIsLowerPane ? "(lower pane)" : "(upper pane)");
     drawForeground(painter, rect);
 }
 
