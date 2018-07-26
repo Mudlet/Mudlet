@@ -204,7 +204,8 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o-i386-win32.zip"
+  // Old source was getting intermittant: DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o-i386-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2o-win32.zip" "openssl-1.0.2o-i386-win32.zip"
   ExtractZip "openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl-1.0.2o", "$Env:MINGW_BASE_DIR\bin")
