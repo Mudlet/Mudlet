@@ -30,6 +30,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPointer>
+#include <QProcess>
 #include <QThread>
 #include <QTimer>
 #include "post_guard.h"
@@ -440,7 +441,7 @@ public:
 public slots:
     void slot_replyFinished(QNetworkReply*);
     void slotPurge();
-    void slotDeleteSender();
+    void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
     QNetworkAccessManager* mpFileDownloader;
