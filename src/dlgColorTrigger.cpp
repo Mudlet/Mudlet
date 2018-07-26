@@ -47,10 +47,16 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     // must be set)
     connect(buttonBox->button(QDialogButtonBox::Ignore), &QAbstractButton::pressed, this, &dlgColorTrigger::slot_resetColorClicked);
     buttonBox->button(QDialogButtonBox::Ignore)->setText(tr("Ignore"));
+    buttonBox->button(QDialogButtonBox::Ignore)->setToolTip(mudlet::htmlWrapper(mIsBackground
+                                                                                ? tr("<p>Click to make the color trigger ignore the text's background color - however chosing this for both this and the foreground is an error.</p>")
+                                                                                : tr("<p>Click to make the color trigger ignore the text's foreground color - however chosing this for both this and the background is an error.</p>")));
     // The reset button means trigger only if the text is not set to anything
     // so is in the "default" colour - what ever THAT is
     connect(buttonBox->button(QDialogButtonBox::Reset), &QAbstractButton::pressed, this, &dlgColorTrigger::slot_defaultColorClicked);
     buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Default"));
+    buttonBox->button(QDialogButtonBox::Reset)->setToolTip(mudlet::htmlWrapper(mIsBackground
+                                                                                ? tr("<p>Click to make the color trigger when the text's background color has not been modified from its normal value.</p>")
+                                                                                : tr("<p>Click to make the color trigger when the text's foreground color has not been modified from its normal value.</p>")));
     connect(mSignalMapper, SIGNAL(mapped(int)), this, SLOT(slot_basicColorClicked(int)));
 
     // Fiddle with the three groupBox checkboxes so that they behave as radio
@@ -58,6 +64,10 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     // is also raised when the controls are altered programmatically - which
     // we will be doing in the slots
     connect(groupBox_basicColors, &QGroupBox::clicked, this, &dlgColorTrigger::slot_basicColorGroupSelected);
+    groupBox_basicColors->setToolTip(mudlet::htmlWrapper(mIsBackground
+                                                         ? tr("<p>Click a color to make the trigger fire only when the text's background color matches the color number indicated.</p>")
+                                                         : tr("<p>Click a color to make the trigger fire only when the text's foreground color matches the color number indicated.</p>")));
+
     connect(groupBox_rgbScale, &QGroupBox::clicked, this, &dlgColorTrigger::slot_rgbColorGroupSelected);
     connect(groupBox_grayScale, &QGroupBox::clicked, this, &dlgColorTrigger::slot_grayColorGroupSelected);
 
@@ -68,9 +78,9 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
             || (!mIsBackground && (pT->mColorTriggerFgAnsi >= 16 && pT->mColorTriggerFgAnsi <= 255))) {
 
         // Grey out the basic buttons for color in range 16 to 255:
-        setupBasicButtons(false);
+        setupBasicButtons(false, true);
     } else {
-        setupBasicButtons(true);
+        setupBasicButtons(true, true);
     }
 
     // These will correctly set the colours on the value label in their area:

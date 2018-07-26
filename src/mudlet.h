@@ -265,6 +265,10 @@ public:
     void createMapper(bool loadDefaultMap = true);
 
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
+    // This construct will be very useful for formatting tooltips and by
+    // defining a static function/method here we can save using the same
+    // QStringLiteral all over the place:
+    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'
