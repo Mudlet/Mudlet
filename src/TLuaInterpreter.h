@@ -73,7 +73,7 @@ public:
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
-    void msdp2Lua(char* src, int srclen);
+    void msdp2Lua(const char* src, size_t srclen);
     void initLuaGlobals();
     void initIndenterGlobals();
     bool call(const QString& function, const QString& mName);

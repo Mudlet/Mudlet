@@ -586,24 +586,24 @@ void cTelnet::processTelnetCommand(const string& command)
             break;
         }
 
-        if (option == MSDP) //MSDP support
-        {
+        if (option == OPT_MSDP) {
+            //MSDP support
             string _h;
             if (!mpHost->mEnableMSDP) {
                 _h += TN_IAC;
                 _h += TN_DONT;
-                _h += MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
+                _h += OPT_MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
                 socketOutRaw(_h);
                 qDebug() << "TELNET IAC DONT MSDP";
                 break;
             } else {
-                sendTelnetOption(TN_DO, 69);
+                sendTelnetOption(TN_DO, OPT_MSDP);
                 //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
                 //NOTE: MSDP does not need quotes for string/vals
                 _h += TN_IAC;
                 _h += TN_SB;
-                _h += MSDP; //MSDP
-                _h += 1;    //MSDP_VAR
+                _h += OPT_MSDP; //MSDP
+                _h += 1; //MSDP_VAR
                 _h += "LIST";
                 _h += 2; //MSDP_VAL
                 _h += "COMMANDS";
@@ -747,7 +747,7 @@ void cTelnet::processTelnetCommand(const string& command)
 #ifdef DEBUG
             qDebug() << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled";
 #endif
-            if (option == static_cast<char>(69)) // MSDP got turned off
+            if (option == static_cast<char>(OPT_MSDP)) // MSDP got turned off
             {
                 raiseProtocolEvent("sysProtocolDisabled", "MSDP");
             }
@@ -793,10 +793,10 @@ void cTelnet::processTelnetCommand(const string& command)
         //server wants us to enable some option
         option = command[2];
         auto idxOption = static_cast<quint8>(option);
-        if (option == static_cast<char>(69) && mpHost->mEnableMSDP) // MSDP support
-        {
+        if (option == static_cast<char>(OPT_MSDP) && mpHost->mEnableMSDP) {
+            // MSDP support
             qDebug() << "TELNET IAC DO MSDP";
-            sendTelnetOption(TN_WILL, 69);
+            sendTelnetOption(TN_WILL, OPT_MSDP);
 
             raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
@@ -874,7 +874,7 @@ void cTelnet::processTelnetCommand(const string& command)
         qDebug() << "cTelnet::processTelnetCommand() TN_DONT command=" << (quint8)command[2];
 #endif
         option = command[2];
-        if (option == static_cast<char>(69)) // MSDP got turned off
+        if (option == static_cast<char>(OPT_MSDP)) // MSDP got turned off
         {
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
         }
@@ -906,13 +906,15 @@ void cTelnet::processTelnetCommand(const string& command)
         option = command[2];
 
         // MSDP
-        if (option == static_cast<char>(69)) {
-            QString _m = command.c_str();
+        if (option == static_cast<char>(OPT_MSDP)) {
+            // Using a QByteArray means there is no consideration of encoding
+            // used - it is just bytes...
+            QByteArray _m = command.c_str();
             if (command.size() < 6) {
                 return;
             }
             _m = _m.mid(3, command.size() - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.toUtf8().data(), _m.length());
+            mpHost->mLuaInterpreter.msdp2Lua(_m.constData(), _m.length());
             return;
         }
         // ATCP

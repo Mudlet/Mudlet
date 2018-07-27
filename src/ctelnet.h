@@ -91,7 +91,6 @@ const char TN_BELL = static_cast<char>(7);
 
 const char GMCP = static_cast<char>(201);
 const char MXP = 91;
-const char MSDP = 69; // http://tintin.sourceforge.net/msdp/
 
 const char OPT_ECHO = 1;
 const char OPT_STATUS = 5;
@@ -99,6 +98,7 @@ const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
+const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
