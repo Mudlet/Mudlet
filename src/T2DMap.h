@@ -165,7 +165,7 @@ public slots:
     void slot_customLineColor();
     void shiftZup();
     void shiftZdown();
-    void slot_switchArea(QString);
+    void slot_switchArea(const QString&);
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();

@@ -122,7 +122,7 @@ TMap::TMap(Host* pH)
     // (was dlgMapper) instance has one...!
     mpNetworkAccessManager = new QNetworkAccessManager(this);
 
-    connect(mpNetworkAccessManager, SIGNAL(finished(QNetworkReply*)), this, SLOT(slot_replyFinished(QNetworkReply*)));
+    connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }
 
 TMap::~TMap()
@@ -2153,11 +2153,11 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     mpProgressDialog->setAutoReset(false);
     mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
 
-    connect(mpNetworkReply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(slot_setDownloadProgress(qint64, qint64)));
+    connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     // Not used:    connect(mpNetworkReply, SIGNAL( readyRead() ), this, SLOT( slot_readyRead() ) );
-    connect(mpNetworkReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(slot_downloadError(QNetworkReply::NetworkError)));
+    connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
     // Not used:    connect(mpNetworkReply, SIGNAL( sslErrors( QList<QSslError> ) ), this, SLOT( slot_sslErrors( QList<QSslError> ) ) );
-    connect(mpProgressDialog, SIGNAL(canceled()), this, SLOT(slot_downloadCancel()));
+    connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
     mpProgressDialog->show();
 }

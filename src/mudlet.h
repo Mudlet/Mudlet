@@ -455,11 +455,30 @@ private:
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
 
-    QAction* actionReconnect;
-
     void check_for_mappingscript();
 
     QPointer<QAction> mpActionReplay;
+
+    QPointer<QAction> mpActionAbout;
+    QPointer<QAction> mpActionAliases;
+    QPointer<QAction> mpActionButtons;
+    QPointer<QAction> mpActionConnect;
+    QPointer<QAction> mpActionDisconnect;
+    QPointer<QAction> mpActionFullScreenView;
+    QPointer<QAction> mpActionHelp;
+    QPointer<QAction> mpActionIRC;
+    QPointer<QAction> mpActionKeys;
+    QPointer<QAction> mpActionMapper;
+    QPointer<QAction> mpActionModuleManager;
+    QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionNotes;
+    QPointer<QAction> mpActionOptions;
+    QPointer<QAction> mpActionPackageManager;
+    QPointer<QAction> mpActionReconnect;
+    QPointer<QAction> mpActionScripts;
+    QPointer<QAction> mpActionTimers;
+    QPointer<QAction> mpActionTriggers;
+    QPointer<QAction> mpActionVariables;
 
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;

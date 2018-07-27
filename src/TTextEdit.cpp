@@ -170,13 +170,13 @@ void TTextEdit::slot_toggleTimeStamps()
 void TTextEdit::slot_scrollBarMoved(int line)
 {
     if (mpConsole->mpScrollBar) {
-        disconnect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
+        disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
         mpConsole->mpScrollBar->setRange(0, mpBuffer->getLastLineNumber());
         mpConsole->mpScrollBar->setSingleStep(1);
         mpConsole->mpScrollBar->setPageStep(mScreenHeight);
         mpConsole->mpScrollBar->setValue(line);
         scrollTo(line);
-        connect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
+        connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
     }
 }
 
@@ -322,14 +322,14 @@ void TTextEdit::showNewLines()
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            disconnect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
+            disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
             mpConsole->mpScrollBar->setRange(0, mpBuffer->getLastLineNumber());
             mpConsole->mpScrollBar->setSingleStep(1);
             mpConsole->mpScrollBar->setPageStep(mScreenHeight);
             if (mIsTailMode) {
                 mpConsole->mpScrollBar->setValue(mpBuffer->mCursorY);
             }
-            connect(mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
+            connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
         }
     }
     update();
@@ -1131,7 +1131,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                                 pA = popup->addAction(command[i]);
                                 mPopupCommands[command[i]] = command[i];
                             }
-                            connect(pA, SIGNAL(triggered()), this, SLOT(slot_popupMenu()));
+                            connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                         }
                         popup->popup(event->globalPos());
                     }
@@ -1153,18 +1153,18 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         // the tooltip contents which are presumable filled with the default
         // in the QAction constructor:
         action->setToolTip(QString());
-        connect(action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
+        connect(action, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
         QAction* action2 = new QAction(tr("Copy HTML"), this);
         action2->setToolTip(QString());
-        connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+        connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
         QAction* action3 = new QAction(tr("Select All"), this);
         action3->setToolTip(QString());
-        connect(action3, SIGNAL(triggered()), this, SLOT(slot_selectAll()));
+        connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
 
         QString selectedEngine = mpHost->getSearchEngine().first;
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), this);
         action4->setToolTip(QString());
-        connect(action4, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+        connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
         if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
             action->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
             action3->setIcon(QIcon::fromTheme(QStringLiteral("edit-select-all"), QIcon(QStringLiteral(":/icons/edit-select-all.png"))));
@@ -1182,12 +1182,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         if (!mudlet::self()->isControlsVisible()) {
             QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
-            connect(actionRestoreMainMenu, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainMenu()));
+            connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
             actionRestoreMainMenu->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                               .arg(tr("Use this to restore the Main menu to get access to controls.")));
 
             QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
-            connect(actionRestoreMainToolBar, SIGNAL(triggered()), mudlet::self(), SLOT(slot_restoreMainToolBar()));
+            connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
             actionRestoreMainToolBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                                  .arg(tr("Use this to restore the Main Toolbar to get access to controls.")));
 
