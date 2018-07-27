@@ -87,10 +87,10 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), pu
 {
     pGlobalLua = nullptr;
 
-    connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
+    connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slotPurge);
 
     mpFileDownloader = new QNetworkAccessManager(this);
-    connect(mpFileDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(slot_replyFinished(QNetworkReply*)));
+    connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_replyFinished);
 
     initLuaGlobals();
     initIndenterGlobals();
@@ -210,8 +210,11 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::slotDeleteSender()
+void TLuaInterpreter::slotDeleteSender(int exitCode, QProcess::ExitStatus exitStatus)
 {
+    Q_UNUSED(exitCode);
+    Q_UNUSED(exitStatus);
+
     objectsToDelete.append(sender());
 }
 

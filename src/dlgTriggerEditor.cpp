@@ -105,6 +105,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
 , mCleanResetQueued(false)
+, mSavingAs(false)
 , mAutosaveInterval{}
 {
     // init generated dialog
@@ -125,7 +126,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QSizePolicy sizePolicy6(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpSystemMessageArea->setSizePolicy(sizePolicy6);
     pVB1->addWidget(mpSystemMessageArea);
-    connect(mpSystemMessageArea->messageAreaCloseButton, SIGNAL(clicked()), mpSystemMessageArea, SLOT(hide()));
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
 
     // main areas
 
@@ -135,9 +136,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpTriggersMainArea->setSizePolicy(sizePolicy);
     pVB1->addWidget(mpTriggersMainArea);
     mpTriggersMainArea->lineEdit_soundFile->hide();
-    connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
-    connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
-    connect(mpTriggersMainArea->pushButtonSound, SIGNAL(clicked()), this, SLOT(slot_soundTrigger()));
+    connect(mpTriggersMainArea->pushButtonFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetFgColor);
+    connect(mpTriggersMainArea->pushButtonBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetBgColor);
+    connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_soundTrigger);
 
     mpTimersMainArea = new dlgTimersMainArea(mainArea);
     QSizePolicy sizePolicy7(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -151,13 +152,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpActionsMainArea = new dlgActionMainArea(mainArea);
     mpActionsMainArea->setSizePolicy(sizePolicy8);
-    connect(mpActionsMainArea->checkBox_action_button_isPushDown, SIGNAL(stateChanged(const int)), this, SLOT(slot_toggle_isPushDownButton(const int)));
+    connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::stateChanged, this, &dlgTriggerEditor::slot_toggle_isPushDownButton);
     pVB1->addWidget(mpActionsMainArea);
 
     mpKeysMainArea = new dlgKeysMainArea(mainArea);
     mpKeysMainArea->setSizePolicy(sizePolicy8);
     pVB1->addWidget(mpKeysMainArea);
-    connect(mpKeysMainArea->pushButton_key_grabKey, SIGNAL(pressed()), this, SLOT(slot_grab_key()));
+    connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_grab_key);
 
     mpVarsMainArea = new dlgVarsMainArea(mainArea);
     mpVarsMainArea->setSizePolicy(sizePolicy8);
@@ -170,8 +171,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mIsScriptsMainAreaEditHandler = false;
     mpScriptsMainAreaEditHandlerItem = nullptr;
-    connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, SIGNAL(returnPressed()), this, SLOT(slot_script_main_area_add_handler()));
-    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
+    connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_script_main_area_edit_handler);
 
     // source editor area
 
@@ -185,18 +186,18 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
-    connect(mpSourceEditorEdbee->controller(), SIGNAL(updateStatusTextSignal(QString)), this, SLOT(slot_updateStatusBar(QString)));
+    connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
     simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
 
     // Update the editor preferences
-    connect(mudlet::self(), SIGNAL(signal_editorTextOptionsChanged(QTextOption::Flags)), this, SLOT(slot_changeEditorTextOptions(QTextOption::Flags)));
+    connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
 
     mpSourceEditorEdbeeDocument->setText(QString("# Enter your lua code here\n"));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(mpSourceEditorEdbee->textEditorComponent(), SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slot_editorContextMenu()));
+    connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
 
     // option areas
 
@@ -216,7 +217,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                                                  "QToolButton{border-image:url(:/icons/arrow-right_grey-16x.png);} "
                                                                  "QToolButton::on:hover{border-image:url(:/icons/arrow-down-16x.png);} "
                                                                  "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
-    connect(button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT(slot_showSearchAreaResults(const bool)));
+    connect(button_toggleSearchAreaResults, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showSearchAreaResults);
 
     // additional settings
     treeWidget_triggers->setColumnCount(1);
@@ -225,7 +226,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
+    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost(mpHost);
@@ -234,7 +235,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_aliases, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
+    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_actions->hide();
     treeWidget_actions->setHost(mpHost);
@@ -243,7 +244,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_actions, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
+    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_timers->hide();
     treeWidget_timers->setHost(mpHost);
@@ -252,7 +253,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
+    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_variables->hide();
     treeWidget_variables->setHost(mpHost);
@@ -262,7 +263,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_variables, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
+    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_keys->hide();
     treeWidget_keys->setHost(mpHost);
@@ -271,7 +272,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
+    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost(mpHost);
@@ -280,52 +281,52 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_scripts, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
+    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     QAction* viewTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
-    connect(viewTriggerAction, SIGNAL(triggered()), this, SLOT(slot_show_triggers()));
+    connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_triggers);
 
     QAction* viewActionAction = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
     viewActionAction->setStatusTip(tr("Show Buttons"));
-    connect(viewActionAction, SIGNAL(triggered()), this, SLOT(slot_show_actions()));
+    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_actions);
 
 
     QAction* viewAliasAction = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
-    connect(viewAliasAction, SIGNAL(triggered()), this, SLOT(slot_show_aliases()));
+    connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_aliases);
 
 
     QAction* showTimersAction = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
     showTimersAction->setStatusTip(tr("Show Timers"));
-    connect(showTimersAction, SIGNAL(triggered()), this, SLOT(slot_show_timers()));
+    connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_timers);
 
     QAction* viewScriptsAction = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
     viewScriptsAction->setStatusTip(tr("Show Scripts"));
-    connect(viewScriptsAction, SIGNAL(triggered()), this, SLOT(slot_show_scripts()));
+    connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_scripts);
 
     QAction* viewKeysAction = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     viewKeysAction->setStatusTip(tr("Show Keybindings"));
-    connect(viewKeysAction, SIGNAL(triggered()), this, SLOT(slot_show_keys()));
+    connect(viewKeysAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_keys);
 
     QAction* viewVarsAction = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
-    connect(viewVarsAction, SIGNAL(triggered()), this, SLOT(slot_show_vars()));
+    connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_vars);
 
     QAction* toggleActiveAction = new QAction(QIcon(QStringLiteral(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
-    connect(toggleActiveAction, SIGNAL(triggered()), this, SLOT(slot_toggle_active()));
-    connect(treeWidget_triggers, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), SLOT(slot_toggle_active()));
-    connect(treeWidget_aliases, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), SLOT(slot_toggle_active()));
-    connect(treeWidget_timers, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), SLOT(slot_toggle_active()));
-    connect(treeWidget_scripts, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), SLOT(slot_toggle_active()));
-    connect(treeWidget_actions, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), SLOT(slot_toggle_active()));
-    connect(treeWidget_keys, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), SLOT(slot_toggle_active()));
+    connect(toggleActiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggle_active);
+    connect(treeWidget_triggers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
+    connect(treeWidget_aliases, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
+    connect(treeWidget_timers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
+    connect(treeWidget_scripts, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
+    connect(treeWidget_actions, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
+    connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
 
 
     QAction* addTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/document-new.png")), tr("Add Item"), this);
     addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
-    connect(addTriggerAction, SIGNAL(triggered()), this, SLOT(slot_add_new()));
+    connect(addTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_add_new);
 
     QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(QStringLiteral(":/icons/edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))), tr("Delete Item"), this);
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
@@ -333,11 +334,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
     frame_left->addAction(deleteTriggerAction);
-    connect(deleteTriggerAction, SIGNAL(triggered()), this, SLOT(slot_delete_item()));
+    connect(deleteTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_delete_item);
 
     QAction* addFolderAction = new QAction(QIcon(QStringLiteral(":/icons/folder-new.png")), tr("Add Group"), this);
     addFolderAction->setStatusTip(tr("Add new Group"));
-    connect(addFolderAction, SIGNAL(triggered()), this, SLOT(slot_add_new_folder()));
+    connect(addFolderAction, &QAction::triggered, this, &dlgTriggerEditor::slot_add_new_folder);
 
     QAction* saveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-as.png")), tr("Save Item"), this);
     saveAction->setShortcut(tr("Ctrl+S"));
@@ -345,7 +346,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                    .arg(tr("Saves the selected item. (Ctrl+S)</p>Saving causes any changes to the item to take effect.\nIt will not save to disk, "
                                            "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
-    connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
+    connect(saveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_save_edit);
 
     QAction* copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
@@ -382,11 +383,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QAction* importAction = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
-    connect(importAction, SIGNAL(triggered()), this, SLOT(slot_import()));
+    connect(importAction, &QAction::triggered, this, &dlgTriggerEditor::slot_import);
 
     QAction* exportAction = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Export"), this);
     exportAction->setEnabled(true);
-    connect(exportAction, SIGNAL(triggered()), this, SLOT(slot_export()));
+    connect(exportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
     mProfileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
     mProfileSaveAction->setEnabled(true);
@@ -396,30 +397,30 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                     .arg(tr(R"(Saves your profile. (Ctrl+Shift+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
     mProfileSaveAction->setStatusTip(
             tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
-    connect(mProfileSaveAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAction()));
+    connect(mProfileSaveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAction);
 
     mProfileSaveAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
     mProfileSaveAsAction->setEnabled(true);
-    connect(mProfileSaveAsAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAsAction()));
+    connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
 
     QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
     viewStatsAction->setStatusTip(tr("Generates a statics summary display on the main profile console."));
-    connect(viewStatsAction, SIGNAL(triggered()), this, SLOT(slot_viewStatsAction()));
+    connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
 
     QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("errors"), this);
     viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
-    connect(viewErrorsAction, SIGNAL(triggered()), this, SLOT(slot_viewErrorsAction()));
+    connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
 
     QAction* showDebugAreaAction = new QAction(QIcon(QStringLiteral(":/icons/tools-report-bug.png")), tr("Debug"), this);
     showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be <b><i>slower</i></b>."));
     showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
-    connect(showDebugAreaAction, SIGNAL(triggered()), this, SLOT(slot_debug_mode()));
+    connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
 
-    connect(mudlet::self(), SIGNAL(signal_setToolBarIconSize(const int)), this, SLOT(slot_setToolBarIconSize(const int)));
-    connect(mudlet::self(), SIGNAL(signal_setTreeIconSize(const int)), this, SLOT(slot_setTreeWidgetIconSize(const int)));
+    connect(mudlet::self(), &mudlet::signal_setToolBarIconSize, this, &dlgTriggerEditor::slot_setToolBarIconSize);
+    connect(mudlet::self(), &mudlet::signal_setTreeIconSize, this, &dlgTriggerEditor::slot_setTreeWidgetIconSize);
     slot_setToolBarIconSize(mudlet::self()->mToolbarIconSize);
     slot_setTreeWidgetIconSize(mudlet::self()->mEditorTreeWidgetIconSize);
 
@@ -439,9 +440,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
-    connect(button_displayAllVariables, SIGNAL(toggled(bool)), this, SLOT(slot_toggleHiddenVariables(bool)));
+    connect(button_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
 
-    connect(mpVarsMainArea->checkBox_variable_hidden, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar(bool)));
+    connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_toggleHiddenVar);
 
     toolBar2->addAction(viewTriggerAction);
     toolBar2->addAction(viewAliasAction);
@@ -469,23 +470,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 
-    connect(comboBox_searchTerms, SIGNAL(activated(const QString&)), this, SLOT(slot_searchMudletItems(const QString&)));
+    connect(comboBox_searchTerms, qOverload<const QString&>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_trigger_selected);
     connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_key_selected(QTreeWidgetItem*)));
-    connect(treeWidget_keys, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_timer_selected(QTreeWidgetItem*)));
-    connect(treeWidget_timers, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_scripts, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_scripts_selected(QTreeWidgetItem*)));
-    connect(treeWidget_scripts, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_aliases, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_alias_selected(QTreeWidgetItem*)));
-    connect(treeWidget_aliases, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_actions, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_action_selected(QTreeWidgetItem*)));
-    connect(treeWidget_actions, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_variables, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_var_selected(QTreeWidgetItem*)));
-    connect(treeWidget_variables, SIGNAL(itemChanged(QTreeWidgetItem*, int)), this, SLOT(slot_var_changed(QTreeWidgetItem*)));
-    connect(treeWidget_variables, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_search_list(QTreeWidgetItem*)));
+    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_key_selected);
+    connect(treeWidget_keys, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
+    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_timer_selected);
+    connect(treeWidget_timers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
+    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_scripts_selected);
+    connect(treeWidget_scripts, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
+    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_alias_selected);
+    connect(treeWidget_aliases, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
+    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_action_selected);
+    connect(treeWidget_actions, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
+    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_var_selected);
+    connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_var_changed);
+    connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
+    connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_search_list);
 
     // Force the size of the triangle icon button that shows/hides the search
     // results to be 3/4 of the height of the combo-box used to enter the search
@@ -535,8 +536,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     pLineEdit_searchTerm->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
 
-    connect(mpScriptsMainArea->toolButton_script_add_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
-    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_delete_handler()));
+    connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
+    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_script_main_area_delete_handler);
 
     mpTriggersMainArea->hide();
     mpTimersMainArea->hide();
@@ -593,9 +594,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         QComboBox* pBox = pItem->comboBox_patternType;
         pBox->addItems(_patternList);
         pBox->setItemData(0, QVariant(i));
-        connect(pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
-        connect(pItem->pushButton_fgColor, SIGNAL(pressed()), this, SLOT(slot_color_trigger_fg()));
-        connect(pItem->pushButton_bgColor, SIGNAL(pressed()), this, SLOT(slot_color_trigger_bg()));
+        connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_set_pattern_type_color);
+        connect(pItem->pushButton_fgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_fg);
+        connect(pItem->pushButton_bgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_bg);
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
@@ -4686,7 +4687,7 @@ void dlgTriggerEditor::saveKey()
 
 void dlgTriggerEditor::slot_set_pattern_type_color(int type)
 {
-    auto * pBox = (QComboBox*)sender();
+    QComboBox* pBox = qobject_cast<QComboBox*>(sender());
     if (!pBox) {
         return;
     }
@@ -6417,7 +6418,15 @@ void dlgTriggerEditor::leaveEvent(QEvent *event)
     Q_UNUSED(event);
 
     saveOpenChanges();
-    autoSave();
+
+    // delay autosave for next event loop in case the user has pressed 'Save profile as' and
+    // the focus was lost due to a file export dialog. In this case, don't want
+    // autosave kicking in and blocking the save profile
+    QTimer::singleShot(0, this, [this]() {
+        if (!mSavingAs) {
+            autoSave();
+        }
+    });
 }
 
 void dlgTriggerEditor::changeView(int view)
@@ -7605,6 +7614,7 @@ void dlgTriggerEditor::slot_profileSaveAction()
 
 void dlgTriggerEditor::slot_profileSaveAsAction()
 {
+    mSavingAs = true;
     QString fileName = QFileDialog::getSaveFileName(this, tr("Backup Profile"), QDir::homePath(), tr("trigger files (*.trigger *.xml)"));
 
     if (fileName.isEmpty()) {
@@ -7617,6 +7627,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     }
 
     mpHost->saveProfileAs(fileName);
+    mSavingAs = false;
 }
 
 bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)

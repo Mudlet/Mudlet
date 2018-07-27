@@ -33,7 +33,7 @@ EAction::EAction(QIcon& icon, QString& name) : QAction(icon, name, mudlet::self(
     setText(name);
     setObjectName(name);
     setIcon(icon);
-    connect(this, SIGNAL(triggered(bool)), this, SLOT(slot_execute(bool)));
+    connect(this, &EAction::triggered, this, &EAction::slot_execute);
 }
 
 void EAction::slot_execute(bool checked)

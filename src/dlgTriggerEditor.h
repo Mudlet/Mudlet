@@ -452,6 +452,10 @@ private:
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
 
+    // tracks the duration of the "Save Profile As" action so
+    // autosave doesn't kick in
+    bool mSavingAs;
+
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued;
     void runScheduledCleanReset();
