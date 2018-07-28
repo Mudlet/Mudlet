@@ -199,6 +199,18 @@ void cTelnet::encodingChanged(const QString& encoding)
         // Do NOT create BOM on out-going text data stream!
         outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
 
+        if (!mEncoding.isEmpty() && mEncoding != QLatin1String("ASCII")) {
+            mpOutOfBandDataIncomingCodec = QTextCodec::codecForName(encoding.toLatin1().constData());
+            qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+
+        } else if (mpOutOfBandDataIncomingCodec) {
+            // Will get here if the encoding is ASCII (or empty which is treated
+            // the same) and there is still an an encoder set:
+            qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Uninstalling the codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases() << " as the new encoding setting of: "
+                               << encoding << " does not need a dedicated one explicitly set...";
+            mpOutOfBandDataIncomingCodec = nullptr;
+        }
+
         // No need to tell the TBuffer instance of the main TConsole for this
         // profile to change its QTextCodec to match as it now checks for
         // changes here on each incoming packet
@@ -232,6 +244,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
         if (!mEncoding.isEmpty()) {
             // This will disable trancoding on:
             // input in TBuffer::translateToPlainText(...)
+            // incoming OOB in TLuaInterpreter::encodeBytes(...)
             // output in cTelnet::sendData(...)
             mEncoding.clear();
             if (isToStore) {
@@ -358,6 +371,9 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     }
 }
 
+// This uses UTF-16BE encoded data but needs to be converted to the selected
+// Mud Server encoding - it should NOT contain any Telnet protocol byte
+// sequences:
 bool cTelnet::sendData(QString& data)
 {
     data.remove(QChar::LineFeed);
@@ -383,40 +399,60 @@ bool cTelnet::sendData(QString& data)
             outData = outgoingDataEncoder->fromUnicode(data).constData();
         } else {
             // Plain, raw ASCII, we hope!
-            // TODO: Moan if the user is trying to send non-ASCII characters out!
+            for (int i = 0, total = data.size(); i < total; ++i) {
+                if (data.at(i).row() || data.at(i).cell() > 127){
+                    QString errorMsg = tr("[ WARN ] - Invalid characters in outgoing data, one or more characters cannot\n"
+                                          "be encoded into the range that is acceptable for the character\n"
+                                          "encoding that is currently set {\"ASCII\"} for the MUD Server."
+                                          "It may not understand what is sent to it.");
+                    postMessage(errorMsg);
+                    break;
+                }
+            }
+            // Even if there are bad characters - try to send it anyway...
             outData = data.toStdString();
         }
 
         if (!mpHost->mUSE_UNIX_EOL) {
-            outData.append("\r\n");
-        } else {
-            outData += "\n";
+            outData += "\r";
         }
+        outData += "\n";
+
+        // outData is using the selected Mud Server encoding here:
+        // we need to cook any byte values from the encoding process that are
+        // 0xff (assuming that there are no Telnet protocol sequences in here):
+        outData = mudlet::ReplaceString(outData, "\xff", "\xff\xff");
         return socketOutRaw(outData);
     } else {
+
         mpHost->mAllowToSendCommand = true;
         return false;
     }
 }
 
-
+// Data is *expected* to be in the required MUD Server encoding on entry,
+// of course plain ASCII *is* valid for all encodings including Big-5 and GBK,
+// as we do NOT handle the weirdly different EBDIC!!!
 bool cTelnet::socketOutRaw(string& data)
 {
-    if (!socket.isWritable()) {
+    // We were using socket.iswritable() but it was not clear that that was a
+    // suitable to check for an open, usable connection - whereas isvalid()
+    // is true if the socket is valid and ready for use:
+    if (!socket.isValid()) {
         return false;
     }
-    int dataLength = data.length();
-    int remlen = dataLength;
+    std::size_t dataLength = data.length();
+    std::size_t written = 0;
 
     do {
-        int written = socket.write(data.data(), remlen);
+        qint64 chunkWritten = socket.write(data.substr(written).data());
 
-        if (written == -1) {
+        if (chunkWritten == -1) {
             return false;
         }
-        remlen -= written;
-        dataLength += written;
-    } while (remlen > 0);
+
+        written += static_cast<std::size_t>(chunkWritten);
+    } while (written < dataLength);
 
     if (mGA_Driver) {
         mCommands++;
@@ -429,12 +465,11 @@ bool cTelnet::socketOutRaw(string& data)
     return true;
 }
 
-
 void cTelnet::setDisplayDimensions()
 {
     int x = mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
-    if (myOptionState[static_cast<int>(OPT_NAWS)]) {
+    if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
         string s;
         s = TN_IAC;
         s += TN_SB;
@@ -491,11 +526,12 @@ void cTelnet::sendTelnetOption(char type, char option)
 
     qDebug() << "CLIENT SENDING Telnet: " << _type << " " << (quint8)option;
 #endif
-    string cmd;
-    cmd += TN_IAC;
-    cmd += type;
-    cmd += option;
-    socketOutRaw(cmd);
+    string output;
+    output += TN_IAC;
+    output += type;
+    output += option;
+    // This will be unaffected by Mud Server encoding:
+    socketOutRaw(output);
 }
 
 
@@ -577,46 +613,49 @@ void cTelnet::processTelnetCommand(const string& command)
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
         option = command[2];
-        const auto idxOption = static_cast<int>(option);
+        const auto idxOption = static_cast<size_t>(option);
 
-        if (option == static_cast<char>(25)) //EOR support (END OF RECORD=TN_GA
-        {
+        if (option == OPT_EOR) {
+            //EOR support (END OF RECORD=TN_GA
             qDebug() << "EOR enabled";
-            sendTelnetOption(TN_DO, 25);
+            sendTelnetOption(TN_DO, OPT_EOR);
             break;
         }
 
         if (option == OPT_MSDP) {
             //MSDP support
-            string _h;
+            string output;
             if (!mpHost->mEnableMSDP) {
-                _h += TN_IAC;
-                _h += TN_DONT;
-                _h += OPT_MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
-                socketOutRaw(_h);
+                output += TN_IAC;
+                output += TN_DONT;
+                output += OPT_MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
+                // This will be unaffected by Mud Server encoding:
+                socketOutRaw(output);
                 qDebug() << "TELNET IAC DONT MSDP";
                 break;
             } else {
                 sendTelnetOption(TN_DO, OPT_MSDP);
                 //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
                 //NOTE: MSDP does not need quotes for string/vals
-                _h += TN_IAC;
-                _h += TN_SB;
-                _h += OPT_MSDP; //MSDP
-                _h += 1; //MSDP_VAR
-                _h += "LIST";
-                _h += 2; //MSDP_VAL
-                _h += "COMMANDS";
-                _h += TN_IAC;
-                _h += TN_SE;
-                socketOutRaw(_h);
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_MSDP;
+                output += MSDP_VAR;
+                output += "LIST";
+                output += MSDP_VAL;
+                output += "COMMANDS";
+                output += TN_IAC;
+                output += TN_SE;
+                // This will be unaffected by Mud Server encoding:
+                socketOutRaw(output);
                 qDebug() << "TELNET IAC DO MSDP";
                 raiseProtocolEvent("sysProtocolEnabled", "MSDP");
                 break;
             }
         }
-        if (option == static_cast<char>(200)) // ATCP support
-        {
+
+        if (option == OPT_ATCP) {
+            // ATCP support
             //FIXME: this is a bug, some muds offer both atcp + gmcp
             if (mpHost->mEnableGMCP) {
                 break;
@@ -624,66 +663,67 @@ void cTelnet::processTelnetCommand(const string& command)
 
             qDebug() << "ATCP enabled";
             enableATCP = true;
-            sendTelnetOption(TN_DO, static_cast<char>(200));
+            sendTelnetOption(TN_DO, OPT_ATCP);
 
-            string _h;
-            _h += TN_IAC;
-            _h += TN_SB;
-            _h += static_cast<char>(200);
-            _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n");
-            _h += TN_IAC;
-            _h += TN_SE;
-            socketOutRaw(_h);
+            string output;
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_ATCP;
+            // APP_BUILD could, conceivably contain a non ASCII character:
+            output += encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD  "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n");
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+
             raiseProtocolEvent("sysProtocolEnabled", "ATCP");
             break;
         }
 
-        if (option == GMCP) {
+        if (option == OPT_GMCP) {
             if (!mpHost->mEnableGMCP) {
                 break;
             }
 
             enableGMCP = true;
-            sendTelnetOption(TN_DO, GMCP);
+            sendTelnetOption(TN_DO, OPT_GMCP);
             qDebug() << "GMCP enabled";
 
-            string _h;
-            _h = TN_IAC;
-            _h += TN_SB;
-            _h += GMCP;
-            _h += string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + APP_BUILD + string(R"(" })");
-            _h += TN_IAC;
-            _h += TN_SE;
+            string output;
+            output = TN_IAC;
+            output += TN_SB;
+            output += OPT_GMCP;
+            // APP_BUILD could, conceivable contain a non-ASCII character:
+            output += encodeAndCookBytes(R"(Core.Hello { "client": "Mudlet", "version": )" APP_VERSION APP_BUILD R"(})");
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
 
-            socketOutRaw(_h);
-
-            _h = TN_IAC;
-            _h += TN_SB;
-            _h += GMCP;
-            _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1"])";
-            _h += TN_IAC;
-            _h += TN_SE;
-
-            socketOutRaw(_h);
+            output = TN_IAC;
+            output += TN_SB;
+            output += OPT_GMCP;
+            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1"])";
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
 
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
         }
 
-        if (option == MXP) {
+        if (option == OPT_MXP) {
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
-                sendTelnetOption(TN_DO, 91);
+                sendTelnetOption(TN_DO, OPT_MXP);
 
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
                 break;
             }
         }
 
-        if (option == static_cast<char>(102)) // Aardwulf channel 102 support
-        {
+        if (option == OPT_102) {
+            // Aardwulf channel 102 support
             qDebug() << "Aardwulf channel 102 support enabled";
             enableChannel102 = true;
-            sendTelnetOption(TN_DO, 102);
+            sendTelnetOption(TN_DO, OPT_102);
             raiseProtocolEvent("sysProtocolEnabled", "channel102");
             break;
         }
@@ -738,7 +778,7 @@ void cTelnet::processTelnetCommand(const string& command)
         qDebug() << "cTelnet::processTelnetCommand() TN_WONT command=" << (quint8)command[2];
 #endif
         option = command[2];
-        auto idxOption = static_cast<int>(option);
+        const auto idxOption = static_cast<size_t>(option);
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = false;
             triedToEnable[idxOption] = false;
@@ -747,26 +787,34 @@ void cTelnet::processTelnetCommand(const string& command)
 #ifdef DEBUG
             qDebug() << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled";
 #endif
-            if (option == static_cast<char>(OPT_MSDP)) // MSDP got turned off
-            {
+            if (option == OPT_MSDP) {
+                // MSDP got turned off
                 raiseProtocolEvent("sysProtocolDisabled", "MSDP");
             }
-            if (option == static_cast<char>(200)) // ATCP got turned off
-            {
+
+            if (option == OPT_ATCP) {
+                // ATCP got turned off
+                enableATCP = false;
                 raiseProtocolEvent("sysProtocolDisabled", "ATCP");
             }
-            if (option == static_cast<char>(201)) // GMCP got turned off
-            {
+
+            if (option == OPT_GMCP) {
+                // GMCP got turned off
+                enableGMCP = false;
                 raiseProtocolEvent("sysProtocolDisabled", "GMCP");
             }
-            if (option == MXP) // MXP got turned off
-            {
+
+            if (option == OPT_MXP) {
+                // MXP got turned off
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
-            if (option == static_cast<char>(102)) // channel 102 support
-            {
+
+            if (option == OPT_102) {
+                // channel 102 support
+                enableChannel102 = false;
                 raiseProtocolEvent("sysProtocolDisabled", "channel102");
             }
+
             //send DONT if needed (see RFC 854 for details)
             if (hisOptionState[idxOption] || (heAnnouncedState[idxOption])) {
                 sendTelnetOption(TN_DONT, option);
@@ -792,8 +840,8 @@ void cTelnet::processTelnetCommand(const string& command)
 #endif
         //server wants us to enable some option
         option = command[2];
-        auto idxOption = static_cast<quint8>(option);
-        if (option == static_cast<char>(OPT_MSDP) && mpHost->mEnableMSDP) {
+        const auto idxOption = static_cast<size_t>(option);
+        if (option == OPT_MSDP && mpHost->mEnableMSDP) {
             // MSDP support
             qDebug() << "TELNET IAC DO MSDP";
             sendTelnetOption(TN_WILL, OPT_MSDP);
@@ -801,34 +849,38 @@ void cTelnet::processTelnetCommand(const string& command)
             raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
         }
-        if (option == static_cast<char>(200) && !mpHost->mEnableGMCP) // ATCP support, enable only if GMCP is off as GMCP is better
-        {
+
+        if (option == OPT_ATCP && !mpHost->mEnableGMCP) {
+            // ATCP support, enable only if GMCP is off as GMCP is better
             qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
-            sendTelnetOption(TN_WILL, static_cast<char>(200));
+            sendTelnetOption(TN_WILL, OPT_ATCP);
             raiseProtocolEvent("sysProtocolEnabled", "ATCP");
             break;
         }
-        if (option == static_cast<char>(201) && mpHost->mEnableGMCP) // GMCP support
-        {
+
+        if (option == OPT_GMCP && mpHost->mEnableGMCP) {
+            // GMCP support
             qDebug() << "TELNET IAC DO GMCP";
             enableGMCP = true;
-            sendTelnetOption(TN_WILL, static_cast<char>(201));
+            sendTelnetOption(TN_WILL, OPT_GMCP);
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
         }
-        if (option == MXP) // MXP support
-        {
-            sendTelnetOption(TN_WILL, 91);
+
+        if (option == OPT_MXP && !mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+            // MXP support
+            sendTelnetOption(TN_WILL, OPT_MXP);
             mpHost->mpConsole->print("\n<MXP support enabled>\n");
             raiseProtocolEvent("sysProtocolEnabled", "MXP");
             break;
         }
-        if (option == static_cast<char>(102)) // channel 102 support
+
+        if (option == OPT_102) // channel 102 support
         {
             qDebug() << "TELNET IAC DO CHANNEL 102";
             enableChannel102 = true;
-            sendTelnetOption(TN_WILL, 102);
+            sendTelnetOption(TN_WILL, OPT_102);
             raiseProtocolEvent("sysProtocolEnabled", "channel102");
             break;
         }
@@ -837,11 +889,11 @@ void cTelnet::processTelnetCommand(const string& command)
 #endif
         if (option == OPT_TIMING_MARK) {
             qDebug() << "OK we are willing to enable TIMING_MARK";
-            //send WILL TIMING_MARK
+            // send WILL TIMING_MARK
             sendTelnetOption(TN_WILL, option);
-        } else if (!myOptionState[255])
-        //only if the option is currently disabled
-        {
+        } else if (!myOptionState[idxOption]) {
+            // only if the option is currently disabled
+
             if ((option == OPT_STATUS) || (option == OPT_NAWS) || (option == OPT_TERMINAL_TYPE)) {
                 if (option == OPT_STATUS) {
                     qDebug() << "OK we are willing to enable telnet option STATUS";
@@ -874,27 +926,35 @@ void cTelnet::processTelnetCommand(const string& command)
         qDebug() << "cTelnet::processTelnetCommand() TN_DONT command=" << (quint8)command[2];
 #endif
         option = command[2];
-        if (option == static_cast<char>(OPT_MSDP)) // MSDP got turned off
-        {
+        const auto idxOption = static_cast<size_t>(option);
+        if (option == OPT_MSDP) {
+            // MSDP got turned off
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
         }
-        if (option == static_cast<char>(200)) // ATCP got turned off
-        {
+
+        if (option == OPT_ATCP) {
+            // ATCP got turned off
+            enableATCP = false;
             raiseProtocolEvent("sysProtocolDisabled", "ATCP");
         }
-        if (option == static_cast<char>(201)) // GMCP got turned off
-        {
+
+        if (option == OPT_GMCP) {
+            // GMCP got turned off
+            enableGMCP = false;
             raiseProtocolEvent("sysProtocolDisabled", "GMCP");
         }
-        if (option == MXP) // MXP got turned off
-        {
+
+        if (option == OPT_MXP) {
+            // MXP got turned off
             raiseProtocolEvent("sysProtocolDisabled", "MXP");
         }
-        if (option == static_cast<char>(102)) // channel 102 support
-        {
+
+        if (option == OPT_102) {
+            // channel 102 support
+            enableChannel102 = false;
             raiseProtocolEvent("sysProtocolDisabled", "channel102");
         }
-        int idxOption = option & 0xFF;
+
         if (myOptionState[idxOption] || (!announcedState[idxOption])) {
             sendTelnetOption(TN_WONT, option);
             announcedState[idxOption] = true;
@@ -902,75 +962,83 @@ void cTelnet::processTelnetCommand(const string& command)
         myOptionState[idxOption] = false;
         break;
     }
+
     case TN_SB: {
         option = command[2];
 
         // MSDP
-        if (option == static_cast<char>(OPT_MSDP)) {
+        if (option == OPT_MSDP) {
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
             QByteArray _m = command.c_str();
             if (command.size() < 6) {
                 return;
             }
-            _m = _m.mid(3, command.size() - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.constData(), _m.length());
+            // _m is in the Mud Server's encoding, trim off the Telnet suboption
+            // bytes from beginning (3) and end (2):
+            _m = _m.mid(3, static_cast<int>(command.size()) - 5);
+            mpHost->mLuaInterpreter.msdp2Lua(_m.constData());
             return;
         }
+
         // ATCP
-        if (option == static_cast<char>(200)) {
-            QString _m = command.c_str();
-            if (command.size() < 6) {
+        if (option == OPT_ATCP) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
                 return;
             }
-            _m = _m.mid(3, command.size() - 5);
-            setATCPVariables(_m);
-            if (_m.startsWith("Auth.Request")) {
-                string _h;
-                _h += TN_IAC;
-                _h += TN_SB;
-                _h += static_cast<char>(200);
-                _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
-                _h += TN_IAC;
-                _h += TN_SE;
-                socketOutRaw(_h);
-            }
+            // payload is in the Mud Server's encoding, trim off the Telnet
+            // suboption bytes from beginning (3) and end (2):
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+            setATCPVariables(payload);
 
-            if (_m.startsWith("Client.GUI")) {
+            if (payload.startsWith(QByteArray("Auth.Request"))) {
+                string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_ATCP;
+                // APP_BUILD *could* be a non-ASCII UTF-8 string:
+                output += encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
+                output += TN_IAC;
+                output += TN_SE;
+                socketOutRaw(output);
+            } else if (payload.startsWith(QByteArray("Client.GUI"))) {
                 if (!mpHost->mAcceptServerGUI) {
                     return;
                 }
 
-                QString version = _m.section('\n', 0);
-                version.replace("Client.GUI ", "");
-                version.replace('\n', " ");
-                version = version.section(' ', 0, 0);
+                // payload is still in MUD server encoding at this point, this
+                // will not be a problem for the previous string tests as those
+                // both use ASCII characters that will not change if the
+                // encoding is wrong.
+                QString msg = decodeBytes(payload);
+                QString version = msg.section(QChar::LineFeed, 0);
+                version.remove(QLatin1String("Client.GUI "));
+                version.replace(QChar::LineFeed, QChar::Space);
+                version = version.section(QChar::Space, 0, 0);
 
                 int newVersion = version.toInt();
                 if (mpHost->mServerGUI_Package_version != newVersion) {
                     QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
                                             .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
-                    mpHost->mpConsole->print(_smsg.toLatin1().data());
+                    mpHost->mpConsole->print(_smsg);
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
                     mpHost->mServerGUI_Package_version = newVersion;
                 }
-                QString url = _m.section('\n', 1);
-                QString packageName = url.section('/', -1);
+                QString url = msg.section(QChar::LineFeed, 1);
+                QString packageName = url.section(QLatin1Char('/'), -1);
                 QString fileName = packageName;
-                packageName.replace(".zip", "");
-                packageName.replace("trigger", "");
-                packageName.replace("xml", "");
-                packageName.replace(".mpackage", "");
-                packageName.replace('/', "");
-                packageName.replace('\\', "");
-                packageName.replace('.', "");
-                mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
-                mpHost->mpConsole->print(url);
-                mpHost->mpConsole->print("') (package='");
-                mpHost->mpConsole->print(packageName);
-                mpHost->mpConsole->print("')>\n");
+                packageName.remove(QLatin1String(".zip"));
+                packageName.remove(QLatin1String(".trigger"));
+                packageName.remove(QLatin1String(".xml"));
+                packageName.remove(QLatin1String(".mpackage"));
+                packageName.remove(QLatin1Char('/'));
+                packageName.remove(QLatin1Char('\\'));
+                packageName.remove(QLatin1Char('.'));
+
+                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
-                    mpHost->mpConsole->print("<package is already installed>\n");
+                    postMessage(tr("[  OK  [ - Package is already installed."));
                     return;
                 }
 
@@ -988,64 +1056,78 @@ void cTelnet::processTelnetCommand(const string& command)
         // TODO: Remove these comments. Old boolean taken out for MCCP, and other options which were un-needed code. Rev.3 -MH //
 
         // GMCP
-        if (option == static_cast<char>(201)) {
-            QString rawPayload = command.c_str();
-            if (command.size() < 6) {
+        if (option == OPT_GMCP) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
                 return;
             }
+            // payload is in the Mud Server's encoding, trim off the Telnet suboption
+            // bytes from beginning (3) and end (2):
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
             // strip first 3 characters to get rid of <IAC><SB><201>
             // and strip the last 2 characters to get rid of <IAC><TN_SE>
-            setGMCPVariables(rawPayload.mid(3, rawPayload.size() - 5));
+            setGMCPVariables(payload);
             return;
         }
 
-        if (option == static_cast<unsigned char>(102)) {
-            QString _m = command.c_str();
-            if (command.size() < 6) {
+        if (option == OPT_102) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
                 return;
             }
-            _m = _m.mid(3, command.size() - 5);
-            setChannel102Variables(_m);
+            // payload is in the Mud Server's encoding, trim off the Telnet suboption
+            // bytes from beginning (3) and end (2):
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+            setChannel102Variables(payload);
             return;
         }
-        switch (option) //switch 2
-        {
+
+        switch (option) { //switch 2
         case OPT_STATUS: {
-            //see OPT_TERMINAL_TYPE for explanation why I'm doing this
-            if (true) {
-                qDebug() << "WARNING: FIXME #501";
-                if (command[3] == TNSB_SEND) {
-                    qDebug() << "WARNING: FIXME #504";
-                    //request to send all enabled commands; if server sends his
-                    //own list of commands, we just ignore it (well, he shouldn't
-                    //send anything, as we do not request anything, but there are
-                    //so many servers out there, that you can never be sure...)
-                    string cmd;
-                    cmd += TN_IAC;
-                    cmd += TN_SB;
-                    cmd += OPT_STATUS;
-                    cmd += TNSB_IS;
-                    for (short i = 0; i < 256; i++) {
-                        if (myOptionState[i]) {
-                            cmd += TN_WILL;
-                            cmd += i;
-                        }
-                        if (hisOptionState[i]) {
-                            cmd += TN_DO;
+            if (command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
+                //request to send all enabled commands; if server sends his
+                //own list of commands, we just ignore it (well, he shouldn't
+                //send anything, as we do not request anything, but there are
+                //so many servers out there, that you can never be sure...)
+                // FIXME: This is damaged at the moment as we do not properly take care of the bits for the protocols that we manage ourselves e.g. ATCP/GMCP/MSDP/MXP etc...
+                string cmd;
+                cmd += TN_IAC;
+                cmd += TN_SB;
+                cmd += OPT_STATUS;
+                cmd += TNSB_IS;
+                for (size_t i = 0; i < 256; ++i) {
+                    if (myOptionState[i]) {
+                        cmd += TN_WILL;
+                        cmd += i;
+                        if (i == TN_SB) {
+                            // Handle corner case where byte value is TN_SB
                             cmd += i;
                         }
                     }
-                    cmd += TN_IAC;
-                    cmd += TN_SE;
-                    socketOutRaw(cmd);
+                    if (hisOptionState[i]) {
+                        cmd += TN_DO;
+                        cmd += i;
+                        if (i == TN_SB) {
+                            // Handle corner case where byte value is TN_SB
+                            cmd += i;
+                        }
+                    }
                 }
+                cmd += TN_IAC;
+                cmd += TN_SE;
+                // This assumes that handling the status is exempt from the
+                // need to escape values that would themselves be
+                // interpreted as Telnet protocol bytes themselves -
+                socketOutRaw(cmd);
             }
             break;
         }
 
         case OPT_TERMINAL_TYPE: {
-            if (myOptionState[static_cast<int>(OPT_TERMINAL_TYPE)]) {
-                if (command[3] == TNSB_SEND) {
+            if (command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
+                if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)]) {
                     //server wants us to send terminal type; he can send his own type
                     //too, but we just ignore it, as we have no use for it...
                     string cmd;
@@ -1053,21 +1135,33 @@ void cTelnet::processTelnetCommand(const string& command)
                     cmd += TN_SB;
                     cmd += OPT_TERMINAL_TYPE;
                     cmd += TNSB_IS;
+                    /*
+                     * The valid characters for termTerm are more restricted
+                     * than being ASCII - from:
+                     * https://tools.ietf.org/html/rfc1010 (page 29):
+                     * "A terminal names may be up to 40 characters taken from
+                     * the set of uppercase letters, digits, and the two
+                     * punctuation characters hyphen and slash.  It must start
+                     * with a letter, and end with a letter or digit."
+                     * Once we comply with that we can be certain that Mud
+                     * Server encoding will NOT be an issue!
+                     */
                     cmd += termType.toLatin1().data();
                     cmd += TN_IAC;
                     cmd += TN_SE;
                     socketOutRaw(cmd);
                 }
             }
-            //other cmds should not arrive, as they were not negotiated.
-            //if they do, they are merely ignored
         }
+        //other cmds should not arrive, as they were not negotiated.
+        //if they do, they are merely ignored
         }; //end switch 2
         //other commands are simply ignored (NOP and such, see .h file for list)
     }
     }; //end switch 1
-       // raise sysTelnetEvent for all unhandled protocols
-       // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+
+    // raise sysTelnetEvent for all unhandled protocols
+    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
     if (command[1] != TN_GA && command[1] != TN_EOR) {
         auto type = static_cast<unsigned char>(command[1]);
         auto telnetOption = static_cast<unsigned char>(command[2]);
@@ -1089,51 +1183,67 @@ void cTelnet::processTelnetCommand(const string& command)
     }
 }
 
-void cTelnet::setATCPVariables(const QString& msg)
+// msg is in the Mud Server encoding
+void cTelnet::setATCPVariables(const QByteArray& msg)
 {
+    QString transcodedMsg;
+    if (mpOutOfBandDataIncomingCodec) {
+        // Message is encoded
+        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
+    } else {
+        // Message is in ASCII (though this can handle Utf-8):
+        transcodedMsg = QString::fromUtf8(msg);
+    }
+
     QString var;
     QString arg;
     bool single = true;
-    if (msg.indexOf('\n') > -1) {
-        var = msg.section("\n", 0, 0);
-        arg = msg.section("\n", 1);
+    if (transcodedMsg.indexOf('\n') > -1) {
+        var = transcodedMsg.section(QChar::LineFeed, 0, 0);
+        arg = transcodedMsg.section(QChar::LineFeed, 1);
         single = false;
     } else {
-        var = msg.section(" ", 0, 0);
-        arg = msg.section(" ", 1);
+        var = transcodedMsg.section(QChar::Space, 0, 0);
+        arg = transcodedMsg.section(QChar::Space, 1);
     }
 
-    if (var.startsWith("Client.Compose")) {
+    if (var.startsWith(QLatin1String("Client.Compose"))) {
         QString title;
         if (!single) {
-            title = var.section(" ", 1);
+            title = var.section(QChar::Space, 1);
         } else {
             title = arg;
-            arg = "";
+            arg.clear();
         }
+
         if (mpComposer) {
+            // If we already have the composer out then bail out:
             return;
         }
+
         mpComposer = new dlgComposer(mpHost);
         //FIXME
-        if (arg.startsWith(" ")) {
+        if (arg.startsWith(QChar::Space)) {
             arg.remove(0, 1);
         }
+
         mpComposer->init(title, arg);
         mpComposer->raise();
         mpComposer->show();
         return;
     }
-    var.remove('.');
-    arg.remove('\n');
+
+    var.remove(QLatin1Char('.'));
+    arg.remove(QChar::LineFeed);
     int space = var.indexOf(' ');
     if (space > -1) {
-        arg.prepend(" ");
-        arg = arg.prepend(var.section(" ", 1));
-        var = var.section(" ", 0, 0);
+        arg.prepend(QChar::Space);
+        arg = arg.prepend(var.section(QChar::Space, 1));
+        var = var.section(QChar::Space, 0, 0);
     }
+
     mpHost->mLuaInterpreter.setAtcpTable(var, arg);
-    if (var.startsWith("RoomNum")) {
+    if (var.startsWith(QLatin1String("RoomNum"))) {
         if (mpHost->mpMap) {
             mpHost->mpMap->mRoomIdHash[mpHost->getName()] = arg.toInt();
             if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
@@ -1144,27 +1254,36 @@ void cTelnet::setATCPVariables(const QString& msg)
     }
 }
 
-void cTelnet::setGMCPVariables(const QString& msg)
+void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-    QString var;
-    QString arg;
-    if (msg.indexOf('\n') > -1) {
-        var = msg.section(QChar::LineFeed, 0, 0);
-        arg = msg.section(QChar::LineFeed, 1);
+    QString transcodedMsg;
+    if (mpOutOfBandDataIncomingCodec) {
+        // Message is encoded
+        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
-        var = msg.section(QChar::Space, 0, 0);
-        arg = msg.section(QChar::Space, 1);
+        // Message is in ASCII (though this can handle Utf-8):
+        transcodedMsg = QString::fromUtf8(msg);
     }
 
-    if (msg.startsWith(QStringLiteral("Client.GUI"))) {
+    QString var;
+    QString arg;
+    if (msg.indexOf(QChar::LineFeed) > -1) {
+        var = transcodedMsg.section(QChar::LineFeed, 0, 0);
+        arg = transcodedMsg.section(QChar::LineFeed, 1);
+    } else {
+        var = transcodedMsg.section(QChar::Space, 0, 0);
+        arg = transcodedMsg.section(QChar::Space, 1);
+    }
+
+    if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"))) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
 
-        QString version = msg.section('\n', 0);
+        QString version = transcodedMsg.section(QChar::LineFeed, 0);
         version.remove(QStringLiteral("Client.GUI "));
         version.replace(QChar::LineFeed, QChar::Space);
-        version = version.section(' ', 0, 0);
+        version = version.section(QChar::Space, 0, 0);
 
         int newVersion = version.toInt();
         if (mpHost->mServerGUI_Package_version != newVersion) {
@@ -1174,23 +1293,19 @@ void cTelnet::setGMCPVariables(const QString& msg)
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;
         }
-        QString url = msg.section('\n', 1);
-        QString packageName = url.section('/', -1);
+        QString url = transcodedMsg.section(QChar::LineFeed, 1);
+        QString packageName = url.section(QLatin1Char('/'), -1);
         QString fileName = packageName;
-        packageName.replace(".zip", "");
-        packageName.replace("trigger", "");
-        packageName.replace("xml", "");
-        packageName.replace(".mpackage", "");
-        packageName.replace('/', "");
-        packageName.replace('\\', "");
-        packageName.replace('.', "");
-        mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
-        mpHost->mpConsole->print(url);
-        mpHost->mpConsole->print("') (package='");
-        mpHost->mpConsole->print(packageName);
-        mpHost->mpConsole->print("')>\n");
+        packageName.remove(QLatin1String(".zip"));
+        packageName.remove(QLatin1String(".trigger"));
+        packageName.remove(QLatin1String(".xml"));
+        packageName.remove(QLatin1String(".mpackage"));
+        packageName.remove(QLatin1Char('/'));
+        packageName.remove(QLatin1Char('\\'));
+        packageName.remove(QLatin1Char('.'));
+        postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
-            mpHost->mpConsole->print("<package is already installed>\n");
+            postMessage(tr("[  OK  ] - Package is already installed."));
             return;
         }
 
@@ -1202,9 +1317,9 @@ void cTelnet::setGMCPVariables(const QString& msg)
         mpProgressDialog->show();
         return;
     }
-    arg.remove('\n');
+    arg.remove(QChar::LineFeed);
     // remove \r's from the data, as yajl doesn't like it
-    arg.remove(QChar('\r'));
+    arg.remove(QChar::CarriageReturn);
     mpHost->mLuaInterpreter.setGMCPTable(var, arg);
 }
 
@@ -1228,48 +1343,54 @@ void cTelnet::atcpComposerCancel()
     }
     mpComposer->close();
     mpComposer = nullptr;
-    string msg = "*q\nno\n";
-    socketOutRaw(msg);
+    // This will be unaffected by Mud Server encoding:
+    string output = "*q\nno\n";
+    socketOutRaw(output);
 }
 
 void cTelnet::atcpComposerSave(QString txt)
 {
     if (!mpHost->mEnableGMCP) {
-        //olesetbuf \n <text>
-        string _h;
-        _h += TN_IAC;
-        _h += TN_SB;
-        _h += static_cast<char>(200);
-        _h += "olesetbuf \n ";
-        _h += txt.toLatin1().data();
-        _h += '\n';
-        _h += TN_IAC;
-        _h += TN_SE;
-        socketOutRaw(_h);
-        _h.clear();
-        _h += "*s\n";
-        socketOutRaw(_h);
-    } else {
-        string _h;
-        _h += TN_IAC;
-        _h += TN_SB;
-        _h += GMCP;
-        _h += "IRE.Composer.SetBuffer";
-        if (txt != "") {
-            _h += "  ";
-            _h += txt.toLatin1().data();
-            _h += " ";
+        if (enableATCP) {
+            //olesetbuf \n <text>
+            string output;
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_ATCP;
+            output += "olesetbuf \n ";
+            output += encodeAndCookBytes(txt.toStdString());
+            output += '\n';
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+
+            output = "*s\n";
+            socketOutRaw(output);
         }
-        _h += TN_IAC;
-        _h += TN_SE;
-        socketOutRaw(_h);
-        _h.clear();
-        _h += "*s\n";
-        socketOutRaw(_h);
+
+    } else if (enableGMCP) {
+        string output;
+        output += TN_IAC;
+        output += TN_SB;
+        output += OPT_GMCP;
+        output += "IRE.Composer.SetBuffer";
+        if (!txt.isEmpty()) {
+            output += "  ";
+            output += encodeAndCookBytes(txt.toStdString());
+            output += " ";
+        }
+        output += TN_IAC;
+        output += TN_SE;
+        socketOutRaw(output);
+
+        output = "*s\n";
+        socketOutRaw(output);
     }
+
     if (!mpComposer) {
         return;
     }
+
     mpComposer->close();
     mpComposer = nullptr;
 }
@@ -1983,4 +2104,58 @@ void cTelnet::setKeepAlive(int socketHandle)
     // Number of failed keep alives before forcing a close:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
 #endif // defined(Q_OS_WIN32)
+}
+
+// Used to convert a collection of Bytes in the current MUD Server encoding
+// to the UTF-16BE encoding used for QString and then back to a series of bytes
+// as a QByteArray - note that it does NOT retain states between calls as it
+// assumes each call is a complete separate chunk of text - should this not
+// prove to be the case in practice it will be necessary to fork-off seperate
+// instances of this method for each OOB protocol that uses this DECODER:
+QByteArray cTelnet::decodeBytes(const char* bytes)
+{
+    // Check this each packet
+    QString usedEncoding = mpHost->mTelnet.getEncoding();
+    if (mEncoding != usedEncoding) {
+        encodingChanged(usedEncoding);
+    }
+
+    if (mpOutOfBandDataIncomingCodec) {
+        // (QString) QTextCodec::toUnicode(const char *chars) const converts
+        // from given encoding to the QString UTF-16BE Unicode form:
+        return mpOutOfBandDataIncomingCodec->toUnicode(bytes).toUtf8().constData();
+    } else {
+        return QByteArray(bytes);
+    }
+}
+
+// Converts a Unicode (UTF-8) encoded std::string into the current Mud Server
+// encoding and cooks any 0xff bytes by doubling them to get them through Telnet
+// protocol handling in the Server - this is needed, at least, for the following
+//  characters in the following encodings which WILL become the 0xff value:
+// 'ÿ' {U+00FF Latin small letter y with diaresis} ==> ISO 8859-1/9/14/15/16
+// '˙' {U+02D9 Dot above}                          ==> ISO 8859-2/3/4
+// 'џ' {U+045F Cyrillic small letter dzhe}         ==> ISO 8859-5
+// 'ĸ' {U+0138 Latin small letter kra}             ==> ISO 8859-10
+// '’' {U+2019 Right single quotation mark}        ==> ISO 8859-13
+// '<nbsp>' {U+00A0 Non-breaking space}            ==> CP-850
+std::string cTelnet::encodeAndCookBytes(const std::string& data)
+{
+    // Check this each packet
+    QString usedEncoding = mpHost->mTelnet.getEncoding();
+    if (mEncoding != usedEncoding) {
+        encodingChanged(usedEncoding);
+    }
+
+    if (mpOutOfBandDataIncomingCodec) {
+        // QTextCodec::fromUnicode(...) converts from QString in UTF16BE
+        // encoding to the required Mud Server encoding as a QByteArray,
+        // QString::fromStdString(...) converts from a UTF8 encoded std::string
+        // to a UTF16BE encoded QString:
+        return mudlet::ReplaceString(mpOutOfBandDataIncomingCodec->fromUnicode(QString::fromStdString(data)).toStdString(), "\xff", "\xff\xff");
+    } else {
+        // std::string::c_str() converts the std::string into a char array WITH
+        // a garenteed terminating null byte.
+        return mudlet::ReplaceString(data, "\xff", "\xff\xff");
+    }
 }

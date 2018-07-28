@@ -109,7 +109,6 @@ public:
 
     void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
-    void sendRaw(QString s);
 
     int getHostID()
     {

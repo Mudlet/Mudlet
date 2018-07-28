@@ -70,6 +70,9 @@ class Host;
 class dlgComposer;
 
 
+const char TN_BELL = static_cast<char>(7);
+
+const char TN_EOR = static_cast<char>(239);
 const char TN_SE = static_cast<char>(240);
 const char TN_NOP = static_cast<char>(241);
 const char TN_DM = static_cast<char>(242);
@@ -86,11 +89,10 @@ const char TN_WONT = static_cast<char>(252);
 const char TN_DO = static_cast<char>(253);
 const char TN_DONT = static_cast<char>(254);
 const char TN_IAC = static_cast<char>(255);
-const char TN_EOR = static_cast<char>(239);
-const char TN_BELL = static_cast<char>(7);
 
-const char GMCP = static_cast<char>(201);
-const char MXP = 91;
+const char TNSB_IS = 0;
+const char TNSB_SEND = 1;
+
 
 const char OPT_ECHO = 1;
 const char OPT_STATUS = 5;
@@ -103,8 +105,17 @@ const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
-const char TNSB_IS = 0;
-const char TNSB_SEND = 1;
+const char OPT_102 = 102;
+const char OPT_ATCP = static_cast<char>(200);
+const char OPT_GMCP = static_cast<char>(201);
+
+const char MSDP_VAR = 1;
+const char MSDP_VAL = 2;
+const char MSDP_TABLE_OPEN = 3;
+const char MSDP_TABLE_CLOSE = 4;
+const char MSDP_ARRAY_OPEN = 5;
+const char MSDP_ARRAY_CLOSE = 6;
+
 
 class cTelnet : public QObject
 {
@@ -117,8 +128,8 @@ public:
     void connectIt(const QString& address, int port);
     void disconnect();
     bool sendData(QString& data);
-    void setATCPVariables(const QString& _msg);
-    void setGMCPVariables(const QString& _msg);
+    void setATCPVariables(const QByteArray&);
+    void setGMCPVariables(const QByteArray&);
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
@@ -138,6 +149,12 @@ public:
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
     const QString& getFriendlyEncoding();
+    QByteArray decodeBytes(const char*);
+    std::string encodeAndCookBytes(const std::string&);
+    bool isATCPEnabled() const { return enableATCP; }
+    bool isGMCPEnabled() const { return enableGMCP; }
+    bool isChannel102Enabled() const { return enableChannel102; }
+
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -181,10 +198,12 @@ private:
     void setKeepAlive(int socketHandle);
     void processChunks();
 
+
     QPointer<Host> mpHost;
     QTcpSocket socket;
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
+    QTextCodec* mpOutOfBandDataIncomingCodec;
     QTextCodec* outgoingDataCodec;
 //    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder;
@@ -200,9 +219,16 @@ private:
     bool mNeedDecompression;
     std::string command;
     bool iac, iac2, insb;
-    bool myOptionState[256], hisOptionState[256];
+    // Set if we have negotiated the use of the option by us:
+    bool myOptionState[256];
+    // Set if he has negotiated the use of the option by him:
+    bool hisOptionState[256];
+    // Set if we have tried to negotiate the use of the option by us:
     bool announcedState[256];
+    // Set if the Server tried to negotiate the use of the option by him:
     bool heAnnouncedState[256];
+    // BUG: never set to be true - but seems to hold our intention to want to
+    // enable our use of the option!
     bool triedToEnable[256];
     bool recvdGA;
 

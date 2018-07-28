@@ -2920,7 +2920,7 @@ void mudlet::slot_send_login()
     }
     Host* pHost = tempHostQueue.dequeue();
     QString login = pHost->getLogin();
-    pHost->sendRaw(login);
+    pHost->mTelnet.sendData(login);
 }
 
 void mudlet::slot_send_pass()
@@ -2930,7 +2930,7 @@ void mudlet::slot_send_pass()
     }
     Host* pHost = tempHostQueue.dequeue();
     QString pass = pHost->getPass();
-    pHost->sendRaw(pass);
+    pHost->mTelnet.sendData(pass);
 }
 //////////////////////////////////////////////////////////////////////////////
 
@@ -3737,4 +3737,14 @@ QStringList mudlet::getAvailableFonts()
     QFontDatabase database;
 
     return database.families(QFontDatabase::Any);
+}
+
+std::string mudlet::ReplaceString(std::string subject, const std::string& search, const std::string& replace)
+{
+    size_t pos = 0;
+    while ((pos = subject.find(search, pos)) != std::string::npos) {
+         subject.replace(pos, search.length(), replace);
+         pos += replace.length();
+    }
+    return subject;
 }

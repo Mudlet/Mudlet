@@ -5461,112 +5461,135 @@ int TLuaInterpreter::showToolBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendATCP
 int TLuaInterpreter::sendATCP(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendATCP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        return lua_error(L);
     } else {
-        msg = lua_tostring(L, 1);
+        msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
     string what;
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "sendATCP: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        what = lua_tostring(L, 2);
+    if (lua_gettop(L) > 1) {
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            return lua_error(L);
+        } else {
+            what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
+        }
     }
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += static_cast<char>(200);
-    _h += msg;
-    if (!what.empty()) {
-        _h += " ";
-        _h += what;
-    }
-    _h += TN_IAC;
-    _h += TN_SE;
 
-    Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
-    return 0;
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_ATCP;
+    output += msg;
+    if (!what.empty()) {
+        output += " ";
+        output += what;
+    }
+    output += TN_IAC;
+    output += TN_SE;
+
+    if (!host.mTelnet.isATCPEnabled()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "ATCP is not currently enabled by negotiation with the server");
+        return 2;
+    }
+
+    // output is in Mud Server Encoding form here:
+    if (! host.mTelnet.socketOutRaw(output)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "unable to send some or all of the ATCP message as there was a problem with the connection to the server");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendGMCP
 int TLuaInterpreter::sendGMCP(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendGMCP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        return lua_error(L);
     } else {
-        msg = lua_tostring(L, 1);
+        msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
     string what;
-    if (lua_isstring(L, 2)) {
-        what = lua_tostring(L, 2);
+    if (lua_gettop(L) > 1) {
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            return lua_error(L);
+        } else {
+            what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
+        }
     }
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += GMCP;
-    _h += msg;
-    if (!what.empty()) {
-        _h += " ";
-        _h += what;
-    }
-    _h += TN_IAC;
-    _h += TN_SE;
 
-    Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
-    return 0;
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_GMCP;
+    output += msg;
+    if (!what.empty()) {
+        output += " ";
+        output += what;
+    }
+    output += TN_IAC;
+    output += TN_SE;
+
+    if (!host.mTelnet.isGMCPEnabled()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "GMCP is not currently enabled by negotiation with the server");
+        return 2;
+    }
+
+    // output is in Mud Server Encoding form here:
+    if (! host.mTelnet.socketOutRaw(output)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "unable to send some or all of the GMCP message as there was a problem with the connection to the server");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
-#define MSDP_VAR 1
-#define MSDP_VAL 2
-#define MSDP_TABLE_OPEN 3
-#define MSDP_TABLE_CLOSE 4
-#define MSDP_ARRAY_OPEN 5
-#define MSDP_ARRAY_CLOSE 6
-#define IAC 255
-#define SB 250
-#define SE 240
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendMSDP
 int TLuaInterpreter::sendMSDP(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     string variable;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendMSDP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendMSDP: bad argument #1 type (variable name as string expected, got %1!)", luaL_typename(L,1));
+        return lua_error(L);
     } else {
-        variable = lua_tostring(L, 1);
+        variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += OPT_MSDP;
-    _h += MSDP_VAR;
-    _h += variable;
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_MSDP;
+    output += MSDP_VAR;
+    output += variable;
 
     int n = lua_gettop(L);
-    for (int i = 2; i <= n; i++) {
-        _h += MSDP_VAL;
-        _h += lua_tostring(L, i);
+    for (int i = 2; i <= n; ++i) {
+        output += MSDP_VAL;
+        output += host.mTelnet.encodeAndCookBytes(lua_tostring(L, i));
     }
 
-    _h += TN_IAC;
-    _h += TN_SE;
+    output += TN_IAC;
+    output += TN_SE;
 
-    Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
+    // output is in Mud Server Encoding form here:
+    host.mTelnet.socketOutRaw(output);
     return 0;
 }
 
@@ -5575,23 +5598,45 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 {
     string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendTelnetChannel102: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendTelnetChannel102: bad argument #1 type (message bytes {2 characters} as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         msg = lua_tostring(L, 1);
+        if (msg.length() != 2) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid message of length %d supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)",
+                            msg.length());
+            return 2;
+        }
     }
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += 102;
-    _h += msg;
-    _h += TN_IAC;
-    _h += TN_SE;
+
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_102;
+    output += msg;
+    output += TN_IAC;
+    output += TN_SE;
 
     Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
-    return 0;
+    if (host.mTelnet.isChannel102Enabled()) {
+        // We have already validated output to contain a 2 byte payload so we
+        // should not need to worry about the "encoding" in this use of
+        // socketOutRaw(...) - with the exception of handling any occurance of
+        // 0xFF as either of the bytes to send - however Aardwolf does not use
+        // *THAT* value so, though it is probably okay to not worry about the
+        // need to "escape" it to get it through the telnet protocol unscathed
+        // it is trival to fix:
+        output = mudlet::ReplaceString(output, "\xff", "\xff\xff");
+        host.mTelnet.socketOutRaw(output);
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unable to send message as the 102 subchannel support has not been enabled by the MUD Server");
+        return 2;
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getButtonState
@@ -10690,25 +10735,33 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#expandAlias
 int TLuaInterpreter::expandAlias(lua_State* L)
 {
-    string luaSendText;
+    QString payload;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "expandAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "expandAlias: bad argument #1 type (text to parse as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        payload = QString::fromUtf8(lua_tostring(L, 1));
     }
+
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
         // check if the 2nd argument is a 'false', but don't match if it is 'nil'
         // because expandAlias("command") should be the same as expandAlias("command", nil)
-        if (lua_isboolean(L, 2) && !lua_toboolean(L, 2)) {
+        if (lua_isnil(L, 2)) {
             wantPrint = false;
+        } else if (!lua_toboolean(L, 2)) {
+            lua_pushfstring(L, "expandAlias: bad argument #2 type (echo as boolean is optional, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            wantPrint = lua_toboolean(L, 2);
         }
     }
     Host& host = getHostFromLua(L);
-    host.send(QString(luaSendText.c_str()), wantPrint, false);
-    return 0;
+    // Host::send will encode the UTF encoded data here in the wanted Server
+    // encoding:
+    host.send(payload, wantPrint, false);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine
@@ -10739,45 +10792,53 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send -- not #sendRaw - compare initLuaGlobals()
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send
+// Note this is registered as send NOT sendRaw - see initLuaGlobals()
+// It converts the bytes in the command (the first argument) from Utf-8 to be
+// encoded in the required Mud Server encoding.
 int TLuaInterpreter::sendRaw(lua_State* L)
 {
-    string luaSendText;
+    QString text;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendRaw: bad argument #1 (string expected, got %s)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "send: bad argument #1 type (command as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        text = QString::fromUtf8(lua_tostring(L, 1));
     }
+
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "sendRaw: bad argument #2 (boolean expected, got %s)", luaL_typename(L, 2));
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "send: bad argument #2 type (showOnScreen as boolean expected, got %s)", luaL_typename(L, 2));
+            return lua_error(L);
         } else {
             wantPrint = lua_toboolean(L, 2);
         }
     }
     Host& host = getHostFromLua(L);
-    host.send(QString(luaSendText.c_str()), wantPrint, true);
-    return 0;
+    // Host::send will encode the UTF encoded data here in the wanted Server
+    // encoding:
+    host.send(text, wantPrint, true);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendSocket
+// The data can, theoretically, contain embedded ASCII NUL characters:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
-    string luaSendText;
+    string data;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendSocket: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendSocket: bad argument #1 type (data as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        data = lua_tostring(L, 1);
     }
+
     Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(luaSendText);
+    // msg is not in an encoded form here it is a literal set of bytes, which
+    // is what this usage needs:
+    host.mTelnet.socketOutRaw(data);
     return 0;
 }
 
@@ -11451,9 +11512,10 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
     bool __needMerge = false;
     lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
+    Host& host = getHostFromLua(L);
     if (lua_istable(L, -1)) {
         // only merge tables (instead of replacing them) if the key has been registered as a need to merge key by the user default is Char.Status only
-        if (mpHost->mGMCP_merge_table_keys.contains(key)) {
+        if (host.mGMCP_merge_table_keys.contains(key)) {
             __needMerge = true;
         }
     }
@@ -11526,7 +11588,6 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(key);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        Host& host = getHostFromLua(L);
         if (mudlet::debugMode) {
             QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
             host.mpConsole->printSystemMessage(msg);
@@ -11557,19 +11618,22 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::msdp2Lua(const char* src, size_t srclen)
+// src is in Mud Server encoding and may need transcoding
+void TLuaInterpreter::msdp2Lua(const char* src)
 {
-    qDebug().nospace().noquote() << "<MSDP><" << src << ">";
+    Host& host = getHostFromLua(pGlobalLua);
+    QByteArray transcodedSrc = host.mTelnet.decodeBytes(src);
+    qDebug().nospace().noquote() << "<MSDP><" << transcodedSrc << ">";
     QStringList varList;
     QByteArray lastVar;
-    size_t i = 0;
+    int textLength = transcodedSrc.length();
     int nest = 0;
     quint8 last = 0;
 
     QByteArray script;
     bool no_array_marker_bug = false;
-    while (i < srclen) {
-        switch (src[i]) {
+    for (int i = 0; i < textLength; ++i) {
+        switch (transcodedSrc.at(i)) {
         case MSDP_TABLE_OPEN:
             script.append('{');
             ++nest;
@@ -11636,7 +11700,7 @@ void TLuaInterpreter::msdp2Lua(const char* src, size_t srclen)
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                 script.append(',');
             }
-            if (src[i + 1] != MSDP_TABLE_OPEN && src[i + 1] != MSDP_ARRAY_OPEN) {
+            if (transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) {
                 script.append('\"');
             }
             varList.append(QString::fromUtf8(lastVar));
@@ -11649,11 +11713,10 @@ void TLuaInterpreter::msdp2Lua(const char* src, size_t srclen)
             script.append('\"');
             break;
         default:
-            script.append(src[i]);
-            lastVar.append(src[i]);
+            script.append(transcodedSrc.at(i));
+            lastVar.append(transcodedSrc.at(i));
             break;
         }
-        i++;
     }
     if (last != MSDP_ARRAY_CLOSE && last != MSDP_TABLE_CLOSE) {
         script.append('\"');

@@ -112,10 +112,6 @@ TCommandLine::~TCommandLine()
     Hunspell_destroy(mpHunspell);
 }
 
-void TCommandLine::slot_textChanged(const QString& text)
-{
-}
-
 void TCommandLine::processNormalKey(QEvent* event)
 {
     QPlainTextEdit::event(event);
@@ -671,11 +667,6 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         selectAll();
     }
     adjustHeight();
-}
-
-void TCommandLine::slot_sendCommand(const char* pS)
-{
-    mpHost->sendRaw(QString(pS));
 }
 
 // TAB completion mode gets turned on by the tab key.

@@ -522,13 +522,13 @@ QPair<QString, QString> Host::getSearchEngine()
         return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
 }
 
+// cmd is UTF-16BE encoded here, but will be transcoded to Server's one by
+// cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
     if (wantPrint && mPrintCommand) {
         mInsertedMissingLF = true;
-        if ((cmd == "") && (mUSE_IRE_DRIVER_BUGFIX) && (!mUSE_FORCE_LF_AFTER_PROMPT)) {
-            ;
-        } else {
+        if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
@@ -546,15 +546,17 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     if (!dontExpandAliases) {
         // allow sending blank commands
         if (commandList.empty()) {
-            sendRaw("\n");
+            QString payload(QChar::LineFeed);
+            mTelnet.sendData(payload);
             return;
         }
     }
-    for (int i = 0; i < commandList.size(); i++) {
-        if (commandList[i].size() < 1) {
+
+    for (int i = 0, total = commandList.size(); i < total; ++i) {
+        if (commandList.at(i).isEmpty()) {
             continue;
         }
-        QString command = commandList[i];
+        QString command = commandList.at(i);
         command.remove(QChar::LineFeed);
         if (dontExpandAliases) {
             mTelnet.sendData(command);
@@ -565,11 +567,6 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mTelnet.sendData(command);
         }
     }
-}
-
-void Host::sendRaw(QString command)
-{
-    mTelnet.sendData(command);
 }
 
 int Host::createStopWatch()

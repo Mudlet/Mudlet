@@ -266,6 +266,9 @@ public:
     void createMapper(bool loadDefaultMap = true);
 
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
+    // From https://stackoverflow.com/a/14678964/4805858 an answer to:
+    // "How to find and replace string?" by "Czarek Tomczak":
+    static std::string ReplaceString(std::string subject, const std::string& search, const std::string& replace);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'
