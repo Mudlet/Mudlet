@@ -86,11 +86,7 @@ TAction* ActionUnit::findAction(const QString& name)
 std::vector<TAction*> ActionUnit::findActionsByName(const QString& name)
 {
     std::vector<TAction*> actions;
-#if QT_VERSION < QT_VERSION_CHECK(5, 7, 0)
-    for (auto action : mActionMap) {
-#else
     for (auto action : qAsConst(mActionMap)) {
-#endif
         if (action->getName() == name) {
             actions.push_back(action);
         }

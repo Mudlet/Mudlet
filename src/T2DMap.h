@@ -165,7 +165,7 @@ public slots:
     void slot_customLineColor();
     void shiftZup();
     void shiftZdown();
-    void slot_switchArea(QString);
+    void slot_switchArea(const QString&);
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();
@@ -197,6 +197,8 @@ public slots:
     void slot_customLineAddPoint();
     void slot_customLineRemovePoint();
     void slot_cancelCustomLineDialog();
+    void slot_loadMap();
+    void slot_newMap();
 
 private:
     void resizeMultiSelectionWidget();

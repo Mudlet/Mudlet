@@ -30,6 +30,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPointer>
+#include <QProcess>
 #include <QThread>
 #include <QTimer>
 #include <edbee/texteditorwidget.h>
@@ -78,9 +79,12 @@ public:
     void initLuaGlobals();
     void initIndenterGlobals();
     bool call(const QString& function, const QString& mName);
+    std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
+    std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void*);
+    bool call_luafunction(void* pT);
+    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
@@ -107,13 +111,13 @@ public:
     int startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
-    int startTempTrigger(const QString&, const QString&);
-    int startTempBeginOfLineTrigger(const QString&, const QString&);
-    int startTempExactMatchTrigger(const QString&, const QString&);
-    int startTempLineTrigger(int, int, const QString&);
-    int startTempRegexTrigger(const QString&, const QString&);
-    int startTempColorTrigger(int, int, const QString&);
-    int startTempPromptTrigger(const QString& function);
+    int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
+    int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempLineTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
@@ -195,6 +199,7 @@ public:
     static int clearSpecialExits(lua_State*);
     static int solveRoomCollisions(lua_State*);
     static int setGridMode(lua_State* L);
+    static int getGridMode(lua_State* L);
     static int getCustomEnvColorTable(lua_State* L);
     static int setRoomName(lua_State*);
     static int getRoomName(lua_State*);
@@ -437,7 +442,7 @@ public:
 public slots:
     void slot_replyFinished(QNetworkReply*);
     void slotPurge();
-    void slotDeleteSender();
+    void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
     QNetworkAccessManager* mpFileDownloader;

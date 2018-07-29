@@ -27,7 +27,7 @@ dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_alias_name, SIGNAL(editingFinished()), this, SLOT(slot_editing_name_finished()));
+    connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editing_name_finished);
 }
 
 void dlgAliasMainArea::trimName()

@@ -34,8 +34,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
-    error("Mudlet requires Qt 5.6 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 7)) {
+    error("Mudlet requires Qt 5.7 or later")
 }
 
 # Including IRC Library
@@ -139,7 +139,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.10.2
+VERSION = 3.11.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -286,6 +286,7 @@ unix:!macx {
         -lglut \
         -lglu32 \
         -lpugixml \
+        -lWs2_32 \
         -L"$${MINGW_BASE_DIR}\\bin"
     INCLUDEPATH += \
                    "C:\\Libraries\\boost_1_67_0" \
@@ -1265,7 +1266,6 @@ unix:!macx {
         LUA_LCF_L5_WORKSHOP_FORMATS_LUA__TABLE_SAVE_INSTALL__NODE__HANDLERS \
         LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE__CODE \
         LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE__CODE_SAVE \
-        LUA_LCF_L4_WORKSHOP_FORMATS_SH \
         LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT \
         LUA_LCF_L2_WORKSHOP_LUA \
         LUA_LCF_L3_WORKSHOP_LUA_CODE \
@@ -1290,7 +1290,7 @@ unix:!macx {
         LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT \
         LUA_LCF_L2_WORKSHOP_NUMBER \
         LUA_LCF_L2_WORKSHOP_STRING \
-        LUA_LCF_L3_WORKSHOP_STRING_LINE \
+        LUA_LCF_L3_WORKSHOP_STRING_LINES \
         LUA_LCF_L2_WORKSHOP_STRUC \
         LUA_LCF_L2_WORKSHOP_SYSTEM \
         LUA_LCF_L2_WORKSHOP_TABLE \
