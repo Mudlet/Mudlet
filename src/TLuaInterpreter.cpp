@@ -62,11 +62,6 @@
 #include <assert.h>
 #include <list>
 #include <string>
-
-//#undef lua_register
-//#define lua_register(L,n,f) ( mLuaFunctionNames << n, lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
-
-
 #include "post_guard.h"
 // Provides the lua zip module for MacOs platform that does not have an easy way
 // to provide it as a prebuilt library module (unlike Windows/Linux) - was
