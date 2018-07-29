@@ -46,6 +46,7 @@ public slots:
     void slot_save_name();
     void slot_update_url(const QString &);
     void slot_update_port(QString);
+    void slot_update_SSL_TSL_port(int state);
     void slot_update_login(const QString &);
     void slot_update_pass(const QString &);
     void slot_update_website(const QString &);
@@ -58,6 +59,7 @@ public slots:
     void slot_reallyDeleteProfile();
 
     void slot_update_autologin(int state);
+    void slot_update_autoreconnect(int state);
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();

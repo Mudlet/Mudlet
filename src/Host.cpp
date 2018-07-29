@@ -733,7 +733,7 @@ bool Host::killTrigger(const QString& name)
 
 void Host::connectToServer()
 {
-    mTelnet.connectIt(mUrl, mPort);
+    mTelnet.connectIt(mUrl, mPort, mSslTsl);
 }
 
 void Host::closingDown()

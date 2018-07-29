@@ -71,6 +71,7 @@ cTelnet::cTelnet(Host* pH)
 , mMCCP_version_2(false)
 , mpProgressDialog()
 , hostPort()
+, host_ssl_tsl()
 , networkLatencyMin()
 , networkLatencyMax()
 , mWaitingForResponse()
@@ -85,6 +86,7 @@ cTelnet::cTelnet(Host* pH)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
+    user_disconnect  = false;
 
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -254,7 +256,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     return qMakePair(true, QString());
 }
 
-void cTelnet::connectIt(const QString& address, int port)
+void cTelnet::connectIt(const QString& address, int port, bool ssl_tsl)
 {
     // wird an dieser Stelle gesetzt
     if (mpHost) {
@@ -265,12 +267,13 @@ void cTelnet::connectIt(const QString& address, int port)
 
     if (socket.state() != QAbstractSocket::UnconnectedState) {
         socket.abort();
-        connectIt(address, port);
+        connectIt(address, port, ssl_tsl);
         return;
     }
 
     hostName = address;
     hostPort = port;
+    host_ssl_tsl = ssl_tsl;
     QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
     postMessage(server);
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
@@ -280,6 +283,7 @@ void cTelnet::connectIt(const QString& address, int port)
 void cTelnet::disconnect()
 {
     socket.disconnectFromHost();
+    user_disconnect = true;
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -342,11 +346,17 @@ void cTelnet::handle_socket_signal_disconnected()
         postMessage(err);
         postMessage(msg);
     }
+    if ((!user_disconnect) && (mAutoReconnect)) {
+        connectIt(hostName,hostPort,host_ssl_tsl);
+    }
 }
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
-    if (!hostInfo.addresses().isEmpty()) {
+    if (host_ssl_tsl) {
+        socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
+
+    } else if (!hostInfo.addresses().isEmpty()) {
         mHostAddress = hostInfo.addresses().constFirst();
         postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
         postMessage(tr("[ INFO ]  - Trying to connect to %1: %2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
@@ -1217,6 +1227,11 @@ void cTelnet::setChannel102Variables(const QString& msg)
         int _a = msg.at(1).toLatin1();
         mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
     }
+}
+
+void cTelnet::setReconnect(bool status)
+{
+    mAutoReconnect = status;
 }
 
 void cTelnet::atcpComposerCancel()

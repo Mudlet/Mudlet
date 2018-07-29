@@ -52,7 +52,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
-    connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
+    connect_button = dialog_buttonbox->button(QDialogButtonBox::Apply);
+    connect_button->setText("Co&nnect");
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
@@ -93,7 +94,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         QIcon icon_new(QIcon::fromTheme(QStringLiteral("document-new"), QIcon(QStringLiteral(":/icons/document-new.png"))));
         QIcon icon_connect(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":/icons/dialog-ok-apply.png"))));
 
-        connect_button->setIcon(icon_connect);
+        connect_button->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
         new_profile_button->setIcon(icon_new);
         copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
         remove_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))));
@@ -141,7 +142,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_save_name);
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
+    connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_SSL_TSL_port);
     connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
+    connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoreconnect);
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
@@ -278,13 +281,24 @@ void dlgConnectionProfiles::slot_update_autologin(int state)
     writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
 }
 
+void dlgConnectionProfiles::slot_update_autoreconnect(int state)
+{
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    if (!pItem) {
+        return;
+    }
+    QString profile = pItem->text();
+    writeProfileData(profile, QStringLiteral("autoreconnect"), QString::number(state));
+}
+
 void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
 {
     QString port = port_entry->text().trimmed();
 
     if (ignoreBlank.isEmpty()) {
         validPort = false;
-        connect_button->setDisabled(true);
+        if (connect_button)
+            connect_button->setDisabled(true);
         return;
     }
 
@@ -330,6 +344,16 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
             port_entry->setPalette(mErrorPalette);
         }
     }
+}
+
+void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
+{
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    if (!pItem) {
+        return;
+    }
+    QString profile = pItem->text();
+    writeProfileData(profile, QStringLiteral("ssl_tsl"), QString::number(state));
 }
 
 void dlgConnectionProfiles::slot_update_name(const QString newName)
@@ -819,67 +843,111 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
     host_name_entry->setText(host_url);
 
+
     QString host_port = readProfileData(profile, QStringLiteral("port"));
+    QString val = readProfileData(profile, QStringLiteral("ssl_tsl"));
+    if (val.toInt() == Qt::Checked) {
+        port_ssl_tsl->setChecked(true);
+    } else {
+        port_ssl_tsl->setChecked(false);
+    }
+
     if (host_port.isEmpty()) {
-        // Port to connect to
         if (profile_name == QStringLiteral("Avalon.de")) {
+            //host_url = QStringLiteral("avalon.mud.de");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("God Wars II")) {
+            //host_url = QStringLiteral("godwars2.org");
             host_port = QStringLiteral("3000");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Materia Magica")) {
+            //host_url = QStringLiteral("materiamagica.com");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("BatMUD")) {
+            //host_url = QStringLiteral("batmud.bat.org");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Aardwolf")) {
+            //host_url = QStringLiteral("aardmud.org");
             host_port = QStringLiteral("4000");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Achaea")) {
+            //host_url = QStringLiteral("achaea.com");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Aetolia")) {
+            //host_url = QStringLiteral("aetolia.com");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Lusternia")) {
+            //host_url = QStringLiteral("lusternia.com");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Imperian")) {
+            //host_url = QStringLiteral("imperian.com");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Realms of Despair")) {
+            //host_url = QStringLiteral("realmsofdespair.com");
             host_port = QStringLiteral("4000");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("ZombieMUD")) {
+            //host_url = QStringLiteral("zombiemud.org");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("3Scapes")) {
+            //host_url = QStringLiteral("3k.org");
             host_port = QStringLiteral("3200");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("3Kingdoms")) {
+            //host_url = QStringLiteral("3k.org");
             host_port = QStringLiteral("3000");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Slothmud")) {
+            //host_url = QStringLiteral("slothmud.org");
             host_port = QStringLiteral("6101");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("WoTMUD")) {
+            //host_url = QStringLiteral("game.wotmud.org");
             host_port = QStringLiteral("2224");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Midnight Sun 2")) {
+            //host_url = QStringLiteral("midnightsun2.org");
             host_port = QStringLiteral("3000");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Luminari")) {
+            //host_url = QStringLiteral("luminarimud.com");
             host_port = QStringLiteral("4100");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
+            //host_url = QStringLiteral("reinosdeleyenda.es");
             host_port = QStringLiteral("23");
+            port_ssl_tsl->setChecked(false);
         }
     }
+
     port_entry->setText(host_port);
 
-    QString val = readProfileData(profile, QStringLiteral("password"));
+    val = readProfileData(profile, QStringLiteral("password"));
     character_password_entry->setText(val);
 
     val = readProfileData(profile, QStringLiteral("login"));
@@ -890,6 +958,13 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         autologin_checkBox->setChecked(true);
     } else {
         autologin_checkBox->setChecked(false);
+    }
+
+    val = readProfileData(profile, QStringLiteral("autoreconnect"));
+    if (val.toInt() == Qt::Checked) {
+        auto_reconnect->setChecked(true);
+    } else {
+        auto_reconnect->setChecked(false);
     }
 
     mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
@@ -1551,7 +1626,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     HostManager & hostManager = mudlet::self()->getHostManager();
     Host* pHost = hostManager.getHost(profile_name);
     if (pHost) {
-        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort(), pHost->getSSL_TSL());
         QDialog::accept();
         return;
     }
@@ -1599,6 +1674,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         } else {
             slot_update_port(QString::number(pHost->getPort()));
         }
+        pHost->setSSL_TSL(port_ssl_tsl->checkState());
 
         if (character_password_entry->text().trimmed().size() > 0) {
             pHost->setPass(character_password_entry->text().trimmed());
@@ -1616,6 +1692,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
+        pHost->setAutoReconnect(auto_reconnect->isChecked());
     }
 
     if (needsGenericPackagesInstall) {
@@ -1641,8 +1718,10 @@ void dlgConnectionProfiles::slot_connectToServer()
 bool dlgConnectionProfiles::validateConnect()
 {
     if (validName && validUrl && validPort) {
-        connect_button->setEnabled(true);
-        connect_button->setToolTip(QString());
+        if (connect_button) {
+            connect_button->setEnabled(true);
+            connect_button->setToolTip(QString());
+        }
         return true;
     } else if (!validName) {
         slot_update_name(profile_name_entry->text());
@@ -1652,8 +1731,10 @@ bool dlgConnectionProfiles::validateConnect()
         slot_update_port(QString());
     }
 
-    connect_button->setDisabled(true);
-    connect_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+    if (connect_button) {
+        connect_button->setDisabled(true);
+        connect_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+    }
     return false;
 }
 

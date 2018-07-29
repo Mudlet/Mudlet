@@ -78,6 +78,9 @@ public:
     void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
     void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
+    bool               getSSL_TSL()                     { QMutexLocker locker(& mLock); return mSslTsl; }
+    void               setSSL_TSL(bool b)               { QMutexLocker locker(& mLock); mSslTsl = b; }
+    void               setAutoReconnect(bool b)         {mTelnet.setReconnect(b);}
     QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
     void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
     QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
@@ -386,6 +389,8 @@ private:
     QString mPass;
 
     int mPort;
+    bool mSslTsl;
+    bool mAutoReconnect;
 
     int mRetries;
     bool mSaveProfileOnExit;

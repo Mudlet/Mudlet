@@ -2787,7 +2787,7 @@ void mudlet::slot_reconnect()
     if (!pHost) {
         return;
     }
-    pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+    pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort(), pHost->getSSL_TSL());
 }
 
 void mudlet::slot_disconnect()
@@ -2871,7 +2871,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     Host* pHost = mHostManager.getHost(profile_name);
     if (pHost) {
-        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort(), pHost->getSSL_TSL());
         return;
     }
 

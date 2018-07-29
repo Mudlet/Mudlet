@@ -31,7 +31,7 @@
 #include <QHostInfo>
 #include <QPointer>
 #include <QStringList>
-#include <QTcpSocket>
+#include <QSslSocket>
 #include <QTime>
 #include "post_guard.h"
 
@@ -114,7 +114,7 @@ public:
     Q_DISABLE_COPY(cTelnet)
     cTelnet(Host* pH);
     ~cTelnet();
-    void connectIt(const QString& address, int port);
+    void connectIt(const QString& address, int port, bool ssl_tsl);
     void disconnect();
     bool sendData(QString& data);
     void setATCPVariables(const QString& _msg);
@@ -122,6 +122,7 @@ public:
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
+    void setReconnect(bool status);
     void encodingChanged(const QString&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
@@ -182,7 +183,7 @@ private:
     void processChunks();
 
     QPointer<Host> mpHost;
-    QTcpSocket socket;
+    QSslSocket socket;
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
     QTextCodec* outgoingDataCodec;
@@ -190,6 +191,7 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
+    bool host_ssl_tsl;
     double networkLatencyMin;
     double networkLatencyMax;
     bool mWaitingForResponse;
@@ -228,6 +230,8 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableChannel102;
+    bool user_disconnect;
+    bool mAutoReconnect;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
