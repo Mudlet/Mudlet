@@ -173,7 +173,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
 
     // source editor area
-
     mpSourceEditorArea = new dlgSourceEditorArea(mainArea);
     QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpSourceEditorArea->setSizePolicy(sizePolicy5);
@@ -230,7 +229,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // option areas
 
     auto pHB2 = new QHBoxLayout(popupArea);
-    QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Maximum);
     popupArea->setMinimumSize(200, 60);
     pHB2->setSizeConstraint(QLayout::SetMaximumSize);
     mpErrorConsole = new TConsole(mpHost, false, popupArea);

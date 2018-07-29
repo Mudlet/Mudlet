@@ -3398,41 +3398,30 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 //loads the luaFunctionList for use by the edbee Autocompleter
 bool mudlet::loadLuaFunctionList()
 {
-    qDebug() << "Loading the luaFunctionList via loadLuaFunctionList()...";
     QFile* jsonFile = new QFile(QStringLiteral(":/lua-function-list.json"));
     if (!jsonFile->open(QFile::ReadOnly)) {
-        qDebug() << "Failed to open lua-function-list.json";
         return false;
     }
 
-    qDebug() << "Successfully opened lua-function-list.json";
-
     const QByteArray data = jsonFile->readAll();
-
-    qDebug() << "Read file, length:" << data.length();
 
     jsonFile->close();
 
     auto json_doc = QJsonDocument::fromJson(data);
 
     if(json_doc.isNull()){
-        qDebug()<<"Failed to create JSON doc.";
         return false;
     }
 
     if(!json_doc.isObject()){
-        qDebug()<<"JSON is not an object.";
         return false;
     }
 
     QJsonObject json_obj=json_doc.object();
 
     if(json_obj.isEmpty()){
-        qDebug()<<"JSON object is empty.";
         return false;
     }
-
-    qDebug() << "JSON Object is" << json_obj.count() << "long.";
 
     mudlet::mLuaFunctionNames = json_obj.toVariantHash();
 
