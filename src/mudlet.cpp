@@ -2904,6 +2904,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
     pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
+
+    // This settings also need to be configured, note that the only time not to
+    // save the setting is on profile loading:
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
+
     // For the first real host created the getHostCount() will return 2 because
     // there is already a "default_host"
     signal_hostCreated(pHost, mHostManager.getHostCount());
