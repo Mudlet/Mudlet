@@ -44,9 +44,6 @@ include(../3rdparty/communi/communi.pri)
 # Include lua_yajl (run time lua module needed)
 include(../3rdparty/lua_yajl/lua_yajl.pri)
 
-#include SSH from QT-creator
-include(../3rdparty/qt-creator-ssh/ssh.pri)
-
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
 macx {
