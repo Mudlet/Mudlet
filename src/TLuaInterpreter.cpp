@@ -5316,6 +5316,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     }
 }
 
+// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setOverline
 int TLuaInterpreter::setOverline(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5359,6 +5360,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     }
 }
 
+// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setReverse
 int TLuaInterpreter::setReverse(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5512,7 +5514,7 @@ int TLuaInterpreter::debug(lua_State* L)
     luaDebugText.append(QChar::LineFeed);
 
     if (host.mpEditorDialog) {
-        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[DEBUG:]"), QColor(Qt::white), QColor(Qt::blue));
+        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[DEBUG:]"), QColor(Qt::blue), QColor(Qt::black));
         host.mpEditorDialog->mpErrorConsole->print(luaDebugText, QColor(Qt::green), QColor(Qt::black));
     }
 
