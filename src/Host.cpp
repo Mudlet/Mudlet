@@ -56,7 +56,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QLatin1String(";"))
+, mCommandSeparator(QLatin1String(";;;"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
