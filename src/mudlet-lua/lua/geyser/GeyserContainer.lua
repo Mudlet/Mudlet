@@ -171,6 +171,14 @@ function Geyser.Container:show_impl()
   showWindow(self.name)
 end
 
+function Geyser.Container:raise ()
+	raiseWindow(self.name)
+end
+
+function Geyser.Container:lower ()
+	lowerWindow(self.name)
+end
+
 --- Moves this window according to the new x and y contraints set.
 -- @param x New x constraint to use. If nil, uses current value.
 -- @param y New y constraint to use. If nil, uses current value.
