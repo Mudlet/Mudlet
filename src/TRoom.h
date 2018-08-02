@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2015, 2018 by Stephen Lyons                        *
+ *                                            - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -77,7 +78,7 @@ public:
     const QMap<QString, int>& getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w);
     bool hasExitWeight(const QString& cmd);
-    const bool setDoor(const QString& cmd, const int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
+    const bool setDoor(const QString& cmd, int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
     int getDoor(const QString& cmd);
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
@@ -112,14 +113,14 @@ public:
     void setOut(int id) { out = id; }
     int getId() { return id; }
     int getArea() { return area; }
-    void audit(const QHash<int, int>, const QHash<int, int>);
-    void auditExits(const QHash<int, int>);
+    void audit(QHash<int, int>, QHash<int, int>);
+    void auditExits(QHash<int, int>);
     /*bool*/ void restore(QDataStream& ifs, int roomID, int version);
     void auditExit(int&,
-                   const int,
-                   const QString,
-                   const QString,
-                   const QString,
+                   int,
+                   QString,
+                   QString,
+                   QString,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QSet<int>&,
@@ -128,8 +129,8 @@ public:
                    QMap<QString, QList<int>>&,
                    QMap<QString, QString>&,
                    QMap<QString, bool>&,
-                   const QHash<int, int>);
-    const QString dirCodeToDisplayName(const int dirCode);
+                   QHash<int, int>);
+    const QString dirCodeToDisplayName(int dirCode);
 
 
     int x;
@@ -142,7 +143,7 @@ public:
     qreal min_y;
     qreal max_x;
     qreal max_y;
-    qint8 c;
+    QString mSymbol;
     QString name;
     QVector3D v;
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)

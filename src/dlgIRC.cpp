@@ -3,7 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,15 +29,9 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QtEvents>
-#include <QDebug>
 #include <QDesktopServices>
-#include <QDir>
 #include <QScrollBar>
 #include <QShortcut>
-#include <QString>
-#include <QTextDocument>
-#include <QTime>
 #include "post_guard.h"
 
 
@@ -301,7 +295,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
 
     const QString cmdName = QString(cmd->parameters().at(0)).toUpper();
     if (cmdName == "CLEAR") {
-        IrcBuffer* buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+        auto * buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
         if (cmd->parameters().count() > 1) {
             QString bufferName = cmd->parameters().at(1);
             //QString cBufferName = buffer->title();
@@ -315,7 +309,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         return true;
     }
     if (cmdName == "CLOSE") {
-        IrcBuffer* buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+        auto * buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
         if (cmd->parameters().count() > 1) {
             const QString bufferName = cmd->parameters().at(1);
             if (!bufferName.isEmpty()) {
@@ -485,10 +479,10 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     // joined a buffer - start listening to buffer specific messages
     connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
-    QTextDocument* document = new QTextDocument(buffer);
+    auto * document = new QTextDocument(buffer);
     bufferTexts.insert(buffer, document);
     // create a sorted model for buffer users
-    IrcUserModel* userModel = new IrcUserModel(buffer);
+    auto * userModel = new IrcUserModel(buffer);
     userModel->setSortMethod(Irc::SortByTitle);
     userModels.insert(buffer, userModel);
     // activate the new buffer
@@ -506,7 +500,7 @@ void dlgIRC::slot_onBufferRemoved(IrcBuffer* buffer)
 
 void dlgIRC::slot_onBufferActivated(const QModelIndex& index)
 {
-    IrcBuffer* buffer = index.data(Irc::BufferRole).value<IrcBuffer*>();
+    auto * buffer = index.data(Irc::BufferRole).value<IrcBuffer*>();
     // document, user list and nick completion for the current buffer
     ircBrowser->setDocument(bufferTexts.value(buffer));
     ircBrowser->verticalScrollBar()->triggerAction(QScrollBar::SliderToMaximum);
@@ -520,7 +514,7 @@ void dlgIRC::slot_onBufferActivated(const QModelIndex& index)
 
 void dlgIRC::slot_onUserActivated(const QModelIndex& index)
 {
-    IrcUser* user = index.data(Irc::UserRole).value<IrcUser*>();
+    auto * user = index.data(Irc::UserRole).value<IrcUser*>();
     if (user) {
         // ensure the "user" isn't our own client, can only do this by name.
         if (user->name() == mNickName) {
@@ -555,7 +549,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
         mPingStarted = 0;
     }
 
-    IrcBuffer* buffer = qobject_cast<IrcBuffer*>(sender());
+    auto * buffer = qobject_cast<IrcBuffer*>(sender());
     if (!buffer) {
         buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
     }
@@ -664,12 +658,12 @@ QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
     QString target = bufferName;
     switch (msg->type()) {
     case IrcMessage::Notice: {
-        IrcNoticeMessage* msgNotice = static_cast<IrcNoticeMessage*>(msg);
+        auto * msgNotice = static_cast<IrcNoticeMessage*>(msg);
         target = msgNotice->target();
         break;
     }
     case IrcMessage::Private: {
-        IrcPrivateMessage* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
+        auto * msgPrivate = static_cast<IrcPrivateMessage*>(msg);
         target = msgPrivate->target();
         break;
     }

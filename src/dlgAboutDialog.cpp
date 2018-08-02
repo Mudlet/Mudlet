@@ -27,13 +27,10 @@
 
 #include "dlgAboutDialog.h"
 
-
 #include "pre_guard.h"
 #include <QPainter>
-#include <QStringBuilder>
 #include <QTextLayout>
 #include "post_guard.h"
-
 
 dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 {
@@ -41,7 +38,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
     // Copied from main():
 
-    QImage splashImage(":/Mudlet_splashscreen_main.png");
+    QImage splashImage(QStringLiteral(":/Mudlet_splashscreen_main.png"));
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
@@ -51,7 +48,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font("DejaVu Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(QStringLiteral("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -84,8 +81,9 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
         }
 
         // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar(169) % QString(" Mudlet makers 2008-") % QString(__DATE__).mid(7);
-        QFont font("DejaVu Serif", 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        // PLACEMARKER: Date-stamp needing annual update
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
+        QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -725,9 +723,9 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     license_3rdParty_texts.append(QStringLiteral("%3%4%5<hr>")
                                   .arg(communiHeader,                  //  3 - Communi (IRC) header - translatable
                                        BSD3Clause_Body                 //  4 - Communi (IRC) body BSD3 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QLatin1String("Neither the name of the Communi Project nor the names of its contributors may"),
-                                            QLatin1String("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                            QLatin1String("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
+                                       .arg(QStringLiteral("Neither the name of the Communi Project nor the names of its contributors may"),
+                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
                                        communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
 
     license_3rdParty_texts.append(QStringLiteral("%6%7<hr>%8%9<hr>")
@@ -753,21 +751,21 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                                   .arg(edbeeSuppliment,                // 14 - edbee other components:
                                        OnigmoHeader,                   // 15 - Onigmo (Oniguruma-mod) header - translatable
                                        BSD2Clause_Body                 // 16 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"),
-                                            QLatin1String("AUTHOR OR CONTRIBUTORS")),
+                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
+                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
                                        OnigurumaHeader,                // 17 - Oniguruma header - translatable
                                        BSD2Clause_Body                 // 18 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QLatin1String("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                            QLatin1String("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
+                                       .arg(QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
                                        RubyHeader,                     // 19 - Ruby Header - translatable
                                        BSD2Clause_Body                 // 20 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"),
-                                            QLatin1String("AUTHOR OR CONTRIBUTORS")),
+                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
+                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
                                        QsLogHeader,                    // 21 - QsLog header - translatable
                                        BSD3Clause_Body                 // 22 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QLatin1String("The name of the contributors may not"),
-                                            QLatin1String("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                            QLatin1String("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
+                                       .arg(QStringLiteral("The name of the contributors may not"),
+                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr>%23%24")
@@ -792,7 +790,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     license_3rdParty_texts.append(QStringLiteral("<hr>%31")
                                   .arg(UbuntuFontText));               // 31 - Ubuntu Font Text - not translatable
 #endif
-    license_3rdParty_texts.append(QLatin1String("</body></html>"));
+    license_3rdParty_texts.append(QStringLiteral("</body></html>"));
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
 

@@ -27,6 +27,7 @@
 
 
 #include "HostManager.h"
+#include "FontManager.h"
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -39,10 +40,12 @@
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
+#include <QProxyStyle>
 #include <QQueue>
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
+#include <QTimer>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -66,12 +69,12 @@ class TConsole;
 class TDockWidget;
 class TEvent;
 class TLabel;
+class TTabBar;
 class TTimer;
 class TToolBar;
 class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
-
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -84,7 +87,8 @@ public:
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    HostManager& getHostManager() { return mHostManager; }
+    HostManager& getHostManager() { return mHostManager; }    
+    FontManager mFontManager;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
@@ -103,8 +107,11 @@ public:
     void setDockLayoutUpdated(Host*, const QString&);
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
-    bool setFontSize(Host*, const QString&, int);
+    bool setWindowFont(Host*, const QString&, const QString&);
+    QString getWindowFont(Host*, const QString&);
+    bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
+    QSize calcFontSize(Host* pHost, const QString& windowName);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);
@@ -150,7 +157,8 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings(const QSettings&);
+    void readEarlySettings(const QSettings&);
+    void readLateSettings(const QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
@@ -166,8 +174,8 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
-    void setToolBarIconSize(const int);
-    void setEditorTreeWidgetIconSize(const int);
+    void setToolBarIconSize(int);
+    void setEditorTreeWidgetIconSize(int);
     enum controlsVisibilityFlag {
         visibleNever = 0,
         visibleOnlyWithoutLoadedProfile = 0x1,
@@ -175,8 +183,8 @@ public:
         visibleAlways = 0x3
     };
     Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-    void setToolBarVisibility(const controlsVisibility);
-    void setMenuBarVisibility(const controlsVisibility);
+    void setToolBarVisibility(controlsVisibility);
+    void setMenuBarVisibility(controlsVisibility);
     void adjustToolBarVisibility();
     void adjustMenuBarVisibility();
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
@@ -196,6 +204,7 @@ public:
     void playSound(QString s, int);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
+    QStringList getAvailableFonts();
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -207,7 +216,7 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
     QList<QMediaPlayer*> mMusicBoxList;
-    QTabBar* mpTabBar;
+    TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
     bool mHasSavedLayout;
@@ -217,13 +226,30 @@ public:
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
+    // More modern Desktop styles no longer include icons on the buttons in
+    // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
+    // does use them - use this flag to determine whether we should apply our
+    // icons to override some of them:
+    bool mShowIconsOnDialogs;
+    // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
+    // startup which the user may leave as is or force on or off:
+    bool mShowIconsOnMenuOriginally;
+    // This is the state for the tri-state control on the preferences and
+    // means:
+    // Qt::PartiallyChecked = use the previous state set on application start
+    //    (set AA_DontShowIconsInMenus to inverse of mShowIconsOnMenuOriginally)
+    // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
+    //    to false ourselves)
+    // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
+    //    true ourselves)
+    Qt::CheckState mShowIconsOnMenuCheckedState;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
@@ -306,7 +332,7 @@ public:
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath
     };
-    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
@@ -359,6 +385,8 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
+
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -366,10 +394,10 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
-    void signal_setToolBarIconSize(const int);
-    void signal_setTreeIconSize(const int);
-    void signal_hostCreated(Host*, const quint8);
-    void signal_hostDestroyed(Host*, const quint8);
+    void signal_setToolBarIconSize(int);
+    void signal_setTreeIconSize(int);
+    void signal_hostCreated(Host*, quint8);
+    void signal_hostDestroyed(Host*, quint8);
 
 private slots:
     void slot_close_profile();
@@ -423,11 +451,30 @@ private:
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
 
-    QAction* actionReconnect;
-
     void check_for_mappingscript();
 
     QPointer<QAction> mpActionReplay;
+
+    QPointer<QAction> mpActionAbout;
+    QPointer<QAction> mpActionAliases;
+    QPointer<QAction> mpActionButtons;
+    QPointer<QAction> mpActionConnect;
+    QPointer<QAction> mpActionDisconnect;
+    QPointer<QAction> mpActionFullScreenView;
+    QPointer<QAction> mpActionHelp;
+    QPointer<QAction> mpActionIRC;
+    QPointer<QAction> mpActionKeys;
+    QPointer<QAction> mpActionMapper;
+    QPointer<QAction> mpActionModuleManager;
+    QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionNotes;
+    QPointer<QAction> mpActionOptions;
+    QPointer<QAction> mpActionPackageManager;
+    QPointer<QAction> mpActionReconnect;
+    QPointer<QAction> mpActionScripts;
+    QPointer<QAction> mpActionTimers;
+    QPointer<QAction> mpActionTriggers;
+    QPointer<QAction> mpActionVariables;
 
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;

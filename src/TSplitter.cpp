@@ -24,10 +24,6 @@
 
 #include "TSplitterHandle.h"
 
-#include "pre_guard.h"
-#include <QSplitterHandle>
-#include "post_guard.h"
-
 
 TSplitter::TSplitter(Qt::Orientation o, QWidget* p) : QSplitter(o, p), mpSplitterHandle()
 {

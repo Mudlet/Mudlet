@@ -25,10 +25,6 @@
 #include "Host.h"
 #include "VarUnit.h"
 
-#include "pre_guard.h"
-#include <QTime>
-#include "post_guard.h"
-
 #include <setjmp.h>
 
 
@@ -43,9 +39,7 @@ LuaInterface::LuaInterface(Host* pH) : mpHost(pH), L(), depth()
     lua_atpanic(interpreter->pGlobalLua, &onPanic);
 }
 
-LuaInterface::~LuaInterface()
-{
-}
+LuaInterface::~LuaInterface() = default;
 
 int LuaInterface::onPanic(lua_State* L)
 {

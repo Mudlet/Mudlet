@@ -106,6 +106,8 @@ class TBuffer
     // values are a pair of human-friendly name + encoding data
     static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
 
+    static const QMap<QString, QVector<QString>> mSupportedMxpElements;
+
 
 public:
     TBuffer(Host* pH);
@@ -140,7 +142,7 @@ public:
     QStringList getEndLines(int);
     void clear();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s, const bool isFromServer=false);
+    void translateToPlainText(std::string& s, bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void appendLine(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void setWrapAt(int i) { mWrapAt = i; }
@@ -201,9 +203,10 @@ private:
     void shrinkBuffer();
     int calcWrapPos(int line, int begin, int end);
     void handleNewLine();
-    bool processUtf8Sequence(const std::string&, const bool, const size_t, size_t&, bool&);
-    bool processGBSequence(const std::string&, const bool, const bool, const size_t, size_t&, bool&);
-
+    bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
+    bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
+    bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
+    QString processSupportsRequest(const QString &attributes);
 
     bool gotESC;
     bool gotHeader;
@@ -211,9 +214,10 @@ private:
     int codeRet;
     std::string tempLine;
     bool mWaitingForHighColorCode;
-    bool mHighColorModeForeground;
-    bool mHighColorModeBackground;
-    bool mIsHighColorMode;
+    bool mWaitingForMillionsColorCode;
+    bool mIsHighOrMillionsColorMode;
+    bool mIsHighOrMillionsColorModeForeground;
+    bool mIsHighOrMillionsColorModeBackground;
     bool mIsDefaultColor;
     bool isUserScrollBack;
     int currentFgColorProperty;

@@ -30,16 +30,15 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-#include <queue>
-
-#include <assert.h>
-
 // Define this to get qDebug() messages about the decoding of UTF-8 data when it
 // is not the single bytes of pure ASCII text:
 // #define DEBUG_UTF8_PROCESSING
 // Define this to get qDebug() messages about the decoding of GB2312/GBK/GB18030
 // data when it is not the single bytes of pure ASCII text:
 // #define DEBUG_GB_PROCESSING
+// Define this to get qDebug() messages about the decoding of BIG5
+// data when it is not the single bytes of pure ASCII text:
+// #define DEBUG_BIG5_PROCESSING
 
 // These tables have been regenerated from examination of the Qt source code
 // particularly from:
@@ -617,6 +616,12 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
 };
 // clang-format on
 
+// a map of supported MXP elements and attributes
+const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
+    {QStringLiteral("send"), {"href", "hint", "prompt"}},
+    {QStringLiteral("br"), {}}
+};
+
 TChar::TChar()
 {
     fgR = 255;
@@ -757,7 +762,11 @@ TBuffer::TBuffer(Host* pH)
 , mStrikeOut(false)
 , mFgColorCode(false)
 , mBgColorCode(false)
-, mIsHighColorMode(false)
+, mWaitingForHighColorCode(false)
+, mWaitingForMillionsColorCode(false)
+, mIsHighOrMillionsColorMode(false)
+, mIsHighOrMillionsColorModeForeground(false)
+, mIsHighOrMillionsColorModeBackground(false)
 , mOpenMainQuote()
 , mEchoText()
 , mIsDefaultColor()
@@ -776,9 +785,6 @@ TBuffer::TBuffer(Host* pH)
     newLines = 0;
     mLastLine = 0;
     updateColors();
-    mWaitingForHighColorCode = false;
-    mHighColorModeForeground = false;
-    mHighColorModeBackground = false;
 
     TMxpElement _element;
     _element.name = "SEND";
@@ -1259,13 +1265,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                     numCodes += codeRet;
                     for (int i = 1; i < codeRet + 1; i++) {
+                        // Parse the groups of numeric SGR codes
                         int tag = mCode[i];
                         if (mWaitingForHighColorCode) {
-                            if (mHighColorModeForeground) {
+                            if (mIsHighOrMillionsColorModeForeground) {
                                 if (tag < 16) {
-                                    mHighColorModeForeground = false;
-                                    mWaitingForHighColorCode = false;
-                                    mIsHighColorMode = false;
 
                                     if (tag >= 8) {
                                         tag -= 8;
@@ -1347,7 +1351,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                         mIsDefaultColor = false;
                                         break;
                                     }
-                                    continue;
+
                                 } else if (tag < 232) {
                                     tag -= 16; // because color 1-15 behave like normal ANSI colors
                                     // 6x6x6 RGB color space
@@ -1412,17 +1416,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     fgColorB = value;
                                     fgColorLightB = value;
                                 }
-                                mHighColorModeForeground = false;
-                                mWaitingForHighColorCode = false;
-                                mIsHighColorMode = false;
-                                continue;
-                            }
 
-                            if (mHighColorModeBackground) {
+                                mWaitingForHighColorCode = false;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeForeground = false;
+                                continue;
+                            } else if (mIsHighOrMillionsColorModeBackground) {
                                 if (tag < 16) {
-                                    mHighColorModeBackground = false;
-                                    mWaitingForHighColorCode = false;
-                                    mIsHighColorMode = false;
 
                                     bool _bold;
                                     if (tag >= 8) {
@@ -1513,9 +1513,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                         bgColorG = bgColorLightG;
                                         bgColorB = bgColorLightB;
                                     }
-                                    continue;
-                                }
-                                if (tag < 232) {
+
+                                } else if (tag < 232) {
                                     tag -= 16;
                                     int r = tag / 36;
                                     int g = (tag - (r * 36)) / 6;
@@ -1561,33 +1560,120 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     bgColorG = value;
                                     bgColorB = value;
                                 }
-                                mHighColorModeBackground = false;
+
                                 mWaitingForHighColorCode = false;
-                                mIsHighColorMode = false;
-                                continue;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeBackground = false;
+
                             }
+
+                            continue;
+                        } else if (mWaitingForMillionsColorCode) {
+                            // Need to consume this and two more codes from mCode
+                            // This is not a true ANSI spec decoder because it
+                            // uses only ';' to separate the sub-options and
+                            // only takes a maximum of three after the 38;2 or 48;2
+                            // a full implementation would use ':' and handle a
+                            // a variable number of up to six more numbers...
+                            // the use of ':' would make it is possible to
+                            // separate the sub-options as compared to a whole
+                            // new SGR code...
+                            if (mIsHighOrMillionsColorModeForeground) {
+                                if (i + 2 <= codeRet) {
+                                    // Have enough for all three suboptions
+                                    fgColorR = qBound(0, mCode[i++], 255);
+                                    fgColorG = qBound(0, mCode[i++], 255);
+                                    fgColorB = qBound(0, mCode[i++], 255);
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                } else if (i + 1 <= codeRet) {
+                                    // Have enough for two suboptions, but third, blue component is zero
+                                    fgColorR = qBound(0, mCode[i++], 255);
+                                    fgColorG = qBound(0, mCode[i++], 255);
+                                    fgColorB = 0;
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                } else if (i <= codeRet) {
+                                    // Have enough for one suboption, but second and third, green and blue component are zero
+                                    fgColorR = qBound(0, mCode[i++], 255);
+                                    fgColorG = 0;
+                                    fgColorB = 0;
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                } else  {
+                                    // No codes left so colour must be black, as all of red, green and blue components are zero
+                                    fgColorR = 0;
+                                    fgColorG = 0;
+                                    fgColorB = 0;
+                                    fgColorLightR = fgColorR;
+                                    fgColorLightG = fgColorG;
+                                    fgColorLightB = fgColorB;
+                                    mIsDefaultColor = false;
+                                }
+
+                                mWaitingForMillionsColorCode = false;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeBackground = false;
+
+                            } else if (mIsHighOrMillionsColorModeBackground) {
+                                if (i + 2 <= codeRet) {
+                                    // Have enough for all three suboptions
+                                    bgColorR = qBound(0, mCode[i++], 255);
+                                    bgColorG = qBound(0, mCode[i++], 255);
+                                    bgColorB = qBound(0, mCode[i++], 255);
+                                    mIsDefaultColor = false;
+                                } else if (i + 1 <= codeRet) {
+                                    // Have enough for two suboptions, but third, blue component is zero
+                                    bgColorR = qBound(0, mCode[i++], 255);
+                                    bgColorG = qBound(0, mCode[i++], 255);
+                                    bgColorB = 0;
+                                    mIsDefaultColor = false;
+                                } else if (i <= codeRet) {
+                                    // Have enough for one suboption, but second and third, green and blue component are zero
+                                    bgColorR = qBound(0, mCode[i++], 255);
+                                    bgColorG = 0;
+                                    bgColorB = 0;
+                                    mIsDefaultColor = false;
+                                } else  {
+                                    // No codes left so colour must be black, as all of red , green and blue components are zero
+                                    bgColorR = 0;
+                                    bgColorG = 0;
+                                    bgColorB = 0;
+                                    mIsDefaultColor = false;
+                                }
+
+                                mWaitingForMillionsColorCode = false;
+                                mIsHighOrMillionsColorMode = false;
+                                mIsHighOrMillionsColorModeBackground = false;
+                            }
+
+                            continue;
                         }
 
                         if (tag == 38) {
-                            mIsHighColorMode = true;
-                            mHighColorModeForeground = true;
+                            mIsHighOrMillionsColorMode = true;
+                            mIsHighOrMillionsColorModeForeground = true;
                             continue;
-                        }
-                        if (tag == 48) {
-                            mIsHighColorMode = true;
-                            mHighColorModeBackground = true;
+                        } else if (tag == 48) {
+                            mIsHighOrMillionsColorMode = true;
+                            mIsHighOrMillionsColorModeBackground = true;
                             continue;
                         }
 
-                        if (mIsHighColorMode) {
+                        if (mIsHighOrMillionsColorMode) {
                             switch (tag) {
                             case 5: // Indexed 256 color mode
                                 mWaitingForHighColorCode = true;
                                 break;
                             case 2: // 24Bit RGB color mode
-                            // TODO:
-                            //                                mWaitingFor24BitColor = true;
-                            //                                break;
+                                mWaitingForMillionsColorCode = true;
+                                break;
                             case 4: // 24Bit CYMB color mode
                             case 3: // 24Bit CYM color mode
                             case 1: // "Transparent" mode
@@ -1605,10 +1691,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // we are dealing with standard ANSI colors
                         switch (tag) {
                         case 0:
-                            mHighColorModeForeground = false;
-                            mHighColorModeBackground = false;
                             mWaitingForHighColorCode = false;
-                            mIsHighColorMode = false;
+                            mWaitingForMillionsColorCode = false;
+                            mIsHighOrMillionsColorMode = false;
+                            mIsHighOrMillionsColorModeForeground = false;
+                            mIsHighOrMillionsColorModeBackground = false;
                             mIsDefaultColor = true;
                             fgColorR = mFgColorR;
                             fgColorG = mFgColorG;
@@ -1825,7 +1912,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             if (ch == '<') {
                 if (!mParsingVar) {
                     openT++;
-                    if (currentToken.size() > 0) {
+                    if (!currentToken.empty()) {
                         currentToken += ch;
                     }
                     mAssemblingToken = true;
@@ -1860,6 +1947,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     _tn = _tn.toUpper();
                     if (_tn == "VERSION") {
                         mpHost->sendRaw(QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
+                    } else if (_tn == QLatin1String("SUPPORT")) {
+                        auto response = processSupportsRequest(currentToken.c_str());
+                        mpHost->sendRaw(QStringLiteral("\n\x1b[1z<SUPPORTS %1>\n").arg(response));
                     }
                     if (_tn == "BR") {
                         ch = '\n';
@@ -1985,7 +2075,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             _tp = currentToken.substr(_fs).c_str();
                         }
                         QString _t1 = _tp.toUpper();
-                        const TMxpElement& _element = mMXP_Elements[_tn];
+                        const TMxpElement& _element =  mMXP_Elements[_tn];
                         QString _t2 = _element.href;
                         QString _t3 = _element.hint;
                         bool _userTag = true;
@@ -2039,7 +2129,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             match = _rex.match(_tp, _rpos);
                         }
 
-                        if ((_rl1.size() == _rl2.size()) && (_rl1.size() > 0)) {
+                        if ((_rl1.size() == _rl2.size()) && (!_rl1.empty())) {
                             for (int i = 0; i < _rl1.size(); i++) {
                                 QString _var = _rl1[i];
                                 _var.prepend('&');
@@ -2119,7 +2209,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (ch == '&' || mIgnoreTag) {
-                if ((localBufferPosition + 4 < localBufferLength) && (mSkip.size() == 0)) {
+                if ((localBufferPosition + 4 < localBufferLength) && (mSkip.empty())) {
                     if (localBuffer.substr(localBufferPosition, 4) == "&gt;") {
                         localBufferPosition += 3;
                         ch = '>';
@@ -2257,7 +2347,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         bool isTwoTCharsNeeded = false;
 
         if (!encodingLookupTable.isEmpty()) {
-            quint8 index = static_cast<quint8>(ch);
+            auto index = static_cast<quint8>(ch);
             if (index < 128) {
                 mMudLine.append(QChar::fromLatin1(ch));
             } else {
@@ -2273,6 +2363,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
         } else if (mEncoding == QLatin1String("GB18030")) {
             if (!processGBSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
+                // We have run out of bytes and we have stored the unprocessed
+                // ones but we need to bail out NOW!
+                return;
+            }
+        } else if (mEncoding == QLatin1String("Big5")) {
+            if (!processBig5Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
@@ -2636,7 +2732,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
     bool hasAppended = false;
     int y = P.y();
     int x = P.x();
-    if (chunk.buffer.size() < 1) {
+    if (chunk.buffer.empty()) {
         return;
     }
     if (y < 0 || y > getLastLineNumber()) {
@@ -2684,7 +2780,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
 
 void TBuffer::appendBuffer(const TBuffer& chunk)
 {
-    if (chunk.buffer.size() < 1) {
+    if (chunk.buffer.empty()) {
         return;
     }
     for (int cx = 0; cx < static_cast<int>(chunk.buffer[0].size()); cx++) {
@@ -2802,7 +2898,7 @@ inline int TBuffer::wrap(int startLine)
                 lineText.append(lineBuffer[i].at(i2));
                 i2++;
             }
-            if (newLine.size() == 0) {
+            if (newLine.empty()) {
                 tempList.append(QString());
                 std::deque<TChar> emptyLine;
                 queue.push(emptyLine);
@@ -2877,26 +2973,19 @@ void TBuffer::log(int fromLine, int toLine)
         mpHost->mpConsole->mLogStream.flush();
     }
 
-    QString toLog;
+    QStringList linesToLog;
     for (int i = fromLine; i <= toLine; i++) {
-        QString lineToLog;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            QPoint P1 = QPoint(0, i);
-            QPoint P2 = QPoint(buffer[i].size(), i);
-            lineToLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
+            // This only handles a single line of logged text at a time:
+            linesToLog << bufferToHtml(QPoint(0, i), QPoint(buffer.at(i).size(), i), mpHost->mIsLoggingTimestamps);
         } else {
-            if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
-                lineToLog = timeBuffer[i].left(13);
-            }
-            lineToLog.append(lineBuffer[i]);
-            lineToLog.append("\n");
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(13) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
-        toLog = toLog % lineToLog;
     }
 
     // record the last log call into a temporary buffer - we'll actually log
     // on the next iteration after duplication detection has run
-    lastTextToLog = std::move(toLog);
+    lastTextToLog = std::move(linesToLog.join(QString()));
     lastLoggedFromLine = fromLine;
     lastloggedToLine = toLine;
 }
@@ -2939,7 +3028,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
         }
         int lastSpace = -1;
         int wrapPos = -1;
-        int length = static_cast<int>(buffer[i].size());
+        auto length = static_cast<int>(buffer[i].size());
 
         for (int i2 = 0; i2 < static_cast<int>(buffer[i].size());) {
             if (length - i2 > screenWidth - indent) {
@@ -2961,7 +3050,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
                 if (lineBuffer[i][i2] == QChar('\n')) {
                     i2++;
 
-                    if (newLine.size() == 0) {
+                    if (newLine.empty()) {
                         tempList.append(QString());
                         std::deque<TChar> emptyLine;
                         queue.push(emptyLine);
@@ -3141,7 +3230,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
 void TBuffer::clear()
 {
-    while (buffer.size() > 0) {
+    while (!buffer.empty()) {
         if (!deleteLines(0, 0)) {
             break;
         }
@@ -3883,7 +3972,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_UTF8_PROCESSING)
             QString debugMsg;
             for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16));
+                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
             }
             qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
 #endif
@@ -3939,6 +4028,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
     } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80) {
         // Invalid as first byte
         isValid = false;
+        isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
         qDebug().nospace() << "TBuffer::processGBSequence(...) 1-byte sequence as " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " rejected!";
 #endif
@@ -4148,6 +4238,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // clang-format on
 
                     isValid = false;
+                    isToUseReplacementMark = true;
 
 #if defined(DEBUG_GB_PROCESSING)
                     qDebug().nospace() << "TBuffer::processGBSequence(...) 4-byte sequence as "
@@ -4251,6 +4342,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // Outside expected range
 
                     isValid = false;
+                    isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
                     qDebug().nospace() << "TBuffer::processGBSequence(...) 2-byte sequence as GB18030 rejected!";
 #endif
@@ -4285,7 +4377,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         QString codePoint;
         if (mMainIncomingCodec) {
             // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength), 0);
+            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength),
+                                                      nullptr);
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -4322,7 +4415,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #if defined(DEBUG_GB_PROCESSING)
         QString debugMsg;
         for (size_t i = 0; i < gbSequenceLength; ++i) {
-            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16));
+            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
         qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
 #endif
@@ -4338,11 +4431,137 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
     return true;
 }
 
+bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFromServer, const size_t len, size_t& pos, bool& isNonBmpCharacter)
+{
+#if defined(DEBUG_BIG5_PROCESSING)
+    std::string dataIdentity;
+#endif
+
+    // The encoding standard are taken from https://en.wikipedia.org/wiki/Big5
+    size_t big5SequenceLength = 1;
+    bool isValid = true;
+    bool isToUseReplacementMark = false;
+    // Only set this if we are adding more than one code-point to
+    // mCurrentLineCharacters:
+    isNonBmpCharacter = false;
+    if (static_cast<quint8>(bufferData.at(pos)) < 0x80) {
+        // Is ASCII - single byte character, straight forward for a "first" byte case
+        mMudLine.append(bufferData.at(pos));
+        // As there is already a unit increment at the bottom of caller's loop
+        // there is no need to tweak pos in THIS case
+
+        return true;
+    } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80 || static_cast<quint8>(bufferData.at(pos)) > 0xFE) {
+        // Invalid as first byte
+        isValid = false;
+        isToUseReplacementMark = true;
+#if defined(DEBUG_BIG5_PROCESSING)
+        qDebug().nospace() << "TBuffer::processBig5Sequence(...) 1-byte sequence as Big5 rejected!";
+#endif
+    } else {
+        // We have two bytes
+        big5SequenceLength = 2;
+        if ((pos + big5SequenceLength - 1) >= len) {
+            // Not enough bytes to process yet - so store what we have and return
+            if (isFromServer) {
+#if defined(DEBUG_BIG5_PROCESSING)
+                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficent bytes in buffer to "
+                                      "complete Big5 sequence, need at least: "
+                                   << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+#endif
+                mIncompleteSequenceBytes = bufferData.substr(pos);
+            }
+            return false; // Bail out
+        } else {
+            // check if second byte range is valid
+            auto val2 = static_cast<quint8>(bufferData.at(pos + 1));
+            if (val2 < 0x40 || (val2 > 0x7E && val2 < 0xA1) || val2 > 0xFE) {
+                // second byte range is invalid
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+        }
+
+    }
+
+    // At this point we know how many bytes to consume, and whether they are in
+    // the right ranges of individual values to be valid
+
+    if (isValid) {
+        // Try and convert two byte sequence to Unicode using Qts own
+        // decoder - and check number of codepoints returned
+
+        QString codePoint;
+        if (mMainIncomingCodec) {
+            // Third argument is 0 to indicate we do NOT wish to store the state:
+            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, big5SequenceLength).c_str(), static_cast<int>(big5SequenceLength),
+                                                      nullptr);
+            switch (codePoint.size()) {
+                default:
+                    Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to "
+                                         << codePoint.size() << " QChars which does not make sense!!!";
+                    isValid = false;
+                    isToUseReplacementMark = true;
+                    break;
+                case 2:
+                    // Fall-through
+                    [[clang::fallthrough]];
+                case 1:
+                    // If Qt's decoder found bad characters, update status flags to reflect that.
+                    if (codePoint.contains(QChar::ReplacementCharacter)) {
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                        break;
+                    }
+#if defined(DEBUG_BIG5_PROCESSING)
+                    qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size()
+                                   << " QChar(s) long [" << codePoint << "] and is in the " << dataIdentity.c_str() << " range";
+#endif
+                    mMudLine.append(codePoint);
+                    break;
+                case 0:
+                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5"
+                                   << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                    isValid = false;
+                    isToUseReplacementMark = true;
+            }
+        } else {
+            // Unable to decode it - no Qt decoder...!
+#if defined(DEBUG_BIG5_PROCESSING)
+            qDebug().nospace() << "No Qt decoder found...";
+#endif
+            isValid = false;
+            isToUseReplacementMark = true;
+        }
+    }
+
+    if (!isValid) {
+#if defined(DEBUG_BIG5_PROCESSING)
+        QString debugMsg;
+        for (size_t i = 0; i < big5SequenceLength; ++i) {
+            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+        }
+        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg.toLatin1().constData();
+#endif
+        if (isToUseReplacementMark) {
+            mMudLine.append(QChar::ReplacementCharacter);
+        }
+    }
+
+    // As there is already a unit increment at the bottom of loop
+    // add one less than the sequence length:
+    pos += big5SequenceLength - 1;
+
+    return true;
+}
+
 void TBuffer::encodingChanged(const QString& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
-        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030")) {
+        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030")
+                || mEncoding == QLatin1String("Big5")) {
             mMainIncomingCodec = QTextCodec::codecForName(mEncoding.toLatin1().constData());
             if (!mMainIncomingCodec) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
@@ -4355,4 +4574,72 @@ void TBuffer::encodingChanged(const QString& newEncoding)
             mMainIncomingCodec = nullptr;
         }
     }
+}
+
+QString TBuffer::processSupportsRequest(const QString& elements)
+{
+    // strip initial SUPPORT and tokenize all of the requested elements
+    auto elementsList = elements.trimmed().remove(0, 7).split(QStringLiteral(" "), QString::SkipEmptyParts);
+    QStringList result;
+
+    auto reportEntireElement = [](auto element, auto& result) {
+        result.append("+" + element);
+
+        for (const auto& attribute : mSupportedMxpElements.value(element)) {
+            result.append("+" + element + QStringLiteral(".") + attribute);
+        }
+
+        return result;
+    };
+
+    auto reportAllElements = [reportEntireElement](auto& result) {
+        auto elementsIterator = mSupportedMxpElements.constBegin();
+        while (elementsIterator != mSupportedMxpElements.constEnd()) {
+            result = reportEntireElement(elementsIterator.key(), result);
+            ++elementsIterator;
+        }
+
+        return result;
+    };
+
+    // empty <SUPPORT> - report all known elements
+    if (elementsList.isEmpty()) {
+        result = reportAllElements(result);
+    } else {
+        // otherwise it's <SUPPORT element1 element2 element3>
+        for (auto& element : elementsList) {
+            // prune any enclosing quotes
+            if (element.startsWith(QChar('"'))) {
+                element = element.remove(0, 1);
+            }
+            if (element.endsWith(QChar('"'))) {
+                element.chop(1);
+            }
+
+            if (!element.contains(QChar('.'))) {
+                if (mSupportedMxpElements.contains(element)) {
+                    result = reportEntireElement(element, result);
+                } else {
+                    result.append("-" + element);
+                }
+            } else {
+                auto elementName = element.section(QChar('.'), 0, 0);
+                auto attributeName = element.section(QChar('.'), 1, 1);
+
+                if (!mSupportedMxpElements.contains(elementName)) {
+                    result.append("-" + element);
+                } else if (attributeName == QLatin1String("*")) {
+                    result = reportEntireElement(elementName, result);
+                } else {
+                    if (mSupportedMxpElements.value(elementName).contains(attributeName)) {
+                        result.append("+" + element + "." + attributeName);
+                    } else {
+                        result.append("-" + element + "." + attributeName);
+                    }
+                }
+            }
+        }
+    }
+
+    return result.join(QLatin1String(" "));
 }

@@ -21,20 +21,17 @@
  ***************************************************************************/
 
 
-#include "FontManager.h"
 #include "HostManager.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
 #include <QDesktopWidget>
 #include <QDir>
-#include <QFile>
+#if defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
 #include <QMessageBox>
+#endif // defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
 #include <QPainter>
 #include <QSplashScreen>
-#include <QStringBuilder>
-#include <QTextLayout>
 #include "post_guard.h"
 
 /*
@@ -50,8 +47,6 @@
 #include <Windows.h>
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
-
-#include <iostream>
 
 
 using namespace std;
@@ -198,7 +193,7 @@ int main(int argc, char* argv[])
     unsigned int startupAction = 0;
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
-    QApplication* app = qobject_cast<QApplication*>(initApp.data());
+    auto * app = qobject_cast<QApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
@@ -425,8 +420,9 @@ int main(int argc, char* argv[])
         }
 
         // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar(169) % QString(" Mudlet makers 2008-") % QString(__DATE__).mid(7);
-        QFont font("DejaVu Serif", 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        // PLACEMARKER: Date-stamp needing annual update
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
+        QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -460,6 +456,14 @@ int main(int argc, char* argv[])
 
     // seed random number generator (should be done once per lifetime)
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
+
+    // workaround latency spikes with wifi on Qt < 5.9.4, see https://github.com/Mudlet/Mudlet/issues/1587
+    // set the timeout to infinite
+#if (QT_VERSION < QT_VERSION_CHECK(5, 9, 4))
+    if (qgetenv("QT_BEARER_POLL_TIMEOUT").isEmpty()) {
+        qputenv("QT_BEARER_POLL_TIMEOUT", QByteArray::number(-1));
+    }
+#endif
 
     QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
     QDir dir;
@@ -535,8 +539,6 @@ int main(int argc, char* argv[])
 #endif
 
     mudlet::debugMode = false;
-    FontManager fm;
-    fm.addFonts();
 
     if (show_splash) {
         splash_message.append("Done.\n\n"

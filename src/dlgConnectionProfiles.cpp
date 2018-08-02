@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,16 +27,10 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "XMLimport.h"
-#include "ctelnet.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtUiTools>
-#include <QFileDialog>
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QPainter>
-#include <QStringBuilder>
 #include "post_guard.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
@@ -58,25 +52,101 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
-    abort->setIcon(QIcon(QStringLiteral(":/icons/dialog-close.png")));
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    connect_button->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
 
-    connect(connect_button, SIGNAL(clicked()), this, SLOT(accept()));
-    connect(abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
-    connect(new_profile_button, SIGNAL(clicked()), this, SLOT(slot_addProfile()));
-    connect(copy_profile_button, SIGNAL(clicked()), this, SLOT(slot_copy_profile()));
-    connect(remove_profile_button, SIGNAL(clicked()), this, SLOT(slot_deleteProfile()));
-    connect(profile_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_name(const QString)));
-    connect(profile_name_entry, SIGNAL(editingFinished()), this, SLOT(slot_save_name()));
-    connect(host_name_entry, SIGNAL(textChanged(const QString)), this, SLOT(slot_update_url(const QString)));
-    connect(port_entry, SIGNAL(textChanged(const QString)), this, SLOT(slot_update_port(const QString)));
-    connect(autologin_checkBox, SIGNAL(stateChanged(int)), this, SLOT(slot_update_autologin(int)));
-    connect(login_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_login(const QString)));
-    connect(character_password_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_pass(const QString)));
-    connect(mud_description_textedit, SIGNAL(textChanged()), this, SLOT(slot_update_description()));
-    connect(profiles_tree_widget, SIGNAL(currentItemChanged(QListWidgetItem*, QListWidgetItem*)), this, SLOT(slot_item_clicked(QListWidgetItem*)));
-    connect(profiles_tree_widget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(accept()));
+    // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
+    // is already a Qt provided icon on a predefined button, this is probably
+    // the first and best place to test this as the "Cancel" button is a built-
+    // in dialog button which will have an icon if the current system style
+    // settings suggest it:
+    mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
+
+    auto pWelcome_document = new QTextDocument(this);
+    if (mudlet::self()->mShowIconsOnDialogs) {
+        // Since I've switched to allowing the possibility of theme replacement
+        // of icons we need a way to insert the current theme icons for
+        // "dialog-ok-apply" and "edit-copy" into the help message - this is
+        // awkward because Qt would normally expect to load them from a
+        // resource file but this is no good in this case as we only use the
+        // resource file if the icon is NOT supplied from the current theme.
+        // We can fix this with a bit of fancy editing of the text - replacing a
+        // particular sequence of characters with an image generated from the
+        // actual icon in use.
+        pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
+                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
+                                           "<p>To play a game not in the list, click on NEW_PROFILE_ICON "
+                                           "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
+                                           "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
+                                           "<p>After that, click CONNECT_PROFILE_ICON <span style=\" color:#555753;\">Connect</span> "
+                                           "to play.</p>"
+                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
+                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
+                                           "Welcome message when icons for control buttons are shown, please leave the XXXX_ICON marker words as "
+                                           "they are - they will be replaced by icons (images) when this text is used; otherwise the text should "
+                                           "be identical to the one without icons.")));
+
+        // As we are repurposing the cancel to be a close button we do want to
+        // change it anyhow:
+        abort->setIcon(QIcon::fromTheme(QStringLiteral("dialog-close"), QIcon(QStringLiteral(":/icons/dialog-close.png"))));
+
+        QIcon icon_new(QIcon::fromTheme(QStringLiteral("document-new"), QIcon(QStringLiteral(":/icons/document-new.png"))));
+        QIcon icon_connect(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":/icons/dialog-ok-apply.png"))));
+
+        connect_button->setIcon(icon_connect);
+        new_profile_button->setIcon(icon_new);
+        copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+        remove_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))));
+
+        QTextCursor cursor = pWelcome_document->find(QStringLiteral("NEW_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
+        // The indicated piece of marker text should be selected by the cursor
+        Q_ASSERT_X(!cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)",
+                   "NEW_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
+        // Remove the marker:
+        cursor.removeSelectedText();
+        // Insert the current icon image into the same place:
+        QImage image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
+        cursor.insertImage(image_new);
+        cursor.clearSelection();
+
+        cursor = pWelcome_document->find(QStringLiteral("CONNECT_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
+        Q_ASSERT_X(!cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)",
+                   "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
+        cursor.removeSelectedText();
+        QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
+        cursor.insertImage(image_connect);
+        cursor.clearSelection();
+    } else {
+        pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
+                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
+                                           "<p>To play a game not in the list, click on <span style=\" color:#555753;\">New</span>, fill in the "
+                                           "<i>Profile Name</i>, <i>Server address</i>, and <i>Port</i> fields in the "
+                                           "<i>Required </i> area.</p>"
+                                           "<p>After that, click <span style=\" color:#555753;\">Connect</span> to play.</p>"
+                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
+                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
+                                           "Welcome message when icons for control buttons are NOT shown the text should "
+                                           "be identical to the one with icons except for a pair of XXXX_ICON markers not "
+                                           "in this version.")));
+    }
+    welcome_message->setDocument(pWelcome_document);
+
+    connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
+    connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
+    connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
+    connect(copy_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
+    connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_name);
+    connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_save_name);
+    connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
+    connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
+    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
+    connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
+    connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
+    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
+    connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
+    connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
     // website_entry atm is only a label
     //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
@@ -133,7 +203,7 @@ void dlgConnectionProfiles::slot_update_description()
     }
 }
 
-void dlgConnectionProfiles::slot_update_website(const QString url)
+void dlgConnectionProfiles::slot_update_website(const QString &url)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
@@ -142,7 +212,7 @@ void dlgConnectionProfiles::slot_update_website(const QString url)
     }
 }
 
-void dlgConnectionProfiles::slot_update_pass(const QString pass)
+void dlgConnectionProfiles::slot_update_pass(const QString &pass)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
@@ -151,7 +221,7 @@ void dlgConnectionProfiles::slot_update_pass(const QString pass)
     }
 }
 
-void dlgConnectionProfiles::slot_update_login(const QString login)
+void dlgConnectionProfiles::slot_update_login(const QString &login)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
@@ -160,7 +230,7 @@ void dlgConnectionProfiles::slot_update_login(const QString login)
     }
 }
 
-void dlgConnectionProfiles::slot_update_url(const QString url)
+void dlgConnectionProfiles::slot_update_url(const QString &url)
 {
     if (url.isEmpty()) {
         validUrl = false;
@@ -212,7 +282,7 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
 {
     QString port = port_entry->text().trimmed();
 
-    if (ignoreBlank == "") {
+    if (ignoreBlank.isEmpty()) {
         validPort = false;
         connect_button->setDisabled(true);
         return;
@@ -525,7 +595,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     QFile file(QStringLiteral(":/ui/delete_profile_confirmation.ui"));
     file.open(QFile::ReadOnly);
 
-    QDialog* delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto * delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
 
     if (!delete_profile_dialog) {
@@ -534,14 +604,14 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     delete_profile_lineedit = delete_profile_dialog->findChild<QLineEdit*>(QStringLiteral("delete_profile_lineedit"));
     delete_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("delete_button"));
-    QPushButton* cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
+    auto * cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
 
     if (!delete_profile_lineedit || !delete_button || !cancel_button) {
         return;
     }
 
-    connect(delete_profile_lineedit, SIGNAL(textChanged(const QString)), this, SLOT(slot_deleteprofile_check(const QString)));
-    connect(delete_profile_dialog, SIGNAL(accepted()), this, SLOT(slot_reallyDeleteProfile()));
+    connect(delete_profile_lineedit, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_deleteprofile_check);
+    connect(delete_profile_dialog, &QDialog::accepted, this, &dlgConnectionProfiles::slot_reallyDeleteProfile);
 
     delete_profile_lineedit->setPlaceholderText(profile);
     delete_profile_lineedit->setFocus();
@@ -893,9 +963,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
-    for (int i = 0; i < entries.size(); ++i) {
+    for (const auto entry : entries) {
         QRegularExpression rx(QStringLiteral("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
-        QRegularExpressionMatch match = rx.match(entries.at(i));
+        QRegularExpressionMatch match = rx.match(entry);
 
         if (match.capturedStart() != -1) {
             QString day;
@@ -921,10 +991,14 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
 
             //readableEntries << datetime.toString(Qt::SystemLocaleLongDate);
-            //profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entries.at(i)));
-            profile_history->addItem(datetime.toString(Qt::SystemLocaleLongDate), QVariant(entries.at(i)));
+            //profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entry));
+            profile_history->addItem(datetime.toString(Qt::SystemLocaleLongDate), QVariant(entry));
+        } else if (entry == QLatin1String("autosave.xml")) {
+            QFileInfo fileInfo(dir, entry);
+            auto lastModified = fileInfo.lastModified();
+            profile_history->addItem(QIcon::fromTheme(QStringLiteral("document-save"), QIcon(QStringLiteral(":/icons/document-save.png"))), lastModified.toString(Qt::SystemLocaleLongDate), QVariant(entry));
         } else {
-            profile_history->addItem(entries.at(i), QVariant(entries.at(i))); // if it has a custom name, use it as it is
+            profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
     }
 
@@ -1505,6 +1579,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
+        pHost->refreshPackageFonts();
     } else {
         needsGenericPackagesInstall = true;
     }
@@ -1537,8 +1612,11 @@ void dlgConnectionProfiles::slot_connectToServer()
             slot_update_login(pHost->getLogin());
         }
 
-        QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
-        pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
+        // This settings also need to be configured, note that the only time not to
+        // save the setting is on profile loading:
+        pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
+        // Needed to ensure setting is correct on start-up:
+        pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
     }
 
     if (needsGenericPackagesInstall) {
@@ -1554,6 +1632,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());

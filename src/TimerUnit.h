@@ -71,7 +71,8 @@ public:
     QList<TTimer*> uninstallList;
 
 private:
-    TimerUnit() {}
+    TimerUnit() = default;
+
     void _assembleReport(TTimer*);
     TTimer* getTimerPrivate(int id);
     void addTimerRootNode(TTimer* pT, int parentPosition = -1, int childPosition = -1);

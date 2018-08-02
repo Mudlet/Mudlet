@@ -21,7 +21,6 @@
 
 #include "TTreeWidget.h"
 
-
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TTimer.h"
@@ -30,9 +29,7 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QHeaderView>
-#include <QTreeWidget>
 #include "post_guard.h"
-
 
 TTreeWidget::TTreeWidget(QWidget* pW) : QTreeWidget(pW), mChildID()
 {
@@ -143,7 +140,7 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
 void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if (mIsVarTree && indexClicked.isValid() && mClickedItem == indexClicked) {
+    if (mIsVarTree && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());

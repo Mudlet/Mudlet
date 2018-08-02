@@ -51,8 +51,8 @@ public:
     bool killAlias(const QString& name);
     bool registerAlias(TAlias* pT);
     void unregisterAlias(TAlias* pT);
-    void uninstall(QString);
-    void _uninstall(TAlias* pChild, QString packageName);
+    void uninstall(const QString&);
+    void _uninstall(TAlias* pChild, const QString& packageName);
     void reParentAlias(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     bool processDataStream(const QString&);
     void stopAllTriggers();
@@ -81,7 +81,8 @@ public:
 
 
 private:
-    AliasUnit() {}
+    AliasUnit() = default;
+
     void initStats();
     void _assembleReport(TAlias*);
     TAlias* getAliasPrivate(int id);

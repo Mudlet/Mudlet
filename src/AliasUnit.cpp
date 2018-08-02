@@ -23,17 +23,12 @@
 
 #include "Host.h"
 #include "TAlias.h"
-#include "TLuaInterpreter.h"
-
-#include "pre_guard.h"
-#include <QStringList>
-#include "post_guard.h"
 
 
 using namespace std;
 
 
-void AliasUnit::_uninstall(TAlias* pChild, QString packageName)
+void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
     list<TAlias*>* childrenList = pChild->mpMyChildrenList;
     for (auto alias : *childrenList) {
@@ -43,7 +38,7 @@ void AliasUnit::_uninstall(TAlias* pChild, QString packageName)
 }
 
 
-void AliasUnit::uninstall(QString packageName)
+void AliasUnit::uninstall(const QString &packageName)
 {
     for (auto rootAlias : mAliasRootNodeList) {
         if (rootAlias->mPackageName == packageName) {
@@ -232,8 +227,7 @@ int AliasUnit::getNewID()
 bool AliasUnit::processDataStream(const QString& data)
 {
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
-    QString lua_command_string = "command";
-    Lua->set_lua_string(lua_command_string, data);
+    Lua->set_lua_string(QStringLiteral("command"), data);
     bool state = false;
     for (auto alias : mAliasRootNodeList) {
         // = data.replace( "\n", "" );
@@ -253,7 +247,6 @@ bool AliasUnit::processDataStream(const QString& data)
 void AliasUnit::stopAllTriggers()
 {
     for (auto alias : mAliasRootNodeList) {
-        QString name = alias->getName();
         alias->disableFamily();
     }
 }
@@ -361,9 +354,9 @@ QString AliasUnit::assembleReport()
         }
     }
     QStringList msg;
-    msg << "Aliases current total: " << QString::number(statsAliasTotal) << "\n"
-        << "tempAliases current total: " << QString::number(statsTempAliases) << "\n"
-        << "active Aliases: " << QString::number(statsActiveAliases) << "\n";
+    msg << QStringLiteral("Aliases current total: ") << QString::number(statsAliasTotal) << QStringLiteral("\n")
+        << QStringLiteral("tempAliases current total: ") << QString::number(statsTempAliases) << QStringLiteral("\n")
+        << QStringLiteral("active Aliases: ") << QString::number(statsActiveAliases) << QStringLiteral("\n");
         /*<< "active Aliases max this session: " << QString::number(statsActiveAliasesMax) << "\n"
         << "active Aliases min this session: " << QString::number(statsActiveAliasesMin) << "\n"
         << "active Aliases average this session: " << QString::number(statsActiveAliasesAverage) << "\n"*/
@@ -373,7 +366,7 @@ QString AliasUnit::assembleReport()
         //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
         //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
         //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
-    return msg.join("");
+    return msg.join(QString());
 }
 
 void AliasUnit::doCleanup()

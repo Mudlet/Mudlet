@@ -35,6 +35,7 @@
 #include <QtCore>
 #include <QDialog>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QMap>
 #include "post_guard.h"
 
@@ -107,6 +108,14 @@ public slots:
     void saveMap();
     void copyMap();
     void slot_chooseProfilesChanged(QAction*);
+    void slot_showMapGlyphUsage();
+
+
+    // Log.
+    void slot_setLogDir();
+    void slot_resetLogDir();
+    void slot_logFileNameFormatChange(int index);
+    void slot_changeLogFileAsHtml(bool isHtml);
 
     // Save.
     void slot_save_and_exit();
@@ -114,23 +123,25 @@ public slots:
     void hideActionLabel();
     void slot_setEncoding(const QString&);
 
-    void slot_handleHostAddition(Host*, const quint8);
+    void slot_handleHostAddition(Host*, quint8);
     void slot_handleHostDeletion(Host*);
 
 private slots:
-    void slot_changeShowSpacesAndTabs(const bool);
-    void slot_changeShowLineFeedsAndParagraphs(const bool);
-    void slot_resetThemeUpdateLabel();
+    void slot_changeShowSpacesAndTabs(bool);
+    void slot_changeShowLineFeedsAndParagraphs(bool);
     void slot_script_selected(int index);
     void slot_editor_tab_selected(int tabIndex);
     void slot_theme_selected(int index);
-    void slot_changeShowMenuBar(const int);
-    void slot_changeShowToolBar(const int);
+    void slot_setMapSymbolFont(const QFont&);
+    void slot_setMapSymbolFontStrategy(bool);
+    void slot_changeShowMenuBar(int);
+    void slot_changeShowToolBar(int);
 
 private:
     void setColors();
     void setColors2();
-    void setColor(QPushButton* b, QColor& c);
+    void setColor(QPushButton*, QColor&);
+    void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();
@@ -144,13 +155,18 @@ private:
     void disableHostDetails();
     void enableHostDetails();
     void clearHostDetails();
-    
+    void disconnectHostRelatedControls();
+    void generateMapGlyphDisplay();
+
     int mFontSize;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
-    void disconnectHostRelatedControls();
+    QPointer<QDialog> mpDialogMapGlyphUsage;
+    QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+
+    QString mLogDirPath;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

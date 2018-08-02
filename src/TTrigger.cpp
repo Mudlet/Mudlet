@@ -25,14 +25,11 @@
 
 
 #include "Host.h"
+#include <QRegularExpression>
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"
 #include "mudlet.h"
-
-#include "pre_guard.h"
-#include <QRegularExpression>
-#include "post_guard.h"
 
 #include <assert.h>
 
@@ -73,6 +70,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
 , mRegisteredAnonymousLuaFunction(false)
+, mExpiryCount(-1)
 {
 }
 
@@ -108,6 +106,7 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
 , mRegisteredAnonymousLuaFunction(false)
+, mExpiryCount(-1)
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -151,7 +150,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
         qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: propertyList.size() != regexList.size()";
     }
 
-    if ((propertyList.size() < 1) && (!isFolder()) && (!mColorTrigger)) {
+    if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
         setError("No patterns defined.");
         mOK_init = false;
         return false;
@@ -476,7 +475,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
             execute();
             pL->clearCaptureGroups();
             if (mFilterTrigger) {
-                if (captureList.size() > 0) {
+                if (!captureList.empty()) {
                     filter(captureList.front(), posList.front());
                 }
             }
@@ -519,10 +518,10 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
 
 inline void TTrigger::filter(std::string& capture, int& posOffset)
 {
-    if (capture.size() < 1) {
+    if (capture.empty()) {
         return;
     }
-    char* filterSubject = (char*)malloc(capture.size() + 2048);
+    auto * filterSubject = (char*)malloc(capture.size() + 2048);
     if (filterSubject) {
         strcpy(filterSubject, capture.c_str());
     } else {
@@ -533,6 +532,16 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
         trigger->match(filterSubject, text, -1, posOffset);
     }
     free(filterSubject);
+}
+
+int TTrigger::getExpiryCount() const
+{
+    return mExpiryCount;
+}
+
+void TTrigger::setExpiryCount(int expiryCount)
+{
+    mExpiryCount = expiryCount;
 }
 
 bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
@@ -583,7 +592,7 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
             execute();
             pL->clearCaptureGroups();
             if (mFilterTrigger) {
-                if (captureList.size() > 0) {
+                if (!captureList.empty()) {
                     filter(captureList.front(), posList.front());
                 }
             }
@@ -680,7 +689,7 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             execute();
             pL->clearCaptureGroups();
             if (mFilterTrigger) {
-                if (captureList.size() > 0) {
+                if (!captureList.empty()) {
                     auto it1 = captureList.begin();
                     auto it2 = posList.begin();
                     for (; it1 != captureList.end(); it1++, it2++) {
@@ -805,7 +814,7 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
             execute();
             pL->clearCaptureGroups();
             if (mFilterTrigger) {
-                if (captureList.size() > 0) {
+                if (!captureList.empty()) {
                     filter(captureList.front(), posList.front());
                 }
             }
@@ -924,7 +933,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                     if (mFilterTrigger) {
                         std::list<std::list<std::string>> multiCaptureList;
                         multiCaptureList = matchStatePair.second->multiCaptureList;
-                        if (multiCaptureList.size() > 0) {
+                        if (!multiCaptureList.empty()) {
                             for (auto mit = multiCaptureList.begin(); mit != multiCaptureList.end(); mit++, k++) {
                                 int total = (*mit).size();
                                 auto its = (*mit).begin();
@@ -967,7 +976,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         // a folder can also be a simple structural element in which case all data passes through
         // if at least one regex is defined a folder is considered a trigger chain otherwise a structural element
         if (!mFilterTrigger) {
-            if (conditionMet || (mRegexCodeList.size() < 1)) {
+            if (conditionMet || (mRegexCodeList.empty())) {
                 for (auto trigger : *mpMyChildrenList) {
                     ret = trigger->match(subject, toMatch, line);
                     if (ret) {
@@ -979,7 +988,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 
         if ((mKeepFiring > 0) && (!conditionMet)) {
             mKeepFiring--;
-            if ((mKeepFiring == mStayOpen) || (mpMyChildrenList->size() == 0)) {
+            if ((mKeepFiring == mStayOpen) || (mpMyChildrenList->empty())) {
                 execute();
             }
             for (auto trigger : *mpMyChildrenList) {
@@ -991,6 +1000,19 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
             return true;
         }
 
+        if (conditionMet && mExpiryCount > -1) {
+            mExpiryCount--;
+
+            if (mExpiryCount == 0) {
+                mpHost->getTriggerUnit()->markCleanup(this);
+
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 expired.\n").arg(mName) >> 0;
+                }
+            } else if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 will fire %n more time(s).\n", "", mExpiryCount).arg(mName) >> 0;
+            }
+        }
 
         return conditionMet;
     }
@@ -1238,7 +1260,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
 
 bool TTrigger::isFilterChain()
 {
-    if ((mRegexCodeList.size() > 0) && (hasChildren())) {
+    if ((!mRegexCodeList.empty()) && (hasChildren())) {
         return true;
     } else {
         return false;
@@ -1328,7 +1350,17 @@ void TTrigger::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpLua->call_luafunction(this);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->call_luafunction(this);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callLuaFunctionReturnBool(this);
+            // if the function ran okay and returned true, it wants to extend the expiry count
+            if (result.first && result.second) {
+                mExpiryCount++;
+            }
+        }
         return;
     }
 
@@ -1337,9 +1369,27 @@ void TTrigger::execute()
     }
 
     if (mIsMultiline) {
-        mpLua->callMulti(mFuncName, mName);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->callMulti(mFuncName, mName);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callMultiReturnBool(mFuncName, mName);
+            if (result.second) {
+                mExpiryCount++;
+            }
+        }
     } else {
-        mpLua->call(mFuncName, mName);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->call(mFuncName, mName);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callReturnBool(mFuncName, mName);
+            if (result.second) {
+                mExpiryCount++;
+            }
+        }
     }
 }
 

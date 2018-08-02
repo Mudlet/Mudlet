@@ -30,6 +30,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPointer>
+#include <QProcess>
 #include <QThread>
 #include <QTimer>
 #include "post_guard.h"
@@ -77,9 +78,12 @@ public:
     void initLuaGlobals();
     void initIndenterGlobals();
     bool call(const QString& function, const QString& mName);
+    std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
+    std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void*);
+    bool call_luafunction(void* pT);
+    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
@@ -98,7 +102,7 @@ public:
 
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
-    bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = 0);
+    bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
 
@@ -106,13 +110,13 @@ public:
     int startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
-    int startTempTrigger(const QString&, const QString&);
-    int startTempBeginOfLineTrigger(const QString&, const QString&);
-    int startTempExactMatchTrigger(const QString&, const QString&);
-    int startTempLineTrigger(int, int, const QString&);
-    int startTempRegexTrigger(const QString&, const QString&);
-    int startTempColorTrigger(int, int, const QString&);
-    int startTempPromptTrigger(const QString& function);
+    int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
+    int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempLineTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
+    int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
+    int startTempPromptTrigger(const QString& function, int expiryCount = -1);
     int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
@@ -194,6 +198,7 @@ public:
     static int clearSpecialExits(lua_State*);
     static int solveRoomCollisions(lua_State*);
     static int setGridMode(lua_State* L);
+    static int getGridMode(lua_State* L);
     static int getCustomEnvColorTable(lua_State* L);
     static int setRoomName(lua_State*);
     static int getRoomName(lua_State*);
@@ -245,6 +250,8 @@ public:
     static int loadWindowLayout(lua_State* L);
     static int saveWindowLayout(lua_State* L);
     static int saveProfile(lua_State* L);
+    static int setFont(lua_State* L);
+    static int getFont(lua_State* L);
     static int setFontSize(lua_State* L);
     static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
@@ -372,6 +379,7 @@ public:
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setLabelStyleSheet(lua_State*);
     static int getTime(lua_State*);
+    static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
     static int getTimestamp(lua_State*);
     static int setLink(lua_State*);
@@ -425,6 +433,7 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getAvailableFonts(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
@@ -432,7 +441,7 @@ public:
 public slots:
     void slot_replyFinished(QNetworkReply*);
     void slotPurge();
-    void slotDeleteSender();
+    void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
     QNetworkAccessManager* mpFileDownloader;

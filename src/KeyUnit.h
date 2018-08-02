@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -50,6 +51,7 @@ public:
     }
 
     TKey* getKey(int id);
+    void removeAllTempKeys();
     void compileAll();
     TKey* findKey(QString & name);
     bool enableKey(const QString& name);
@@ -67,6 +69,8 @@ public:
     bool processDataStream(int, int);
     void markCleanup( TKey * pT );
     void doCleanup();
+    void stopAllTriggers();
+    void reenableAllTriggers();
 
     QMultiMap<QString, TKey*> mLookupTable;
     std::list<TKey*> mCleanupList;
@@ -80,9 +84,14 @@ public:
     int statsTempKeysCreated;
     int statsTempKeysKilled;
     QList<TKey*> uninstallList;
+    // Past behaviour is to only process the first key binding that matches,
+    // ignoring any duplicates - but changing that behaviour unconditionally
+    // could break things - so only do it if this flag is set:
+    bool mRunAllKeyMatches;
 
 private:
-    KeyUnit() {}
+    KeyUnit() = default;
+
     TKey* getKeyPrivate(int id);
     void initStats();
     void _assembleReport(TKey*);

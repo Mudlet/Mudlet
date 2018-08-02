@@ -63,7 +63,8 @@ public:
     bool match(const QString& toMatch);
     bool registerAlias();
 
-    TAlias() {}
+    TAlias() = default;
+
     QString mName;
     QString mCommand;
     QString mRegexCode;

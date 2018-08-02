@@ -32,31 +32,17 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
-#include "TDebug.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
-#include "glwidget.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDir>
-#include <QNetworkAccessManager>
 #include <QProgressDialog>
-#include <QStringBuilder>
 #include <QTextCodec>
-#include <QTimer>
+#include <QTextEncoder>
 #include "post_guard.h"
-
-#include <iostream>
-#include <memory>
-#include <sstream>
-
-#include <stdio.h>
-#include <sys/types.h>
-#include <time.h>
 
 #define DEBUG
 
@@ -70,6 +56,7 @@ QFile replayFile;
 
 cTelnet::cTelnet(Host* pH)
 : mResponseProcessed(true)
+, networkLatency()
 , mAlertOnNewData(true)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
@@ -82,11 +69,6 @@ cTelnet::cTelnet(Host* pH)
 , mCommands(0)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
-, enableATCP(false)
-, enableGMCP(false)
-, enableChannel102(false)
-, loadingReplay(false)
-, networkLatency()
 , mpProgressDialog()
 , hostPort()
 , networkLatencyMin()
@@ -95,6 +77,10 @@ cTelnet::cTelnet(Host* pH)
 , mZstream()
 , recvdGA()
 , lastTimeOffset()
+, enableATCP(false)
+, enableGMCP(false)
+, enableChannel102(false)
+, loadingReplay(false)
 , mIsReplayRunFromLua(false)
 {
     mIsTimerPosting = false;
@@ -103,10 +89,10 @@ cTelnet::cTelnet(Host* pH)
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
-    encodingChanged(QLatin1String("UTF-8"));
-    termType = QString("Mudlet %1").arg(APP_VERSION);
+    encodingChanged(QStringLiteral("UTF-8"));
+    termType = QStringLiteral("Mudlet %1").arg(QStringLiteral(APP_VERSION));
     if (QByteArray(APP_BUILD).trimmed().length()) {
-        termType.append(QString(APP_BUILD));
+        termType.append(QStringLiteral(APP_BUILD));
     }
 
     iac = iac2 = insb = false;
@@ -116,42 +102,44 @@ cTelnet::cTelnet(Host* pH)
     curY = 25;
 
     if (mAcceptableEncodings.isEmpty()) {
-        mAcceptableEncodings << QLatin1String("UTF-8");
-        mAcceptableEncodings << QLatin1String("GBK");
-        mAcceptableEncodings << QLatin1String("GB18030");
-        mAcceptableEncodings << QLatin1String("ISO 8859-1");
+        mAcceptableEncodings << QStringLiteral("UTF-8");
+        mAcceptableEncodings << QStringLiteral("GBK");
+        mAcceptableEncodings << QStringLiteral("GB18030");
+        mAcceptableEncodings << QStringLiteral("Big5");
+        mAcceptableEncodings << QStringLiteral("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
 
     if (mFriendlyEncodings.isEmpty()) {
-        mFriendlyEncodings << QLatin1String("UTF-8");
-        mFriendlyEncodings << QLatin1String("GBK");
-        mFriendlyEncodings << QLatin1String("GB18030");
-        mFriendlyEncodings << QLatin1String("ISO 8859-1");
+        mFriendlyEncodings << QStringLiteral("UTF-8");
+        mFriendlyEncodings << QStringLiteral("GBK");
+        mFriendlyEncodings << QStringLiteral("GB18030");
+        mFriendlyEncodings << QStringLiteral("Big5");
+        mFriendlyEncodings << QStringLiteral("ISO 8859-1");
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
 
     // initialize the socket
-    connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
-    connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
-    connect(&socket, SIGNAL(readyRead()), this, SLOT(handle_socket_signal_readyRead()));
+    connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+    connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
+    connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
 
     // initialize telnet session
     reset();
 
     mpPostingTimer->setInterval(300); //FIXME
-    connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
+    connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
     mTimerLogin = new QTimer(this);
     mTimerLogin->setSingleShot(true);
-    connect(mTimerLogin, SIGNAL(timeout()), this, SLOT(slot_send_login()));
+    connect(mTimerLogin, &QTimer::timeout, this, &cTelnet::slot_send_login);
 
     mTimerPass = new QTimer(this);
     mTimerPass->setSingleShot(true);
-    connect(mTimerPass, SIGNAL(timeout()), this, SLOT(slot_send_pass()));
+    connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
     mpDownloader = new QNetworkAccessManager(this);
-    connect(mpDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
 }
 
 void cTelnet::reset()
@@ -182,7 +170,7 @@ cTelnet::~cTelnet()
         mudlet::self()->replayOver();
     }
 
-    if (messageStack.size()) {
+    if (!messageStack.empty()) {
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
         foreach (QString message, messageStack) {
             qWarning("%s\n------------", qPrintable(message));
@@ -240,14 +228,14 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
 {
     QString reportedEncoding = newEncoding;
     if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
-        reportedEncoding = QLatin1String("ASCII");
+        reportedEncoding = QStringLiteral("ASCII");
         if (!mEncoding.isEmpty()) {
             // This will disable trancoding on:
             // input in TBuffer::translateToPlainText(...)
             // output in cTelnet::sendData(...)
             mEncoding.clear();
             if (isToStore) {
-                mpHost->writeProfileData(QLatin1String("encoding"), reportedEncoding);
+                mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
     } else if (!mAcceptableEncodings.contains(newEncoding)) {
@@ -259,7 +247,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
         if (isToStore) {
-            mpHost->writeProfileData(QLatin1String("encoding"), mEncoding);
+            mpHost->writeProfileData(QStringLiteral("encoding"), mEncoding);
         }
     }
 
@@ -313,6 +301,9 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
+
+    setKeepAlive(socket.socketDescriptor());
+
     QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
     postMessage(msg);
     QString func = "onConnect";
@@ -325,7 +316,7 @@ void cTelnet::handle_socket_signal_connected()
     }
 
     TEvent event;
-    event.mArgumentList.append(QLatin1String("sysConnectionEvent"));
+    event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 }
@@ -335,7 +326,7 @@ void cTelnet::handle_socket_signal_disconnected()
     postData();
 
     TEvent event;
-    event.mArgumentList.append(QLatin1String("sysDisconnectionEvent"));
+    event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
@@ -356,28 +347,23 @@ void cTelnet::handle_socket_signal_disconnected()
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
     if (!hostInfo.addresses().isEmpty()) {
-        mHostAddress = hostInfo.addresses().first();
-        QString msg = "[ INFO ]  - The IP address of " + hostName + " has been found. It is: " + mHostAddress.toString() + "\n";
-        postMessage(msg);
-        msg = "[ INFO ]  - Trying to connect to " + mHostAddress.toString() + ":" + QString::number(hostPort) + " ...\n";
-        postMessage(msg);
+        mHostAddress = hostInfo.addresses().constFirst();
+        postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
+        postMessage(tr("[ INFO ]  - Trying to connect to %1: %2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = "[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.";
-        postMessage(msg);
+        postMessage(tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."));
         return;
     }
 }
 
 bool cTelnet::sendData(QString& data)
 {
-    while (data.indexOf("\n") != -1) {
-        data.replace(QChar('\n'), "");
-    }
+    data.remove(QChar::LineFeed);
 
     TEvent event;
-    event.mArgumentList.append(QLatin1String("sysDataSendRequest"));
+    event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(data);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -752,7 +738,7 @@ void cTelnet::processTelnetCommand(const string& command)
         qDebug() << "cTelnet::processTelnetCommand() TN_WONT command=" << (quint8)command[2];
 #endif
         option = command[2];
-        int idxOption = static_cast<int>(option);
+        auto idxOption = static_cast<int>(option);
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = false;
             triedToEnable[idxOption] = false;
@@ -806,7 +792,7 @@ void cTelnet::processTelnetCommand(const string& command)
 #endif
         //server wants us to enable some option
         option = command[2];
-        int idxOption = static_cast<int>(option);
+        auto idxOption = static_cast<quint8>(option);
         if (option == static_cast<char>(69) && mpHost->mEnableMSDP) // MSDP support
         {
             qDebug() << "TELNET IAC DO MSDP";
@@ -960,8 +946,8 @@ void cTelnet::processTelnetCommand(const string& command)
 
                 int newVersion = version.toInt();
                 if (mpHost->mServerGUI_Package_version != newVersion) {
-                    QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
-                                            .arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
+                    QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
+                                            .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
                     mpHost->mpConsole->print(_smsg.toLatin1().data());
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
                     mpHost->mServerGUI_Package_version = newVersion;
@@ -990,7 +976,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
-                connect(reply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(setDownloadProgress(qint64, qint64)));
+                connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
             }
             return;
@@ -1079,17 +1065,17 @@ void cTelnet::processTelnetCommand(const string& command)
     }
     }; //end switch 1
        // raise sysTelnetEvent for all unhandled protocols
-       // EXCEPT TN_GA (performance)
-    if (command[1] != TN_GA) {
-        unsigned char type = static_cast<unsigned char>(command[1]);
-        unsigned char telnetOption = static_cast<unsigned char>(command[2]);
+       // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+    if (command[1] != TN_GA && command[1] != TN_EOR) {
+        auto type = static_cast<unsigned char>(command[1]);
+        auto telnetOption = static_cast<unsigned char>(command[2]);
         QString msg = command.c_str();
         if (command.size() >= 6) {
             msg = msg.mid(3, command.size() - 5);
         }
 
         TEvent event;
-        event.mArgumentList.append(QLatin1String("sysTelnetEvent"));
+        event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(QString::number(type));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -1161,27 +1147,27 @@ void cTelnet::setGMCPVariables(const QString& msg)
     QString var;
     QString arg;
     if (msg.indexOf('\n') > -1) {
-        var = msg.section("\n", 0, 0);
-        arg = msg.section("\n", 1);
+        var = msg.section(QChar::LineFeed, 0, 0);
+        arg = msg.section(QChar::LineFeed, 1);
     } else {
-        var = msg.section(" ", 0, 0);
-        arg = msg.section(" ", 1);
+        var = msg.section(QChar::Space, 0, 0);
+        arg = msg.section(QChar::Space, 1);
     }
 
-    if (msg.startsWith("Client.GUI")) {
+    if (msg.startsWith(QStringLiteral("Client.GUI"))) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
 
         QString version = msg.section('\n', 0);
-        version.replace("Client.GUI ", "");
-        version.replace('\n', " ");
+        version.remove(QStringLiteral("Client.GUI "));
+        version.replace(QChar::LineFeed, QChar::Space);
         version = version.section(' ', 0, 0);
 
         int newVersion = version.toInt();
         if (mpHost->mServerGUI_Package_version != newVersion) {
-            QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
-                                    .arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
+            QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
+                                    .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
             mpHost->mpConsole->print(_smsg.toLatin1().data());
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;
@@ -1210,7 +1196,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
-        connect(reply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(setDownloadProgress(qint64, qint64)));
+        connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
     }
@@ -1302,7 +1288,7 @@ void cTelnet::postMessage(QString msg)
         return;
     }
 
-    while (messageStack.size()) {
+    while (!messageStack.empty()) {
         while (messageStack.first().endsWith('\n')) { // Must strip off final line feeds as use that character for split() - will replace it later
             messageStack.first().chop(1);
         }
@@ -1330,7 +1316,7 @@ void cTelnet::postMessage(QString msg)
                     // Fix for lua using tabs for indentation which was messing up justification:
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), Qt::black); // Bright Yellow on black
                 }
             } else if (prefix.contains("LUA")) {
@@ -1341,7 +1327,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size() > 0) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), Qt::black); // Red on black
                 }
             } else if (prefix.contains("WARN")) {
@@ -1352,7 +1338,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), Qt::black);
                 }
             } else if (prefix.contains("ALERT")) {
@@ -1363,7 +1349,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), Qt::black); // Yellow on Black
                 }
             } else if (prefix.contains("INFO")) {
@@ -1374,7 +1360,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), Qt::black); // Light Green on Black
                 }
             } else if (prefix.contains("OK")) {
@@ -1385,7 +1371,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), Qt::black); // Orangish on black
                 }
             } else {                                                                                             // Unrecognised but still in a "[ something ] -  message..." format
@@ -1396,7 +1382,7 @@ void cTelnet::postMessage(QString msg)
                     temp.replace('\t', "        ");
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
-                if (body.size()) {
+                if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(50, 50, 50), QColor(190, 190, 190)); //Foreground dark grey, background bright grey
                 }
             }
@@ -1454,7 +1440,7 @@ void cTelnet::gotPrompt(string& mud_data)
 
 void cTelnet::gotRest(string& mud_data)
 {
-    if (mud_data.size() < 1) {
+    if (mud_data.empty()) {
         return;
     }
     if (!mGA_Driver) {
@@ -1550,17 +1536,6 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         qDebug() << "Listening for new compression sequences";
         return -1;
     }
-    /* TODO: Remove this commented code once it is deemed safe. -MH
-	   else
-	   {
-	    if( zval <= 0 )
-	    {
-	        initStreamDecompressor();
-	        qDebug() << "Listening for new compression sequences";
-	        return -1;
-	    }
-	   }
-	 */
     return outSize;
 }
 
@@ -1629,7 +1604,7 @@ void cTelnet::loadReplayChunk()
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(slot_processReplayChunk()));
+        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
     } else {
         loadingReplay = false;
         replayFile.close();
@@ -1725,7 +1700,7 @@ void cTelnet::slot_processReplayChunk()
         }
     } //for
 
-    if (cleandata.size() > 0) {
+    if (!cleandata.empty()) {
         gotRest(cleandata);
     }
 
@@ -1911,7 +1886,7 @@ void cTelnet::handle_socket_signal_readyRead()
         } //for
     } while (datalen == 100000);
 
-    if (cleandata.size() > 0) {
+    if (!cleandata.empty()) {
         gotRest(cleandata);
     }
     mpHost->mpConsole->finalize();
@@ -1926,4 +1901,84 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentList.append(protocol);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
+}
+
+// credit: https://github.com/qflow/websockets
+// Also see: https://stackoverflow.com/a/5435430/4805858
+// particularly the comment: "Note that keepalive won't detect a failure until
+// at least the configured keepalive_time + (keepalive_intrvl*keepalive_probes).
+// I think by default if you don't change the settings this can default to over
+// an hour!" – bdk Mar 25 '11 at 17:50
+void cTelnet::setKeepAlive(int socketHandle)
+{
+    // Switch the keep-alive option on:
+    int on = 1;
+    // allow 75 seconds to set up connection {*nix-like OS default}:
+    int init = 75;
+    // send keepalive after 2 minutes of inactivity (after the init period)
+    // {2 hours is default}:
+    constexpr int timeout = 2 * 60;
+    // send a keepalive packet every 75 seconds {*nix-like 0S default}:
+    int interval = 75;
+    // send up to 10 keepalive packets out - then disconnect if no response:
+    int count = 10;
+#if defined(Q_OS_WIN32)
+    // Both Windows 32 and 64 bit despite the "32"
+
+    // Windows is hardwired to use 10 for the count value (TCP_KEEPCNT) in Vista
+    // and later.
+    // https://msdn.microsoft.com/en-us/library/windows/desktop/dd877220(v=vs.85).aspx
+    Q_UNUSED(count)
+    Q_UNUSED(init)
+    struct tcp_keepalive
+    {
+        u_long onoff; // off = 0; on = not 0; default off
+        u_long keepalivetime; // milliseconds, default = 7,200,000 = 2 hours
+        u_long keepaliveinterval; // milliseconds, default = 1000 = 1 second
+    } alive;
+    alive.onoff = on;
+    alive.keepalivetime = timeout * 1000;
+    alive.keepaliveinterval = interval * 1000;
+    DWORD dwBytesRet = 0;
+    WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
+
+#else // For OSes other than Windows:
+
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+    setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
+#else
+    // FreeBSD always has the Keep-alive option enabled, so the above is not
+    // needed
+    Q_UNUSED(on)
+#endif
+
+    // The effect is that (on FreeBSD) "init" seconds is allowed to set up the
+    // connection, then after (all OSes) "timeout" seconds with no traffic a
+    // keep-alive is sent - which should wake up the far end, if it does not
+    // another one is sent after a further "interval" seconds and if NO response
+    // is received after "count" of those keep alives then Mudlet will close the
+    // socket itself - declaring the remote end dead... we are hoping that that
+    // does not happen so that the FIRST keep-alive does what it is supposed to!
+
+    // Time to establish connection on new, unconnected sockets, in seconds
+#if defined(Q_OS_FREEBSD)
+    // Only an option on FreeBSD:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINIT, &init, sizeof(init));
+#else
+    Q_UNUSED(init)
+#endif
+
+    // Start keepalives after this interval of idleness, in seconds:
+#if defined(Q_OS_MACOS)
+    // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#else
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
+#endif
+
+    // Interval between keep-alives, in seconds:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+    // Number of failed keep alives before forcing a close:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#endif // defined(Q_OS_WIN32)
 }

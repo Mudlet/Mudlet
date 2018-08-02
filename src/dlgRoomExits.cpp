@@ -36,13 +36,7 @@
 
 #include "Host.h"
 #include "TArea.h"
-#include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
-
-#include "pre_guard.h"
-#include <QDebug>
-#include "post_guard.h"
 
 dlgRoomExits::dlgRoomExits(Host* pH, QWidget* pW) : QDialog(pW), mpHost(pH), mpEditItem(nullptr), pR(), mRoomID(), mEditColumn()
 {
@@ -130,7 +124,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
 
         case 7:
             if (!mpEditItem->text(7).trimmed().length()) {
-                mpEditItem->setText(7, tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (1 of 5)"));
+                mpEditItem->setText(7, tr("<command or Lua script>", "This string is also used programmatically - ensure all five instances are the same"));
             }
             specialExits->closePersistentEditor(mpEditItem, mEditColumn);
             //            qDebug()<<"Closed PE on item:"<<mpEditItem->text(7)<<"column:"<<mEditColumn;
@@ -244,7 +238,7 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setCheckState(6, Qt::Unchecked); //Doortype: locked
     pI->setToolTip(6,
                    QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-    pI->setText(7, tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (2 of 5)")); //Exit command
+    pI->setText(7, tr("<command or Lua script>", "This string is also used programmatically - ensure all five instances are the same")); //Exit command
     pI->setTextAlignment(7, Qt::AlignLeft);
     specialExits->addTopLevelItem(pI);
 }
@@ -284,7 +278,7 @@ void dlgRoomExits::save()
             door = 0;
         }
         QString value = pI->text(7);
-        if (value != tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (3 of 5)") && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) != nullptr) {
+        if (value != tr("<command or Lua script>", "This string is also used programmatically - ensure all five instances are the same") && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) != nullptr) {
             originalExitCmds.remove(value);
             if (pI->checkState(1) == Qt::Unchecked) {
                 value = value.prepend(QStringLiteral("0"));
@@ -1984,74 +1978,75 @@ void dlgRoomExits::init(int id)
 // We now do not connect up all these things until AFTER we have initialised
 // things as some controls will issue unwanted signals upon setting values into
 // them as we have above...
-    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
-    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
-    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(save()));
-    connect( button_addSpecialExit,SIGNAL(clicked()),                            this, SLOT(slot_addSpecialExit()));
-    connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_editSpecialExit(QTreeWidgetItem *, int)));
-    connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_checkModified()));
-    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
-    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
-    connect( nw,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_nw_textEdited(const QString &)));
-    connect( n,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_n_textEdited(const QString &)));
-    connect( ne,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_ne_textEdited(const QString &)));
-    connect( up,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_up_textEdited(const QString &)));
-    connect( w,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_w_textEdited(const QString &)));
-    connect( e,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_e_textEdited(const QString &)));
-    connect( down,                 SIGNAL(textEdited(const QString &)),          this, SLOT(slot_down_textEdited(const QString &)));
-    connect( sw,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_sw_textEdited(const QString &)));
-    connect( s,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_s_textEdited(const QString &)));
-    connect( se,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_se_textEdited(const QString &)));
-    connect( in,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_in_textEdited(const QString &)));
-    connect( out,                  SIGNAL(textEdited(const QString &)),          this, SLOT(slot_out_textEdited(const QString &)));
-    connect( stub_nw,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_nw_stateChanged(int)));
-    connect( stub_n,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_n_stateChanged(int)));
-    connect( stub_ne,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_ne_stateChanged(int)));
-    connect( stub_up,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_up_stateChanged(int)));
-    connect( stub_w,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_w_stateChanged(int)));
-    connect( stub_e,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_e_stateChanged(int)));
-    connect( stub_down,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_down_stateChanged(int)));
-    connect( stub_sw,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_sw_stateChanged(int)));
-    connect( stub_s,               SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_s_stateChanged(int)));
-    connect( stub_se,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_se_stateChanged(int)));
-    connect( stub_in,              SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_in_stateChanged(int)));
-    connect( stub_out,             SIGNAL(stateChanged(int)),                    this, SLOT(slot_stub_out_stateChanged(int)));
-    connect( noroute_nw,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_n,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_ne,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_up,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_w,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_e,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_down,         SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_sw,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_s,            SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_se,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_in,           SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( noroute_out,          SIGNAL(stateChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_nw,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_n,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_ne,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_up,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_w,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_e,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_down,          SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_sw,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_s,             SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_se,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_in,            SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( weight_out,           SIGNAL(valueChanged(int)),                    this, SLOT(slot_checkModified()));
-    connect( doortype_nw,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_n,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_ne,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_up,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_w,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_e,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_sw,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_s,           SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_se,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_in,          SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
-    connect( doortype_down,        SIGNAL(buttonClicked(int)),                   this, SLOT(slot_checkModified()));
+    connect( button_save,          &QAbstractButton::clicked,                            this, &dlgRoomExits::slot_endEditSpecialExits);
+    connect( button_save,          &QAbstractButton::clicked,                            this, &dlgRoomExits::slot_checkModified);
+    connect( button_save,          &QAbstractButton::clicked,                            this, &dlgRoomExits::save);
+    connect( button_addSpecialExit,&QAbstractButton::clicked,                            this, &dlgRoomExits::slot_addSpecialExit);
+    connect( specialExits,         &QTreeWidget::itemClicked, this, &dlgRoomExits::slot_editSpecialExit);
+    connect( specialExits,         &QTreeWidget::itemClicked, this, &dlgRoomExits::slot_checkModified);
+    connect( button_endEditing,    &QAbstractButton::clicked,                            this, &dlgRoomExits::slot_endEditSpecialExits);
+    connect( button_endEditing,    &QAbstractButton::clicked,                            this, &dlgRoomExits::slot_checkModified);
+    connect( nw,                   &QLineEdit::textEdited,          this, &dlgRoomExits::slot_nw_textEdited);
+    connect( n,                    &QLineEdit::textEdited,          this, &dlgRoomExits::slot_n_textEdited);
+    connect( ne,                   &QLineEdit::textEdited,          this, &dlgRoomExits::slot_ne_textEdited);
+    connect( up,                   &QLineEdit::textEdited,          this, &dlgRoomExits::slot_up_textEdited);
+    connect( w,                    &QLineEdit::textEdited,          this, &dlgRoomExits::slot_w_textEdited);
+    connect( e,                    &QLineEdit::textEdited,          this, &dlgRoomExits::slot_e_textEdited);
+    connect( down,                 &QLineEdit::textEdited,          this, &dlgRoomExits::slot_down_textEdited);
+    connect( sw,                   &QLineEdit::textEdited,          this, &dlgRoomExits::slot_sw_textEdited);
+    connect( s,                    &QLineEdit::textEdited,          this, &dlgRoomExits::slot_s_textEdited);
+    connect( se,                   &QLineEdit::textEdited,          this, &dlgRoomExits::slot_se_textEdited);
+    connect( in,                   &QLineEdit::textEdited,          this, &dlgRoomExits::slot_in_textEdited);
+    connect( out,                  &QLineEdit::textEdited,          this, &dlgRoomExits::slot_out_textEdited);
+    connect( stub_nw,              &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_nw_stateChanged);
+    connect( stub_n,               &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_n_stateChanged);
+    connect( stub_ne,              &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_ne_stateChanged);
+    connect( stub_up,              &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_up_stateChanged);
+    connect( stub_w,               &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_w_stateChanged);
+    connect( stub_e,               &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_e_stateChanged);
+    connect( stub_down,            &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_down_stateChanged);
+    connect( stub_sw,              &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_sw_stateChanged);
+    connect( stub_s,               &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_s_stateChanged);
+    connect( stub_se,              &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_se_stateChanged);
+    connect( stub_in,              &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_in_stateChanged);
+    connect( stub_out,             &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_stub_out_stateChanged);
+    connect( noroute_nw,           &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_n,            &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_ne,           &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_up,           &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_w,            &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_e,            &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_down,         &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_sw,           &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_s,            &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_se,           &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_in,           &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( noroute_out,          &QCheckBox::stateChanged,                    this, &dlgRoomExits::slot_checkModified);
+    connect( weight_nw,            qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_n,             qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_ne,            qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_up,            qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_w,             qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_e,             qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_down,          qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_sw,            qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_s,             qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_se,            qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_in,            qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( weight_out,           qOverload<int>(&QSpinBox::valueChanged),     this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_nw,          qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_n,           qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_ne,          qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_up,          qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_w,           qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_e,           qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_down,        qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_sw,          qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_s,           qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_se,          qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_in,          qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_down,        qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
+    connect( doortype_out,         qOverload<int>(&QButtonGroup::buttonClicked),this, &dlgRoomExits::slot_checkModified);
 }
 
 TExit* dlgRoomExits::makeExitFromControls(int direction)
@@ -2282,7 +2277,7 @@ void dlgRoomExits::slot_checkModified()
  *                   pI->text(0).toInt(),
  *                   qPrintable(pI->text(7)));
  */
-            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (4 of 5)") || pI->text(0).toInt() <= 0)
+            if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically - ensure all five instances are the same") || pI->text(0).toInt() <= 0)
                 continue; // Ignore new or to be deleted entries
             currentCount++;
         }
@@ -2302,7 +2297,7 @@ void dlgRoomExits::slot_checkModified()
  *                           pI->text(0).toInt(),
  *                           qPrintable(pI->text(7)));
  */
-                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (5 of 5)") || pI->text(0).toInt() <= 0)
+                    if (pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically - ensure all five instances are the same") || pI->text(0).toInt() <= 0)
                         continue; // Ignore new or to be deleted entries
                     QString currentCmd = pI->text(7);
                     TExit currentExit;
@@ -2328,6 +2323,16 @@ void dlgRoomExits::slot_checkModified()
             }
         }
     }
-    setWindowModified(isModified);
-    button_save->setEnabled(isModified);
+
+    if (isWindowModified() != isModified) {
+        // There has been a change in the "are there changes?" state
+        setWindowModified(isModified);
+        button_save->setEnabled(isModified);
+#if defined(Q_OS_MACOS) && (QT_VERSION > 0x050903)
+        // Fix: https://bugreports.qt.io/browse/QTBUG-68067 which seems to
+        // effect macOs for Qt versions somewhere after Qt 5.9.3 and which we
+        // do not have a fix version - yet!
+        button_save->repaint();
+#endif
+    }
 }

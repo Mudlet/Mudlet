@@ -43,7 +43,7 @@ public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
     void updateAreaComboBox();
-    void setDefaultAreaShown(const bool);
+    void setDefaultAreaShown(bool);
     bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();
 

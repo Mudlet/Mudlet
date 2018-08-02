@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -57,7 +58,7 @@ class TConsole : public QWidget
 
 public:
     Q_DISABLE_COPY(TConsole)
-    TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
+    TConsole(Host*, bool isDebugConsole, QWidget* parent = nullptr);
     void reset();
     void resetMainConsole();
     void echoUserWindow(const QString&);
@@ -117,12 +118,12 @@ public:
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
     void scrollUp(int lines);
-    void print(const QString&, const QColor fgColor, const QColor bgColor);
+    void print(const QString&, QColor fgColor, QColor bgColor);
     void print(const QString& msg);
     void print(const char*);
     void printDebug(QColor&, QColor&, const QString&);
     void printSystemMessage(const QString& msg);
-    void printOnDisplay(std::string&, const bool isFromServer = false);
+    void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
     bool hasSelection();
     void moveCursorEnd();
@@ -140,7 +141,8 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(int);
+    bool setMiniConsoleFontSize(int);    
+    bool setMiniConsoleFont(const QString& font);
     void setBold(bool);
     void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
     void setItalics(bool);
@@ -152,7 +154,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int);
-    void setConsoleFgColor(int, int, int);
+// Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> _getFgColor();
     std::list<int> _getBgColor();
     void _luaWrapLine(int);
@@ -171,8 +173,8 @@ public:
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;
-    TTextEdit* console;
-    TTextEdit* console2;
+    TTextEdit* mUpperPane;
+    TTextEdit* mLowerPane;
     int currentFgColorProperty;
     QToolButton* emergencyStop;
     bool isUserScrollBack;
@@ -188,6 +190,8 @@ public:
     QString mConsoleName;
     QString mCurrentLine;
     int mDeletedLines;
+    QString mDisplayFontName;
+    int mDisplayFontSize;
     QFont mDisplayFont;
     int mEngineCursor;
     QColor mFgColor;
@@ -196,7 +200,6 @@ public:
 
     int mIndentCount;
     bool mIsDebugConsole;
-    bool mIsHighColorMode;
     bool mIsSubConsole;
     std::map<std::string, TLabel*> mLabelMap;
     QFile mLogFile;
@@ -213,9 +216,6 @@ public:
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
-    bool mHighColorModeBackground;
-    bool mHighColorModeForeground;
-
 
     QWidget* mpBaseVFrame;
     QWidget* mpTopToolBar;
@@ -226,7 +226,6 @@ public:
     QWidget* mpMainDisplay;
 
     dlgMapper* mpMapper;
-    dlgNotepad* mpNotePad;
 
     QScrollBar* mpScrollBar;
 
@@ -244,7 +243,6 @@ public:
     bool mTriggerEngineMode;
     bool mUserConsole;
     QPoint mUserCursor;
-    bool mWaitingForHighColorCode;
     bool mWindowIsHidden;
     int mWrapAt;
     QLineEdit* networkLatency;
@@ -265,6 +263,10 @@ public:
     QWidget* mpButtonMainLayer;
 
 signals:
+    // Raised when new data is incoming to trigger Alert handling in mudlet
+    // class, second argument is true for a lower priority indication when
+    // locally produced information is painted into main console
+    void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
 
 
 public slots:
@@ -278,6 +280,10 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+
+private:
+    void refreshMiniConsole() const;
+
 };
 
 #endif // MUDLET_TCONSOLE_H

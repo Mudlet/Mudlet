@@ -30,7 +30,6 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
-#include "ctelnet.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -42,14 +41,10 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
-#include <QMainWindow>
 #include <QNetworkDiskCache>
-#include <QPalette>
-#include <QRegularExpression>
-#include <QStandardPaths>
-#include <QTextOption>
+#include <QTableWidget>
 #include <QToolBar>
-#include <QVariant>
+#include <QUiLoader>
 #include "post_guard.h"
 
 
@@ -62,10 +57,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // init generated dialog
     setupUi(this);
 
-    // These are currently empty so can be hidden until needed, but provides
-    // locations on the first (General) and last (Special Options) tabs where
-    // temporary/development/testing controls can be placed if needed...
-    groupBox_debug->hide();
+    // The groupBox_debug is no longer empty, (it contains
+    // checkBox_showIconsOnMenus) so can no longer be "hidden until needed"
+    // it still provides a location on the last (Special Options) tab where
+    // temporary/development/testing controls can be placed if needed, they
+    // should be added to the (QGridLayout*) returned by:
+    // qobject_cast<QGridLayout*>(groupBox_debug->layout())
 
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
@@ -102,6 +99,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         comboBox_toolBarVisibility->setCurrentIndex(2);
     }
 
+    // Set the properties of the log options
+    lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
+    pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Select a directory where logs will be saved.</p>"));
+    pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
+    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
+                                                   .arg("<p>This option sets the format of the log name.</p>"
+                                                        "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
+    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</p>"));
+    lineEdit_logFileName->setPlaceholderText(
+            tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
+    label_logFileNameExtension->setVisible(false);
+    label_logFileName->setVisible(false);
+    lineEdit_logFileName->setVisible(false);
+
     if (pHost) {
         initWithHost(pHost);
     } else {
@@ -128,13 +139,66 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // on top! 8-)
     tabWidget->setCurrentIndex(0);
 
-    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
-    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
+    // To be moved to a slot that is used on GUI language change when that gets
+    // implimented:
+    pushButton_showGlyphUsage->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg(tr("<p>This will bring up a display showing all the symbols used in the current "
+                                                  "map and whether they can be drawn using just the specifed font, any other "
+                                                  "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                                  "that make up that symbol, so that they can be identified even if they "
+                                                  "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                                  "that symbol are listed, which may help to identify any unexpected or odd cases.<p>")));
+    fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                                "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                     .arg(tr("<p>Using a single font is likely to produce a more consistent style but may "
+                                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
+    checkBox_runAllKeyBindings->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                           .arg(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
+                                                   "(combination of key and modifiers) even if more than one of them is set to be "
+                                                   "active. This means that a temporary keybinding (not visible in the Editor) "
+                                                   "created by a script or package may be used in preference to a permanent one "
+                                                   "that is shown and is set to be active. If checked then all matching keybindings "
+                                                   "will be run.</p>"
+                                                   "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
+                                                   "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>")));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                         .arg("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                              "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                              "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                              "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                              "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                              "<p>This control has three settings:"
+                                                              "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                              "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                              "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                              "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
+                                                              "full support for languages other than English.</i></p>"));
+    checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mShowIconsOnMenuCheckedState);
+    checkBox_showIconsOnMenus->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
+                                               "shown icons on menus, others, however do not. This control allows the user to override "
+                                               "the setting, if needed, as follows:"
+                                               "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
+                                               "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
+                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
+                                               "<p><i>This setting is only processed when individual menus are created and changes may not "
+                                               "propogate everywhere until Mudlet is restarted.</i></p>"));
+
+    connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
+    connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
-    connect(mudlet::self(), SIGNAL(signal_hostCreated(Host*,quint8)), this, SLOT(slot_handleHostAddition(Host*,quint8)));
-    connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*,quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
-    connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
-    connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
+    connect(mudlet::self(), &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
+    connect(mudlet::self(), &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
+    // Because QComboBox::currentIndexChanged has multiple (overloaded) forms we
+    // have to state which one we want to use for these two:
+    connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
+    connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -161,6 +225,7 @@ void dlgProfilePreferences::disableHostDetails()
     // disable the others:
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -182,6 +247,10 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
+    label_mapSymbolsFont->setEnabled(false);
+    fontComboBox_mapSymbols->setEnabled(false);
+    checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
+    pushButton_showGlyphUsage->setEnabled(false);
 
     groupBox_downloadMapOptions->setEnabled(false);
     // The above is actually normally hidden:
@@ -192,6 +261,12 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(false);
+
+    // on groupBox_logOptions:
+    groupBox_logOptions->setEnabled(false);
+    lineEdit_logFileName->setVisible(false);
+    label_logFileName->setVisible(false);
+    label_logFileNameExtension->setVisible(false);
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
@@ -220,6 +295,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(true);
@@ -243,6 +319,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(true);
+
+    // on tab_logging:
+    groupBox_logOptions->setEnabled(true);
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(true);
@@ -275,6 +354,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
+    checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     QString path;
     // This is duplicated (and should be the same as) the code in:
@@ -321,7 +401,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
      || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
 
         groupBox_downloadMapOptions->setVisible(true);
-        connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
+        connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
     } else {
         groupBox_downloadMapOptions->setVisible(false);
     }
@@ -348,7 +428,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mFontSize = 10;
     }
     if (mFontSize < 40 && mFontSize > 0) {
-        fontSize->setCurrentIndex( (mFontSize - 1) );
+        fontSize->setCurrentIndex((mFontSize - 1));
     } else {
         // if the font size set for the main console is outside the pre-set range
         // this will unfortunately reset the font to default size.
@@ -372,12 +452,46 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
+    checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
     topBorderHeight->setValue(pHost->mBorderTopHeight);
     bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
     leftBorderWidth->setValue(pHost->mBorderLeftWidth);
     rightBorderWidth->setValue(pHost->mBorderRightWidth);
-    mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+
+    // Set the properties in groupBox_logOptions
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
+    mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+
+    bool isLogFileNameEntryShown = pHost->mLogFileNameFormat.isEmpty();
+    QString logExtension = pHost->mIsNextLogFileInHtmlFormat ? ".html" : ".txt";
+    label_logFileNameExtension->setVisible(isLogFileNameEntryShown);
+    lineEdit_logFileName->setVisible(isLogFileNameEntryShown);
+    label_logFileName->setVisible(isLogFileNameEntryShown);
+    label_logFileNameExtension->setText(logExtension);
+
+    // This is the previous standard:
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
+    // The ISO standard for this uses T as the date/time separator
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd"));
+    // It might be possible to use QDateTime::weekNumber but that number is not
+    // available from the QDateTime::toString(...) method
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01%1)").arg(logExtension), QStringLiteral("yyyy-MM"));
+    comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
+    comboBox_logFileNameFormat->setCurrentIndex(comboBox_logFileNameFormat->findData(pHost->mLogFileNameFormat));
+
+    lineEdit_logFileName->setText(pHost->mLogFileName);
+
+    // pHost->mLogDir should be empty for the default location:
+    mLogDirPath = pHost->mLogDir;
+    lineEdit_logFileFolder->setText(mLogDirPath);
+    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()));
+    // set the cursor position to the end of the lineEdit's text property.
+    lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
+    // Enable the reset button if the current location is not the default one:
+    pushButton_resetLogDir->setEnabled(mLogDirPath.length() > 0);
+
+
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
     mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
@@ -394,7 +508,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
-    if (! mpMenu) {
+    if (!mpMenu) {
         mpMenu = new QMenu(tr("Other profiles to Map to:"));
     }
 
@@ -455,10 +569,41 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
     if (pHost->mpMap->mpMapper) {
+        QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_debug);
+        mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_debug);
+        mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
+        mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
+        mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
+        mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
+        auto * pdebugLayout = qobject_cast<QGridLayout*>(groupBox_debug->layout());
+        if (pdebugLayout) {
+            int existingRows = pdebugLayout->rowCount();
+            pdebugLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
+            pdebugLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
+        } else {
+            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QGridLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
+        }
+
+        label_mapSymbolsFont->setEnabled(true);
+        fontComboBox_mapSymbols->setEnabled(true);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(true);
+
         checkBox_showDefaultArea->show();
         checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
         checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
+
+        pushButton_showGlyphUsage->setEnabled(true);
+        fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
+        connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
+        connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
+        connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
     } else {
+        label_mapSymbolsFont->setEnabled(false);
+        fontComboBox_mapSymbols->setEnabled(false);
+        checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
+        pushButton_showGlyphUsage->setEnabled(false);
+
         checkBox_showDefaultArea->hide();
     }
 
@@ -481,140 +626,149 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
-    connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
-    connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
+    connect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandLineFgColor);
+    connect(pushButton_command_line_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandLineBgColor);
 
-    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
-    connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
-    connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
-    connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
-    connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
-    connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
-    connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
-    connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
-    connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
-    connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
-    connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
-    connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
-    connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
-    connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
-    connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
-    connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
+    connect(pushButton_black, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlack);
+    connect(pushButton_lBlack, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlack);
+    connect(pushButton_red, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorRed);
+    connect(pushButton_lRed, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightRed);
+    connect(pushButton_green, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorGreen);
+    connect(pushButton_lGreen, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightGreen);
+    connect(pushButton_yellow, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorYellow);
+    connect(pushButton_lYellow, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightYellow);
+    connect(pushButton_blue, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlue);
+    connect(pushButton_lBlue, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlue);
+    connect(pushButton_magenta, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorMagenta);
+    connect(pushButton_lMagenta, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightMagenta);
+    connect(pushButton_cyan, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorCyan);
+    connect(pushButton_lCyan, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightCyan);
+    connect(pushButton_white, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorWhite);
+    connect(pushButton_lWhite, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightWhite);
 
-    connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
-    connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
-    connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
-    connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
+    connect(pushButton_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor);
+    connect(pushButton_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor);
+    connect(pushButton_command_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandFgColor);
+    connect(pushButton_command_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandBgColor);
 
-    connect(reset_colors_button, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
+    connect(pushButton_resetColors, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
     connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
 
-    connect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(setDisplayFont()));
-    connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
+    connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::setDisplayFont);
+    connect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::setFontSize);
 
-    connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
-    connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
-    connect(pushButton_green_2, SIGNAL(clicked()), this, SLOT(setColorGreen2()));
-    connect(pushButton_Lgreen_2, SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
-    connect(pushButton_red_2, SIGNAL(clicked()), this, SLOT(setColorRed2()));
-    connect(pushButton_Lred_2, SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
-    connect(pushButton_blue_2, SIGNAL(clicked()), this, SLOT(setColorBlue2()));
-    connect(pushButton_Lblue_2, SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
-    connect(pushButton_yellow_2, SIGNAL(clicked()), this, SLOT(setColorYellow2()));
-    connect(pushButton_Lyellow_2, SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
-    connect(pushButton_cyan_2, SIGNAL(clicked()), this, SLOT(setColorCyan2()));
-    connect(pushButton_Lcyan_2, SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
-    connect(pushButton_magenta_2, SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
-    connect(pushButton_Lmagenta_2, SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
-    connect(pushButton_white_2, SIGNAL(clicked()), this, SLOT(setColorWhite2()));
-    connect(pushButton_Lwhite_2, SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
+    connect(pushButton_black_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlack2);
+    connect(pushButton_Lblack_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlack2);
+    connect(pushButton_green_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorGreen2);
+    connect(pushButton_Lgreen_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightGreen2);
+    connect(pushButton_red_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorRed2);
+    connect(pushButton_Lred_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightRed2);
+    connect(pushButton_blue_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlue2);
+    connect(pushButton_Lblue_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlue2);
+    connect(pushButton_yellow_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorYellow2);
+    connect(pushButton_Lyellow_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightYellow2);
+    connect(pushButton_cyan_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorCyan2);
+    connect(pushButton_Lcyan_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightCyan2);
+    connect(pushButton_magenta_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorMagenta2);
+    connect(pushButton_Lmagenta_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightMagenta2);
+    connect(pushButton_white_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorWhite2);
+    connect(pushButton_Lwhite_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightWhite2);
 
-    connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
-    connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
+    connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor2);
+    connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
 
-    connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
-    connect(mEnableMSDP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
+    connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
 
-    connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
-    connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
-    connect(mpMenu, SIGNAL(triggered(QAction*)), this, SLOT(slot_chooseProfilesChanged(QAction*)));
+    connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
+    connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
+    connect(mpMenu.data(), &QMenu::triggered, this, &dlgProfilePreferences::slot_chooseProfilesChanged);
 
-    connect(pushButton_copyMap, SIGNAL(clicked()), this, SLOT(copyMap()));
-    connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
-    connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
-    connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
+    connect(pushButton_copyMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::copyMap);
+    connect(pushButton_loadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::loadMap);
+    connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::saveMap);
+    connect(comboBox_encoding, &QComboBox::currentTextChanged, this, &dlgProfilePreferences::slot_setEncoding);
+
+    connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
+    connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
+    connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
+    connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
 {
-    disconnect(buttonDownloadMap, SIGNAL(clicked()));
-
-    disconnect(pushButton_command_line_foreground_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_line_background_color, SIGNAL(clicked()));
-
-    disconnect(pushButton_black, SIGNAL(clicked()));
-    disconnect(pushButton_Lblack, SIGNAL(clicked()));
-    disconnect(pushButton_green, SIGNAL(clicked()));
-    disconnect(pushButton_Lgreen, SIGNAL(clicked()));
-    disconnect(pushButton_red, SIGNAL(clicked()));
-    disconnect(pushButton_Lred, SIGNAL(clicked()));
-    disconnect(pushButton_blue, SIGNAL(clicked()));
-    disconnect(pushButton_Lblue, SIGNAL(clicked()));
-    disconnect(pushButton_yellow, SIGNAL(clicked()));
-    disconnect(pushButton_Lyellow, SIGNAL(clicked()));
-    disconnect(pushButton_cyan, SIGNAL(clicked()));
-    disconnect(pushButton_Lcyan, SIGNAL(clicked()));
-    disconnect(pushButton_magenta, SIGNAL(clicked()));
-    disconnect(pushButton_Lmagenta, SIGNAL(clicked()));
-    disconnect(pushButton_white, SIGNAL(clicked()));
-    disconnect(pushButton_Lwhite, SIGNAL(clicked()));
-
-    disconnect(pushButton_foreground_color, SIGNAL(clicked()));
-    disconnect(pushButton_background_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_foreground_color, SIGNAL(clicked()));
-    disconnect(pushButton_command_background_color, SIGNAL(clicked()));
-
     // The "new" style connect(...) does not have the same range of overloaded
     // disconnect(...) counterparts - so we need to provide the "dummy"
     // arguments to get the wanted wild-card behaviour for them:
-    disconnect(reset_colors_button, &QAbstractButton::clicked, 0, 0);
-    disconnect(reset_colors_button_2, &QAbstractButton::clicked, 0, 0);
 
-    disconnect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)));
-    disconnect(fontSize, SIGNAL(currentIndexChanged(int)));
+    disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(pushButton_black_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lblack_2, SIGNAL(clicked()));
-    disconnect(pushButton_green_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lgreen_2, SIGNAL(clicked()));
-    disconnect(pushButton_red_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lred_2, SIGNAL(clicked()));
-    disconnect(pushButton_blue_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lblue_2, SIGNAL(clicked()));
-    disconnect(pushButton_yellow_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lyellow_2, SIGNAL(clicked()));
-    disconnect(pushButton_cyan_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lcyan_2, SIGNAL(clicked()));
-    disconnect(pushButton_magenta_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lmagenta_2, SIGNAL(clicked()));
-    disconnect(pushButton_white_2, SIGNAL(clicked()));
-    disconnect(pushButton_Lwhite_2, SIGNAL(clicked()));
+    disconnect(pushButton_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_background_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_line_background_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_foreground_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_command_background_color, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(pushButton_foreground_color_2, SIGNAL(clicked()));
-    disconnect(pushButton_background_color_2, SIGNAL(clicked()));
+    disconnect(pushButton_black, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lBlack, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_red, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lRed, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_green, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lGreen, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_yellow, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lYellow, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_blue, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lBlue, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_magenta, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lMagenta, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_cyan, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lCyan, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_white, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_lWhite, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(mEnableGMCP, SIGNAL(clicked()));
-    disconnect(mEnableMSDP, SIGNAL(clicked()));
+    disconnect(pushButton_resetColors, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(mFORCE_MCCP_OFF, SIGNAL(clicked()));
-    disconnect(mFORCE_GA_OFF, SIGNAL(clicked()));
+    disconnect(fontComboBox, qOverload<const QFont&>(&QFontComboBox::currentFontChanged), nullptr, nullptr);
+    disconnect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
 
-    disconnect(mpMenu, SIGNAL(triggered(QAction*)));
-    disconnect(pushButton_copyMap, SIGNAL(clicked()));
-    disconnect(pushButton_loadMap, SIGNAL(clicked()));
-    disconnect(pushButton_saveMap, SIGNAL(clicked()));
+    disconnect(pushButton_black_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lblack_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_green_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lgreen_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_red_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lred_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_blue_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lblue_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_yellow_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lyellow_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_cyan_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lcyan_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_magenta_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lmagenta_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_white_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_Lwhite_2, &QAbstractButton::clicked, nullptr, nullptr);
 
-    disconnect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)));
+    disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
+
+    disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMSDP, &QAbstractButton::clicked, nullptr, nullptr);
+
+    disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
+
+    disconnect(mpMenu.data(), &QMenu::triggered, nullptr, nullptr);
+    disconnect(pushButton_copyMap, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_loadMap, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_saveMap, &QAbstractButton::clicked, nullptr, nullptr);
+
+    disconnect(comboBox_encoding, &QComboBox::currentTextChanged, nullptr, nullptr);
+    disconnect(pushButton_whereToLog, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_resetLogDir, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
+    disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -682,7 +836,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
-    if (mpMenu ) {
+    if (mpMenu) {
         mpMenu->deleteLater();
         mpMenu = nullptr;
     }
@@ -770,54 +924,51 @@ void dlgProfilePreferences::setColors()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor.name()));
-        pushButton_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor.name()));
-        pushButton_black->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack.name()));
-        pushButton_Lblack->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack.name()));
-        pushButton_red->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed.name()));
-        pushButton_Lred->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed.name()));
-        pushButton_green->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen.name()));
-        pushButton_Lgreen->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen.name()));
-        pushButton_blue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue.name()));
-        pushButton_Lblue->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue.name()));
-        pushButton_yellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow.name()));
-        pushButton_Lyellow->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow.name()));
-        pushButton_cyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan.name()));
-        pushButton_Lcyan->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan.name()));
-        pushButton_magenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta.name()));
-        pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
-        pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
-        pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
-
-        pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineFgColor.name()));
-        pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandLineBgColor.name()));
-        pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandFgColor.name()));
-        pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCommandBgColor.name()));
+        setButtonColor(pushButton_foreground_color, pHost->mFgColor);
+        setButtonColor(pushButton_background_color, pHost->mBgColor);
+        setButtonColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
+        setButtonColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
+        setButtonColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
+        setButtonColor(pushButton_command_background_color, pHost->mCommandBgColor);
+        setButtonColor(pushButton_black, pHost->mBlack);
+        setButtonColor(pushButton_lBlack, pHost->mLightBlack);
+        setButtonColor(pushButton_red, pHost->mRed);
+        setButtonColor(pushButton_lRed, pHost->mLightRed);
+        setButtonColor(pushButton_green, pHost->mGreen);
+        setButtonColor(pushButton_lGreen, pHost->mLightGreen);
+        setButtonColor(pushButton_blue, pHost->mBlue);
+        setButtonColor(pushButton_lBlue, pHost->mLightBlue);
+        setButtonColor(pushButton_yellow, pHost->mYellow);
+        setButtonColor(pushButton_lYellow, pHost->mLightYellow);
+        setButtonColor(pushButton_cyan, pHost->mCyan);
+        setButtonColor(pushButton_lCyan, pHost->mLightCyan);
+        setButtonColor(pushButton_magenta, pHost->mMagenta);
+        setButtonColor(pushButton_lMagenta, pHost->mLightMagenta);
+        setButtonColor(pushButton_white, pHost->mWhite);
+        setButtonColor(pushButton_lWhite, pHost->mLightWhite);
     } else {
         pushButton_foreground_color->setStyleSheet(QString());
         pushButton_background_color->setStyleSheet(QString());
-
-        pushButton_black->setStyleSheet(QString());
-        pushButton_Lblack->setStyleSheet(QString());
-        pushButton_green->setStyleSheet(QString());
-        pushButton_Lgreen->setStyleSheet(QString());
-        pushButton_red->setStyleSheet(QString());
-        pushButton_Lred->setStyleSheet(QString());
-        pushButton_blue->setStyleSheet(QString());
-        pushButton_Lblue->setStyleSheet(QString());
-        pushButton_yellow->setStyleSheet(QString());
-        pushButton_Lyellow->setStyleSheet(QString());
-        pushButton_cyan->setStyleSheet(QString());
-        pushButton_Lcyan->setStyleSheet(QString());
-        pushButton_magenta->setStyleSheet(QString());
-        pushButton_Lmagenta->setStyleSheet(QString());
-        pushButton_white->setStyleSheet(QString());
-        pushButton_Lwhite->setStyleSheet(QString());
-
         pushButton_command_line_foreground_color->setStyleSheet(QString());
         pushButton_command_line_background_color->setStyleSheet(QString());
         pushButton_command_foreground_color->setStyleSheet(QString());
         pushButton_command_background_color->setStyleSheet(QString());
+        pushButton_black->setStyleSheet(QString());
+        pushButton_lBlack->setStyleSheet(QString());
+        pushButton_red->setStyleSheet(QString());
+        pushButton_lRed->setStyleSheet(QString());
+        pushButton_green->setStyleSheet(QString());
+        pushButton_lGreen->setStyleSheet(QString());
+        pushButton_yellow->setStyleSheet(QString());
+        pushButton_lYellow->setStyleSheet(QString());
+        pushButton_blue->setStyleSheet(QString());
+        pushButton_lBlue->setStyleSheet(QString());
+        pushButton_magenta->setStyleSheet(QString());
+        pushButton_lMagenta->setStyleSheet(QString());
+        pushButton_cyan->setStyleSheet(QString());
+        pushButton_lCyan->setStyleSheet(QString());
+        pushButton_white->setStyleSheet(QString());
+        pushButton_lWhite->setStyleSheet(QString());
     }
 }
 
@@ -945,9 +1096,18 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
         c = color;
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();
+            // update the display properly when color selections change.
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            if (!mudlet::self()->mConsoleMap[pHost]->mUpperPane->mIsTailMode) {
+                // The upper pane having mIsTailMode true means lower pane is hidden
+                mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+                mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
+            }
         }
 
-        b->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(color.name()));
+        // Also set a contrasting foreground color so text will always be visible
+        setButtonColor(b, color);
     }
 }
 
@@ -1020,10 +1180,10 @@ void dlgProfilePreferences::setDisplayFont()
             mudlet::self()->mConsoleMap[pHost]->changeColors();
 
             // update the display properly when font or size selections change.
-            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
         }
         auto config = edbeePreviewWidget->config();
@@ -1060,7 +1220,7 @@ void dlgProfilePreferences::setColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblack, pHost->mLightBlack);
+        setColor(pushButton_lBlack, pHost->mLightBlack);
     }
 }
 
@@ -1076,7 +1236,7 @@ void dlgProfilePreferences::setColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lred, pHost->mLightRed);
+        setColor(pushButton_lRed, pHost->mLightRed);
     }
 }
 
@@ -1092,27 +1252,12 @@ void dlgProfilePreferences::setColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lgreen, pHost->mLightGreen);
-    }
-}
-
-void dlgProfilePreferences::setColorBlue()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_blue, pHost->mBlue);
-    }
-}
-
-void dlgProfilePreferences::setColorLightBlue()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_Lblue, pHost->mLightBlue);
+        setColor(pushButton_lGreen, pHost->mLightGreen);
     }
 }
 
 void dlgProfilePreferences::setColorYellow()
+
 {
     Host* pHost = mpHost;
     if (pHost) {
@@ -1124,7 +1269,41 @@ void dlgProfilePreferences::setColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lyellow, pHost->mLightYellow);
+        setColor(pushButton_lYellow, pHost->mLightYellow);
+    }
+}
+
+void dlgProfilePreferences::setColorBlue()
+
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_blue, pHost->mBlue);
+    }
+}
+
+void dlgProfilePreferences::setColorLightBlue()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_lBlue, pHost->mLightBlue);
+    }
+}
+
+void dlgProfilePreferences::setColorMagenta()
+
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_magenta, pHost->mMagenta);
+    }
+}
+
+void dlgProfilePreferences::setColorLightMagenta()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_lMagenta, pHost->mLightMagenta);
     }
 }
 
@@ -1140,23 +1319,7 @@ void dlgProfilePreferences::setColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lcyan, pHost->mLightCyan);
-    }
-}
-
-void dlgProfilePreferences::setColorMagenta()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_magenta, pHost->mMagenta);
-    }
-}
-
-void dlgProfilePreferences::setColorLightMagenta()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_Lmagenta, pHost->mLightMagenta);
+        setColor(pushButton_lCyan, pHost->mLightCyan);
     }
 }
 
@@ -1172,7 +1335,7 @@ void dlgProfilePreferences::setColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lwhite, pHost->mLightWhite);
+        setColor(pushButton_lWhite, pHost->mLightWhite);
     }
 }
 
@@ -1346,7 +1509,7 @@ void dlgProfilePreferences::loadMap()
                            tr("Load Mudlet map"),
                            mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
                            tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
-                              "Do not change extensions (in braces) they are used programmatically!"));
+                              "Do not change extensions (in braces) as they are used programmatically"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -1377,7 +1540,7 @@ void dlgProfilePreferences::loadMap()
             label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
         }
     }
-    QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
+    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
 
     // Restore setting immediately before we used it
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
@@ -1423,7 +1586,7 @@ void dlgProfilePreferences::saveMap()
     pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
-    QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
+    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
 }
 
 void dlgProfilePreferences::hideActionLabel()
@@ -1560,7 +1723,7 @@ void dlgProfilePreferences::copyMap()
 
     if (!pHost->mpConsole->saveMap(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
-        QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
+        QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
         return;
     }
 
@@ -1585,7 +1748,7 @@ void dlgProfilePreferences::copyMap()
 
     if (thisProfileLatestMapFile.fileName().isEmpty()) {
         label_mapFileActionResult->setText(tr("Could not copy the map - failed to work out which map file we just saved the map as!"));
-        QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
+        QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
         return;
     }
 
@@ -1603,7 +1766,7 @@ void dlgProfilePreferences::copyMap()
 
         if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
-            QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
+            QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
             continue; // Try again with next profile
         } else {
             label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
@@ -1619,15 +1782,106 @@ void dlgProfilePreferences::copyMap()
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
     // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
-    QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
+    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
 
     // CHECK: Race condition? We might be changing this whilst other profile
     // are accessing it...
     mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
 
+void dlgProfilePreferences::slot_setLogDir()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    /*
+     * To show the files even though we are looking for a directory so that the
+     * user can see the files that may get appended to depending on the format
+     * selection, we need to use QFileDialog::DontUseNativeDialog because on
+     * Windows the native one does not show files when selecting a directory.
+     *
+     * Also from Qt Docs:
+     * "On Windows, the dialog will spin a blocking modal event loop that will
+     * not dispatch any QTimers, and if parent is not 0 then it will position
+     * the dialog just below the parent's title bar.
+     *
+     * Warning: Do not delete parent during the execution of the dialog. If you
+     * want to do this, you should create the dialog yourself using one of the
+     * QFileDialog constructors."
+     *
+     * That warning suggests *bad things* would happen if the "Save" button or
+     * the widget title bar close button was pressed on the Profile Preferrences
+     * dialog while the directory selector is open...!
+     */
+    // Seems to return "." when Cancel is hit:
+    QString currentLogDir = QFileDialog::getExistingDirectory(
+            this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lineEdit_logFileFolder->placeholderText() : mLogDirPath), QFileDialog::DontUseNativeDialog);
+
+    if (!currentLogDir.isEmpty() && currentLogDir != nullptr) {
+        // Disable pushButton_resetLogDir and clear
+        // lineEdit_logFileFolder if the directory is set to the
+        // default path
+        if (currentLogDir == mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName())) {
+            // clear mLogDirPath, which sets the directory where logs are saved
+            // to Mudlet's default log path.
+            mLogDirPath.clear();
+            lineEdit_logFileFolder->clear();
+            pushButton_resetLogDir->setEnabled(false);
+        } else {
+            // set mLogDirPath to the selected directory
+            mLogDirPath = currentLogDir;
+            // If the directory is anything other than the default log
+            // directory, set the text of lineEdit_logFileFolder to the selected
+            // directory.
+            lineEdit_logFileFolder->setText(mLogDirPath);
+            // Set the cursor position to the end of the text.
+            lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
+            pushButton_resetLogDir->setEnabled(true);
+        }
+    }
+    // If 'Cancel' is pushed, do nothing and keep mLogDirPath as its current value.
+    return;
+}
+
+void dlgProfilePreferences::slot_resetLogDir()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    mLogDirPath.clear();
+    lineEdit_logFileFolder->clear();
+    lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->placeholderText().length());
+    pushButton_resetLogDir->setEnabled(false);
+
+    return;
+}
+
+void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
+{
+    Q_UNUSED(index);
+
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    bool isShown = comboBox_logFileNameFormat->currentData().toString().isEmpty();
+    lineEdit_logFileName->setVisible(isShown);
+    label_logFileName->setVisible(isShown);
+    label_logFileNameExtension->setVisible(isShown);
+}
+
 void dlgProfilePreferences::slot_save_and_exit()
 {
+    if (mpDialogMapGlyphUsage) {
+        mpDialogMapGlyphUsage->close();
+        mpDialogMapGlyphUsage = nullptr;
+    }
+
     Host* pHost = mpHost;
     if (pHost) {
         if (dictList->currentItem()) {
@@ -1645,6 +1899,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
+        pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();
         pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
@@ -1663,6 +1918,12 @@ void dlgProfilePreferences::slot_save_and_exit()
                 // Corner case fixup:
                 pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
             }
+
+            // If a map was loaded
+            if (mpDoubleSpinBox_mapSymbolFontFudge) {
+                pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
+            }
+
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
         }
@@ -1674,6 +1935,9 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
+        pHost->mLogDir = mLogDirPath;
+        pHost->mLogFileName = lineEdit_logFileName->text();
+        pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
@@ -1773,6 +2037,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+        pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         if (pHost->mpEditorDialog) {
@@ -1830,6 +2095,18 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
+    mudlet::self()->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
+    switch (checkBox_showIconsOnMenus->checkState()) {
+    case Qt::Unchecked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
+        break;
+    case Qt::Checked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+        break;
+    case Qt::PartiallyChecked:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mudlet::self()->mShowIconsOnMenuOriginally);
+    }
+
     close();
 }
 
@@ -1860,6 +2137,15 @@ void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
     Host* pHost = mpHost;
     if (pHost) {
         pHost->mTelnet.setEncoding(pHost->mTelnet.getComputerEncoding(newEncoding));
+
+        if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
+            // We are linking the Server encoding to this setting currently
+            // - eventually it would move to the locale/language control when it
+            // goes in, but we only need to change the setting for this if it is
+            // set to be automatic changed as necessary:
+
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        }
     }
 }
 
@@ -2079,8 +2365,9 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [this] {
-            slot_resetThemeUpdateLabel();
+        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
+            label->hide();
+            label->setText(tr("Updating themes from colorsublime.com..."));
         });
         getReply->deleteLater();
     });
@@ -2147,7 +2434,7 @@ void dlgProfilePreferences::populateThemesList()
     }
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
-    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const std::pair<QString, QString>& a, const std::pair<QString, QString>& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
+    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
     // temporary disable painting and event updates while we refill the list
     code_editor_theme_selection_combobox->setUpdatesEnabled(false);
@@ -2250,12 +2537,6 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
     config->endChanges();
 }
 
-void dlgProfilePreferences::slot_resetThemeUpdateLabel()
-{
-    theme_download_label->hide();
-    theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
-}
-
 /*
  * This is to deal particularly with the case where the preferences dialog is
  * opened without a host instance (other than the dummy "default_host") being
@@ -2309,11 +2590,243 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
     }
 }
 
+void dlgProfilePreferences::generateMapGlyphDisplay()
+{
+    QHash<QString, QSet<int>> roomSymbolsHash(mpHost->mpMap->roomSymbolsHash());
+    QPointer<QTableWidget> pTableWidget = mpDialogMapGlyphUsage->findChild<QTableWidget*>(QLatin1String("tableWidget"));
+    if (!pTableWidget) {
+        return;
+    }
+
+    // Must turn off sorting at least whilst inserting items...
+    pTableWidget->setSortingEnabled(false);
+    pTableWidget->setColumnCount(6);
+    // This clears any previous contents:
+    pTableWidget->setRowCount(0);
+    pTableWidget->setRowCount(roomSymbolsHash.count());
+
+
+    QFont selectedFont = mpHost->mpMap->mMapSymbolFont;
+    selectedFont.setPointSize(16);
+    selectedFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+    QFont anyFont = mpHost->mpMap->mMapSymbolFont;
+    anyFont.setPointSize(16);
+    anyFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+
+    int row = -1;
+    QHashIterator<QString, QSet<int>> itUsedSymbol(roomSymbolsHash);
+    while (itUsedSymbol.hasNext()) {
+        itUsedSymbol.next();
+        QString symbol = itUsedSymbol.key();
+        QList<int> roomsWithSymbol = itUsedSymbol.value().toList();
+        if (roomsWithSymbol.count() > 1) {
+            std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
+        }
+        auto * pSymbolInFont = new QTableWidgetItem();
+        pSymbolInFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.</p>")));
+        pSymbolInFont->setFont(selectedFont);
+
+        auto * pSymbolAnyFont = new QTableWidgetItem();
+        pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
+        pSymbolAnyFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>The room symbol will appear like this if symbols (glyphs) from any font can be used.</p>")));
+        pSymbolAnyFont->setFont(anyFont);
+
+        QFontMetrics SymbolInFontMetrics(selectedFont);
+        QFontMetrics SymbolAnyFontMetrics(anyFont);
+
+        // pCodePoints is the sequence of UTF-32 codepoints in the symbol and
+        // this ought to be what is needed to check that a font or set of fonts
+        // can render the codepoints:
+        QVector<quint32> pCodePoints = symbol.toUcs4();
+        // These can be used to flag symbols that cannot be reproduced
+        bool isSingleFontUsable=true;
+        bool isAllFontUsable=true;
+        QStringList codePointsString;
+        for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
+            codePointsString << QStringLiteral("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
+            if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
+                isAllFontUsable=false;
+                // By definition if all the fonts together cannot render the
+                // glyph then the specified one cannot either
+                isSingleFontUsable=false;
+            } else if (!SymbolInFontMetrics.inFontUcs4(pCodePoints.at(i))) {
+                isSingleFontUsable=false;
+            }
+        }
+
+        QTableWidgetItem* pCodePointDisplay = new QTableWidgetItem(codePointsString.join(QStringLiteral(", ")));
+        pCodePointDisplay->setTextAlignment(Qt::AlignCenter);
+        pCodePointDisplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                      .arg(tr("<p>These are the sequence of hexadecimal numbers that are used by the Unicode consortium "
+                                              "to identify the graphemes needed to create the symbol.  These numbers can be utilised "
+                                              "to determine precisely what is to be drawn even if some fonts have glyphs that are the "
+                                              "same for different codepoints or combination of codepoints.</p>"
+                                              "<p>Character entry utilities such as <i>charmap.exe</i> on <i>Windows</i> or <i>gucharmap</i> "
+                                              "on many Unix type operating systems will also use these numbers which cover "
+                                              "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use "
+                                              "Plane 16</i> via most of the written marks that humanity has ever made.</p>")));
+
+        // Need to pad the numbers with spaces so that sorting works correctly:
+        QTableWidgetItem* pUsageCount = new QTableWidgetItem(QStringLiteral("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
+        pUsageCount->setTextAlignment(Qt::AlignCenter);
+        pUsageCount->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>How many rooms in the whole map have this symbol.")));
+
+        QStringList roomNumberStringList;
+        QListIterator<int> itRoom(roomsWithSymbol);
+        // Only show the first, say 32, rooms otherwise the whole dialog could
+        // be filled completely for a symbol that is used extensively e.g. on
+        // a wilderness type map:
+        int roomCount = 0;
+        while (itRoom.hasNext()) {
+            roomNumberStringList << QString::number(itRoom.next());
+            if (++roomCount == 32 && itRoom.hasNext()) {
+                // There is still rooms not listed
+                roomNumberStringList << tr("more - not shown...");
+                // Escape from loop to truncate the listing:
+                break;
+            }
+        }
+        QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(QStringLiteral(", ")));
+        pRoomNumbers->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>The rooms with this symbol, up to a maximum of thirty-two, if there are more "
+                                         "than this, it is indicated but they are not shown.</p>")));
+
+        auto * pDummyButton = new QToolButton();
+        if (isSingleFontUsable) {
+            pSymbolInFont->setText(symbol);
+            pSymbolAnyFont->setText(symbol);
+            pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
+            pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>The symbol can be made entirely from glyphs in the specified font.</p>")));
+        } else {
+            // Need to switch to a different font as it is possible that the
+            // single font may not have the replacement glyph either...!
+            pSymbolInFont->setFont(anyFont);
+            pSymbolInFont->setText(QString(QChar::ReplacementCharacter));
+            if (isAllFontUsable) {
+                pSymbolAnyFont->setText(symbol);
+                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-warning.png")));
+                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>The symbol cannot be made entirely from glyphs in the specified font, but, "
+                                                 "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
+                                                 "(glyphs) from chosen font</i> option or try and choose another font that does "
+                                                 "have the needed glyphs.</p><p><i>You need not close this table to try another font, "
+                                                 "changing it on the main preferences dialogue will update this table after a slight "
+                                                 "delay.</i></p>")));
+            } else {
+                pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
+                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-error.png")));
+                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>The symbol cannot be drawn using any of the fonts in the system, either an "
+                                                 "invalid string was entered as the symbol for the indicated rooms or the map was "
+                                                 "created on a different systems with a different set of fonts available to use. "
+                                                 "You may be able to correct this by installing an additional font using whatever "
+                                                 "method is appropriate for this system or by editing the map to use a different "
+                                                 "symbol. It may be possible to do the latter via a lua script using the "
+                                                 "<i>getRoomChar</i> and <i>setRoomChar</i> functions.</p>")));
+            }
+        }
+        pTableWidget->setCellWidget(++row, 0, pDummyButton);
+
+        pTableWidget->setItem(row, 1, pSymbolInFont);
+        pTableWidget->setItem(row, 2, pSymbolAnyFont);
+        pTableWidget->setItem(row, 3, pCodePointDisplay);
+        pTableWidget->setItem(row, 4, pUsageCount);
+        pTableWidget->setItem(row, 5, pRoomNumbers);
+    }
+    pTableWidget->sortItems(4, Qt::DescendingOrder);
+    pTableWidget->setSortingEnabled(true);
+    pTableWidget->resizeColumnsToContents();
+    // The room number column can contain a lot of rooms...
+    pTableWidget->resizeRowsToContents();
+    mpDialogMapGlyphUsage->show();
+    mpDialogMapGlyphUsage->raise();
+}
+
+void dlgProfilePreferences::slot_showMapGlyphUsage()
+{
+    if (!mpHost || !mpHost->mpMap) {
+        return;
+    }
+
+    if (mpDialogMapGlyphUsage) {
+        // Already in use so just refresh the contents instead:
+        generateMapGlyphDisplay();
+        return;
+    }
+
+    QUiLoader loader;
+    QFile file(QStringLiteral(":/ui/glyph_usage.ui"));
+    file.open(QFile::ReadOnly);
+    mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
+    file.close();
+    if (!mpDialogMapGlyphUsage) {
+        qWarning() << "dlgProfilePreferences::slot_showMapGlyphUsage() ERROR: failed to create the dialog!";
+        return;
+    }
+
+    mpDialogMapGlyphUsage->setWindowIcon(QIcon(QStringLiteral(":/icons/place_of_interest.png")));
+    mpDialogMapGlyphUsage->setWindowTitle(tr("Map symbol usage - %1").arg(mpHost->getName()));
+    mpDialogMapGlyphUsage->setAttribute(Qt::WA_DeleteOnClose);
+    generateMapGlyphDisplay();
+}
+
+void dlgProfilePreferences::slot_setMapSymbolFontStrategy(const bool isToOnlyUseSelectedFont)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    if (pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed != isToOnlyUseSelectedFont) {
+        pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed = isToOnlyUseSelectedFont;
+        if (isToOnlyUseSelectedFont) {
+            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+        } else {
+            pHost->mpMap->mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(pHost->mpMap->mMapSymbolFont.styleStrategy() &~(QFont::NoFontMerging)));
+        }
+        // Clear the existing cache of room symbol pixmaps:
+        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
+
+        if (mpDialogMapGlyphUsage) {
+            generateMapGlyphDisplay();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
+    if (pHost->mpMap->mMapSymbolFont != font) {
+        pHost->mpMap->mMapSymbolFont = font;
+        pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);
+        // Clear the existing cache of room symbol pixmaps:
+        pHost->mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
+
+        if (mpDialogMapGlyphUsage) {
+            generateMapGlyphDisplay();
+        }
+    }
+}
+
 // These next two prevent BOTH controls being set to never to prevent the lose
 // of access to the setting/controls completely - once there is a profile loaded
 // access to the settings/controls can be overriden by a context menu action on
 // any TConsole instance:
-void dlgProfilePreferences::slot_changeShowMenuBar(const int newIndex)
+void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
     if (!newIndex && !comboBox_toolBarVisibility->currentIndex()) {
         // This control has been set to the "Never" setting but so is the other
@@ -2322,11 +2835,34 @@ void dlgProfilePreferences::slot_changeShowMenuBar(const int newIndex)
     }
 }
 
-void dlgProfilePreferences::slot_changeShowToolBar(const int newIndex)
+void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
 {
     if (!newIndex && !comboBox_menuBarVisibility->currentIndex()) {
         // This control has been set to the "Never" setting but so is the other
         // control - so force it back to the "Only if no profile one
         comboBox_toolBarVisibility->setCurrentIndex(1);
     }
+}
+
+void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
+{
+    if (isHtml) {
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.html)"));
+        label_logFileNameExtension->setText(QStringLiteral(".html"));
+    } else {
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
+        label_logFileNameExtension->setText(QStringLiteral(".txt"));
+    }
+}
+
+void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)
+{
+    button->setStyleSheet(QStringLiteral("QPushButton{color: %1; background-color: %2;}").arg(color.lightness() > 127 ? QStringLiteral("black") : QStringLiteral("white"),
+                                                                                              color.name()));
 }

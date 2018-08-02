@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,25 +25,16 @@
 
 #include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
 #include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
-#include "TScript.h"
-#include "TTimer.h"
-#include "TTrigger.h"
-#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QtMath>
-#include <QDebug>
 #include <QBuffer>
-#include <QStringList>
+#include <QtMath>
 #include "post_guard.h"
+
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
@@ -777,10 +768,36 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes");
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = (attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes");
     pHost->mUSE_UNIX_EOL = (attributes().value("mUSE_UNIX_EOL") == "yes");
+    pHost->getKeyUnit()->mRunAllKeyMatches = (attributes().value("runAllKeyMatches") == "yes");
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
+    if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
+        const QStringRef ambiguousWidthSetting(attributes().value("AmbigousWidthGlyphsToBeWide"));
+        if (ambiguousWidthSetting == QStringLiteral("yes")) {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
+        } else if (ambiguousWidthSetting == QStringLiteral("auto")) {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        } else {
+            pHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
+        }
+    } else {
+        // The encoding setting is stored as part of the profile details and NOT
+        // in the save file - probably because it is needed before the
+        // connection to the Server is initiated so it will already be in place
+        // which is just as well as it is needed for the automatic case...
+        pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+    }
     pHost->mIsNextLogFileInHtmlFormat = (attributes().value("mRawStreamDump") == "yes");
     pHost->mIsLoggingTimestamps = (attributes().value("mIsLoggingTimestamps") == "yes");
+    pHost->mLogDir = attributes().value("logDirectory").toString();
+    if (attributes().hasAttribute("logFileNameFormat")) {
+        // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
+        // which is slightly different {always use 24-hour clock even if AM/PM is
+        // present (it isn't)} and that broke some code that requires an exact
+        // string to work with - now always change it to "HH":
+        pHost->mLogFileNameFormat = attributes().value("logFileNameFormat").toString().replace(QLatin1String("hh"), QLatin1String("HH"), Qt::CaseSensitive);
+        pHost->mLogFileName = attributes().value("logFileName").toString();
+    }
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
@@ -806,12 +823,9 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     }
 
-    if(attributes().hasAttribute(QLatin1String("mSearchEngineName")))
-    {
+    if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
-    }
-    else
-    {
+    } else {
         pHost->mSearchEngineName = QString("Google");
     }
 
@@ -1021,7 +1035,7 @@ int XMLimport::readTriggerPackage()
 
 // imports a trigger and returns its ID - in case of a group, returns the ID
 // of the top-level trigger group.
-int XMLimport::readTriggerGroup(TTrigger *pParent)
+int XMLimport::readTriggerGroup(TTrigger* pParent)
 {
     auto pT = new TTrigger(pParent, mpHost);
 

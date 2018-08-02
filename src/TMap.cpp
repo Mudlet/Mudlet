@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,7 +27,6 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -35,17 +34,11 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QDebug>
-#include <QDir>
 #include <QElapsedTimer>
 #include <QFileDialog>
-#include <QMainWindow>
 #include <QMessageBox>
-#include <QNetworkAccessManager>
 #include <QProgressDialog>
-#include <QSslConfiguration>
 #include "post_guard.h"
-
 
 TMap::TMap(Host* pH)
 : mpRoomDB(new TRoomDB(this))
@@ -64,9 +57,12 @@ TMap::TMap(Host* pH)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(18)
+, mMaxVersion(19)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
+, mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
+, mMapSymbolFontFudgeFactor(1.0)
+, mIsOnlyMapSymbolFontToBeUsed(false)
 , mIsFileViewingRecommended(false)
 , mpNetworkAccessManager(Q_NULLPTR)
 , mpProgressDialog(Q_NULLPTR)
@@ -126,7 +122,7 @@ TMap::TMap(Host* pH)
     // (was dlgMapper) instance has one...!
     mpNetworkAccessManager = new QNetworkAccessManager(this);
 
-    connect(mpNetworkAccessManager, SIGNAL(finished(QNetworkReply*)), this, SLOT(slot_replyFinished(QNetworkReply*)));
+    connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }
 
 TMap::~TMap()
@@ -1062,7 +1058,19 @@ bool TMap::serialize(QDataStream& ofs)
     ofs << customEnvColors;
     ofs << mpRoomDB->hashTable;
     if (mSaveVersion >= 17) {
+        if (mSaveVersion < 19) {
+            // Save the data in the map user data for older versions
+            mUserData.insert(QStringLiteral("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
+            mUserData.insert(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
+            mUserData.insert(QStringLiteral("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? QStringLiteral("true") : QStringLiteral("false"));
+        }
         ofs << mUserData;
+        if (mSaveVersion >= 19) {
+            // Save the data directly in supported format versions
+            ofs << mMapSymbolFont;
+            ofs << mMapSymbolFontFudgeFactor;
+            ofs << mIsOnlyMapSymbolFontToBeUsed;
+        }
     }
     // TODO: Remove when versions < 17 are not an option...
     else {
@@ -1200,6 +1208,11 @@ bool TMap::serialize(QDataStream& ofs)
         }
 
         ofs << pR->getId();
+        if (mSaveVersion <= 19) {
+            if (!pR->mSymbol.isEmpty()) {
+                pR->userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+            }
+        }
         ofs << pR->getArea();
         ofs << pR->x;
         ofs << pR->y;
@@ -1221,7 +1234,25 @@ bool TMap::serialize(QDataStream& ofs)
         ofs << pR->name;
         ofs << pR->isLocked;
         ofs << pR->getOtherMap();
-        ofs << pR->c;
+        if (mSaveVersion >= 19) {
+            ofs << pR->mSymbol;
+        } else {
+            qint8 oldCharacterCode = 0;
+            if (pR->mSymbol.length()) {
+                // There is something for a symbol
+                QChar firstChar = pR->mSymbol.at(0);
+                if (pR->mSymbol.length() == 1 && firstChar.row() == 0 && firstChar.cell() > 32) {
+                    // It is something that can be represented by the past unsigned short
+                    oldCharacterCode = firstChar.toLatin1();
+                } else {
+                    // Not representable - put in a '?' for older Mudlet
+                    // versions that cannot display the character and will not
+                    // parse the value placed in the room's user data:
+                    oldCharacterCode = QChar('?').toLatin1();
+                }
+            }
+            ofs << oldCharacterCode;
+        }
         ofs << pR->userData;
         ofs << pR->customLines;
         ofs << pR->customLinesArrow;
@@ -1252,7 +1283,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     }
 
     bool canRestore = true;
-    if (entries.size() || !location.isEmpty()) {
+    if (!entries.empty() || !location.isEmpty()) {
         QFile file(location.isEmpty() ? QStringLiteral("%1/%2").arg(folder, entries.at(0)) : location);
 
         if (!file.open(QFile::ReadOnly)) {
@@ -1288,7 +1319,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             postMessage(alertMsg);
             QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
                                  "There is so much data that it DOES NOT have that you could be\n"
-                                 "be better off starting again...");
+                                 "better off starting again...");
             appendErrorMsgWithNoLf(infoMsg, false);
             postMessage(infoMsg);
             canRestore = false;
@@ -1313,9 +1344,39 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (mVersion >= 7) {
             ifs >> mpRoomDB->hashTable;
         }
+
         if (mVersion >= 17) {
             ifs >> mUserData;
+            if (mVersion >= 19) {
+                // Read the data from the file directly in version 19 or later
+                ifs >> mMapSymbolFont;
+                ifs >> mMapSymbolFontFudgeFactor;
+                ifs >> mIsOnlyMapSymbolFontToBeUsed;
+            } else {
+                // Fallback to reading the data from the map user data - and
+                // remove it from the data the user will see:
+                QString fontString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFont"));
+                QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
+                QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
+                if (!fontString.isEmpty()) {
+                    mMapSymbolFont = QFont(fontString);
+                }
+                if (!fontFudgeFactorString.isEmpty()) {
+                    mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
+                }
+                if (!onlyUseSymbolFontString.isEmpty()) {
+                    mIsOnlyMapSymbolFontToBeUsed = (onlyUseSymbolFontString != QLatin1String("false"));
+                }
+            }
         }
+
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(( mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
+                                                                          | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+#if QT_VERSION >= 0x050a00
+                                                                          | QFont::PreferNoShaping
+#endif
+                                                                          ));
+
         if (mVersion >= 14) {
             int areaSize;
             ifs >> areaSize;
@@ -1468,7 +1529,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
     }
 
-    if ((!canRestore || entries.size() == 0) && downloadIfNotFound) {
+    if ((!canRestore || entries.empty()) && downloadIfNotFound) {
         QMessageBox msgBox;
 
         if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
@@ -2095,11 +2156,11 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     mpProgressDialog->setAutoReset(false);
     mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
 
-    connect(mpNetworkReply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(slot_setDownloadProgress(qint64, qint64)));
+    connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     // Not used:    connect(mpNetworkReply, SIGNAL( readyRead() ), this, SLOT( slot_readyRead() ) );
-    connect(mpNetworkReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(slot_downloadError(QNetworkReply::NetworkError)));
+    connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
     // Not used:    connect(mpNetworkReply, SIGNAL( sslErrors( QList<QSslError> ) ), this, SLOT( slot_sslErrors( QList<QSslError> ) ) );
-    connect(mpProgressDialog, SIGNAL(canceled()), this, SLOT(slot_downloadCancel()));
+    connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
     mpProgressDialog->show();
 }
@@ -2336,4 +2397,23 @@ void TMap::reportProgressToProgressDialog(const int current, const int maximum)
         }
         mpProgressDialog->setValue(current);
     }
+}
+
+QHash<QString, QSet<int>> TMap::roomSymbolsHash()
+{
+    QHash<QString, QSet<int>> results;
+    QHashIterator<int, TRoom*> itRoom(mpRoomDB->getRoomMap());
+    while (itRoom.hasNext()) {
+        itRoom.next();
+        if (itRoom.value() && !itRoom.value()->mSymbol.isEmpty()) {
+            if (results.contains(itRoom.value()->mSymbol)) {
+                results[itRoom.value()->mSymbol].insert(itRoom.key());
+            } else {
+                QSet<int> newEntry;
+                newEntry << itRoom.key();
+                results.insert(itRoom.value()->mSymbol, newEntry);
+            }
+        }
+    }
+    return results;
 }

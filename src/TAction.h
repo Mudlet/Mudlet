@@ -135,7 +135,8 @@ public:
     bool mToolbarLastFloatingState;
 
 private:
-    TAction() {}
+    TAction() = default;
+
     QString mFuncName;
     bool mModuleMember;
     bool mDataChanged;

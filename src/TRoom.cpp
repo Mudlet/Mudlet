@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,13 +29,10 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
-#include <QDataStream>
-#include <QDebug>
-#include <QElapsedTimer>
+#include <QString>
 #include <QStringBuilder>
+#include <QRegularExpression>
 #include "post_guard.h"
-
 
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)
@@ -46,7 +44,7 @@ TRoom::TRoom(TRoomDB* pRDB)
 , min_y(0)
 , max_x(0)
 , max_y(0)
-, c(0)
+, mSymbol(QString())
 , highlight(false)
 , highlightColor(QColor(255, 150, 0))
 , rendered(false)
@@ -607,7 +605,7 @@ void TRoom::removeAllSpecialExitsToRoom(int _id)
 
 void TRoom::calcRoomDimensions()
 {
-    if (customLines.size() < 1) {
+    if (customLines.empty()) {
         return;
     }
     min_x = 0.0;
@@ -620,7 +618,7 @@ void TRoom::calcRoomDimensions()
     while (it.hasNext()) {
         it.next();
         const QList<QPointF>& _pL = it.value();
-        if (_pL.size() < 1) {
+        if (_pL.empty()) {
             continue;
         }
         if (needInit) {
@@ -691,12 +689,33 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     if (version >= 6) {
         ifs >> other;
     }
-    if (version >= 9) {
-        ifs >> c;
+
+    qint8 oldCharacterCode = 0;
+    if (version >= 19) {
+        // From version 19 we use a QString for one or more (Unicode) Graphemes
+        ifs >> mSymbol;
+    } else if (version >= 9 && version < 19) {
+        // For older versions we note the prior unsigned short in case
+        // there is no fallback carried in the room user data
+        ifs >> oldCharacterCode;
     }
+
     if (version >= 10) {
         ifs >> userData;
+        if (version < 19) {
+            // Recover and remove backup values from the user data
+            QString symbolString = userData.take(QLatin1String("system.fallback_symbol"));
+            if (!symbolString.isEmpty()) {
+                // There is a fallback in the user data
+                mSymbol = symbolString;
+            } else if (oldCharacterCode > 32) {
+                // There is an old format unsigned short represeting a printable
+                // ASCII or ISO 8859-1 (Latin1) character:
+                mSymbol = QChar(oldCharacterCode);
+            }
+        }
     }
+
     if (version >= 11) {
         ifs >> customLines;
         ifs >> customLinesArrow;

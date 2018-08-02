@@ -20,14 +20,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QApplication>
 
 #include "TLabel.h"
-
 #include "Host.h"
-#include "TEvent.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QtEvents>
 #include "post_guard.h"
 
@@ -36,8 +34,6 @@ TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(nullptr), mouseInside()
 {
     setMouseTracking(true);
 }
-
-QString nothing = "";
 
 void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
 {
