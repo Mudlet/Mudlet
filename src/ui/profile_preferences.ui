@@ -991,6 +991,13 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_enableTextAnalyzer">
+            <property name="text">
+             <string>Enable text analyzer</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

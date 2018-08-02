@@ -122,8 +122,9 @@ public slots:
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
-    QString convertWhiteSpaceToVisual(const QChar& first);
-// Not needed?    QString convertWhiteSpaceToVisual(const QChar& first, const QChar& second);
+    static QString htmlCenter(const QString&);
+    static QString convertWhiteSpaceToVisual(const QChar& first, const QChar& second = QChar::Null);
+    static QString byteToLuaCodeOrChar(const char*);
 
 
     int mFontHeight;

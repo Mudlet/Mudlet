@@ -147,6 +147,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
+, mEnableTextAnalyzer(false)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)

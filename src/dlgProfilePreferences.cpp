@@ -189,6 +189,17 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                                "<p><i>This setting is only processed when individual menus are created and changes may not "
                                                "propogate everywhere until Mudlet is restarted.</i></p>"));
+    checkBox_enableTextAnalyzer->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                            .arg(tr("<p>Check this option to activate a context (right click) menu action on any "
+                                                    "console/user window that, when the mouse cursor is hovered over it, will "
+                                                    "display the UTF-16 and UTF-8 items that make up each Unicode codepoint on "
+                                                    "the <b>first</b> line of any selection.</p>"
+                                                    "<p><i>Note: the whole line of text will be analyzed even if only part of "
+                                                    "it is selected.</i></p>"
+                                                    "<p>This utility feature is intended to help the user identify any grapheme "
+                                                    "(visual equivalent to a <i>character</i>) that a Game server may send even "
+                                                    "if it is composed of multiple bytes as any non-ASCII character will be in the "
+                                                    "Lua sub-system which uses the UTF-8 encoding system.<p>")));
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -224,6 +235,7 @@ void dlgProfilePreferences::disableHostDetails()
     // Some of groupBox_displayOptions are usable, so must pick out and
     // disable the others:
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
+    checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
 
@@ -294,6 +306,7 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_doubleClick->setEnabled(true);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
+    checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
 
@@ -450,6 +463,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
+    checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
@@ -817,6 +831,7 @@ void dlgProfilePreferences::clearHostDetails()
     command_separator_lineedit->clear();
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
+    checkBox_enableTextAnalyzer->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
     topBorderHeight->clear();
@@ -1897,6 +1912,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
+        pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
         pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();

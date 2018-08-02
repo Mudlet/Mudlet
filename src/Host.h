@@ -345,6 +345,7 @@ public:
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
+    bool mEnableTextAnalyzer;
 
 
 signals:
