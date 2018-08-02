@@ -2628,7 +2628,6 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>profiles_tree_widget</tabstop>
   <tabstop>welcome_message</tabstop>
   <tabstop>profile_name_entry</tabstop>
   <tabstop>host_name_entry</tabstop>
@@ -2636,12 +2635,14 @@
   <tabstop>port_ssl_tsl</tabstop>
   <tabstop>profile_history</tabstop>
   <tabstop>autologin_checkBox</tabstop>
+  <tabstop>auto_reconnect</tabstop>
   <tabstop>login_entry</tabstop>
   <tabstop>character_password_entry</tabstop>
   <tabstop>mud_description_textedit</tabstop>
   <tabstop>remove_profile_button</tabstop>
   <tabstop>copy_profile_button</tabstop>
   <tabstop>new_profile_button</tabstop>
+  <tabstop>profiles_tree_widget</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>

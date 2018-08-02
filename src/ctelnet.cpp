@@ -71,7 +71,7 @@ cTelnet::cTelnet(Host* pH)
 , mMCCP_version_2(false)
 , mpProgressDialog()
 , hostPort()
-, host_ssl_tsl()
+, hostSslTsl()
 , networkLatencyMin()
 , networkLatencyMax()
 , mWaitingForResponse()
@@ -86,7 +86,7 @@ cTelnet::cTelnet(Host* pH)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
-    user_disconnect  = false;
+    userDisconnect  = false;
 
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -256,7 +256,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     return qMakePair(true, QString());
 }
 
-void cTelnet::connectIt(const QString& address, int port, bool ssl_tsl)
+void cTelnet::connectIt(const QString& address, int port, bool sslTsl)
 {
     // wird an dieser Stelle gesetzt
     if (mpHost) {
@@ -267,13 +267,13 @@ void cTelnet::connectIt(const QString& address, int port, bool ssl_tsl)
 
     if (socket.state() != QAbstractSocket::UnconnectedState) {
         socket.abort();
-        connectIt(address, port, ssl_tsl);
+        connectIt(address, port, sslTsl);
         return;
     }
 
     hostName = address;
     hostPort = port;
-    host_ssl_tsl = ssl_tsl;
+    hostSslTsl = sslTsl;
     QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
     postMessage(server);
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
@@ -283,7 +283,7 @@ void cTelnet::connectIt(const QString& address, int port, bool ssl_tsl)
 void cTelnet::disconnect()
 {
     socket.disconnectFromHost();
-    user_disconnect = true;
+    userDisconnect = true;
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -346,14 +346,14 @@ void cTelnet::handle_socket_signal_disconnected()
         postMessage(err);
         postMessage(msg);
     }
-    if ((!user_disconnect) && (mAutoReconnect)) {
-        connectIt(hostName,hostPort,host_ssl_tsl);
+    if ((!userDisconnect) && (mAutoReconnect)) {
+        connectIt(hostName,hostPort,hostSslTsl);
     }
 }
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
-    if (host_ssl_tsl) {
+    if (hostSslTsl) {
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
     } else if (!hostInfo.addresses().isEmpty()) {

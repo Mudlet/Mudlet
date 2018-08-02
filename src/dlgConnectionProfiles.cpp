@@ -53,7 +53,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->button(QDialogButtonBox::Apply);
-    connect_button->setText("Co&nnect");
+    connect_button->setText(tr("Connect"));
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
@@ -1626,7 +1626,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     HostManager & hostManager = mudlet::self()->getHostManager();
     Host* pHost = hostManager.getHost(profile_name);
     if (pHost) {
-        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort(), pHost->getSSL_TSL());
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort(), pHost->getSslTsl());
         QDialog::accept();
         return;
     }
@@ -1674,7 +1674,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         } else {
             slot_update_port(QString::number(pHost->getPort()));
         }
-        pHost->setSSL_TSL(port_ssl_tsl->checkState());
+        pHost->setSslTsl(port_ssl_tsl->checkState());
 
         if (character_password_entry->text().trimmed().size() > 0) {
             pHost->setPass(character_password_entry->text().trimmed());

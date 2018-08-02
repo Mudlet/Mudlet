@@ -5076,7 +5076,7 @@ int TLuaInterpreter::disconnect(lua_State* L)
 int TLuaInterpreter::reconnect(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.mTelnet.connectIt(host.getUrl(), host.getPort(), host.getSSL_TSL());
+    host.mTelnet.connectIt(host.getUrl(), host.getPort(), host.getSslTsl());
     return 0;
 }
 

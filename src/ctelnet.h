@@ -191,7 +191,7 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
-    bool host_ssl_tsl;
+    bool hostSslTsl;
     double networkLatencyMin;
     double networkLatencyMax;
     bool mWaitingForResponse;
@@ -230,7 +230,7 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableChannel102;
-    bool user_disconnect;
+    bool userDisconnect;
     bool mAutoReconnect;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
