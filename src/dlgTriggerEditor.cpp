@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -6444,6 +6444,7 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 void dlgTriggerEditor::leaveEvent(QEvent *event)
 {
     Q_UNUSED(event);
+    if( QApplication::focusWidget()->objectName() == "listWidgetRef" ) return;
 
     saveOpenChanges();
 
