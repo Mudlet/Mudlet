@@ -80,7 +80,14 @@ msvc:QMAKE_CXXFLAGS += -MP
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.11
 
 QT += network opengl uitools multimedia gui concurrent
-qtHaveModule(gamepad): QT += gamepad
+qtHaveModule(gamepad) {
+    QT += gamepad
+    message("Using Gamepad module")
+}
+qtHaveModule(texttospeech) {
+    QT += texttospeech
+    message("Using TextToSpeech module")
+}
 
 ############################# TEMPORARY TESTING PART ###########################
 # Tempory tests to determine what scope variables are correct, it seems that
@@ -695,6 +702,7 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
     $${PWD}/mudlet-lua/lua/KeyCodes.lua \
+    $${PWD}/mudlet-lua/lua/TTSValues.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
