@@ -171,10 +171,12 @@ function Geyser.Container:show_impl()
   showWindow(self.name)
 end
 
+--- Raises the window to the top of the z-order stack, displaying in front of all other windows
 function Geyser.Container:raise ()
 	raiseWindow(self.name)
 end
 
+--- Lowers the window to the bottom of the z-order stack, displaying behind all other windows
 function Geyser.Container:lower ()
 	lowerWindow(self.name)
 end
