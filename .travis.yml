@@ -7,7 +7,7 @@ addons:
   apt:
     sources: &add-sources
     - sourceline: 'ppa:beineri/opt-qt571-trusty'
-    - sourceline: 'ppa:beineri/opt-qt593-trusty'
+    - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:jonathonf/php7'
     packages: &common-packages
@@ -53,49 +53,50 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=qmake
-      QT_VERSION=59
+      QT_VERSION=510
     addons:
       apt:
         sources: *add-sources
-        packages: &qt59-packages
+        packages: &qt510-packages
         - *common-packages
-        - qt59base
-        - qt59multimedia
-        - qt59tools
-        - qt59gamepad
+        - qt510base
+        - qt510multimedia
+        - qt510tools
+        - qt510gamepad
+        - qt510speech
 
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-      QT_VERSION=59
+      QT_VERSION=510
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt59-packages
+        - *qt510-packages
 
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
-      QT_VERSION=59
+      QT_VERSION=510
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt59-packages
+        - *qt510-packages
 
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
-      QT_VERSION=59
+      QT_VERSION=510
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt59-packages
+        - *qt510-packages
 
   - os: linux
     compiler: gcc

@@ -34,6 +34,9 @@
 #include <QThread>
 #include <QTimer>
 #include <edbee/texteditorwidget.h>
+#ifdef QT_TEXTTOSPEECH_LIB
+#include <QTextToSpeech>
+#endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
 extern "C" {
@@ -429,6 +432,26 @@ public:
     static int getServerEncoding(lua_State*);
     static int getServerEncodingsList(lua_State*);
     static int alert(lua_State* L);
+#ifdef QT_TEXTTOSPEECH_LIB
+	static int ttsSpeak(lua_State* L);
+	static int ttsSkipSpeech(lua_State* L);
+	static int ttsSetSpeechRate(lua_State* L);
+	static int ttsSetSpeechPitch(lua_State* L);
+	static int ttsSetSpeechVolume(lua_State* L);
+	static int ttsSetVoiceByName(lua_State* L);
+	static int ttsSetVoiceByIndex(lua_State* L);
+	static int ttsGetCurrentVoice(lua_State* L);
+	static int ttsGetVoices(lua_State* L);	
+	static int ttsQueueSpeech(lua_State* L);
+	static int ttsGetSpeechQueue(lua_State* L);
+	static int ttsPauseSpeech(lua_State* L);
+	static int ttsResumeSpeech(lua_State* L);
+	static int ttsClearQueue(lua_State* L);
+	static int ttsGetCurrentLine(lua_State* L);
+	static int ttsGetState(lua_State* L);
+	static void ttsBuild();
+	static void ttsStateChanged(QTextToSpeech::State state);
+#endif // QT_TEXTTOSPEECH_LIB
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
     static int getColumnCount(lua_State*);
