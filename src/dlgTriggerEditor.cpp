@@ -6444,7 +6444,7 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 void dlgTriggerEditor::leaveEvent(QEvent *event)
 {
     Q_UNUSED(event);
-    if( QApplication::focusWidget()->objectName() == "listWidgetRef" ) return;
+    if( QApplication::focusWidget() != nullptr && QApplication::focusWidget()->objectName() == "listWidgetRef" ) return;
 
     saveOpenChanges();
 
