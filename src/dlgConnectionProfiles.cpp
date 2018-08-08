@@ -52,8 +52,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
-    connect_button = dialog_buttonbox->button(QDialogButtonBox::Apply);
-    connect_button->setText(tr("Connect"));
+    connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably

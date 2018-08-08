@@ -384,7 +384,7 @@ mudlet::mudlet()
     connect(mpActionKeys.data(), &QAction::triggered, this, &mudlet::show_key_dialog);
     connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::show_variable_dialog);
     connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::show_action_dialog);
-    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::show_options_dialog);
+    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_show_options_dialog);
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -441,8 +441,8 @@ mudlet::mudlet()
     connect(mactionKeys, &QAction::triggered, this, &mudlet::show_key_dialog);
     connect(mactionButtons, &QAction::triggered, this, &mudlet::show_action_dialog);
 
-    connect(mactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
-    connect(dactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
+    connect(mactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
+    connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
 
     connect(mactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
@@ -2606,7 +2606,8 @@ void mudlet::show_action_dialog()
     pEditor->showNormal();
 }
 
-void mudlet::show_options_dialog()
+
+void mudlet::show_options_dialog(QString tab)
 {
     Host* pHost = getActiveHost();
 
@@ -2618,8 +2619,14 @@ void mudlet::show_options_dialog()
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlg->setAttribute(Qt::WA_DeleteOnClose);
     }
+    mpProfilePreferencesDlg->setTab(tab);
     mpProfilePreferencesDlg->raise();
     mpProfilePreferencesDlg->show();
+}
+
+void mudlet::slot_show_options_dialog()
+{
+    show_options_dialog("General");
 }
 
 void mudlet::show_help_dialog()

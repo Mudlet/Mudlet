@@ -230,7 +230,7 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableChannel102;
-    bool userDisconnect;
+    bool gagReconnect;
     bool mAutoReconnect;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER

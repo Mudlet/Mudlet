@@ -337,6 +337,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+    void show_options_dialog(QString tab);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -411,7 +412,7 @@ private slots:
     void show_action_dialog();
     void show_key_dialog();
     void show_variable_dialog();
-    void show_options_dialog();
+    void slot_show_options_dialog();
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);

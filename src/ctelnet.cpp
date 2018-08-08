@@ -42,6 +42,7 @@
 #include <QProgressDialog>
 #include <QTextCodec>
 #include <QTextEncoder>
+#include <QSslError>
 #include "post_guard.h"
 
 #define DEBUG
@@ -86,7 +87,7 @@ cTelnet::cTelnet(Host* pH)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
-    userDisconnect  = false;
+    gagReconnect  = false;
 
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -283,7 +284,7 @@ void cTelnet::connectIt(const QString& address, int port, bool sslTsl)
 void cTelnet::disconnect()
 {
     socket.disconnectFromHost();
-    userDisconnect = true;
+    gagReconnect = true;
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -341,12 +342,30 @@ void cTelnet::handle_socket_signal_disconnected()
     reset();
     QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
     QString spacer = "    ";
+    bool sslerr = (!socket.sslErrors().empty() ||
+                   (socket.error()&QAbstractSocket::SslHandshakeFailedError));
+    //sslErrors(socket.sslErrors());
+
+    if (sslerr) {
+        //QSslCertificate cert = socket.peerCertificate();
+        //err2 = QString("Certificate for: %1 expires: %2 Authority: %3")
+        //        .arg(cert.subjectInfo(QSslCertificate::CommonName).first())
+        //        .arg(cert.expiryDate().toString("ddd MMMM d yy"));
+        //        .arg(cert.issuerInfo(QSslCertificate::OrganizationalUnitName).first());
+        gagReconnect = true;
+    }
+
     if (!mpHost->mIsGoingDown) {
         postMessage(spacer);
         postMessage(err);
         postMessage(msg);
     }
-    if ((!userDisconnect) && (mAutoReconnect)) {
+
+    if (sslerr) {
+        mudlet::self()->show_options_dialog("Security");
+    }
+
+    if ((!gagReconnect) && (mAutoReconnect)) {
         connectIt(hostName,hostPort,hostSslTsl);
     }
 }
