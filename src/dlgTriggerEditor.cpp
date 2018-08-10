@@ -175,6 +175,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_script_main_area_edit_handler);
 
     // source editor area
+
     mpSourceEditorArea = new dlgSourceEditorArea(mainArea);
     QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpSourceEditorArea->setSizePolicy(sizePolicy5);
@@ -212,6 +213,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     provider->add("false", 14);
     provider->add("for", 14);
     provider->add("function", 14);
+    provider->add("goto", 14);
     provider->add("local", 14);
     provider->add("nil", 14);
     provider->add("not", 14);

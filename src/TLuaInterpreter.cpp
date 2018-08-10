@@ -55,17 +55,6 @@
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
-#include <QRegularExpression>
-#include <QSound>
-#include <QSslConfiguration>
-#include <QString>
-#include <QStringList>
-#include <QStringBuilder>
-
-#include <assert.h>
-#include <list>
-#include <string>
-#include "post_guard.h"
 // Provides the lua zip module for MacOs platform that does not have an easy way
 // to provide it as a prebuilt library module (unlike Windows/Linux) - was
 // called luazip.c and it is an amalgum of both such files that came from

@@ -515,7 +515,7 @@ void mudlet::initEdbee()
     // We only need the single Lua lexer, probably ever
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
 
-    //Open and parse luaFunctionList
+    //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
     loadLuaFunctionList();
 
     //QFile file(fileName);
@@ -3438,17 +3438,13 @@ bool mudlet::loadLuaFunctionList()
 
     auto json_doc = QJsonDocument::fromJson(data);
 
-    if(json_doc.isNull()){
+    if (json_doc.isNull() || !json_doc.isObject()) {
         return false;
     }
 
-    if(!json_doc.isObject()){
-        return false;
-    }
+    QJsonObject json_obj = json_doc.object();
 
-    QJsonObject json_obj=json_doc.object();
-
-    if(json_obj.isEmpty()){
+    if (json_obj.isEmpty()) {
         return false;
     }
 

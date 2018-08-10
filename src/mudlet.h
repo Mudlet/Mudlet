@@ -251,10 +251,8 @@ public:
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadLuaFunctionList();
-    
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
