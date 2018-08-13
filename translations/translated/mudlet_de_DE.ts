@@ -363,12 +363,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
       <source>Text Label</source>
-      <translation>Textmarke</translation>
+      <translation>Textmarkierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2209"/>
       <source>Image Label</source>
-      <translation>Bildmarke</translation>
+      <translation>Bildmarkierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2234"/>
@@ -383,7 +383,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2481"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation>Ziehen zum Auswählen mehrerer Räume oder Marken, loslassen zum Beenden...</translation>
+      <translation>Ziehen zum Auswählen mehrerer Räume oder Markierungen, loslassen zum Beenden...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2640"/>
@@ -403,12 +403,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2674"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>neue Karte erstellen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>Karte laden</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2690"/>
@@ -483,7 +483,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2749"/>
       <source>Create labels to show text or images.</source>
-      <translation>Erstelle Marken und Text oder Bilder anzuzeigen.</translation>
+      <translation>Erstelle Markierungen, um Text oder Bilder anzuzeigen.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
@@ -498,12 +498,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2786"/>
       <source>Move label</source>
-      <translation>Verschiebe Marke</translation>
+      <translation>Verschiebe Markierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2789"/>
       <source>Delete label</source>
-      <translation>Lösche Marke</translation>
+      <translation>Lösche Markierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
@@ -618,12 +618,18 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Wähle ein vorhandenes Symbol 
+aus der Liste (sortiert nach Häufigkeit),
+oder gebe ein oder mehrere neue 
+Grapheme (&quot;sichtbare Zeichen&quot;) ein,
+die gesetzt werden sollen (oder ein 
+Leerzeichen zum löschen) für alle
+ausgewählten Räume:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3580"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Räume ausbreiten</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3581"/>
@@ -632,12 +638,15 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Erhöhe den Abstand der
+gewählten Räume mittig 
+um den markierten Raum
+herum um ein Faktor von:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3642"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Räume zusammenziehen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3643"/>
@@ -646,14 +655,17 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Verringere den Abstand der 
+gewählten Räume mittig 
+um den markierten Raum 
+herum um einen Faktor von:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3773"/>
       <location filename="../src/T2DMap.cpp" line="3786"/>
       <location filename="../src/T2DMap.cpp" line="3831"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Raumgewicht eingeben</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3774"/>
@@ -661,7 +673,9 @@ factor of:</source>
 (= travel time), mimimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Neues Raumgewicht
+(= Reisezeit) eingeben,
+Mindestens 1 (Standard):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3787"/>
@@ -672,17 +686,22 @@ selected rooms, mimimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Neues Raumgewicht
+(= Reisezeit) eingeben
+für alle gewählten Räume,
+mindestens 1 (Standard)
+und der einzige bisher
+benutzte Wert ist:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3820"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Anzahl:%2, Standard}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3828"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>1 {Anzahl 0, Standard}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3832"/>
@@ -695,18 +714,24 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Vorhandenes Raumgewicht
+(= Reisezeit) wählen für 
+alle gewählten Räume
+aus der Liste (sortiert
+nach Häufigkeit) oder
+eine neue (positive) 
+Ganzzahl eingeben:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3880"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte laden</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3882"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte (*.dat);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4685"/>
@@ -717,7 +742,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4732"/>
       <source>Left-click and drag a square for the size and position of your label</source>
-      <translation>Links klicken und ein Rechteck aufziehen für die Größe und Position der Marke</translation>
+      <translation>Links klicken und ein Rechteck aufziehen für die Größe und Position der Markierung</translation>
     </message>
   </context>
   <context>
@@ -873,31 +898,31 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="519"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1254 (Türkisch/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="538"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1255 (Hebräisch/Hebrew)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="557"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1256 (Arabisch/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="576"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1257 (Baltisch/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="595"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (Vietnamesisch/Vietnamese)</translation>
     </message>
   </context>
   <context>
@@ -1006,108 +1031,112 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="971"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Protokoll der Sitzung startet um &apos;hh:mm:ss&apos; am &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;JJJJ&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="992"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log Sitzung startet um &apos;hh:mm:ss&apos; am &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;JJJJ&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="997"/>
       <source>&lt;p&gt;Stop logging MUD output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Protokollierung der Ausgabe des Spiels als Log-Datei beenden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1001"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>Protokoll der Sitzung endet bei %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1002"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss&apos; am &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1015"/>
       <source>&lt;p&gt;Start logging MUD output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Protokollierung der Ausgabe des Spiels als Log-Datei beginnen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1599"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte geladen wird(1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1617"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(1) bei %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1640"/>
       <source>loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: NULL Host pointer {in TConsole::importMap(...)} - etwas ist falsch!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1653"/>
       <source>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - etwas ist falsch!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1661"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte importiert wird(1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1684"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Karte Datei nicht gefunden, verwendeter Pfad und Name waren:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1690"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (benutzter Dateiname: 
+&quot;%1&quot; wurde nicht gefunden).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1699"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Kartendatei gefunden und geöffnet, wird jetzt verarbeitet...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1712"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (benutzter Dateiname: 
+&quot;%1&quot; konnte nicht gelesen werden).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2366"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte geladen wird(2)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2376"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(2) bei %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2789"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Anforderung vom System empfangen, die Karte neu zu laden...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2794"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - ... System-Anforderung, die Karte neu zu laden, wurde abgeschlossen.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2796"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - ... System-Anforderung, die Karte neu zu laden, fehlgeschlagen.</translation>
     </message>
   </context>
   <context>
@@ -1118,24 +1147,24 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="197"/>
       <source>failureToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>failureToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="159"/>
       <source>unableToOpenLocalFileForWriting</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToOpenLocalFileForWriting</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="176"/>
       <source>unableToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9063"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Lua-Befehl setAreaUserData() verwendet - Er ist derzeit als experimentell gekennzeichnet!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9064"/>
@@ -1146,12 +1175,14 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Um voll funktionsfähig zu sein, benötigt der obige Befehl eine Überarbeitung des Formats der Kartendatei und obwohl das codiert wurde ist es NICHT aktiviert, so dass die Effekte dieser Funktion NICHT zwischen Sitzungen beibehalten werden, da die relevanten Daten NICHT GESPEICHERT werden.
+
+Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies deine einzige Warnung über diesen Befehl...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9124"/>
       <source>[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Lua-Befehl setMapUserData() verwendet - Er ist derzeit als experimentell gekennzeichnet!</translation>
     </message>
   </context>
   <context>
@@ -1159,47 +1190,47 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="211"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>RoomID=%1 ist nicht vorhanden, kann nicht die AreaID=%2 bei einem nicht existierenden Raum setzen!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="222"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 ist nicht vorhanden, kann nicht die RoomID=%1 auf eine nicht existierende Region setzen!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Auditierung einer geladenen/importierten/heruntergeladenen Karte startet...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - UMWANDLUNG: herkömmliche Markierung, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Wandle herkömmliche Markierung ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - UMWANDLUNG: Kann herkömmliche Markierung nicht umwandeln im Bereich mit ID: %1, Markierung ID ist: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="477"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - UMWANDLUNG: Kann herkömmliche Markierung mit ID: %1 nicht umwandeln.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Auditierung der Karte abgeschlossen (%1s). Genieß dein Spiel...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Karte erfolgreich geladen (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -1292,9 +1323,7 @@ a release version may allow you to downgrade to save a map in
 a format compatible with others using older versions of MUDLET
 however some features may be crippled or non-operational for
 this version of MUDLET.</source>
-      <translation>[ WARNUNG ] - Speichere Karte in einem anderem Format {%1} als dem empfohlenen {%2} mit dem Build-Status des Quellcodes im Hinterkopf. Entwicklungsversionen des Quellcodes bieten möglicherweise die Chance,
-experimentelle Funktionen zu testen und benötigen ein überarbeitetes Format, das vielleicht nicht kompatibel ist mit bestehenden release-code-Versionen. Umgekehrt kann
-eine release-version es ermöglichen, eine Karte in einem Format zu speichern, das kompatibel ist für Andere, die ältere Versionen von MUDLET benutzen, aber einige Funktionen sind möglicherweise zerstört worden oder nicht in Betrieb in dieser Version von MUDLET.</translation>
+      <translation>[ WARNUNG ] - Speichere Karte in einem anderem Format {%1} als dem empfohlenen {%2} mit dem Build-Status des Quellcodes im Hinterkopf. Entwicklungsversionen des Quellcodes bieten möglicherweise die Chance, experimentelle Funktionen zu testen und benötigen ein überarbeitetes Format, das vielleicht nicht kompatibel ist mit bestehenden release-code-Versionen. Umgekehrt kann eine release-version es ermöglichen, eine Karte in einem Format zu speichern, das kompatibel ist für Andere, die ältere Versionen von MUDLET benutzen, aber einige Funktionen sind möglicherweise zerstört worden oder nicht in Betrieb in dieser Version von MUDLET.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1078"/>
@@ -1351,7 +1380,7 @@ aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Vielleicht sollte man DIESE Kartendatei dem Mudlet Museum spenden! Es gibt so viele Daten, die sie NICHT BESITZT, dass man vielleicht besser wieder von vorne beginnen könnte...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1329"/>
@@ -1619,12 +1648,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="227"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>Keine Region erstellt! Angeforderte Regions-ID=%1. Hinweis: Regions-IDs müssen &gt; 0 sein</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="249"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>Warnung: Beim Einstellen der Region des Raums (ID: %1) gab es keinen aktuelle Region!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="786"/>
@@ -1690,27 +1719,27 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1153"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {ohne}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1156"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (offen)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1159"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (geschlossen)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1162"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (gesperrt)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {defekt}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1169"/>
@@ -1818,12 +1847,12 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="37"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Unbekannte Region</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Standard-Region</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="505"/>
@@ -2098,22 +2127,22 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopieren</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1241"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>HTML kopieren</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Alles auswählen</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1249"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Mit %1 suchen</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1268"/>
@@ -2173,12 +2202,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/updater.cpp" line="153"/>
       <location filename="../src/updater.cpp" line="215"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Aktualisieren</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="307"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>Neu starten, um die Aktualisierung anzuwenden</translation>
     </message>
   </context>
   <context>
@@ -2194,27 +2223,27 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="352"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>Analysiere Regionsdaten...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="356"/>
       <source>Parsing room data...</source>
-      <translation type="unfinished"/>
+      <translation>Analysiere Raumdaten...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="360"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>Analysiere Umgebungsdaten...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="368"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>Weise die Räume ihren Regionen zu...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="518"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>Analysiere Raumdaten [Anzahl: %1]...</translation>
     </message>
   </context>
   <context>
@@ -2222,22 +2251,22 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Über Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>Lizenz</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>Drittanbieter</translation>
     </message>
   </context>
   <context>
@@ -2245,7 +2274,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
@@ -5998,110 +6027,110 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Profil-Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
       <source>General</source>
-      <translation type="unfinished"/>
+      <translation>Allgemein</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
       <source>Icon sizes</source>
-      <translation type="unfinished"/>
+      <translation>Symbolgröße</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="73"/>
       <source>Icon size toolbars:</source>
-      <translation type="unfinished"/>
+      <translation>Symbolgröße in Symbolleisten:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="96"/>
       <source>Icon size in tree views:</source>
-      <translation type="unfinished"/>
+      <translation>Symbolgröße in Baumansichten:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="116"/>
       <source>Show menu bar:</source>
-      <translation type="unfinished"/>
+      <translation>Menüleiste anzeigen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="127"/>
       <location filename="../src/ui/profile_preferences.ui" line="156"/>
       <source>Never</source>
-      <translation type="unfinished"/>
+      <translation>Niemals</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="132"/>
       <location filename="../src/ui/profile_preferences.ui" line="161"/>
       <source>Until a profile is loaded</source>
-      <translation type="unfinished"/>
+      <translation>Bis ein Profil geladen wurde</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="137"/>
       <location filename="../src/ui/profile_preferences.ui" line="166"/>
       <source>Always</source>
-      <translation type="unfinished"/>
+      <translation>Immer</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="145"/>
       <source>Show main toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Funktionsleiste anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="180"/>
       <source>Server data encoding</source>
-      <translation type="unfinished"/>
+      <translation>Server-Daten-Kodierung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="189"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If you are playing a non-English MUD and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your MUD.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won&apos;t work yet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Wenn du ein nicht-englisches Spiel spielst und � siehst anstelle von Text oder spezielle Buchstaben wie das &lt;span style=&quot; font-weight:600;&quot;&gt;ä&lt;/span&gt; nicht richtig angezeigt werden - versuche, die Kodierung auf UTF-8 umzustellen, oder einen Vorschlag von deinem Spiel.&lt;/p&gt;&lt;p&gt;Hinweis: Während dies Mudlet die Anzeige von Text in anderen Sprachen ermöglicht, ist die Internationalisierung noch in Entwicklung, daher werden Trigger oder Lua-code noch nicht funktionieren.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
       <source>Misc</source>
-      <translation type="unfinished"/>
+      <translation>Diverses</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="205"/>
       <source>Toolbar notification if Mudlet is minimized and new data arrives</source>
-      <translation type="unfinished"/>
+      <translation>Benachrichtigung in der Symbolleiste, wenn Mudlet minimiert ist und neue Daten ankommen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="212"/>
       <source>Force auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Zwingend automatisch speichern beim Beenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="219"/>
       <source>Allow server to install script packages</source>
-      <translation type="unfinished"/>
+      <translation>Erlaube Servern Skriptpakete zu installieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Game protocols</source>
-      <translation type="unfinished"/>
+      <translation>Spiel-Protokolle</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Ermöglicht GMCP - beachte, falls du auch MSDP aktivierst, bevorzugen einige Server das eine oder das andere&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="238"/>
       <source>Enable GMCP</source>
-      <translation type="unfinished"/>
+      <translation>Aktiviere GMCP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="245"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Ermöglicht MSDP - beachte, falls du auch GMCP aktivierst, bevorzugen einige Server das eine oder das andere&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="248"/>
       <source>Enable MSDP</source>
-      <translation type="unfinished"/>
+      <translation>Aktiviere MSDP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
@@ -6112,7 +6141,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
       <source>Log options</source>
-      <translation type="unfinished"/>
+      <translation>Optionen für die Protokollierung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="288"/>
@@ -6122,47 +6151,47 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="291"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation type="unfinished"/>
+      <translation>Speichere Protokolldateien im HTML-Format anstelle von normalem Text</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="298"/>
       <source>Add timestamps at the beginning of log lines</source>
-      <translation type="unfinished"/>
+      <translation>Ergänze Zeitstempel zu Beginn der protokollierten Zeilen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Save log files in:</source>
-      <translation type="unfinished"/>
+      <translation>Protokolldateien speichern unter:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
       <source>Browse...</source>
-      <translation type="unfinished"/>
+      <translation>Durchsuchen...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="329"/>
       <source>Reset</source>
-      <translation type="unfinished"/>
+      <translation>Zurücksetzen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="336"/>
       <source>Log format:</source>
-      <translation type="unfinished"/>
+      <translation>Format des Protokolls:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
       <source>Log name:</source>
-      <translation type="unfinished"/>
+      <translation>Name des Protokolls:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="369"/>
       <source>.txt</source>
-      <translation type="unfinished"/>
+      <translation>.txt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="389"/>
       <source>Input line</source>
-      <translation type="unfinished"/>
+      <translation>Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="398"/>
@@ -6237,7 +6266,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="533"/>
       <source>Main display</source>
-      <translation type="unfinished"/>
+      <translation>Hauptanzeige</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="545"/>
@@ -6437,72 +6466,72 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1111"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>Farbansicht</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1117"/>
       <source>Select your color preferences</source>
-      <translation type="unfinished"/>
+      <translation>Wähle deine Farb-Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1123"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrund:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1130"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1146"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1153"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1166"/>
       <source>Command line foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrund der Befehlszeile:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1173"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1183"/>
       <source>Command line background:</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund der Befehlszeile:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1190"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
       <source>Command foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrund des Befehls:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1207"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Die Vordergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1220"/>
       <source>Command background:</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund des Befehls:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1227"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Die Hintergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1246"/>
@@ -6694,7 +6723,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1600"/>
       <source>Mapper</source>
-      <translation type="unfinished"/>
+      <translation>Mapper</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1606"/>
@@ -6780,209 +6809,210 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1751"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>Karte herunterladen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1757"/>
       <location filename="../src/ui/profile_preferences.ui" line="1770"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;In Spielen, die Karten zum Download anpieten (derzeit nur IRE-Spiele), kannst du diese Taste drücken, um die neueste Karte zu erhalten. Beachte, dass dies deine bisherigen Änderungen &lt;span style=&quot; font-weight:600;&quot;&gt;überschreiben&lt;/span&gt; wird, und nur noch die neue Karte verwendet&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1760"/>
       <source>Download latest map provided by your MUD:</source>
-      <translation type="unfinished"/>
+      <translation>Lade die neueste Karte herunter, die dein Spiel bereitstellt:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1773"/>
       <source>Download</source>
-      <translation type="unfinished"/>
+      <translation>Herunterladen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1786"/>
       <source>Map backups</source>
-      <translation type="unfinished"/>
+      <translation>Kartensicherung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1792"/>
       <source>Delete map backups older than:</source>
-      <translation type="unfinished"/>
+      <translation>Lösche Kartensicherungen, die älter sind als:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1809"/>
       <source>days since today, keeping newer and monthly backups</source>
-      <translation type="unfinished"/>
+      <translation>Tage seit heute. Behalte neuere und monatliche Sicherungen.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1822"/>
       <source>Map view</source>
-      <translation type="unfinished"/>
+      <translation>Kartenansicht</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1828"/>
       <source>2D Map Room Symbol Font</source>
-      <translation type="unfinished"/>
+      <translation>2D-Karte-Raum-Symbol-Schriftart</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1835"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Dies ermöglicht das Anti-Aliasing (AA) der 2D-Kartenansicht, die so glatter und schöner aussieht. Deaktiviere dies auf sehr langsamen Computern.&lt;/p&gt;&lt;p&gt;Die 3D-Kartenansicht hat immer Anti-Aliasing aktiviert.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1838"/>
       <source>Use high quality graphics in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Verwende hochwertige Grafiken in der 2D-Ansicht</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1848"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Der Standard-Bereich (Bereich-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese in den richtigen Bereich platziert werden&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1851"/>
       <source>Show the default area in map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Den Standard-Bereich in der Auswahl der Kartenbereiche anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1861"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation type="unfinished"/>
+      <translation>Verwende nur Symbole (Glyphen) aus der gewählten Schriftart</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1868"/>
       <source>Show symbol usage...</source>
-      <translation type="unfinished"/>
+      <translation>Zeige Verwendung der Symbole...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1892"/>
       <source>Mapper colors</source>
-      <translation type="unfinished"/>
+      <translation>Farben des Mappers</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1898"/>
       <source>Select your color preferences for the map display</source>
-      <translation type="unfinished"/>
+      <translation>Wähle deine Farbeinstellungen für die Kartenanzeige</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1904"/>
       <source>Link color</source>
-      <translation type="unfinished"/>
+      <translation>Farbe der Verbindungen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1924"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2237"/>
       <source>Special Options</source>
-      <translation type="unfinished"/>
+      <translation>Spezielle Optionen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2243"/>
       <source>Special options needed for some older MUD drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>Spezielle Optionen für einige ältere Spiel-Treiber (Aktivierung benötigt Neustart des Client)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2249"/>
       <source>Force compression off</source>
-      <translation type="unfinished"/>
+      <translation>Komprimierung zwingend abschalten</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2256"/>
       <source>Force telnet GA signal interpretation off</source>
-      <translation type="unfinished"/>
+      <translation>Telnet GA Signalinterpretation zwingend abschalten</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2263"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
-      <translation type="unfinished"/>
+      <translation>Diese Option ergänzt einen Zeilenumbruch &lt;LF&gt; oder &quot;
+&quot; zu deiner Befehlszeile bei leeren Befehlen. Diese Option wird nur selten notwendig sein.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2267"/>
       <source>Force new line on empty commands</source>
-      <translation type="unfinished"/>
+      <translation>Neue Zeile bei leeren Befehlen ergänzen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2274"/>
       <source>Force MXP negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>MXP Verhandlungen zwingend abschalten</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2308"/>
       <source>IRC client options</source>
-      <translation type="unfinished"/>
+      <translation>IRC-Client-Optionen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2317"/>
       <source>irc.example.net</source>
-      <translation type="unfinished"/>
+      <translation>irc.beispiel.net</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2324"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Port:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2331"/>
       <source>#channel1 #channel2 #etc...</source>
-      <translation type="unfinished"/>
+      <translation>#kanal1 #kanal2 #usw...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2338"/>
       <source>MudletUser123</source>
-      <translation type="unfinished"/>
+      <translation>MudletNutzer123</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2345"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Server-Adresse:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2352"/>
       <source>Auto-join channels: </source>
-      <translation type="unfinished"/>
+      <translation>Automatisch betretene Kanäle: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2359"/>
       <source>Nickname:</source>
-      <translation type="unfinished"/>
+      <translation>Spitzname:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2369"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2379"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Suchmaschine</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2391"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Aktualisierungen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2397"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Deaktiviere automatische Aktualisierungen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>Andere spezielle Optionen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2413"/>
       <source>Show icons on menus</source>
-      <translation type="unfinished"/>
+      <translation>Symbole in Menüs anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2477"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Speichern</translation>
     </message>
   </context>
   <context>
@@ -7686,23 +7716,23 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
       <source>fire length</source>
-      <translation type="unfinished"/>
+      <translation>Reichweite</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
       <location filename="../src/ui/triggers_main_area.ui" line="995"/>
       <source>Within how many lines must all condition be true to fire the trigger?</source>
-      <translation type="unfinished"/>
+      <translation>Innerhalb von wievielen Zeilen müssen alle Bedingungen wahr sein, um den Trigger auszulösen?</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
       <source>more lines</source>
-      <translation type="unfinished"/>
+      <translation>mehr Zeilen</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="532"/>
       <source>play a wave sound file if the trigger fires</source>
-      <translation type="unfinished"/>
+      <translation>spiele eine wave Audiodatei, wenn der Trigger ausgelöst wird</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="535"/>
@@ -7717,74 +7747,75 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="916"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The trigger will only fire if all conditions on the list have been met within the specified line delta, and captures will be saved in &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; instead of &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. If this option is not set the trigger will fire if any conditon on the list has been met.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Der Trigger wird nur ausgelöst, wenn alle Bedingungen der Liste innerhalb des angegebenen Zeilenabstands erfüllt sind. Erfasstes wird als &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; gespeichert werden, anstelle von &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. Wenn diese Option nicht gesetzt ist, wird der Trigger ausgelöst, wenn eine Bedingung der Liste erfüllt worden ist.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="922"/>
       <source>multiline / AND Trigger</source>
-      <translation type="unfinished"/>
+      <translation>mehrzeiliger / UND Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="961"/>
       <source>line delta</source>
-      <translation type="unfinished"/>
+      <translation>Zeilenabstand</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1120"/>
       <source>act as filter, i.e. only pass matches to its children to trigger on, instead of the original line from the MUD</source>
-      <translation type="unfinished"/>
+      <translation>fungiere als Filter, d.h. es werden nur Treffer (matches) an die Kinder weitergeleitet, um darauf zu triggern, anstatt der ursprünglichen Zeile aus dem Spiel</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1123"/>
       <source>filter</source>
-      <translation type="unfinished"/>
+      <translation>Filter</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1165"/>
       <source>Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)</source>
-      <translation type="unfinished"/>
+      <translation>Nur gefilterter Inhalt (=erfasste Gruppen, capture groups) wird an die untergeordneten Trigger weitergeleitet, nicht die ursprüngliche Zeile (siehe Anleitung zu Filtern)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1168"/>
       <source>only pass matches to children as trigger input</source>
-      <translation type="unfinished"/>
+      <translation>sende nur Treffer (matches) als Eingangsdaten an untergebene Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1290"/>
       <source>Choose this option if you want to include all possible matches of the pattern in the line.
 Without this option, the pattern matching will stop after the first successful match.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle diese Option, wenn du alle möglichen Treffer des Musters in der Zeile aufnehmen möchtest. Ohne diese Option wird nach dem ersten erfolgreichen Treffer des Musters nicht weitergemacht.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1294"/>
       <source>match all</source>
-      <translation type="unfinished"/>
+      <translation>Treffe alle</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1339"/>
       <source>match all occurences of the pattern in the line</source>
-      <translation type="unfinished"/>
+      <translation>Treffe alle Vorkommnisse des Musters in der Zeile</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1470"/>
       <source>highlight the capture groups if there are any
 otherwise highlight the entire match</source>
-      <translation type="unfinished"/>
+      <translation>Erfasste Gruppen hervorheben, falls es welche gibt.
+Ansonsten den kompletten Treffer hervorheben.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1474"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>Hervorheben</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1537"/>
       <source>fg color</source>
-      <translation type="unfinished"/>
+      <translation>VG Farbe</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1583"/>
       <source>bg color</source>
-      <translation type="unfinished"/>
+      <translation>HG Farbe</translation>
     </message>
   </context>
   <context>
@@ -7792,12 +7823,12 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground Color</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background Color</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
