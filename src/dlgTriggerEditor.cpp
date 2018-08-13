@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -196,13 +196,43 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
+    edbee::StringTextAutoCompleteProvider* provider = new edbee::StringTextAutoCompleteProvider();
+    //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
+
+    // Add lua functions and reserved lua terms to an AutoComplete provider
+    for(QString key : mudlet::mLuaFunctionNames.keys())
+    {
+        provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());
+    }
+
+    provider->add("and", 14);
+    provider->add("break", 14);
+    provider->add("else", 14);
+    provider->add("elseif", 14);
+    provider->add("end", 14);
+    provider->add("false", 14);
+    provider->add("for", 14);
+    provider->add("function", 14);
+    provider->add("goto", 14);
+    provider->add("local", 14);
+    provider->add("nil", 14);
+    provider->add("not", 14);
+    provider->add("repeat", 14);
+    provider->add("return", 14);
+    provider->add("then", 14);
+    provider->add("true", 14);
+    provider->add("until", 14);
+    provider->add("while", 14);
+
+    // Set the newly filled provider to be used by our Edbee instance
+    edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
+
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
 
     // option areas
 
     auto pHB2 = new QHBoxLayout(popupArea);
-    QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Maximum);
     popupArea->setMinimumSize(200, 60);
     pHB2->setSizeConstraint(QLayout::SetMaximumSize);
     mpErrorConsole = new TConsole(mpHost, false, popupArea);
@@ -6416,6 +6446,7 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 void dlgTriggerEditor::leaveEvent(QEvent *event)
 {
     Q_UNUSED(event);
+    if( QApplication::focusWidget() != nullptr && QApplication::focusWidget()->objectName() == "listWidgetRef" ) return;
 
     saveOpenChanges();
 
