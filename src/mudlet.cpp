@@ -3,7 +3,7 @@
  *   Copyright (C) 2013-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -57,6 +57,12 @@
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QToolBar>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QVariantHash>
+
 #include <zip.h>
 #include "post_guard.h"
 
@@ -108,6 +114,7 @@ QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
+QVariantHash mudlet::mLuaFunctionNames;
 
 QPointer<mudlet> mudlet::_self = nullptr;
 
@@ -507,6 +514,12 @@ void mudlet::initEdbee()
     auto grammarManager = edbee->grammarManager();
     // We only need the single Lua lexer, probably ever
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
+
+    //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
+    loadLuaFunctionList();
+
+    //QFile file(fileName);
+    //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
 
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 }
@@ -3407,6 +3420,35 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
         zip_error_to_str(buf, sizeof(buf), err, errno);
         return false;
     }
+
+    return true;
+}
+
+//loads the luaFunctionList for use by the edbee Autocompleter
+bool mudlet::loadLuaFunctionList()
+{
+    QFile* jsonFile = new QFile(QStringLiteral(":/lua-function-list.json"));
+    if (!jsonFile->open(QFile::ReadOnly)) {
+        return false;
+    }
+
+    const QByteArray data = jsonFile->readAll();
+
+    jsonFile->close();
+
+    auto json_doc = QJsonDocument::fromJson(data);
+
+    if (json_doc.isNull() || !json_doc.isObject()) {
+        return false;
+    }
+
+    QJsonObject json_obj = json_doc.object();
+
+    if (json_obj.isEmpty()) {
+        return false;
+    }
+
+    mudlet::mLuaFunctionNames = json_obj.toVariantHash();
 
     return true;
 }
