@@ -236,32 +236,32 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
       <source>[WHOIS] %1 is using a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 utilise une connexion sécurisée</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="404"/>
       <source>[WHOIS] %1 is on %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 est sur %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="411"/>
       <source>[WHOWAS] %1 was %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 était %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="412"/>
       <source>[WHOWAS] %1 was connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 était connecté via %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="414"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 était connecté en tant que %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
       <source>[WHO] %1 (%2)</source>
-      <translation type="unfinished"/>
+      <translation>[WHO] %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
@@ -296,7 +296,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 secondes</translation>
     </message>
   </context>
   <context>
@@ -304,12 +304,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>Id du salon</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nom du salon</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="106"/>
@@ -364,12 +364,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2234"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Arrière-plan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2235"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Premier plan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2481"/>
@@ -384,17 +384,17 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Modifier les propriétés de cette ligne</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2653"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Terminer de dessiner cette ligne</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2674"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>créer une nouvelle carte</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
@@ -529,7 +529,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2844"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Supprimer la ligne perso</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3269"/>
