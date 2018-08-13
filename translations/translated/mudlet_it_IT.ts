@@ -72,7 +72,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
       <source>! %1 mode is %2 %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 in modalità %2 %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
@@ -108,13 +108,13 @@ attendere prego...</translation>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
       <location filename="../src/ircmessageformatter.cpp" line="271"/>
       <source>! %1 time is %2</source>
-      <translation type="unfinished"/>
+      <translation>! Il tempo di %1 è %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
       <location filename="../src/ircmessageformatter.cpp" line="268"/>
       <source>! %1 version is %2</source>
-      <translation type="unfinished"/>
+      <translation>! La versione di %1 è %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
@@ -230,12 +230,12 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
       <source>[WHOIS] %1 is logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 ha effettuato il login come %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
       <source>[WHOIS] %1 is connected from %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 è connesso da %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
@@ -404,7 +404,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>carica mappa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2690"/>
@@ -635,7 +635,7 @@ factor of:</source>
       <location filename="../src/T2DMap.cpp" line="3786"/>
       <location filename="../src/T2DMap.cpp" line="3831"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Impostare il peso della stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3774"/>
@@ -682,7 +682,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3880"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carica la Mappa di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3882"/>
@@ -694,7 +694,7 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="4685"/>
       <location filename="../src/T2DMap.cpp" line="4721"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
-      <translation type="unfinished"/>
+      <translation>Click sinistro del mouse per aggiungere un punto, click destro per annulla/cambia/fine...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4732"/>
@@ -1182,7 +1182,7 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mappa caricata correttamente (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -2063,27 +2063,27 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copia</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1241"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>Copia Codice HTML</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona Tutto</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1249"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Cerca su %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1268"/>
       <source>restore Main menu</source>
-      <translation type="unfinished"/>
+      <translation>ripristina menu Principale</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1271"/>
@@ -2122,7 +2122,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1010"/>
       <source>Trigger name=%1 expired.
 </source>
-      <translation type="unfinished"/>
+      <translation>Trigger name=%1 scaduto.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1013"/>
@@ -2187,7 +2188,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Informazioni su Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
@@ -2318,7 +2319,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -2565,7 +2566,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2196"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>Richiesto</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2205"/>
@@ -2605,12 +2606,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2343"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome del personaggio:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2350"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Il nome del personaggio</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2360"/>
@@ -2630,7 +2631,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2383"/>
       <source>Auto connect this profile on startup</source>
-      <translation type="unfinished"/>
+      <translation>Auto connetti questo profilo all'avvio</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2405"/>
@@ -2673,7 +2674,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="77"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Stile:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="105"/>
@@ -2683,7 +2684,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="138"/>
       <source>Exit Details:</source>
-      <translation type="unfinished"/>
+      <translation>Dettagli Uscita:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="153"/>
@@ -2751,7 +2752,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Uscita Normale:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
@@ -2888,7 +2889,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Annulla</translation>
     </message>
   </context>
   <context>
@@ -2924,7 +2925,7 @@ Count</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Stanze</translation>
     </message>
   </context>
   <context>
@@ -4470,7 +4471,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1742"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1748"/>
       <source>Value</source>
-      <translation type="unfinished"/>
+      <translation>Valore</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3291"/>
