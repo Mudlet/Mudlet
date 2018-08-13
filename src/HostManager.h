@@ -48,7 +48,7 @@ public:
     bool addHost(QString name, QString port, QString login, QString pass);
     bool deleteHost(QString);
     void postIrcMessage(QString, QString, QString);
-    void postInterHostEvent(const Host*, const TEvent&, const bool = false);
+    void postInterHostEvent(const Host*, const TEvent&);
 
 private:
     QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access

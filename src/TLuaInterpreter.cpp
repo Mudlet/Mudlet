@@ -49,10 +49,7 @@
 #include "pre_guard.h"
 #include <QDesktopServices>
 #include <QFileDialog>
-#include <QVector>
-#ifdef QT_TEXTTOSPEECH_LIB
-#include <QTextToSpeech>
-#endif // QT_TEXTTOSPEECH_LIB
+#include <QRegularExpression>
 #include "post_guard.h"
 
 // Provides the lua zip module for MacOs platform that does not have an easy way
@@ -85,14 +82,6 @@ int luaopen_yajl(lua_State*);
 }
 
 using namespace std;
-
-#ifdef QT_TEXTTOSPEECH_LIB
-QPointer<QTextToSpeech> speechUnit;
-QVector<QString> speechQueue;
-bool bSpeechBuilt;
-int speechState = QTextToSpeech::Ready;
-QString speechCurrent;
-#endif // QT_TEXTTOSPEECH_LIB
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), purgeTimer(this)
 {
@@ -5237,11 +5226,11 @@ int TLuaInterpreter::setPopup(lua_State* L)
         s++;
     }
     /* N/U:
-       if( n >= s )
-       {
-        customFormat = lua_toboolean( L, s );
-       }
-     */
+	   if( n >= s )
+	   {
+	    customFormat = lua_toboolean( L, s );
+	   }
+	 */
     Host& host = getHostFromLua(L);
     QString txt = a2.c_str();
     QString name = a1.c_str();
@@ -11046,485 +11035,6 @@ int TLuaInterpreter::restartIrc(lua_State* L)
     return 1;
 }
 
-#ifdef QT_TEXTTOSPEECH_LIB
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSpeak
-int TLuaInterpreter::ttsSpeak(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-    
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsSpeak: argument expected string, got %s!", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    }
-    
-    QString textToSay;
-    textToSay = QString::fromUtf8(lua_tostring(L, 1));
-    
-    speechUnit->say(textToSay);
-	speechCurrent = textToSay;
-    
-    return 0;
-}
-
-// No documentation available in wiki - internal function
-// Builds the speechUnit required for TTS operations.
-// Forces default variables, only runs on first TTS call.
-void TLuaInterpreter::ttsBuild()
-{
-    if (bSpeechBuilt) {
-        return;
-    }
-
-    speechUnit = new QTextToSpeech();
-
-    bSpeechBuilt = true;
-
-    connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
-
-
-    speechUnit->setVolume(1.0);
-    speechUnit->setRate(0.0);
-    speechUnit->setPitch(0.0);
-
-    return;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSkipSpeech
-int TLuaInterpreter::ttsSkipSpeech(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    speechUnit->stop();
-
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetSpeechRate
-int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    float fRate;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetSpeechRate: argument expected number, got %s!", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        fRate = lua_tonumber(L, 1);
-    }
-
-    if (fRate > 1.0) {
-        fRate = 1.0;
-    }
-
-    if (fRate < -1.0) {
-        fRate = -1.0;
-    }
-
-    speechUnit->setRate(fRate);
-
-    TEvent event;
-    event.mArgumentList.append(QLatin1String("ttsRateChanged"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(fRate));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
-
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetSpeechPitch
-int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    float fPitch;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetSpeechPitch: argument expected number, got %s!", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        fPitch = lua_tonumber(L, 1);
-    }
-
-    if (fPitch > 1.0) {
-        fPitch = 1.0;
-    }
-
-    if (fPitch < -1.0) {
-        fPitch = -1.0;
-    }
-
-    speechUnit->setPitch(fPitch);
-
-    TEvent event;
-    event.mArgumentList.append(QLatin1String("ttsPitchChanged"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(fPitch));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
-
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetSpeechVolume
-int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    float fVol;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetSpeechVolume: argument expected number, got %s!", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        fVol = lua_tonumber(L, 1);
-    }
-
-    if (fVol > 1.0) {
-        fVol = 1.0;
-    }
-
-    if (fVol < 0.0) {
-        fVol = 0.0;
-    }
-
-    speechUnit->setVolume(fVol);
-
-    TEvent event;
-    event.mArgumentList.append(QLatin1String("ttsVolumeChanged"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(fVol));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
-
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetVoices
-int TLuaInterpreter::ttsGetVoices(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    QVector<QVoice> speechVoices = speechUnit->availableVoices();
-    int i = 0;
-    lua_newtable(L);
-    for (const QVoice& voice : speechVoices) {
-        lua_pushnumber(L, ++i);
-        lua_pushstring(L, voice.name().toUtf8().constData());
-        lua_settable(L, -3);
-    }
-
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetCurrentVoice
-int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    QString currentVoice = speechUnit->voice().name();
-    lua_pushstring(L, currentVoice.toUtf8().constData());
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByName
-int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    QString nextVoice;
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsSetVoiceByName: argument expected string, got %s!", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        nextVoice = QString(lua_tostring(L, 1));
-    }
-
-    QVector<QVoice> speechVoices = speechUnit->availableVoices();
-    foreach (const QVoice& voice, speechVoices) {
-        if (voice.name() == nextVoice) {
-            speechUnit->setVoice(voice);
-            lua_pushboolean(L, true);
-            
-            TEvent event;
-            event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            event.mArgumentList.append(voice.name());
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
-            
-            return 1;
-        }
-    }
-
-    lua_pushboolean(L, false);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByIndex
-int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    int index;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetVoiceByIndex: argument expected number, got %s!", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        index = lua_tonumber(L, 1);
-    }
-
-    index--;
-
-    QVector<QVoice> speechVoices = speechUnit->availableVoices();
-    if (index < 0 || index > speechVoices.size()) {
-        lua_pushstring(L, "ttsSetVoiceByIndex: voice index out of bounds");
-        lua_error(L);
-        return 1;
-    }
-
-    speechUnit->setVoice(speechVoices.at(index));
-
-    
-            
-    TEvent event;
-    event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(speechVoices[index].name());
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
-    
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// No documentation available in wiki - internal function
-// Handles playback of queued text.
-void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
-{
-    if (state != speechState) {
-        speechState = state;
-        TEvent event;
-        switch (state) {
-        case QTextToSpeech::Paused:
-            event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
-            break;
-        case QTextToSpeech::Speaking:
-            event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
-            break;
-        case QTextToSpeech::BackendError:
-            event.mArgumentList.append(QLatin1String("ttsSpeechError"));
-            break;
-        case QTextToSpeech::Ready:
-            event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
-            break;
-        }
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
- 
-        if (state == QTextToSpeech::Speaking) {
-            event.mArgumentList.append(speechCurrent);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        }
-
-        mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
-    }
-
-    if (state != QTextToSpeech::Ready || speechQueue.empty()) {
-        return;
-    }
-
-    QString textToSay;
-    textToSay = speechQueue.takeFirst();
-
-    speechUnit->say(textToSay);
-    speechCurrent = textToSay;
-
-    return;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueueSpeech
-int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsQueueText: bad argument #1 type (input as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    }
-
-    QString inputText = lua_tostring(L, 1);
-    int index;
-
-    if (lua_gettop(L) > 1) {
-        if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "ttsQueueText: bad argument #2 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
-        }
-
-        index = lua_tonumber(L, 2);
-        index--;
-
-        if (index < 0) {
-            index = 0;
-        }
-
-        if (index > speechQueue.size()) {
-            index = speechQueue.size();
-        }
-    } else {
-        index = speechQueue.size();
-    }
-
-    speechQueue.insert(index, inputText);
-
-    TEvent event;
-    Host& host = getHostFromLua(L);
-    event.mArgumentList.append(QLatin1String("ttsSpeechQueued"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(inputText);
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(index));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    host.raiseEvent(event);
-
-    TLuaInterpreter::ttsStateChanged(speechUnit->state());
-
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetSpeechQueue
-int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    if (lua_gettop(L) > 0) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "ttsGetspeechQueue. bad argument #1 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
-        }
-
-        int index = lua_tonumber(L, 1);
-        index--;
-
-        if (index < 0 || index > speechQueue.size()) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-
-        lua_pushstring(L, speechQueue.at(index).toLatin1().constData());
-        return 1;
-    }
-
-    lua_newtable(L);
-
-    for (int i = 0; i < speechQueue.size(); i++) {
-        lua_pushnumber(L, i + 1);
-        lua_pushstring(L, speechQueue.at(i).toUtf8().constData());
-        lua_settable(L, -3);
-    }
-
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsPauseSpeech
-int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    speechUnit->pause();
-
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsResumeSpeech
-int TLuaInterpreter::ttsResumeSpeech(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    speechUnit->resume();
-
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsClearQueue
-int TLuaInterpreter::ttsClearQueue(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    if (lua_gettop(L) > 0) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "ttsClearQueue: bad argument #1 type (optional index as int expected, got %s!)", luaL_typename(L, 1));
-            lua_error(L);
-            return 1;
-        }
-
-        int index = lua_tonumber(L, 1);
-        index--;
-
-        if (index < 0 || index >= speechQueue.size()) {
-            lua_pushfstring(L, "ttsClearQueue: index (%d) out of bounds for queue size %d", index + 1, speechQueue.size());
-            lua_error(L);
-            return 1;
-        }
-
-        speechQueue.remove(index);
-        return 0;
-    }
-
-    speechQueue.clear();
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetCurrentLine
-int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    if (speechUnit->state() == QTextToSpeech::Ready || speechUnit->state() == QTextToSpeech::BackendError) {
-        lua_pushboolean(L, false);
-        return 1;
-    }
-
-    lua_pushstring(L, speechCurrent.toUtf8().constData());
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetState
-int TLuaInterpreter::ttsGetState(lua_State* L)
-{
-    TLuaInterpreter::ttsBuild();
-
-    switch (speechUnit->state()) {
-    case QTextToSpeech::Ready:
-        lua_pushstring(L, "ttsSpeechReady");
-        break;
-    case QTextToSpeech::Paused:
-        lua_pushstring(L, "ttsSpeechPaused");
-        break;
-    case QTextToSpeech::Speaking:
-        lua_pushstring(L, "ttsSpeechStarted");
-        break;
-    case QTextToSpeech::BackendError:
-        lua_pushstring(L, "ttsSpeechError");
-        break;
-    default:
-        lua_pushstring(L, "ttsUnknownState");
-    }
-
-    return 1;
-}
-
-#endif // QT_TEXTTOSPEECH_LIB
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setServerEncoding
 int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
@@ -11804,17 +11314,17 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 
     /*std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
 
-       int k=1;
-       for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
-       {
-        cout << "regex#"<<k<<" got:"<<endl;
-        std::list<string>::const_iterator it = (*mit).begin();
-        for( int i=1; it!=(*mit).end(); it++, i++ )
-        {
-            cout << i<<"#"<<"<"<<*it<<">"<<endl;
-        }
-        cout << "-----------------------------"<<endl;
-       }*/
+	   int k=1;
+	   for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
+	   {
+	    cout << "regex#"<<k<<" got:"<<endl;
+	    std::list<string>::const_iterator it = (*mit).begin();
+	    for( int i=1; it!=(*mit).end(); it++, i++ )
+	    {
+	        cout << i<<"#"<<"<"<<*it<<">"<<endl;
+	    }
+	    cout << "-----------------------------"<<endl;
+	   }*/
 }
 
 // No documentation available in wiki - internal function
@@ -11824,12 +11334,12 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
     mCaptureGroupPosList = posList;
 
     /*std::list<string>::iterator it2 = mCaptureGroupList.begin();
-       std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
-       int i=0;
-       for( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++ )
-       {
-        cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
-       } */
+	   std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
+	   int i=0;
+	   for( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++ )
+	   {
+	    cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
+	   } */
 }
 
 // No documentation available in wiki - internal function
@@ -13283,24 +12793,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName);
     lua_register(pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent);
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
-#ifdef QT_TEXTTOSPEECH_LIB
-    lua_register(pGlobalLua, "ttsSpeak", TLuaInterpreter::ttsSpeak);
-    lua_register(pGlobalLua, "ttsSkipSpeech", TLuaInterpreter::ttsSkipSpeech);
-    lua_register(pGlobalLua, "ttsSetSpeechRate", TLuaInterpreter::ttsSetSpeechRate);
-    lua_register(pGlobalLua, "ttsSetSpeechPitch", TLuaInterpreter::ttsSetSpeechPitch);
-    lua_register(pGlobalLua, "ttsSetSpeechVolume", TLuaInterpreter::ttsSetSpeechVolume);
-    lua_register(pGlobalLua, "ttsSetVoiceByName", TLuaInterpreter::ttsSetVoiceByName);
-    lua_register(pGlobalLua, "ttsSetVoiceByIndex", TLuaInterpreter::ttsSetVoiceByIndex);
-    lua_register(pGlobalLua, "ttsGetCurrentVoice", TLuaInterpreter::ttsGetCurrentVoice);
-    lua_register(pGlobalLua, "ttsGetVoices", TLuaInterpreter::ttsGetVoices);
-    lua_register(pGlobalLua, "ttsQueueSpeech", TLuaInterpreter::ttsQueueSpeech);
-    lua_register(pGlobalLua, "ttsGetSpeechQueue", TLuaInterpreter::ttsGetSpeechQueue);
-    lua_register(pGlobalLua, "ttsPauseSpeech", TLuaInterpreter::ttsPauseSpeech);
-    lua_register(pGlobalLua, "ttsResumeSpeech", TLuaInterpreter::ttsResumeSpeech);
-    lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
-    lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
-    lua_register(pGlobalLua, "ttsGetState", TLuaInterpreter::ttsGetState);
-#endif // QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding);
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);

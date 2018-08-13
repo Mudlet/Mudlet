@@ -128,8 +128,7 @@ local packages = {
   "GUIUtils.lua",
   "Other.lua",
   "GMCP.lua",
-  "KeyCodes.lua",
-  "TTSValues.lua"
+  "KeyCodes.lua"
 }
 
 -- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
