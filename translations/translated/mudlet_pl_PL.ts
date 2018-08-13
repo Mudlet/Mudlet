@@ -171,17 +171,17 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>! %1 wyszedł</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 wyszedł (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! bez tematu</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
@@ -201,22 +201,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
       <source>[WHOIS] %1 is %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 to %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[WHOIS] %1 is connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 łączy się przez %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="394"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 jest połączony/a od %2 (idle %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
@@ -231,17 +231,17 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
       <source>[WHOIS] %1 is connected from %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 łączy się z %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
       <source>[WHOIS] %1 is using a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 używa bezpiecznego połączenia</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="404"/>
       <source>[WHOIS] %1 is on %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 jest w %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="411"/>
@@ -261,7 +261,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
       <source>[WHO] %1 (%2)</source>
-      <translation type="unfinished"/>
+      <translation>[WHO] %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
@@ -276,27 +276,27 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 dni</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 godzin</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 minut</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 sekund</translation>
     </message>
   </context>
   <context>
@@ -309,7 +309,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa pokoju</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="106"/>
@@ -326,7 +326,8 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2044"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nazwa pokoju: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2058"/>
@@ -394,12 +395,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2674"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>utwórz nową mapę</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>wczytaj mapę</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2690"/>
@@ -1342,27 +1343,27 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1538"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>Nie znaleziono mapy. Czy chcesz pobrać mapę czy zacząć własną?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1539"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Pobierz mapę</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1540"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Zacznij własną</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2003"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemy z mapą</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2010"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemy z obszarem</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2018"/>
@@ -1372,7 +1373,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2027"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemy z pokojem</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2036"/>
@@ -1382,7 +1383,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2046"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Koniec raportu</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2052"/>
@@ -1407,22 +1408,22 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2143"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pobieranie mapy rozpoczęte, proszę czekać...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2151"/>
       <source>Downloading XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Pobieranie pliku XML z mapą %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2151"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>Przerwij</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2152"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>Pobieranie mapy</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2179"/>
@@ -1433,12 +1434,12 @@ imported at user request.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2211"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Importowanie pliku XML z mapą %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2212"/>
       <source>Map import</source>
-      <translation type="unfinished"/>
+      <translation>Importowanie mapy</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2239"/>
@@ -1499,69 +1500,69 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="81"/>
       <location filename="../src/TRoom.cpp" line="771"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Północ</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="82"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Północny wschód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="83"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Północny zachód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="84"/>
       <location filename="../src/TRoom.cpp" line="816"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Południe</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="85"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Południowy wschód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="86"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Południowy zachód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="87"/>
       <location filename="../src/TRoom.cpp" line="861"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Wschód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="88"/>
       <location filename="../src/TRoom.cpp" line="876"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Zachód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="89"/>
       <location filename="../src/TRoom.cpp" line="891"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>W górę</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="90"/>
       <location filename="../src/TRoom.cpp" line="906"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>W dół</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="91"/>
       <location filename="../src/TRoom.cpp" line="921"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>Do środka</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="92"/>
       <location filename="../src/TRoom.cpp" line="936"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Na zewnątrz</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="93"/>
@@ -2055,7 +2056,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopiuj</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1241"/>
@@ -2179,17 +2180,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>O Mudlecie</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>Licencja</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
@@ -2607,7 +2608,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2360"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Hasło:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2367"/>
@@ -2632,7 +2633,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2423"/>
       <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>Strona WWW:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2485"/>
@@ -2660,12 +2661,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="77"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Styl:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="105"/>
@@ -2916,7 +2917,7 @@ Count</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Pokoje</translation>
     </message>
   </context>
   <context>
@@ -3137,7 +3138,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="102"/>
       <source>%1 closed their client.</source>
-      <translation type="unfinished"/>
+      <translation>%1 zamknął/ęła swojego klienta.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="114"/>
@@ -3269,7 +3270,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="41"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skrypty</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
@@ -3289,7 +3290,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="75"/>
       <source>Add Files</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj pliki</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
@@ -3401,63 +3402,63 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1506"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Załaduj mapę Mudletową</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1521"/>
       <source>Importing map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Importowanie mapy - proszę czekać...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1525"/>
       <source>Imported map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa zaimportowana z %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1527"/>
       <source>Could not import map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Importowanie mapy z %1 się nie powiodło.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1530"/>
       <source>Loading map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy - proszę czekać...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1535"/>
       <source>Loaded map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa załadowana z %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1537"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy z %1 się nie powiodło.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1554"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz Mudletową mapę</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1554"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mudletowa mapa (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1564"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisywanie mapy - proszę czekać...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1578"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa zapisana do %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1580"/>
       <source>Could not save map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Zapisanie mapy do %1 się nie powiodło.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1618"/>
@@ -3560,7 +3561,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2367"/>
       <source>Updating themes from colorsublime.com...</source>
-      <translation type="unfinished"/>
+      <translation>Aktualizowanie skórek z colorsublime.com...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="155"/>
@@ -3596,7 +3597,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2673"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jak wiele pokoi w całej mapie ma ten symbol.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2685"/>
@@ -3940,17 +3941,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1719"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>północny zachód</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1720"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>północ</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1721"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>północny wschód</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
@@ -3960,12 +3961,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>zachód</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1724"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>wschód</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
@@ -3975,17 +3976,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>południowy zachód</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1727"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>południe</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1728"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>południowy wschód</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
@@ -4062,12 +4063,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="303"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5690"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skrypty</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="304"/>
       <source>Show Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż skrypty</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="307"/>
@@ -4159,7 +4160,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8057"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8063"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopiuj</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="354"/>
@@ -4172,7 +4173,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8058"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8064"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Wklej</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="368"/>
@@ -4206,12 +4207,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="401"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz profil jako</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="405"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>Statystyki</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="406"/>
@@ -4358,7 +4359,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1922"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1952"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1271"/>
@@ -4376,7 +4377,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2006"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2038"/>
       <source>Script</source>
-      <translation type="unfinished"/>
+      <translation>Skrypt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1352"/>
@@ -4418,7 +4419,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1473"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2130"/>
       <source>Action</source>
-      <translation type="unfinished"/>
+      <translation>Akcja</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1473"/>
@@ -4452,23 +4453,23 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1728"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1742"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Zmienna</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1742"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1748"/>
       <source>Value</source>
-      <translation type="unfinished"/>
+      <translation>Wartość</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3291"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa tabeli...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3298"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa zmiennej...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4755"/>
@@ -4680,7 +4681,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7782"/>
       <source>choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>wybierz plik dźwiękowy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7782"/>
@@ -4690,24 +4691,24 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7918"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Zapisywanie…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8056"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8062"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Wytnij</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8060"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8066"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Zaznacz wszystko</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8053"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Sformatuj wszystko</translation>
     </message>
   </context>
   <context>
@@ -4826,7 +4827,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="97"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="104"/>
@@ -5179,12 +5180,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="204"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Edytor skryptów</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="207"/>
       <source>Open script editor</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz edytor skryptów</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
@@ -5225,7 +5226,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/ui/main_window.ui" line="237"/>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Forum online</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
@@ -5296,7 +5297,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="303"/>
       <source>Show map</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż mapę</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
@@ -5311,7 +5312,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Menedżer pakietów</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
@@ -5596,7 +5597,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="246"/>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skrypty</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
@@ -5627,7 +5628,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="264"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
@@ -5638,12 +5639,12 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="270"/>
       <location filename="../src/mudlet.cpp" line="408"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Mapa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="271"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż/ukryj mapę</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="276"/>
@@ -5658,7 +5659,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="282"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Ustawienia</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
@@ -5752,17 +5753,17 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="362"/>
       <location filename="../src/mudlet.cpp" line="363"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz widok pełnoekranowy</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="405"/>
       <source>Actions</source>
-      <translation type="unfinished"/>
+      <translation>Akcje</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Pomoc</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
@@ -5772,12 +5773,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="413"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="541"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa modułu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="541"/>
@@ -5965,7 +5966,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
       <source>Icon sizes</source>
-      <translation type="unfinished"/>
+      <translation>Rozmiary ikon</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="73"/>
@@ -5986,7 +5987,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="127"/>
       <location filename="../src/ui/profile_preferences.ui" line="156"/>
       <source>Never</source>
-      <translation type="unfinished"/>
+      <translation>Nigdy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="132"/>
@@ -5998,7 +5999,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="137"/>
       <location filename="../src/ui/profile_preferences.ui" line="166"/>
       <source>Always</source>
-      <translation type="unfinished"/>
+      <translation>Zawsze</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="145"/>
@@ -6094,7 +6095,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
       <source>Browse...</source>
-      <translation type="unfinished"/>
+      <translation>Przeglądaj...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="329"/>
@@ -6179,17 +6180,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="484"/>
       <source>Spell check</source>
-      <translation type="unfinished"/>
+      <translation>Sprawdzanie pisowni</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="490"/>
       <source>Choose spell check dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz słownik do sprawdzania pisowni:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="500"/>
       <source>Enable spell check</source>
-      <translation type="unfinished"/>
+      <translation>Włącz sprawdzanie pisowni</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="533"/>
@@ -6219,7 +6220,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="587"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>Włącz antyaliasing</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="603"/>
@@ -6379,7 +6380,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1014"/>
       <source>Editor</source>
-      <translation type="unfinished"/>
+      <translation>Edytor</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1020"/>
@@ -6470,7 +6471,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1256"/>
       <location filename="../src/ui/profile_preferences.ui" line="1941"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Czarny:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1263"/>
@@ -6492,7 +6493,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1296"/>
       <location filename="../src/ui/profile_preferences.ui" line="1975"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Czerwony:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1303"/>
@@ -6503,7 +6504,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
       <location filename="../src/ui/profile_preferences.ui" line="1992"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnoczerwony:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1323"/>
@@ -6514,7 +6515,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1336"/>
       <location filename="../src/ui/profile_preferences.ui" line="2009"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Zielony:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1343"/>
@@ -6525,7 +6526,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1356"/>
       <location filename="../src/ui/profile_preferences.ui" line="2026"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnozielony:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1363"/>
@@ -6536,7 +6537,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1376"/>
       <location filename="../src/ui/profile_preferences.ui" line="2043"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Żółty:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1383"/>
@@ -6547,7 +6548,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1396"/>
       <location filename="../src/ui/profile_preferences.ui" line="2060"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnożółty:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1403"/>
@@ -6558,7 +6559,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1416"/>
       <location filename="../src/ui/profile_preferences.ui" line="2077"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Niebieski:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1423"/>
@@ -6569,7 +6570,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1436"/>
       <location filename="../src/ui/profile_preferences.ui" line="2094"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnoniebieski:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1443"/>
@@ -6843,7 +6844,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2249"/>
       <source>Force compression off</source>
-      <translation type="unfinished"/>
+      <translation>Wymuś brak kompresji</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2256"/>
@@ -6879,7 +6880,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2324"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Port:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2331"/>
@@ -7669,7 +7670,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="574"/>
       <source>choose file:</source>
-      <translation type="unfinished"/>
+      <translation>wybierz plik:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="916"/>
