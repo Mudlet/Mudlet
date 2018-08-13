@@ -13107,18 +13107,18 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
 #ifdef QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "ttsSpeak", TLuaInterpreter::ttsSpeak);
-    lua_register(pGlobalLua, "ttsSkipSpeech", TLuaInterpreter::ttsSkipSpeech);
-    lua_register(pGlobalLua, "ttsSetSpeechRate", TLuaInterpreter::ttsSetSpeechRate);
-    lua_register(pGlobalLua, "ttsSetSpeechPitch", TLuaInterpreter::ttsSetSpeechPitch);
-    lua_register(pGlobalLua, "ttsSetSpeechVolume", TLuaInterpreter::ttsSetSpeechVolume);
+    lua_register(pGlobalLua, "ttsSkip", TLuaInterpreter::ttsSkipSpeech);
+    lua_register(pGlobalLua, "ttsSetRate", TLuaInterpreter::ttsSetSpeechRate);
+    lua_register(pGlobalLua, "ttsSetPitch", TLuaInterpreter::ttsSetSpeechPitch);
+    lua_register(pGlobalLua, "ttsSetVolume", TLuaInterpreter::ttsSetSpeechVolume);
     lua_register(pGlobalLua, "ttsSetVoiceByName", TLuaInterpreter::ttsSetVoiceByName);
     lua_register(pGlobalLua, "ttsSetVoiceByIndex", TLuaInterpreter::ttsSetVoiceByIndex);
     lua_register(pGlobalLua, "ttsGetCurrentVoice", TLuaInterpreter::ttsGetCurrentVoice);
     lua_register(pGlobalLua, "ttsGetVoices", TLuaInterpreter::ttsGetVoices);
-    lua_register(pGlobalLua, "ttsQueueSpeech", TLuaInterpreter::ttsQueueSpeech);
-    lua_register(pGlobalLua, "ttsGetSpeechQueue", TLuaInterpreter::ttsGetSpeechQueue);
-    lua_register(pGlobalLua, "ttsPauseSpeech", TLuaInterpreter::ttsPauseSpeech);
-    lua_register(pGlobalLua, "ttsResumeSpeech", TLuaInterpreter::ttsResumeSpeech);
+    lua_register(pGlobalLua, "ttsQueue", TLuaInterpreter::ttsQueueSpeech);
+    lua_register(pGlobalLua, "ttsGetQueue", TLuaInterpreter::ttsGetSpeechQueue);
+    lua_register(pGlobalLua, "ttsPause", TLuaInterpreter::ttsPauseSpeech);
+    lua_register(pGlobalLua, "ttsResume", TLuaInterpreter::ttsResumeSpeech);
     lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
     lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
 #endif // QT_TEXTTOSPEECH_LIB
