@@ -90,6 +90,7 @@ using namespace std;
 QPointer<QTextToSpeech> speechUnit;
 QVector<QString> speechQueue;
 bool bSpeechBuilt;
+bool bSpeechQueueing;
 int speechState = QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
@@ -11011,6 +11012,7 @@ void TLuaInterpreter::ttsBuild()
     speechUnit = new QTextToSpeech();
 
     bSpeechBuilt = true;
+    bSpeechQueueing = false;
 
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
 
@@ -11241,9 +11243,8 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
     index--;
 
     QVector<QVoice> speechVoices = speechUnit->availableVoices();
-    if (index < 0 || index > speechVoices.size()) {
-        lua_pushstring(L, "ttsSetVoiceByIndex: voice index out of bounds");
-        lua_error(L);
+    if (index < 0 || index >= speechVoices.size()) {
+        lua_pushboolean(L, false);
         return 1;
     }
 
@@ -11295,6 +11296,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
     }
 
     if (state != QTextToSpeech::Ready || speechQueue.empty()) {
+	bSpeechQueueing = false;
         return;
     }
 
@@ -11358,7 +11360,12 @@ int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);
 
-    TLuaInterpreter::ttsStateChanged(speechUnit->state());
+    if (speechQueue.size() = 1 && speechUnit->state() == QTextToSpeech::Ready && bSpeechQueueing == false)
+    {
+        bSpeechQueueing = true;
+        TLuaInterpreter::ttsStateChanged(speechUnit->state());
+    }
+	
 
     return 0;
 }
