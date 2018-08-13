@@ -11048,7 +11048,9 @@ int TLuaInterpreter::restartIrc(lua_State* L)
 
 #ifdef QT_TEXTTOSPEECH_LIB
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSpeak
+/** ttsSpeak( text )
+ *  Synthesizes text for reading.
+ */
 int TLuaInterpreter::ttsSpeak(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11068,9 +11070,10 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     return 0;
 }
 
-// No documentation available in wiki - internal function
-// Builds the speechUnit required for TTS operations.
-// Forces default variables, only runs on first TTS call.
+/** ttsBuild()
+ *  Builds the speechUnit required for TTS operations.
+ *  Forces default variables, only runs on first TTS call.
+ */
 void TLuaInterpreter::ttsBuild()
 {
     if (bSpeechBuilt) {
@@ -11091,7 +11094,9 @@ void TLuaInterpreter::ttsBuild()
     return;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSkipSpeech
+/** ttsSkipSpeech()
+ *  Skips the current line of text.
+ */
 int TLuaInterpreter::ttsSkipSpeech(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11101,7 +11106,10 @@ int TLuaInterpreter::ttsSkipSpeech(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetSpeechRate
+
+/** ttsSetSpeechRate( rate )
+ *  Sets the rate of speech playback.
+ */
 int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11135,7 +11143,10 @@ int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetSpeechPitch
+
+/** ttsSetSpeechPitch( pitch )
+ *  Sets the pitch of speech playback.
+ */
 int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11169,7 +11180,10 @@ int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetSpeechVolume
+
+/** ttsSetSpeechVolume( volume )
+ *  Sets the volume of speech playback.
+ */
 int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11203,7 +11217,11 @@ int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetVoices
+
+/** ttsGetVoices()
+ *  Lists all voices available to the current OS locale.
+ *  Currently uses the default system locale.
+ */
 int TLuaInterpreter::ttsGetVoices(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11220,7 +11238,10 @@ int TLuaInterpreter::ttsGetVoices(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetCurrentVoice
+
+/** ttsGetCurrentVoice()
+ *  Returns the current voice used by the speechUnit.
+ */
 int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11230,7 +11251,11 @@ int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByName
+
+/** ttsSetVoiceByName( name )
+ *  Sets the current speechUnit voice if given a name.
+ *  Returns true if set, false otherwise.
+ */
 int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11266,7 +11291,12 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByIndex
+
+/** ttsSetVoiceByIndex( index )
+ *  Sets the current speechUnit voice if given a proper index.
+ *  Returns true if set, errors otherwise.
+ *  Should only be used in conjunction with ttsGetVoices.
+ */
 int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11304,8 +11334,9 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
     return 1;
 }
 
-// No documentation available in wiki - internal function
-// Handles playback of queued text.
+/**
+ *  Handles playback of queued text.
+ */
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
     if (state != speechState) {
@@ -11348,7 +11379,11 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
     return;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueueSpeech
+
+/** ttsQueueSpeech( input, opt. index )
+ *  Adds a line of text to the queue at the specified index.
+ *  If no index is provided, it will add it to the end of the queue.
+ */
 int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11400,7 +11435,11 @@ int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetSpeechQueue
+/** ttsGetSpeechQueue( opt. index )
+ *  Returns the queued text at index.
+ *  If no index exists, returns false.
+ *  If no index provided, returns a table with the entire queue.
+ */
 int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11435,7 +11474,9 @@ int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsPauseSpeech
+/** ttsPauseSpeech()
+ *  Pauses speech.
+ */
 int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11445,7 +11486,9 @@ int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsResumeSpeech
+/** ttsResumeSpeech()
+ *  Resumes speech.
+ */
 int TLuaInterpreter::ttsResumeSpeech(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11455,7 +11498,11 @@ int TLuaInterpreter::ttsResumeSpeech(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsClearQueue
+/** ttsClearQueue( opt. index )
+ *  Removes an item from the speech queue at index.
+ *  Returns false if invalid index provided.
+ *  Clears entire queue if no index provided.
+ */
 int TLuaInterpreter::ttsClearQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11484,7 +11531,9 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetCurrentLine
+/** ttsGetCurrentLine()
+ *  Returns the text being spoken, or false if not speaking.
+ */
 int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -11498,7 +11547,10 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetState
+/** ttsGetState()
+ *  Returns the current state of the speechUnit.
+ *  Possible returns: ttsSpeechReady, ttsSpeechPaused, ttsSpeechStarted, ttsSpeechError, ttsUnknownState.
+ */
 int TLuaInterpreter::ttsGetState(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
@@ -13299,7 +13351,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "ttsResumeSpeech", TLuaInterpreter::ttsResumeSpeech);
     lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
     lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
-    lua_register(pGlobalLua, "ttsGetState", TLuaInterpreter::ttsGetState);
 #endif // QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding);
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
