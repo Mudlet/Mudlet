@@ -403,12 +403,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2674"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>создать новую карту</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>загрузить карту</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2690"/>
@@ -692,24 +692,24 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3880"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить карту Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3882"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet карта (*.dat); Карта Xml-данные (*.xml); Любой файл (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4685"/>
       <location filename="../src/T2DMap.cpp" line="4721"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите левую кнопку, чтобы добавить точку, щелкните правой кнопкой мыши для отмены/изменения/конца...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4732"/>
       <source>Left-click and drag a square for the size and position of your label</source>
-      <translation type="unfinished"/>
+      <translation>Щелкните и перетащите квадрат для размера и положения метки</translation>
     </message>
   </context>
   <context>
@@ -952,12 +952,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="757"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Вы хотите сохранить профиль %1?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="770"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось сохранить профиль</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="770"/>
@@ -992,7 +992,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="935"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, журнал из профиля %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="971"/>
@@ -1424,7 +1424,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2143"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ Инфо ] - Загрузка карты начата, пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2151"/>
@@ -2132,7 +2132,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1010"/>
       <source>Trigger name=%1 expired.
 </source>
-      <translation type="unfinished"/>
+      <translation>Триггер=%1 истек.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1013"/>
@@ -2174,7 +2175,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="356"/>
       <source>Parsing room data...</source>
-      <translation type="unfinished"/>
+      <translation>Анализ комнат...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="360"/>
@@ -3258,7 +3259,8 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="229"/>
       <source>Cannot find a path to this room.
 </source>
-      <translation type="unfinished"/>
+      <translation>Невозможно найти путь к этой комнате.
+</translation>
     </message>
   </context>
   <context>
