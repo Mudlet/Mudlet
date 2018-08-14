@@ -114,7 +114,7 @@ public:
     Q_DISABLE_COPY(cTelnet)
     cTelnet(Host* pH);
     ~cTelnet();
-    void connectIt(const QString& address, int port, bool ssl_tsl);
+    void connectIt(const QString& address, int port);
     void disconnect();
     bool sendData(QString& data);
     void setATCPVariables(const QString& _msg);
@@ -139,6 +139,11 @@ public:
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
     const QString& getFriendlyEncoding();
+    QSslCertificate getPeerCertificate();
+    QAbstractSocket::SocketError error();
+    QList<QSslError> handle_socket_signal_sslError();
+    QString errorString();
+
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -161,10 +166,10 @@ public slots:
     void handle_socket_signal_disconnected();
     void handle_socket_signal_readyRead();
     void handle_socket_signal_error();
+    void handle_socket_signal_sslError(const QList<QSslError> &errors);
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
-
 
 private:
     cTelnet() = default;

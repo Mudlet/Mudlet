@@ -730,10 +730,9 @@ bool Host::killTrigger(const QString& name)
     return mTriggerUnit.killTrigger(name);
 }
 
-
 void Host::connectToServer()
 {
-    mTelnet.connectIt(mUrl, mPort, mSslTsl);
+    mTelnet.connectIt(mUrl, mPort);
 }
 
 void Host::closingDown()

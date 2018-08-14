@@ -78,8 +78,6 @@ public:
     void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
     void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
-    bool               getSslTsl()                     { QMutexLocker locker(& mLock); return mSslTsl; }
-    void               setSslTsl(bool b)               { QMutexLocker locker(& mLock); mSslTsl = b; }
     void               setAutoReconnect(bool b)         {mTelnet.setReconnect(b);}
     QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
     void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
@@ -213,6 +211,11 @@ public:
     bool mFORCE_NO_COMPRESSION;
     bool mFORCE_SAVE_ON_EXIT;
     bool mInsertedMissingLF;
+
+    bool mSslTsl;
+    bool mAutoReconnect;
+    bool mSslIgnoreExpired;
+    bool mSslIgnoreSelfSigned;
     bool mIsGoingDown;
     bool mIsProfileLoadingSequence;
 
@@ -356,6 +359,9 @@ signals:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
+    void encrypted();
+    void connected();
+    void error();
 
 private:
     QScopedPointer<LuaInterface> mLuaInterface;
@@ -389,8 +395,6 @@ private:
     QString mPass;
 
     int mPort;
-    bool mSslTsl;
-    bool mAutoReconnect;
 
     int mRetries;
     bool mSaveProfileOnExit;

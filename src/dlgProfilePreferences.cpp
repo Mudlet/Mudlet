@@ -42,6 +42,7 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
+#include <QString>
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
@@ -199,6 +200,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // have to state which one we want to use for these two:
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
+
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -275,6 +277,10 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_ircOptions enabled...
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
+
+    // tab security
+
+    groupBox_ssl->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -329,6 +335,15 @@ void dlgProfilePreferences::enableHostDetails()
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
     groupbox_searchEngineSelection->setEnabled(true);
+
+    // tab security
+    if (QSslSocket::supportsSsl()) {
+        groupBox_ssl->setEnabled(true);
+    } else {
+        groupBox_ssl->setEnabled(false);
+
+    }
+
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -618,6 +633,52 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
+    notificationArea->hide();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->hide();
+
+
+    if (QSslSocket::supportsSsl() && pHost->mSslTsl == true) {
+        QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
+        ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
+        ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
+        ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
+        ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
+        ssl_alternate_names->setText("");
+        if (!pHost->mTelnet.handle_socket_signal_sslError().empty())
+        {
+            notificationAreaIconLabelWarning->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+        else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError )
+        {
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+        else if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError)
+        {
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+        else if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+    }
+
+    checkBox_ssl->setChecked((Qt::CheckState) pHost->mSslTsl);
+    checkBox_self_signed->setChecked((Qt::CheckState) pHost->mSslIgnoreSelfSigned);
+    checkBox_expired->setChecked((Qt::CheckState) pHost->mSslIgnoreExpired);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -693,6 +754,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
+
+    //Security tab
+
+
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1953,6 +2018,12 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
+
+        //tab security
+        pHost->mSslTsl = checkBox_ssl->isChecked();
+        pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
+        pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
+
 
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();

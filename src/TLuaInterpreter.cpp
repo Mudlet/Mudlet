@@ -3878,7 +3878,7 @@ int TLuaInterpreter::connectToServer(lua_State* L)
         }
     }
 
-    host.mTelnet.connectIt(url.c_str(), port, false);
+    host.mTelnet.connectIt(url.c_str(), port);
 
     lua_pushboolean(L, true);
     return 1;
@@ -5076,7 +5076,7 @@ int TLuaInterpreter::disconnect(lua_State* L)
 int TLuaInterpreter::reconnect(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.mTelnet.connectIt(host.getUrl(), host.getPort(), host.getSslTsl());
+    host.mTelnet.connectIt(host.getUrl(), host.getPort());
     return 0;
 }
 

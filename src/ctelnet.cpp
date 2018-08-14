@@ -72,7 +72,6 @@ cTelnet::cTelnet(Host* pH)
 , mMCCP_version_2(false)
 , mpProgressDialog()
 , hostPort()
-, hostSslTsl()
 , networkLatencyMin()
 , networkLatencyMax()
 , mWaitingForResponse()
@@ -126,6 +125,9 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
     connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
     connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
+    connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
+   //connect(&socket, qOverload<const QList<QSslError>&> (&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError(const QList<QSslError>));
+
 
     // initialize telnet session
     reset();
@@ -214,6 +216,25 @@ const QString& cTelnet::getComputerEncoding(const QString& encoding)
     return TBuffer::getComputerEncoding(encoding);
 }
 
+QSslCertificate cTelnet::getPeerCertificate()
+{
+    return socket.peerCertificate();
+}
+
+QAbstractSocket::SocketError cTelnet::error()
+{
+    return socket.error();
+}
+
+QList<QSslError> cTelnet::handle_socket_signal_sslError() {
+    return socket.sslErrors();
+}
+
+QString cTelnet::errorString()
+{
+    return socket.errorString();
+}
+
 // returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
 const QString& cTelnet::getFriendlyEncoding()
 {
@@ -257,7 +278,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     return qMakePair(true, QString());
 }
 
-void cTelnet::connectIt(const QString& address, int port, bool sslTsl)
+void cTelnet::connectIt(const QString& address, int port)
 {
     // wird an dieser Stelle gesetzt
     if (mpHost) {
@@ -268,13 +289,23 @@ void cTelnet::connectIt(const QString& address, int port, bool sslTsl)
 
     if (socket.state() != QAbstractSocket::UnconnectedState) {
         socket.abort();
-        connectIt(address, port, sslTsl);
+        connectIt(address, port);
         return;
+    }
+
+    if (mpHost->mSslTsl) {
+        QList<QSslError> exceptions =QList<QSslError>();
+        if (mpHost->mSslIgnoreExpired) {
+            exceptions.append(QSslError::CertificateExpired);
+        }
+        if (mpHost->mSslIgnoreSelfSigned) {
+            exceptions.append(QSslError::SelfSignedCertificate);
+        }
+        socket.ignoreSslErrors(exceptions);
     }
 
     hostName = address;
     hostPort = port;
-    hostSslTsl = sslTsl;
     QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
     postMessage(server);
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
@@ -343,15 +374,10 @@ void cTelnet::handle_socket_signal_disconnected()
     QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
     QString spacer = "    ";
     bool sslerr = (!socket.sslErrors().empty() ||
-                   (socket.error()&QAbstractSocket::SslHandshakeFailedError));
-    //sslErrors(socket.sslErrors());
-
+                   (socket.error() == QAbstractSocket::SslHandshakeFailedError) ||
+                   (socket.error() == QAbstractSocket::SslInvalidUserDataError) ||
+                   (socket.error() == QAbstractSocket::QAbstractSocket::SslInternalError));
     if (sslerr) {
-        //QSslCertificate cert = socket.peerCertificate();
-        //err2 = QString("Certificate for: %1 expires: %2 Authority: %3")
-        //        .arg(cert.subjectInfo(QSslCertificate::CommonName).first())
-        //        .arg(cert.expiryDate().toString("ddd MMMM d yy"));
-        //        .arg(cert.issuerInfo(QSslCertificate::OrganizationalUnitName).first());
         gagReconnect = true;
     }
 
@@ -366,13 +392,36 @@ void cTelnet::handle_socket_signal_disconnected()
     }
 
     if ((!gagReconnect) && (mAutoReconnect)) {
-        connectIt(hostName,hostPort,hostSslTsl);
+        connectIt(hostName,hostPort);
+    }
+}
+
+void cTelnet::handle_socket_signal_sslError(const QList<QSslError> &errors)
+{
+    QSslError::SslError expired = QSslError::CertificateExpired;
+    QSslError::SslError selfsigned = QSslError::SelfSignedCertificate;
+    if (mpHost->mSslIgnoreExpired) {
+        //errors.removeOne(<QSslError::SslError *> &expired);
+    }
+    if (mpHost->mSslIgnoreSelfSigned) {
+        //errors.removeOne(const_cast<QSslError::SslError *> &selfsigned);
+    }
+    if (errors.isEmpty()) {
+        socket.ignoreSslErrors();
     }
 }
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
-    if (hostSslTsl) {
+    if (mpHost->mSslTsl) {
+        QList<QSslError> exceptions =QList<QSslError>();
+        if (mpHost->mSslIgnoreExpired) {
+            exceptions.append(QSslError::CertificateExpired);
+        }
+        if (mpHost->mSslIgnoreSelfSigned) {
+            exceptions.append(QSslError::SelfSignedCertificate);
+        }
+        socket.ignoreSslErrors(exceptions);
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
     } else if (!hostInfo.addresses().isEmpty()) {
