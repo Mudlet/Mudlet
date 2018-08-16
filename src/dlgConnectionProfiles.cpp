@@ -963,9 +963,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
-    for (int i = 0; i < entries.size(); ++i) {
+    for (const auto entry : entries) {
         QRegularExpression rx(QStringLiteral("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
-        QRegularExpressionMatch match = rx.match(entries.at(i));
+        QRegularExpressionMatch match = rx.match(entry);
 
         if (match.capturedStart() != -1) {
             QString day;
@@ -991,10 +991,14 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
 
             //readableEntries << datetime.toString(Qt::SystemLocaleLongDate);
-            //profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entries.at(i)));
-            profile_history->addItem(datetime.toString(Qt::SystemLocaleLongDate), QVariant(entries.at(i)));
+            //profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entry));
+            profile_history->addItem(datetime.toString(Qt::SystemLocaleLongDate), QVariant(entry));
+        } else if (entry == QLatin1String("autosave.xml")) {
+            QFileInfo fileInfo(dir, entry);
+            auto lastModified = fileInfo.lastModified();
+            profile_history->addItem(QIcon::fromTheme(QStringLiteral("document-save"), QIcon(QStringLiteral(":/icons/document-save.png"))), lastModified.toString(Qt::SystemLocaleLongDate), QVariant(entry));
         } else {
-            profile_history->addItem(entries.at(i), QVariant(entries.at(i))); // if it has a custom name, use it as it is
+            profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
     }
 
@@ -1608,8 +1612,9 @@ void dlgConnectionProfiles::slot_connectToServer()
             slot_update_login(pHost->getLogin());
         }
 
-        QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
-        pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
+        // This settings also need to be configured, note that the only time not to
+        // save the setting is on profile loading:
+        pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
     }

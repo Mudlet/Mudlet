@@ -70,7 +70,8 @@ public:
 
     void exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage);
-    bool exportGenericPackage(const QString& exportFileName);
+    bool exportProfile(const QString& exportFileName);
+    bool exportPackage(const QString &exportFileName);
     bool exportTrigger(const QString& fileName);
     bool exportTimer(const QString& fileName);
     bool exportAlias(const QString& fileName);

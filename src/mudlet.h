@@ -7,7 +7,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2015-2016, 2018 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -45,6 +45,8 @@
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
+#include <QTimer>
+#include "edbee/models/textautocompleteprovider.h"
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -156,7 +158,8 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings(const QSettings&);
+    void readEarlySettings(const QSettings&);
+    void readLateSettings(const QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
@@ -217,6 +220,7 @@ public:
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
+    static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
     QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
     QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
@@ -229,6 +233,18 @@ public:
     // does use them - use this flag to determine whether we should apply our
     // icons to override some of them:
     bool mShowIconsOnDialogs;
+    // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
+    // startup which the user may leave as is or force on or off:
+    bool mShowIconsOnMenuOriginally;
+    // This is the state for the tri-state control on the preferences and
+    // means:
+    // Qt::PartiallyChecked = use the previous state set on application start
+    //    (set AA_DontShowIconsInMenus to inverse of mShowIconsOnMenuOriginally)
+    // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
+    //    to false ourselves)
+    // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
+    //    true ourselves)
+    Qt::CheckState mShowIconsOnMenuCheckedState;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
@@ -236,6 +252,7 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
+    static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
@@ -437,11 +454,30 @@ private:
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
 
-    QAction* actionReconnect;
-
     void check_for_mappingscript();
 
     QPointer<QAction> mpActionReplay;
+
+    QPointer<QAction> mpActionAbout;
+    QPointer<QAction> mpActionAliases;
+    QPointer<QAction> mpActionButtons;
+    QPointer<QAction> mpActionConnect;
+    QPointer<QAction> mpActionDisconnect;
+    QPointer<QAction> mpActionFullScreenView;
+    QPointer<QAction> mpActionHelp;
+    QPointer<QAction> mpActionIRC;
+    QPointer<QAction> mpActionKeys;
+    QPointer<QAction> mpActionMapper;
+    QPointer<QAction> mpActionModuleManager;
+    QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionNotes;
+    QPointer<QAction> mpActionOptions;
+    QPointer<QAction> mpActionPackageManager;
+    QPointer<QAction> mpActionReconnect;
+    QPointer<QAction> mpActionScripts;
+    QPointer<QAction> mpActionTimers;
+    QPointer<QAction> mpActionTriggers;
+    QPointer<QAction> mpActionVariables;
 
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;

@@ -36,6 +36,9 @@
 // Define this to get qDebug() messages about the decoding of GB2312/GBK/GB18030
 // data when it is not the single bytes of pure ASCII text:
 // #define DEBUG_GB_PROCESSING
+// Define this to get qDebug() messages about the decoding of BIG5
+// data when it is not the single bytes of pure ASCII text:
+// #define DEBUG_BIG5_PROCESSING
 
 // These tables have been regenerated from examination of the Qt source code
 // particularly from:
@@ -612,6 +615,12 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x01B0), QChar(0x20AB), QChar(0x00FF)}))}// F8-FF
 };
 // clang-format on
+
+// a map of supported MXP elements and attributes
+const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
+    {QStringLiteral("send"), {"href", "hint", "prompt"}},
+    {QStringLiteral("br"), {}}
+};
 
 TChar::TChar()
 {
@@ -1938,6 +1947,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     _tn = _tn.toUpper();
                     if (_tn == "VERSION") {
                         mpHost->sendRaw(QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
+                    } else if (_tn == QLatin1String("SUPPORT")) {
+                        auto response = processSupportsRequest(currentToken.c_str());
+                        mpHost->sendRaw(QStringLiteral("\n\x1b[1z<SUPPORTS %1>\n").arg(response));
                     }
                     if (_tn == "BR") {
                         ch = '\n';
@@ -2063,7 +2075,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             _tp = currentToken.substr(_fs).c_str();
                         }
                         QString _t1 = _tp.toUpper();
-                        const TMxpElement& _element = mMXP_Elements[_tn];
+                        const TMxpElement& _element =  mMXP_Elements[_tn];
                         QString _t2 = _element.href;
                         QString _t3 = _element.hint;
                         bool _userTag = true;
@@ -2351,6 +2363,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
         } else if (mEncoding == QLatin1String("GB18030")) {
             if (!processGBSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
+                // We have run out of bytes and we have stored the unprocessed
+                // ones but we need to bail out NOW!
+                return;
+            }
+        } else if (mEncoding == QLatin1String("Big5")) {
+            if (!processBig5Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
@@ -4413,11 +4431,137 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
     return true;
 }
 
+bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFromServer, const size_t len, size_t& pos, bool& isNonBmpCharacter)
+{
+#if defined(DEBUG_BIG5_PROCESSING)
+    std::string dataIdentity;
+#endif
+
+    // The encoding standard are taken from https://en.wikipedia.org/wiki/Big5
+    size_t big5SequenceLength = 1;
+    bool isValid = true;
+    bool isToUseReplacementMark = false;
+    // Only set this if we are adding more than one code-point to
+    // mCurrentLineCharacters:
+    isNonBmpCharacter = false;
+    if (static_cast<quint8>(bufferData.at(pos)) < 0x80) {
+        // Is ASCII - single byte character, straight forward for a "first" byte case
+        mMudLine.append(bufferData.at(pos));
+        // As there is already a unit increment at the bottom of caller's loop
+        // there is no need to tweak pos in THIS case
+
+        return true;
+    } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80 || static_cast<quint8>(bufferData.at(pos)) > 0xFE) {
+        // Invalid as first byte
+        isValid = false;
+        isToUseReplacementMark = true;
+#if defined(DEBUG_BIG5_PROCESSING)
+        qDebug().nospace() << "TBuffer::processBig5Sequence(...) 1-byte sequence as Big5 rejected!";
+#endif
+    } else {
+        // We have two bytes
+        big5SequenceLength = 2;
+        if ((pos + big5SequenceLength - 1) >= len) {
+            // Not enough bytes to process yet - so store what we have and return
+            if (isFromServer) {
+#if defined(DEBUG_BIG5_PROCESSING)
+                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficent bytes in buffer to "
+                                      "complete Big5 sequence, need at least: "
+                                   << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+#endif
+                mIncompleteSequenceBytes = bufferData.substr(pos);
+            }
+            return false; // Bail out
+        } else {
+            // check if second byte range is valid
+            auto val2 = static_cast<quint8>(bufferData.at(pos + 1));
+            if (val2 < 0x40 || (val2 > 0x7E && val2 < 0xA1) || val2 > 0xFE) {
+                // second byte range is invalid
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+        }
+
+    }
+
+    // At this point we know how many bytes to consume, and whether they are in
+    // the right ranges of individual values to be valid
+
+    if (isValid) {
+        // Try and convert two byte sequence to Unicode using Qts own
+        // decoder - and check number of codepoints returned
+
+        QString codePoint;
+        if (mMainIncomingCodec) {
+            // Third argument is 0 to indicate we do NOT wish to store the state:
+            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, big5SequenceLength).c_str(), static_cast<int>(big5SequenceLength),
+                                                      nullptr);
+            switch (codePoint.size()) {
+                default:
+                    Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to "
+                                         << codePoint.size() << " QChars which does not make sense!!!";
+                    isValid = false;
+                    isToUseReplacementMark = true;
+                    break;
+                case 2:
+                    // Fall-through
+                    [[clang::fallthrough]];
+                case 1:
+                    // If Qt's decoder found bad characters, update status flags to reflect that.
+                    if (codePoint.contains(QChar::ReplacementCharacter)) {
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                        break;
+                    }
+#if defined(DEBUG_BIG5_PROCESSING)
+                    qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size()
+                                   << " QChar(s) long [" << codePoint << "] and is in the " << dataIdentity.c_str() << " range";
+#endif
+                    mMudLine.append(codePoint);
+                    break;
+                case 0:
+                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5"
+                                   << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                    isValid = false;
+                    isToUseReplacementMark = true;
+            }
+        } else {
+            // Unable to decode it - no Qt decoder...!
+#if defined(DEBUG_BIG5_PROCESSING)
+            qDebug().nospace() << "No Qt decoder found...";
+#endif
+            isValid = false;
+            isToUseReplacementMark = true;
+        }
+    }
+
+    if (!isValid) {
+#if defined(DEBUG_BIG5_PROCESSING)
+        QString debugMsg;
+        for (size_t i = 0; i < big5SequenceLength; ++i) {
+            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+        }
+        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg.toLatin1().constData();
+#endif
+        if (isToUseReplacementMark) {
+            mMudLine.append(QChar::ReplacementCharacter);
+        }
+    }
+
+    // As there is already a unit increment at the bottom of loop
+    // add one less than the sequence length:
+    pos += big5SequenceLength - 1;
+
+    return true;
+}
+
 void TBuffer::encodingChanged(const QString& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
-        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030")) {
+        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030")
+                || mEncoding == QLatin1String("Big5")) {
             mMainIncomingCodec = QTextCodec::codecForName(mEncoding.toLatin1().constData());
             if (!mMainIncomingCodec) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
@@ -4430,4 +4574,72 @@ void TBuffer::encodingChanged(const QString& newEncoding)
             mMainIncomingCodec = nullptr;
         }
     }
+}
+
+QString TBuffer::processSupportsRequest(const QString& elements)
+{
+    // strip initial SUPPORT and tokenize all of the requested elements
+    auto elementsList = elements.trimmed().remove(0, 7).split(QStringLiteral(" "), QString::SkipEmptyParts);
+    QStringList result;
+
+    auto reportEntireElement = [](auto element, auto& result) {
+        result.append("+" + element);
+
+        for (const auto& attribute : mSupportedMxpElements.value(element)) {
+            result.append("+" + element + QStringLiteral(".") + attribute);
+        }
+
+        return result;
+    };
+
+    auto reportAllElements = [reportEntireElement](auto& result) {
+        auto elementsIterator = mSupportedMxpElements.constBegin();
+        while (elementsIterator != mSupportedMxpElements.constEnd()) {
+            result = reportEntireElement(elementsIterator.key(), result);
+            ++elementsIterator;
+        }
+
+        return result;
+    };
+
+    // empty <SUPPORT> - report all known elements
+    if (elementsList.isEmpty()) {
+        result = reportAllElements(result);
+    } else {
+        // otherwise it's <SUPPORT element1 element2 element3>
+        for (auto& element : elementsList) {
+            // prune any enclosing quotes
+            if (element.startsWith(QChar('"'))) {
+                element = element.remove(0, 1);
+            }
+            if (element.endsWith(QChar('"'))) {
+                element.chop(1);
+            }
+
+            if (!element.contains(QChar('.'))) {
+                if (mSupportedMxpElements.contains(element)) {
+                    result = reportEntireElement(element, result);
+                } else {
+                    result.append("-" + element);
+                }
+            } else {
+                auto elementName = element.section(QChar('.'), 0, 0);
+                auto attributeName = element.section(QChar('.'), 1, 1);
+
+                if (!mSupportedMxpElements.contains(elementName)) {
+                    result.append("-" + element);
+                } else if (attributeName == QLatin1String("*")) {
+                    result = reportEntireElement(elementName, result);
+                } else {
+                    if (mSupportedMxpElements.value(elementName).contains(attributeName)) {
+                        result.append("+" + element + "." + attributeName);
+                    } else {
+                        result.append("-" + element + "." + attributeName);
+                    }
+                }
+            }
+        }
+    }
+
+    return result.join(QLatin1String(" "));
 }

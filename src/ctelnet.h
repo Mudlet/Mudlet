@@ -41,6 +41,23 @@
 #include <queue>
 #include <string>
 
+#if defined(Q_OS_WIN32)
+#include <Winsock2.h>
+#include <ws2tcpip.h>
+#include "mstcpip.h"
+#else
+#include <sys/socket.h>
+/*
+ * The Linux documentation for setsockopt(2), indicates that "sys/types.h" is
+ * optional for that OS but is suggested for portability with other OSes also
+ * derived from BSD code - it is included in the corresponding FreeBSD manpage!
+ */
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+#endif
+
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
@@ -157,11 +174,11 @@ private:
 
     void processTelnetCommand(const std::string& command);
     void sendTelnetOption(char type, char option);
-    void applyGAFix();
-    void processChunk(std::string&);
-    void processPromptChunk(std::string&);
+    void gotRest(std::string&);
+    void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void setKeepAlive(int socketHandle);
     void processChunks();
 
     QPointer<Host> mpHost;
@@ -219,22 +236,6 @@ private:
     bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
-
-    enum class DataChunkType {
-        IN_BAND,
-        GMCP
-    };
-
-    struct MudDataChunk {
-        DataChunkType type;
-        std::string data;
-        bool ends_with_prompt;
-    };
-
-    // We break mud data up into chunks by GA signal and Telnet
-    // control sequences, storing in-band data and GMCP in the
-    // queue to be processed in order to enable inline events.
-    std::queue<MudDataChunk> mudDataChunks;
 };
 
 #endif // MUDLET_CTELNET_H

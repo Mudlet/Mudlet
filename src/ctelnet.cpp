@@ -105,6 +105,7 @@ cTelnet::cTelnet(Host* pH)
         mAcceptableEncodings << QStringLiteral("UTF-8");
         mAcceptableEncodings << QStringLiteral("GBK");
         mAcceptableEncodings << QStringLiteral("GB18030");
+        mAcceptableEncodings << QStringLiteral("Big5");
         mAcceptableEncodings << QStringLiteral("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
@@ -113,31 +114,32 @@ cTelnet::cTelnet(Host* pH)
         mFriendlyEncodings << QStringLiteral("UTF-8");
         mFriendlyEncodings << QStringLiteral("GBK");
         mFriendlyEncodings << QStringLiteral("GB18030");
+        mFriendlyEncodings << QStringLiteral("Big5");
         mFriendlyEncodings << QStringLiteral("ISO 8859-1");
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
 
     // initialize the socket
-    connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
-    connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
-    connect(&socket, SIGNAL(readyRead()), this, SLOT(handle_socket_signal_readyRead()));
+    connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+    connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
+    connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
 
     // initialize telnet session
     reset();
 
     mpPostingTimer->setInterval(300); //FIXME
-    connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
+    connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
     mTimerLogin = new QTimer(this);
     mTimerLogin->setSingleShot(true);
-    connect(mTimerLogin, SIGNAL(timeout()), this, SLOT(slot_send_login()));
+    connect(mTimerLogin, &QTimer::timeout, this, &cTelnet::slot_send_login);
 
     mTimerPass = new QTimer(this);
     mTimerPass->setSingleShot(true);
-    connect(mTimerPass, SIGNAL(timeout()), this, SLOT(slot_send_pass()));
+    connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
     mpDownloader = new QNetworkAccessManager(this);
-    connect(mpDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
 }
 
 void cTelnet::reset()
@@ -299,6 +301,9 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
+
+    setKeepAlive(socket.socketDescriptor());
+
     QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
     postMessage(msg);
     QString func = "onConnect";
@@ -971,7 +976,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
-                connect(reply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(setDownloadProgress(qint64, qint64)));
+                connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
             }
             return;
@@ -1191,12 +1196,10 @@ void cTelnet::setGMCPVariables(const QString& msg)
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
-        connect(reply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(setDownloadProgress(qint64, qint64)));
+        connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
     }
-
-    mudDataChunks.push({DataChunkType::GMCP, msg.toStdString(), false});
     arg.remove('\n');
     // remove \r's from the data, as yajl doesn't like it
     arg.remove(QChar('\r'));
@@ -1392,39 +1395,42 @@ void cTelnet::postMessage(QString msg)
 
 //forward data for further processing
 
-// Patch for servers that need GA/EOR for prompt fixups
-void cTelnet::applyGAFix()
-{
-    int j = 0;
-    int s = mMudData.size();
-    while (j < s) {
-        // search for leading <LF> but skip leading ANSI control sequences
-        if (mMudData[j] == 0x1B) {
-            while (j < s) {
-                if (mMudData[j] == 'm') {
-                    goto NEXT;
-                    break;
-                }
-                j++;
-            }
-        }
-        if (mMudData[j] == '\n') {
-            mMudData.erase(j, 1);
-            break;
-        } else {
-            break;
-        }
-    NEXT:
-        j++;
-    }
-}
 
-void cTelnet::processPromptChunk(string& mud_data)
+void cTelnet::gotPrompt(string& mud_data)
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
+
     if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        applyGAFix();
+        //////////////////////////////////////////////////////////////////////
+        //
+        // Patch for servers that need GA/EOR for prompt fixups
+        //
+
+        int j = 0;
+        int s = mMudData.size();
+        while (j < s) {
+            // search for leading <LF> but skip leading ANSI control sequences
+            if (mMudData[j] == 0x1B) {
+                while (j < s) {
+                    if (mMudData[j] == 'm') {
+                        goto NEXT;
+                        break;
+                    }
+                    j++;
+                }
+            }
+            if (mMudData[j] == '\n') {
+                mMudData.erase(j, 1);
+                break;
+            } else {
+                break;
+            }
+        NEXT:
+            j++;
+        }
+        //
+        ////////////////////////////
     }
 
     postData();
@@ -1432,12 +1438,11 @@ void cTelnet::processPromptChunk(string& mud_data)
     mIsTimerPosting = false;
 }
 
-void cTelnet::processChunk(string& mud_data)
+void cTelnet::gotRest(string& mud_data)
 {
     if (mud_data.empty()) {
         return;
     }
-
     if (!mGA_Driver) {
         size_t i = mud_data.rfind('\n');
         if (i != string::npos) {
@@ -1458,13 +1463,16 @@ void cTelnet::processChunk(string& mud_data)
             }
         }
 
-    } else {
+    } else if (mGA_Driver) {
         mMudData += mud_data;
-        if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-            applyGAFix();
-        }
         postData();
         mMudData = "";
+    } else {
+        mMudData += mud_data;
+        if (!mIsTimerPosting) {
+            mpPostingTimer->start();
+            mIsTimerPosting = true;
+        }
     }
 }
 
@@ -1596,7 +1604,7 @@ void cTelnet::loadReplayChunk()
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(slot_processReplayChunk()));
+        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
     } else {
         loadingReplay = false;
         replayFile.close();
@@ -1633,8 +1641,6 @@ void cTelnet::slot_processReplayChunk()
                 //4. IAC DO/DONT/WILL/WONT <command code>
                 iac2 = false;
                 command += ch;
-                mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
-                cleandata = "";
                 processTelnetCommand(command);
                 command = "";
             } else if (iac && (!insb) && (ch == TN_SB)) {
@@ -1651,8 +1657,6 @@ void cTelnet::slot_processReplayChunk()
                 command += ch;
                 if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
                 {
-                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
-                    cleandata = "";
                     processTelnetCommand(command);
                     command = "";
                     iac = false;
@@ -1668,8 +1672,6 @@ void cTelnet::slot_processReplayChunk()
             {
                 iac = false;
                 command += ch;
-                mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
-                cleandata = "";
                 processTelnetCommand(command);
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
@@ -1693,12 +1695,14 @@ void cTelnet::slot_processReplayChunk()
                 cleandata.push_back('\n'); //part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
             }
             recvdGA = false;
-            mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), true});
+            gotPrompt(cleandata);
             cleandata = "";
         }
     } //for
 
-    processChunks();
+    if (!cleandata.empty()) {
+        gotRest(cleandata);
+    }
 
     mpHost->mpConsole->finalize();
     if (loadingReplay) {
@@ -1767,8 +1771,6 @@ void cTelnet::handle_socket_signal_readyRead()
                     //4. IAC DO/DONT/WILL/WONT <command code>
                     iac2 = false;
                     command += ch;
-                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
-                    cleandata = "";
                     processTelnetCommand(command);
                     command = "";
                 } else if (iac && (!insb) && (ch == TN_SB)) {
@@ -1803,7 +1805,7 @@ void cTelnet::handle_socket_signal_readyRead()
                                 if (_compress) {
                                     mNeedDecompression = true;
                                     // from this position in stream onwards, data will be compressed by zlib
-                                    processChunk(cleandata);
+                                    gotRest(cleandata);
                                     cleandata = "";
                                     initStreamDecompressor();
                                     buffer += i + 3; //bugfix: BenH
@@ -1831,8 +1833,6 @@ void cTelnet::handle_socket_signal_readyRead()
                     command += ch;
                     if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
                     {
-                        mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
-                        cleandata = "";
                         processTelnetCommand(command);
                         command = "";
                         iac = false;
@@ -1848,8 +1848,6 @@ void cTelnet::handle_socket_signal_readyRead()
                 {
                     iac = false;
                     command += ch;
-                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), false});
-                    cleandata = "";
                     processTelnetCommand(command);
                     //this could have set receivedGA to true; we'll handle that later
                     command = "";
@@ -1876,7 +1874,7 @@ void cTelnet::handle_socket_signal_readyRead()
                     }
                     cleandata.push_back('\xff');
                     recvdGA = false;
-                    mudDataChunks.push({DataChunkType::IN_BAND, std::move(cleandata), true});
+                    gotPrompt(cleandata);
                     cleandata = "";
                 } else {
                     if (mLF_ON_GA) //TODO: reenable option in preferences
@@ -1888,38 +1886,11 @@ void cTelnet::handle_socket_signal_readyRead()
         } //for
     } while (datalen == 100000);
 
-    processChunks();
+    if (!cleandata.empty()) {
+        gotRest(cleandata);
+    }
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();
-}
-
-void cTelnet::processChunks()
-{
-    while (!mudDataChunks.empty()) {
-        auto& chunk = mudDataChunks.front();
-        if (chunk.type == DataChunkType::GMCP) {
-            QString data = QString::fromStdString(chunk.data);
-            QString var;
-            QString arg;
-            if (data.indexOf('\n') > -1) {
-                var = data.section(QChar::LineFeed, 0, 0);
-                arg = data.section(QChar::LineFeed, 1);
-            } else {
-                var = data.section(QChar::Space, 0, 0);
-                arg = data.section(QChar::Space, 1);
-            }
-            arg.remove('\n');
-            arg.remove(QChar('\r'));
-            mpHost->mLuaInterpreter.raiseInlineGMCPEvent(var, arg);
-        } else if (chunk.type == DataChunkType::IN_BAND) {
-            if (chunk.ends_with_prompt) {
-                processChunk(chunk.data);
-            } else {
-                processPromptChunk(chunk.data);
-            }
-        }
-        mudDataChunks.pop();
-    }
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
@@ -1930,4 +1901,84 @@ void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
     event.mArgumentList.append(protocol);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
+}
+
+// credit: https://github.com/qflow/websockets
+// Also see: https://stackoverflow.com/a/5435430/4805858
+// particularly the comment: "Note that keepalive won't detect a failure until
+// at least the configured keepalive_time + (keepalive_intrvl*keepalive_probes).
+// I think by default if you don't change the settings this can default to over
+// an hour!" – bdk Mar 25 '11 at 17:50
+void cTelnet::setKeepAlive(int socketHandle)
+{
+    // Switch the keep-alive option on:
+    int on = 1;
+    // allow 75 seconds to set up connection {*nix-like OS default}:
+    int init = 75;
+    // send keepalive after 2 minutes of inactivity (after the init period)
+    // {2 hours is default}:
+    constexpr int timeout = 2 * 60;
+    // send a keepalive packet every 75 seconds {*nix-like 0S default}:
+    int interval = 75;
+    // send up to 10 keepalive packets out - then disconnect if no response:
+    int count = 10;
+#if defined(Q_OS_WIN32)
+    // Both Windows 32 and 64 bit despite the "32"
+
+    // Windows is hardwired to use 10 for the count value (TCP_KEEPCNT) in Vista
+    // and later.
+    // https://msdn.microsoft.com/en-us/library/windows/desktop/dd877220(v=vs.85).aspx
+    Q_UNUSED(count)
+    Q_UNUSED(init)
+    struct tcp_keepalive
+    {
+        u_long onoff; // off = 0; on = not 0; default off
+        u_long keepalivetime; // milliseconds, default = 7,200,000 = 2 hours
+        u_long keepaliveinterval; // milliseconds, default = 1000 = 1 second
+    } alive;
+    alive.onoff = on;
+    alive.keepalivetime = timeout * 1000;
+    alive.keepaliveinterval = interval * 1000;
+    DWORD dwBytesRet = 0;
+    WSAIoctl(socketHandle, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL);
+
+#else // For OSes other than Windows:
+
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+    setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
+#else
+    // FreeBSD always has the Keep-alive option enabled, so the above is not
+    // needed
+    Q_UNUSED(on)
+#endif
+
+    // The effect is that (on FreeBSD) "init" seconds is allowed to set up the
+    // connection, then after (all OSes) "timeout" seconds with no traffic a
+    // keep-alive is sent - which should wake up the far end, if it does not
+    // another one is sent after a further "interval" seconds and if NO response
+    // is received after "count" of those keep alives then Mudlet will close the
+    // socket itself - declaring the remote end dead... we are hoping that that
+    // does not happen so that the FIRST keep-alive does what it is supposed to!
+
+    // Time to establish connection on new, unconnected sockets, in seconds
+#if defined(Q_OS_FREEBSD)
+    // Only an option on FreeBSD:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINIT, &init, sizeof(init));
+#else
+    Q_UNUSED(init)
+#endif
+
+    // Start keepalives after this interval of idleness, in seconds:
+#if defined(Q_OS_MACOS)
+    // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#else
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
+#endif
+
+    // Interval between keep-alives, in seconds:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+    // Number of failed keep alives before forcing a close:
+    setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#endif // defined(Q_OS_WIN32)
 }

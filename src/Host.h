@@ -142,7 +142,7 @@ public:
     double getStopWatchTime(int);
     int createStopWatch();
     void startSpeedWalk();
-    void saveModules(int);
+    void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
@@ -152,7 +152,7 @@ public:
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
     void resetProfile();
-    std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), bool syncModules = false);
+    std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();
     void reenableAllTriggers();
@@ -243,8 +243,9 @@ public:
     QString mLogFileName;
     // The first argument to QDateTime::toString(...) to generate a date/time
     // dependent filename unless it is empty in which case the above value is
-    // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" is set as a
-    // default in the constructor:
+    // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" has been
+    // changed to "yyyy-MM-dd#HH-mm-ss" and is set as a default in the
+    // constructor:
     QString mLogFileNameFormat;
 
     bool mResetProfile;

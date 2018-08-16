@@ -106,6 +106,8 @@ class TBuffer
     // values are a pair of human-friendly name + encoding data
     static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
 
+    static const QMap<QString, QVector<QString>> mSupportedMxpElements;
+
 
 public:
     TBuffer(Host* pH);
@@ -203,7 +205,8 @@ private:
     void handleNewLine();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
-
+    bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
+    QString processSupportsRequest(const QString &attributes);
 
     bool gotESC;
     bool gotHeader;
