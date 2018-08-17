@@ -11096,10 +11096,10 @@ void TLuaInterpreter::ttsBuild()
     return;
 }
 
-/** ttsSkipSpeech()
+/** ttsSkip()
  *  Skips the current line of text.
  */
-int TLuaInterpreter::ttsSkipSpeech(lua_State* L)
+int TLuaInterpreter::ttsSkip(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
@@ -11109,16 +11109,16 @@ int TLuaInterpreter::ttsSkipSpeech(lua_State* L)
 }
 
 
-/** ttsSetSpeechRate( rate )
+/** ttsSetRate( rate )
  *  Sets the rate of speech playback.
  */
-int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
+int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
     float fRate;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetSpeechRate: argument expected number, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetRate: argument expected number, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11146,16 +11146,16 @@ int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
 }
 
 
-/** ttsSetSpeechPitch( pitch )
+/** ttsSetPitch( pitch )
  *  Sets the pitch of speech playback.
  */
-int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
+int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
     float fPitch;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetSpeechPitch: argument expected number, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetPitch: argument expected number, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11183,16 +11183,16 @@ int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
 }
 
 
-/** ttsSetSpeechVolume( volume )
+/** ttsSetVolume( volume )
  *  Sets the volume of speech playback.
  */
-int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
+int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
     float fVol;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetSpeechVolume: argument expected number, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetVolume: argument expected number, got %s!", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11382,11 +11382,11 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 }
 
 
-/** ttsQueueSpeech( input, opt. index )
+/** ttsQueue( input, opt. index )
  *  Adds a line of text to the queue at the specified index.
  *  If no index is provided, it will add it to the end of the queue.
  */
-int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
+int TLuaInterpreter::ttsQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
@@ -11442,18 +11442,18 @@ int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
     return 0;
 }
 
-/** ttsGetSpeechQueue( opt. index )
+/** ttsGetQueue( opt. index )
  *  Returns the queued text at index.
  *  If no index exists, returns false.
  *  If no index provided, returns a table with the entire queue.
  */
-int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
+int TLuaInterpreter::ttsGetQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
     if (lua_gettop(L) > 0) {
         if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "ttsGetspeechQueue. bad argument #1 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "ttsGetQueue. bad argument #1 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         }
@@ -11481,10 +11481,10 @@ int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
     return 1;
 }
 
-/** ttsPauseSpeech()
+/** ttsPause()
  *  Pauses speech.
  */
-int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
+int TLuaInterpreter::ttsPause(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
@@ -11493,10 +11493,10 @@ int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
     return 0;
 }
 
-/** ttsResumeSpeech()
+/** ttsResume()
  *  Resumes speech.
  */
-int TLuaInterpreter::ttsResumeSpeech(lua_State* L)
+int TLuaInterpreter::ttsResume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
@@ -13344,18 +13344,18 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
 #ifdef QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "ttsSpeak", TLuaInterpreter::ttsSpeak);
-    lua_register(pGlobalLua, "ttsSkip", TLuaInterpreter::ttsSkipSpeech);
-    lua_register(pGlobalLua, "ttsSetRate", TLuaInterpreter::ttsSetSpeechRate);
-    lua_register(pGlobalLua, "ttsSetPitch", TLuaInterpreter::ttsSetSpeechPitch);
-    lua_register(pGlobalLua, "ttsSetVolume", TLuaInterpreter::ttsSetSpeechVolume);
+    lua_register(pGlobalLua, "ttsSkip", TLuaInterpreter::ttsSkip);
+    lua_register(pGlobalLua, "ttsSetRate", TLuaInterpreter::ttsSetRate);
+    lua_register(pGlobalLua, "ttsSetPitch", TLuaInterpreter::ttsSetPitch);
+    lua_register(pGlobalLua, "ttsSetVolume", TLuaInterpreter::ttsSetVolume);
     lua_register(pGlobalLua, "ttsSetVoiceByName", TLuaInterpreter::ttsSetVoiceByName);
     lua_register(pGlobalLua, "ttsSetVoiceByIndex", TLuaInterpreter::ttsSetVoiceByIndex);
     lua_register(pGlobalLua, "ttsGetCurrentVoice", TLuaInterpreter::ttsGetCurrentVoice);
     lua_register(pGlobalLua, "ttsGetVoices", TLuaInterpreter::ttsGetVoices);
-    lua_register(pGlobalLua, "ttsQueue", TLuaInterpreter::ttsQueueSpeech);
-    lua_register(pGlobalLua, "ttsGetQueue", TLuaInterpreter::ttsGetSpeechQueue);
-    lua_register(pGlobalLua, "ttsPause", TLuaInterpreter::ttsPauseSpeech);
-    lua_register(pGlobalLua, "ttsResume", TLuaInterpreter::ttsResumeSpeech);
+    lua_register(pGlobalLua, "ttsQueue", TLuaInterpreter::ttsQueue);
+    lua_register(pGlobalLua, "ttsGetQueue", TLuaInterpreter::ttsGetQueue);
+    lua_register(pGlobalLua, "ttsPause", TLuaInterpreter::ttsPause);
+    lua_register(pGlobalLua, "ttsResume", TLuaInterpreter::ttsResume);
     lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
     lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
 #endif // QT_TEXTTOSPEECH_LIB

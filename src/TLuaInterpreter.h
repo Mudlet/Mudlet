@@ -434,18 +434,18 @@ public:
     static int alert(lua_State* L);
 #ifdef QT_TEXTTOSPEECH_LIB
 	static int ttsSpeak(lua_State* L);
-	static int ttsSkipSpeech(lua_State* L);
-	static int ttsSetSpeechRate(lua_State* L);
-	static int ttsSetSpeechPitch(lua_State* L);
-	static int ttsSetSpeechVolume(lua_State* L);
+	static int ttsSkip(lua_State* L);
+	static int ttsSetRate(lua_State* L);
+	static int ttsSetPitch(lua_State* L);
+	static int ttsSetVolume(lua_State* L);
 	static int ttsSetVoiceByName(lua_State* L);
 	static int ttsSetVoiceByIndex(lua_State* L);
 	static int ttsGetCurrentVoice(lua_State* L);
 	static int ttsGetVoices(lua_State* L);	
-	static int ttsQueueSpeech(lua_State* L);
-	static int ttsGetSpeechQueue(lua_State* L);
-	static int ttsPauseSpeech(lua_State* L);
-	static int ttsResumeSpeech(lua_State* L);
+	static int ttsQueue(lua_State* L);
+	static int ttsGetQueue(lua_State* L);
+	static int ttsPause(lua_State* L);
+	static int ttsResume(lua_State* L);
 	static int ttsClearQueue(lua_State* L);
 	static int ttsGetCurrentLine(lua_State* L);
 	static int ttsGetState(lua_State* L);
