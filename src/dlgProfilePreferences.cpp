@@ -337,9 +337,12 @@ void dlgProfilePreferences::enableHostDetails()
     groupbox_searchEngineSelection->setEnabled(true);
 
     // tab security
+#ifndef QT_NO_SSL
     if (QSslSocket::supportsSsl()) {
         groupBox_ssl->setEnabled(true);
-    } else {
+    } else
+#endif
+    {
         groupBox_ssl->setEnabled(false);
 
     }
@@ -639,7 +642,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     notificationAreaIconLabelInformation->hide();
     notificationAreaMessageBox->hide();
 
-
+#ifndef QT_NO_SSL
     if (QSslSocket::supportsSsl() && pHost->mSslTsl == true) {
         QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
         ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
@@ -675,6 +678,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
         }
     }
+#endif
 
     checkBox_ssl->setChecked((Qt::CheckState) pHost->mSslTsl);
     checkBox_self_signed->setChecked((Qt::CheckState) pHost->mSslIgnoreSelfSigned);

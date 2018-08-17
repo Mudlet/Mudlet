@@ -159,9 +159,12 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     notificationAreaIconLabelInformation->hide();
     notificationAreaMessageBox->hide();
 
+#ifndef QT_NO_SSL
     if (QSslSocket::supportsSsl()) {
         port_ssl_tsl->setEnabled(true);
-    } else {
+    } else
+#endif
+    {
         port_ssl_tsl->setEnabled(false);
 
     }
@@ -583,8 +586,13 @@ void dlgConnectionProfiles::validateHost()
             valid = false;
         }
 
+#ifndef QT_NO_SSL
         if (port_ssl_tsl->isChecked() && !QSslSocket::supportsSsl())
         {
+#else
+        if (port_ssl_tsl->isChecked() && port_ssl_tsl->isEnabled())
+        {
+#endif
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(),tr("Mudlet is not Configured for SSL connections.\n\n")));
             host_name_entry->setPalette(mErrorPalette);

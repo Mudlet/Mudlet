@@ -125,9 +125,10 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
     connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
     connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
-    connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
-   //connect(&socket, qOverload<const QList<QSslError>&> (&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError(const QList<QSslError>));
-
+    //connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
+ #ifndef QT_NO_SSL
+    //connect(&socket, qOverload<const QList<QSslError>&> (&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError(const QList<QSslError>));
+#endif
 
     // initialize telnet session
     reset();
@@ -216,18 +217,22 @@ const QString& cTelnet::getComputerEncoding(const QString& encoding)
     return TBuffer::getComputerEncoding(encoding);
 }
 
+#ifndef QT_NO_SSL
+
 QSslCertificate cTelnet::getPeerCertificate()
 {
     return socket.peerCertificate();
 }
 
+QList<QSslError> cTelnet::handle_socket_signal_sslError() {
+    return socket.sslErrors();
+}
+
+#endif
+
 QAbstractSocket::SocketError cTelnet::error()
 {
     return socket.error();
-}
-
-QList<QSslError> cTelnet::handle_socket_signal_sslError() {
-    return socket.sslErrors();
 }
 
 QString cTelnet::errorString()
@@ -293,6 +298,7 @@ void cTelnet::connectIt(const QString& address, int port)
         return;
     }
 
+#ifndef QT_NO_SSL
     if (mpHost->mSslTsl) {
         QList<QSslError> exceptions =QList<QSslError>();
         if (mpHost->mSslIgnoreExpired) {
@@ -303,6 +309,7 @@ void cTelnet::connectIt(const QString& address, int port)
         }
         socket.ignoreSslErrors(exceptions);
     }
+#endif
 
     hostName = address;
     hostPort = port;
@@ -373,6 +380,7 @@ void cTelnet::handle_socket_signal_disconnected()
     reset();
     QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
     QString spacer = "    ";
+#ifndef QT_NO_SSL
     bool sslerr = (!socket.sslErrors().empty() ||
                    (socket.error() == QAbstractSocket::SslHandshakeFailedError) ||
                    (socket.error() == QAbstractSocket::SslInvalidUserDataError) ||
@@ -380,22 +388,25 @@ void cTelnet::handle_socket_signal_disconnected()
     if (sslerr) {
         gagReconnect = true;
     }
-
+#endif
     if (!mpHost->mIsGoingDown) {
         postMessage(spacer);
         postMessage(err);
         postMessage(msg);
     }
 
+#ifndef QT_NO_SSL
     if (sslerr) {
         mudlet::self()->show_options_dialog("Security");
     }
+#endif
 
     if ((!gagReconnect) && (mAutoReconnect)) {
         connectIt(hostName,hostPort);
     }
 }
 
+#ifndef QT_NO_SSL
 void cTelnet::handle_socket_signal_sslError(const QList<QSslError> &errors)
 {
     QSslError::SslError expired = QSslError::CertificateExpired;
@@ -410,9 +421,11 @@ void cTelnet::handle_socket_signal_sslError(const QList<QSslError> &errors)
         socket.ignoreSslErrors();
     }
 }
+#endif
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
+#ifndef QT_NO_SSL
     if (mpHost->mSslTsl) {
         QList<QSslError> exceptions =QList<QSslError>();
         if (mpHost->mSslIgnoreExpired) {
@@ -424,7 +437,9 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         socket.ignoreSslErrors(exceptions);
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
-    } else if (!hostInfo.addresses().isEmpty()) {
+    } else
+#endif
+    if (!hostInfo.addresses().isEmpty()) {
         mHostAddress = hostInfo.addresses().constFirst();
         postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
         postMessage(tr("[ INFO ]  - Trying to connect to %1: %2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));

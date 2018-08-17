@@ -31,7 +31,11 @@
 #include <QHostInfo>
 #include <QPointer>
 #include <QStringList>
+#ifndef QT_NO_SSL
 #include <QSslSocket>
+#else
+#include <QTcpSocket>
+#endif
 #include <QTime>
 #include "post_guard.h"
 
@@ -139,11 +143,12 @@ public:
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
     const QString& getFriendlyEncoding();
-    QSslCertificate getPeerCertificate();
     QAbstractSocket::SocketError error();
-    QList<QSslError> handle_socket_signal_sslError();
     QString errorString();
-
+#ifndef QT_NO_SSL
+    QSslCertificate getPeerCertificate();
+    QList<QSslError> handle_socket_signal_sslError();
+#endif
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -166,7 +171,6 @@ public slots:
     void handle_socket_signal_disconnected();
     void handle_socket_signal_readyRead();
     void handle_socket_signal_error();
-    void handle_socket_signal_sslError(const QList<QSslError> &errors);
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
@@ -188,7 +192,13 @@ private:
     void processChunks();
 
     QPointer<Host> mpHost;
+#ifndef QT_NO_SSL
     QSslSocket socket;
+    void handle_socket_signal_sslError(const QList<QSslError> &errors);
+
+#else
+    QTcpSocket socket;
+#endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
     QTextCodec* outgoingDataCodec;
