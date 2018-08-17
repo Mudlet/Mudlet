@@ -147,7 +147,7 @@ public:
     QString errorString();
 #ifndef QT_NO_SSL
     QSslCertificate getPeerCertificate();
-    QList<QSslError> handle_socket_signal_sslError();
+    QList<QSslError> getSslErrors();
 #endif
 
     QMap<int, bool> supportedTelnetOptions;

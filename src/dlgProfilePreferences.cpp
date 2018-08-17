@@ -650,7 +650,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
         ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
         ssl_alternate_names->setText("");
-        if (!pHost->mTelnet.handle_socket_signal_sslError().empty())
+        if (!pHost->mTelnet.getSslErrors().empty())
         {
             notificationAreaIconLabelWarning->show();
             notificationArea->show();

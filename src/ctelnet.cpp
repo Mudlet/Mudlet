@@ -127,7 +127,7 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
     //connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
  #ifndef QT_NO_SSL
-    //connect(&socket, qOverload<const QList<QSslError>&> (&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError(const QList<QSslError>));
+    connect(&socket, qOverload<const QList<QSslError>&> (&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
 #endif
 
     // initialize telnet session
@@ -224,7 +224,7 @@ QSslCertificate cTelnet::getPeerCertificate()
     return socket.peerCertificate();
 }
 
-QList<QSslError> cTelnet::handle_socket_signal_sslError() {
+QList<QSslError> cTelnet::getSslErrors() {
     return socket.sslErrors();
 }
 
