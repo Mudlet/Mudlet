@@ -11465,7 +11465,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);
 
-    if (speechQueue.size() = 1 && speechUnit->state() == QTextToSpeech::Ready && bSpeechQueueing == false)
+    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && bSpeechQueueing == false)
     {
         bSpeechQueueing = true;
         TLuaInterpreter::ttsStateChanged(speechUnit->state());
