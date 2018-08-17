@@ -438,6 +438,9 @@ public:
 	static int ttsSetRate(lua_State* L);
 	static int ttsSetPitch(lua_State* L);
 	static int ttsSetVolume(lua_State* L);
+	static int ttsGetRate(lua_State* L);
+	static int ttsGetPitch(lua_State* L);
+	static int ttsGetVolume(lua_State* L);
 	static int ttsSetVoiceByName(lua_State* L);
 	static int ttsSetVoiceByIndex(lua_State* L);
 	static int ttsGetCurrentVoice(lua_State* L);

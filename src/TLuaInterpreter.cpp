@@ -11219,6 +11219,39 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
     return 0;
 }
 
+/** ttsGetVolume
+ *  Returns current volume.
+ */
+int TLuaInterpreter::ttsGetVolume(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+    
+    lua_pushnumber(L, speechUnit->volume());
+    return 1;
+}
+
+/** ttsGetRate
+ *  Returns current rate.
+ */
+int TLuaInterpreter::ttsGetRate(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+    
+    lua_pushnumber(L, speechUnit->rate());
+    return 1;
+}
+
+/** ttsGetPitch
+ *  Returns current pitch.
+ */
+int TLuaInterpreter::ttsGetPitch(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+    
+    lua_pushnumber(L, speechUnit->pitch());
+    return 1;
+}
+
 
 /** ttsGetVoices()
  *  Lists all voices available to the current OS locale.
@@ -13348,6 +13381,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "ttsSetRate", TLuaInterpreter::ttsSetRate);
     lua_register(pGlobalLua, "ttsSetPitch", TLuaInterpreter::ttsSetPitch);
     lua_register(pGlobalLua, "ttsSetVolume", TLuaInterpreter::ttsSetVolume);
+    lua_register(pGlobalLua, "ttsGetRate", TLuaInterpreter::ttsGetRate);
+    lua_register(pGlobalLua, "ttsGetPitch", TLuaInterpreter::ttsGetPitch);
+    lua_register(pGlobalLua, "ttsGetVolume", TLuaInterpreter::ttsGetVolume);
     lua_register(pGlobalLua, "ttsSetVoiceByName", TLuaInterpreter::ttsSetVoiceByName);
     lua_register(pGlobalLua, "ttsSetVoiceByIndex", TLuaInterpreter::ttsSetVoiceByIndex);
     lua_register(pGlobalLua, "ttsGetCurrentVoice", TLuaInterpreter::ttsGetCurrentVoice);
