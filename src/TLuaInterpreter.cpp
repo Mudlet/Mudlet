@@ -13394,6 +13394,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "ttsResume", TLuaInterpreter::ttsResume);
     lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
     lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
+    lua_register(pGlobalLua, "ttsGetState", TLuaInterpreter::ttsGetState);
 #endif // QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding);
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
