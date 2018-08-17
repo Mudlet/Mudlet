@@ -528,12 +528,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2835"/>
       <source>Select a point first, then remove it</source>
-      <translation type="unfinished"/>
+      <translation>Сначала выберите точку, а затем удалите её</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2840"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Изменить свойства этой линии</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2844"/>
