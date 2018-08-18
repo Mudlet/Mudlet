@@ -618,6 +618,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
+    timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -2049,6 +2050,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mThemePreviewType = data.first;
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
+
+        pHost->mTimerDebugOutputSuppressionInterval = timeEdit_timerDebugOutputMinimumInterval->time();
     }
 
 #if defined(INCLUDE_UPDATER)
