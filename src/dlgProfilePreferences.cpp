@@ -624,6 +624,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
     enableHostDetails();
 
+    // Identify which Profile we are showing the settings for:
+    setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
+
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
     connect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandLineFgColor);
@@ -857,6 +860,9 @@ void dlgProfilePreferences::clearHostDetails()
 
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
+
+    // Remove the reference to the Host/profile in the title:
+    setWindowTitle(tr("Profile preferences"));
 }
 
 void dlgProfilePreferences::loadEditorTab()

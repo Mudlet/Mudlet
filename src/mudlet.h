@@ -227,7 +227,7 @@ public:
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
-    QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
+    QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our

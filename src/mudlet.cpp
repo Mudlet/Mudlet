@@ -155,7 +155,6 @@ mudlet::mudlet()
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
-, mpProfilePreferencesDlg(nullptr)
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
@@ -2623,16 +2622,19 @@ void mudlet::show_options_dialog()
 {
     Host* pHost = getActiveHost();
 
-    if (!mpProfilePreferencesDlg) {
-        mpProfilePreferencesDlg = new dlgProfilePreferences(this, pHost);
-        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
-        mpProfilePreferencesDlg->setAttribute(Qt::WA_DeleteOnClose);
+    // value will automatically return a nullptr if there is NO entry for this
+    // Host in the QMap
+    if (!mpProfilePreferencesDlgMap.value(pHost)) {
+        mpProfilePreferencesDlgMap[pHost] = new dlgProfilePreferences(this, pHost);
+
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
+        mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
     }
-    mpProfilePreferencesDlg->raise();
-    mpProfilePreferencesDlg->show();
+    mpProfilePreferencesDlgMap.value(pHost)->raise();
+    mpProfilePreferencesDlgMap.value(pHost)->show();
 }
 
 void mudlet::show_help_dialog()
