@@ -263,7 +263,7 @@ public:
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
-    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    void setShowMapAuditErrors(const bool);
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
@@ -345,6 +345,14 @@ public:
     Updater* updater;
 #endif
 
+    void setEnableFullScreenMode(const bool);
+
+    // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
+    // will eventually (Mudlet 4.0?) migrate to the "EnableFullScreenMode" in
+    // the main QSetting file - there is no need to have it stored as a file now
+    // except to maintain backwards compatibility...
+    bool mEnableFullScreenMode;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -401,6 +409,10 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_enableFulScreenModeChanged(bool);
+    void signal_showMapAuditErrorsChanged(bool);
+    void signal_menuBarVisibilityChanged(const controlsVisibility);
+    void signal_toolBarVisibilityChanged(const controlsVisibility);
 
 private slots:
     void slot_close_profile();
