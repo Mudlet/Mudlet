@@ -4358,7 +4358,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2311"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2316"/>
       <source>Command</source>
-      <translation type="unfinished"/>
+      <translation>Comando</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1214"/>
@@ -4444,7 +4444,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2132"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2193"/>
       <source>Button</source>
-      <translation type="unfinished"/>
+      <translation>Bottoni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1456"/>
@@ -4466,7 +4466,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1504"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2161"/>
       <source>Action</source>
-      <translation type="unfinished"/>
+      <translation>Azione</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1504"/>
@@ -4645,7 +4645,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7217"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7241"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copia %1 negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7247"/>
@@ -4738,7 +4738,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7960"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Salvataggio…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8098"/>
@@ -5167,7 +5167,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="160"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Riproduci</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="163"/>
@@ -5212,7 +5212,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferenze</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="196"/>
@@ -5242,7 +5242,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="213"/>
       <source>Alt+E</source>
-      <translation type="unfinished"/>
+      <translation>Alt+E</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="218"/>
@@ -5257,7 +5257,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="224"/>
       <source>Alt+N</source>
-      <translation type="unfinished"/>
+      <translation>Alt+N</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
@@ -5309,7 +5309,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
       <source>Load replay</source>
-      <translation type="unfinished"/>
+      <translation>Carica replay</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="269"/>
@@ -5633,7 +5633,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Bottoni</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="248"/>
@@ -6108,7 +6108,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
       <source>Log options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni di log</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="288"/>
@@ -6118,12 +6118,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="291"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation type="unfinished"/>
+      <translation>Salva i file di log in formato HTML, invece di testo semplice</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="298"/>
       <source>Add timestamps at the beginning of log lines</source>
-      <translation type="unfinished"/>
+      <translation>Aggiunti data e ora all'inizio di ogni riga di log</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
@@ -6218,7 +6218,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="484"/>
       <source>Spell check</source>
-      <translation type="unfinished"/>
+      <translation>Controllo ortografico</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="490"/>
@@ -6228,7 +6228,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="500"/>
       <source>Enable spell check</source>
-      <translation type="unfinished"/>
+      <translation>Abilita controllo ortografico</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="533"/>
