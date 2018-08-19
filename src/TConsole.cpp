@@ -375,7 +375,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     timeStampButton->setFocusPolicy(Qt::NoFocus);
     timeStampButton->setToolTip(tr("<html><head/><body><p>Show Time Stamps.</p></body></html>"));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, SIGNAL(pressed()), mUpperPane, SLOT(slot_toggleTimeStamps()));
+    connect(timeStampButton, &QAbstractButton::pressed, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
 
     auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -385,7 +385,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     replayButton->setFocusPolicy(Qt::NoFocus);
     replayButton->setToolTip(tr("<html><head/><body><p>Record a replay.</p></body></html>"));
     replayButton->setIcon(QIcon(QStringLiteral(":/icons/media-tape.png")));
-    connect(replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
+    connect(replayButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
@@ -398,7 +398,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
     logButton->setIcon(logIcon);
-    connect(logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
+    connect(logButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleLogging);
 
     networkLatency->setReadOnly(true);
     networkLatency->setSizePolicy(sizePolicy4);
@@ -442,7 +442,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
     emergencyStop->setToolTip(tr("<html><head/><body><p>Emergency Stop. Stops all timers and triggers.</p></body></html>"));
-    connect(emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers(bool)));
+    connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stop_all_triggers);
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
     mpBufferSearchBox->setMaximumSize(QSize(150, 30));
@@ -458,7 +458,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette(__pal);
     mpBufferSearchBox->setToolTip(tr("<html><head/><body><p>Search buffer.</p></body></html>"));
-    connect(mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
+    connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
 
 
     mpBufferSearchUp->setMinimumSize(QSize(30, 30));
@@ -467,7 +467,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpBufferSearchUp->setToolTip(tr("<html><head/><body><p>Earlier search result.</p></body></html>"));
     mpBufferSearchUp->setFocusPolicy(Qt::NoFocus);
     mpBufferSearchUp->setIcon(QIcon(QStringLiteral(":/icons/export.png")));
-    connect(mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
+    connect(mpBufferSearchUp, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferUp);
 
 
     mpBufferSearchDown->setMinimumSize(QSize(30, 30));
@@ -476,7 +476,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpBufferSearchDown->setFocusPolicy(Qt::NoFocus);
     mpBufferSearchDown->setToolTip(tr("<html><head/><body><p>Later search result.</p></body></html>"));
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
-    connect(mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
+    connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
     if (mpCommandLine) {
         layoutLayer2->addWidget(mpCommandLine);
@@ -511,7 +511,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 
     isUserScrollBack = false;
 
-    connect(mpScrollBar, SIGNAL(valueChanged(int)), mUpperPane, SLOT(slot_scrollBarMoved(int)));
+    connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
 
     if (mIsSubConsole) {
         mpScrollBar->hide();
@@ -567,8 +567,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
         // message and not make THAT connection should it indeed be null but it
         // is not fatal...
         // So, this SHOULD be the main profile mUpperPane - Slysven
-        connect(mudlet::self(), SIGNAL(signal_profileMapReloadRequested(QList<QString>)), this, SLOT(slot_reloadMap(QList<QString>)), Qt::UniqueConnection);
-        connect(this, SIGNAL(signal_newDataAlert(const QString&, const bool)), mudlet::self(), SLOT(slot_newDataOnHost(const QString&, const bool)), Qt::UniqueConnection);
+        connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TConsole::slot_reloadMap, Qt::UniqueConnection);
+        connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
     }

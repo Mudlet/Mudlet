@@ -1612,8 +1612,9 @@ void dlgConnectionProfiles::slot_connectToServer()
             slot_update_login(pHost->getLogin());
         }
 
-        QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
-        pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
+        // This settings also need to be configured, note that the only time not to
+        // save the setting is on profile loading:
+        pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
     }

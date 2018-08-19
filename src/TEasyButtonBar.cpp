@@ -126,7 +126,7 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
 
     // Was using released() signal but now we want to track the ACTUAL state of
     // the underlying QAbstractButton
-    connect(pB, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)));
+    connect(pB, &QAbstractButton::clicked, this, &TEasyButtonBar::slot_pressed);
     mButtonList.push_back(pB);
     pB->setChecked(pB->mpTAction->mButtonState);
 }
@@ -188,7 +188,7 @@ void TEasyButtonBar::clear()
 {
     auto pW = new QWidget;
     for (auto& flipButton : mButtonList) {
-        disconnect(flipButton, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)));
+        disconnect(flipButton, &QAbstractButton::clicked, this, &TEasyButtonBar::slot_pressed);
     }
     mButtonList.clear();
     mpWidget->deleteLater();

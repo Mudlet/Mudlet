@@ -122,7 +122,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.resize(120, 100);
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
-    connect(&mMultiSelectionListWidget, SIGNAL(itemSelectionChanged()), this, SLOT(slot_roomSelectionChanged()));
+    connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
 }
 
 void T2DMap::init()
@@ -2155,13 +2155,13 @@ void T2DMap::createLabel(QRectF labelRectangle)
     // N/U:     QRectF selectedRegion = labelRectangle;
     TMapLabel label;
     QFont font;
-    QString text = "no text";
+    QString text = QLatin1String("no text");
     QString imagePath;
 
     mHelpMsg.clear();
 
     QMessageBox textOrImageDialog;
-    textOrImageDialog.setText("Text label or image label?");
+    textOrImageDialog.setText(tr("Type of label?"));
     QPushButton* textButton = textOrImageDialog.addButton(tr("Text Label"), QMessageBox::ActionRole);
     QPushButton* imageButton = textOrImageDialog.addButton(tr("Image Label"), QMessageBox::ActionRole);
     textOrImageDialog.setStandardButtons(QMessageBox::Cancel);
@@ -2177,24 +2177,24 @@ void T2DMap::createLabel(QRectF labelRectangle)
         label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, "Background color");
         label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, "Foreground color");
     } else if (textOrImageDialog.clickedButton() == imageButton) {
-        label.bgColor = QColor(50, 50, 150, 100);
+       label.bgColor = QColor(50, 50, 150, 100);
         label.fgColor = QColor(255, 255, 50, 255);
         label.text = "";
-        imagePath = QFileDialog::getOpenFileName(nullptr, "Select image");
+        imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"));
     } else {
         return;
     }
 
     QMessageBox backgroundOrForegroundDialog;
     backgroundOrForegroundDialog.setStandardButtons(QMessageBox::Cancel);
-    backgroundOrForegroundDialog.setText("Draw label as background or on top of everything?");
-    QPushButton* textButton2 = backgroundOrForegroundDialog.addButton(tr("Background"), QMessageBox::ActionRole);
-    QPushButton* imageButton2 = backgroundOrForegroundDialog.addButton(tr("Foreground"), QMessageBox::ActionRole);
+    backgroundOrForegroundDialog.setText(tr("Draw label as background or on top of everything?"));
+    QPushButton* backgroundButton = backgroundOrForegroundDialog.addButton(tr("Background"), QMessageBox::ActionRole);
+    QPushButton* foregroundButton = backgroundOrForegroundDialog.addButton(tr("Foreground"), QMessageBox::ActionRole);
     backgroundOrForegroundDialog.exec();
     bool showOnTop = false;
-    if (backgroundOrForegroundDialog.clickedButton() == textButton2) {
+    if (backgroundOrForegroundDialog.clickedButton() == backgroundButton) {
         showOnTop = false;
-    } else if (backgroundOrForegroundDialog.clickedButton() == imageButton2) {
+    } else if (backgroundOrForegroundDialog.clickedButton() == foregroundButton) {
         showOnTop = true;
     } else {
         return;
@@ -2596,7 +2596,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 QAction* action = new QAction("undo", this);
                 action->setToolTip(tr("Undo last point"));
                 if (room->customLines.value(mCustomLinesRoomExit).count() > 1) {
-                    connect(action, SIGNAL(triggered()), this, SLOT(slot_undoCustomLineLastPoint()));
+                    connect(action, &QAction::triggered, this, &T2DMap::slot_undoCustomLineLastPoint);
                 } else {
                     action->setEnabled(false);
                 }
@@ -2604,11 +2604,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 QAction* action2 = new QAction("properties", this);
                 action2->setText("properties...");
                 action2->setToolTip(tr("Change the properties of this line"));
-                connect(action2, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
+                connect(action2, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
                 QAction* action3 = new QAction("finish", this);
                 action3->setToolTip(tr("Finish drawing this line"));
-                connect(action3, SIGNAL(triggered()), this, SLOT(slot_doneCustomLine()));
+                connect(action3, &QAction::triggered, this, &T2DMap::slot_doneCustomLine);
 
                 mPopupMenu = true;
 
@@ -2713,7 +2713,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             auto setPlayerLocation = new QAction("set location", this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
                 setPlayerLocation->setToolTip(tr("Set player current location to here"));
-                connect(setPlayerLocation, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
+                connect(action16, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
             } else {
                 setPlayerLocation->setEnabled(false);
                 setPlayerLocation->setToolTip(tr("Cannot set location when not exactly one room selected"));
@@ -2853,6 +2853,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 continue;
             }
             mapper->setMapping(action, it2.key());
+            // TODO: QSignalMapper is not compatible with the functor (Qt5)
+            // style of QObject::connect(...) - it has been declared obsolete
+            // and should be replaced with lamba functions to perform what the
+            // slot method did...
             connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));

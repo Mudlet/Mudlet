@@ -162,7 +162,7 @@ void dlgPackageExporter::slot_export_package()
     top = items.first();
     QList<QTreeWidgetItem*> aliasList;
     recurseTree(top, aliasList);
-    for (auto item : aliasList) {
+    for (auto item : qAsConst(aliasList)) {
         if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
             aliasMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
@@ -174,7 +174,7 @@ void dlgPackageExporter::slot_export_package()
     top = items.first();
     QList<QTreeWidgetItem*> actionList;
     recurseTree(top, actionList);
-    for (auto item : actionList) {
+    for (auto item : qAsConst(actionList)) {
         if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
             actionMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
@@ -186,7 +186,7 @@ void dlgPackageExporter::slot_export_package()
     top = items.first();
     QList<QTreeWidgetItem*> scriptList;
     recurseTree(top, scriptList);
-    for (auto item : scriptList) {
+    for (auto item : qAsConst(scriptList)) {
         if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
             scriptMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
@@ -198,7 +198,7 @@ void dlgPackageExporter::slot_export_package()
     top = items.first();
     QList<QTreeWidgetItem*> keyList;
     recurseTree(top, keyList);
-    for (auto item : keyList) {
+    for (auto item : qAsConst(keyList)) {
         if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
             keyMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
@@ -207,11 +207,11 @@ void dlgPackageExporter::slot_export_package()
         }
     }
 
-    writer.exportGenericPackage(filePath);
+    writer.exportPackage(filePath);
 
     //now fix all the stuff we weren't exporting
     //trigger, timer, alias,action,script, keys
-    for (auto item : trigList) {
+    for (auto item : qAsConst(trigList)) {
         if (triggerMap.contains(item)) {
             triggerMap[item]->exportItem = true;
         }
@@ -219,7 +219,7 @@ void dlgPackageExporter::slot_export_package()
             modTriggerMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : timerList) {
+    for (auto item : qAsConst(timerList)) {
         if (timerMap.contains(item)) {
             timerMap[item]->exportItem = true;
         }
@@ -227,7 +227,7 @@ void dlgPackageExporter::slot_export_package()
             modTimerMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : actionList) {
+    for (auto item : qAsConst(actionList)) {
         if (actionMap.contains(item)) {
             actionMap[item]->exportItem = true;
         }
@@ -235,7 +235,7 @@ void dlgPackageExporter::slot_export_package()
             modActionMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : scriptList) {
+    for (auto item : qAsConst(scriptList)) {
         if (scriptMap.contains(item)) {
             scriptMap[item]->exportItem = true;
         }
@@ -243,7 +243,7 @@ void dlgPackageExporter::slot_export_package()
             modScriptMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : keyList) {
+    for (auto item : qAsConst(keyList)) {
         if (keyMap.contains(item)) {
             keyMap[item]->exportItem = true;
         }
@@ -251,7 +251,7 @@ void dlgPackageExporter::slot_export_package()
             modKeyMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : aliasList) {
+    for (auto item : qAsConst(aliasList)) {
         if (aliasMap.contains(item)) {
             aliasMap[item]->exportItem = true;
         }
@@ -286,7 +286,7 @@ void dlgPackageExporter::slot_export_package()
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
         }
-        err = zip_add(archive, fname.toStdString().c_str(), s);
+        err = zip_file_add(archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE);
         if (err == -1) {
             int sep = 0;
             zip_error_get(archive, &err, &sep);

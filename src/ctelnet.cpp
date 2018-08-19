@@ -120,26 +120,26 @@ cTelnet::cTelnet(Host* pH)
     }
 
     // initialize the socket
-    connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
-    connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
-    connect(&socket, SIGNAL(readyRead()), this, SLOT(handle_socket_signal_readyRead()));
+    connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+    connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
+    connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
 
     // initialize telnet session
     reset();
 
     mpPostingTimer->setInterval(300); //FIXME
-    connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
+    connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
     mTimerLogin = new QTimer(this);
     mTimerLogin->setSingleShot(true);
-    connect(mTimerLogin, SIGNAL(timeout()), this, SLOT(slot_send_login()));
+    connect(mTimerLogin, &QTimer::timeout, this, &cTelnet::slot_send_login);
 
     mTimerPass = new QTimer(this);
     mTimerPass->setSingleShot(true);
-    connect(mTimerPass, SIGNAL(timeout()), this, SLOT(slot_send_pass()));
+    connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
     mpDownloader = new QNetworkAccessManager(this);
-    connect(mpDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
 }
 
 void cTelnet::reset()
@@ -976,7 +976,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
-                connect(reply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(setDownloadProgress(qint64, qint64)));
+                connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
             }
             return;
@@ -1196,7 +1196,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
-        connect(reply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(setDownloadProgress(qint64, qint64)));
+        connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
     }
@@ -1604,7 +1604,7 @@ void cTelnet::loadReplayChunk()
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(slot_processReplayChunk()));
+        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
     } else {
         loadingReplay = false;
         replayFile.close();
