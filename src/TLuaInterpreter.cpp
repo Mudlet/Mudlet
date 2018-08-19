@@ -11578,9 +11578,14 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
-    if (speechUnit->state() == QTextToSpeech::Ready || speechUnit->state() == QTextToSpeech::BackendError) {
-        lua_pushboolean(L, false);
-        return 1;
+    if (speechUnit->state() == QTextToSpeech::Ready) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "not speaking any text");
+        return 2;
+    } else if (speechUnit->state() == QTextToSpeech::BackendError) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "error with the backend");
+        return 2;
     }
 
     lua_pushstring(L, speechCurrent.toUtf8().constData());
