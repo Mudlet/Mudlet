@@ -620,10 +620,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
     if (!pPlayerRoom) {
         painter.save();
         painter.fillRect(0, 0, width(), height(), Qt::transparent);
-        auto font(p.font());
+        auto font(painter.font());
         font.setPointSize(10);
         painter.setFont(font);
-        painter.drawText(0, 0, _w, _h, Qt::AlignCenter | Qt::TextWordWrap, tr("No map or no valid position."));
+        painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, tr("No map or no valid position."));
         painter.restore();
         return;
     }
@@ -2625,7 +2625,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
             auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
-            auto pArea = mpMap->mpRoomDB->getArea(mAID);
+            auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
 
             if (!playerRoom || !pArea) {
                 auto createMap = new QAction(tr("create new map"), this);
@@ -2692,7 +2692,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             connect(roomArea, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
             auto customExitLine = new QAction("custom exit lines", this);
-            TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
             if (!pArea) {
                 return;
             }
@@ -2713,7 +2712,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             auto setPlayerLocation = new QAction("set location", this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
                 setPlayerLocation->setToolTip(tr("Set player current location to here"));
-                connect(action16, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
+                connect(setPlayerLocation, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
             } else {
                 setPlayerLocation->setEnabled(false);
                 setPlayerLocation->setToolTip(tr("Cannot set location when not exactly one room selected"));
