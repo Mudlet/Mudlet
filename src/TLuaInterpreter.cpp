@@ -11057,7 +11057,7 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     TLuaInterpreter::ttsBuild();
     
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsSpeak: argument expected string, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSpeak: bad argument #%1 type (text to say as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     }
