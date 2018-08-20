@@ -105,7 +105,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setToolTip(
 	    QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
                     tr("Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the "
-                       "relevant header to sort by that method.  Note that the name column willl only show if at least one of the rooms has a name.")));
+                       "relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
     mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection
