@@ -323,7 +323,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="626"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Keine Karte bzw. ungültige Position.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2035"/>
@@ -368,7 +368,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2212"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>Art der Markierung?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2213"/>
@@ -383,27 +383,27 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2218"/>
       <source>Enter label text.</source>
-      <translation type="unfinished"/>
+      <translation>Text der Markierung eingeben.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2225"/>
       <source>Background color</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2226"/>
       <source>Foreground color</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>Bild auswählen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2238"/>
       <source>Draw label as background or on top of everything?</source>
-      <translation type="unfinished"/>
+      <translation>Markierung als Hintergrund zeichnen oder alles überlagern?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2239"/>
@@ -3244,7 +3244,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="102"/>
       <source>%1 closed their client.</source>
-      <translation type="unfinished"/>
+      <translation>%1 hat den Client geschlossen.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="114"/>
@@ -3334,7 +3334,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="602"/>
       <source>Your nick has changed.</source>
-      <translation type="unfinished"/>
+      <translation>Dein Spitzname hat sich geändert.</translation>
     </message>
   </context>
   <context>
