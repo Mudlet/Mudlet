@@ -2574,27 +2574,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation>Helles schwarz:</translation>
+      <translation>Helles Schwarz:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation>Hellrot:</translation>
+      <translation>Helles Rot:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation>Hellgrün:</translation>
+      <translation>Helles Grün:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation>Hellgelb:</translation>
+      <translation>Helles Gelb:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation>Hellblau:</translation>
+      <translation>Helles Blau:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
@@ -2609,7 +2609,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
       <source>Light white:</source>
-      <translation>Helles weiß:</translation>
+      <translation>Helles Weiß:</translation>
     </message>
   </context>
   <context>
@@ -2622,7 +2622,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="114"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="127"/>
@@ -2636,7 +2636,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/composer.ui" line="134"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Speichern</translation>
     </message>
   </context>
   <context>
