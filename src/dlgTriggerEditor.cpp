@@ -6438,26 +6438,6 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
     Q_UNUSED(pE);
 
     saveOpenChanges();
-    autoSave();
-}
-
-// this doesn't seem 100% right - I couldn't find a "window lost focus" event
-// The focusOutEvent above is not it - that is for keyboard focus
-void dlgTriggerEditor::leaveEvent(QEvent *event)
-{
-    Q_UNUSED(event);
-    if( QApplication::focusWidget() != nullptr && QApplication::focusWidget()->objectName() == "listWidgetRef" ) return;
-
-    saveOpenChanges();
-
-    // delay autosave for next event loop in case the user has pressed 'Save profile as' and
-    // the focus was lost due to a file export dialog. In this case, don't want
-    // autosave kicking in and blocking the save profile
-    QTimer::singleShot(0, this, [this]() {
-        if (!mSavingAs) {
-            autoSave();
-        }
-    });
 }
 
 void dlgTriggerEditor::changeView(int view)

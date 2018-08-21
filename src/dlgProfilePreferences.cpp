@@ -101,12 +101,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // Set the properties of the log options
     lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
-    pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Select a directory where logs will be saved.</p>"));
-    pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
-    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
-                                                   .arg("<p>This option sets the format of the log name.</p>"
-                                                        "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
-    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</p>"));
+    pushButton_whereToLog->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Select a directory where logs will be saved.</p>")));
+    pushButton_resetLogDir->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>")));
+    comboBox_logFileNameFormat->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+            .arg(tr("<p>This option sets the format of the log name.</p>"
+                    "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>")));
+    lineEdit_logFileName->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</p>")));
     lineEdit_logFileName->setPlaceholderText(
             tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
     label_logFileNameExtension->setVisible(false);
