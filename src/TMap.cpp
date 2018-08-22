@@ -1100,7 +1100,7 @@ bool TMap::serialize(QDataStream& ofs)
             QList<int> _oldList = pA->rooms.toList();
             ofs << _oldList;
         }
-        ofs << pA->ebenen;
+        ofs << pA->zLevels;
         ofs << pA->exits;
         ofs << pA->gridMode;
         ofs << pA->max_x;
@@ -1117,7 +1117,7 @@ bool TMap::serialize(QDataStream& ofs)
             ofs << pA->yminEbene;
         } else { // Recreate the pointless z{min|max}Ebene items
             QMap<int, int> dummyMinMaxEbene;
-            QListIterator<int> itZ(pA->ebenen);
+            QListIterator<int> itZ(pA->zLevels);
             while (itZ.hasNext()) {
                 int dummyEbenValue = itZ.next();
                 dummyMinMaxEbene.insert(dummyEbenValue, dummyEbenValue);
@@ -1397,7 +1397,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
-                ifs >> pA->ebenen;
+                ifs >> pA->zLevels;
                 ifs >> pA->exits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
@@ -1667,7 +1667,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
-            ifs >> pA.ebenen;
+            ifs >> pA.zLevels;
             ifs >> pA.exits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
