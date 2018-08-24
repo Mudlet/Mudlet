@@ -11704,7 +11704,7 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
     host.raiseEvent(event);
 }
 
-TLuaInterpreter::setMatches(lua_State* L)
+void TLuaInterpreter::setMatches(lua_State* L)
 {
     if (!mCaptureGroupList.empty()) {
         lua_newtable(L);
