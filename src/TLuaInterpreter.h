@@ -457,6 +457,7 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
+    void TLuaInterpreter::setMatches(lua_State* L);
 
     QMap<QNetworkReply*, QString> downloadMap;
 
