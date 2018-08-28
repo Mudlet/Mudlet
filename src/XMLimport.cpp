@@ -822,11 +822,23 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mSearchEngineName = QString("Google");
     }
-    pHost->mDiscordHideAddress = (attributes().value("mDiscordHideAddress") == "yes");
-    pHost->mDiscordHideCurrentArea = (attributes().value("mDiscordHideCurrentArea") == "yes");
-    pHost->mDiscordDisableLua = (attributes().value("mDiscordDisableLua") == "yes");
-    pHost->mDiscordHideCharacterIcon = (attributes().value("mDiscordHideCharacterIcon") == "yes");
-    pHost->mDiscordHideCharacterText = (attributes().value("mDiscordHideCharacterText") == "yes");
+
+    if (attributes().hasAttribute(QLatin1String("DiscordAccessOptions"))) {
+        // Only set this option if there is a value - otherwise use the Host defaults
+        pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("DiscordAccessOptions").toString().toInt());
+    }
+
+    if (attributes().hasAttribute(QLatin1String("RequiredDiscordUserName"))) {
+        pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("RequiredDiscordUserName")).toString();
+    } else {
+        pHost->mRequiredDiscordUserName.clear();
+    }
+
+    if (attributes().hasAttribute(QLatin1String("RequiredDiscordUserDiscriminator"))) {
+        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("RequiredDiscordUserDiscriminator")).toString();
+    } else {
+        pHost->mRequiredDiscordUserDiscriminator.clear();
+    }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();

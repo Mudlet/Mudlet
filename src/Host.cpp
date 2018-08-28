@@ -133,12 +133,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
-, mDiscordHideAddress{}
-, mDiscordHideCharacterIcon{}
-, mDiscordHideCharacterText{}
-, mDiscordHideCurrentArea{}
 , mDiscordDisableServerSide(true)
-, mDiscordDisableLua(true)
+, mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
 , mRoomSize(0.5)
 , mShowInfo(true)
@@ -212,7 +208,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"Google",     "https://www.google.com/search?q="}
     });
 
-    auto optin = readProfileData(QStringLiteral("discordoptin"));
+    auto optin = readProfileData(QStringLiteral("discordserveroptin"));
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
@@ -1281,7 +1277,8 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
     }
 }
 
-// handles out of band (OOB) GMCP/MSDP data for Discord
+// handles out of band (OOB) GMCP/MSDP data for Discord - called whenever GMCP
+// Telnet sub-option comes in and starts with "External.Discord.(Status|Info)"
 void Host::processDiscordGMCP(const QString& packageMessage, const QString& data)
 {
     if (mDiscordDisableServerSide) {
@@ -1299,38 +1296,176 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
     }
 
     if (packageMessage == QLatin1String("External.Discord.Status")) {
-        auto gameName = json.value(QStringLiteral("game"));
-        if (gameName != QJsonValue::Undefined) {
-            mudlet::self()->mDiscord.setGame(this, gameName.toString());
+        processGMCPDiscordStatus(json);
+    } else if (packageMessage == QLatin1String("External.Discord.Info")) {
+        processGMCPDiscordInfo(json);
+    }
+}
+
+void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
+{
+    mudlet* pMudlet = mudlet::self();
+    bool hasInvite = false;
+    auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
+    // Will be of form: "https://discord.gg/#####"
+    if (inviteUrl != QJsonValue::Undefined) {
+        hasInvite = true;
+    }
+
+    bool hasApplicationId = false;
+    bool hasCustomAppID = false;
+    auto appID = discordInfo.value(QStringLiteral("applicationid"));
+    if (appID != QJsonValue::Undefined) {
+        hasApplicationId = true;
+        if (appID.toString() == Discord::mMudletApplicationId) {
+            pMudlet->mDiscord.setApplicationID(this, QString());
+        } else {
+            hasCustomAppID = true;
+            pMudlet->mDiscord.setApplicationID(this, appID.toString());
         }
+    }
 
-        auto area = json.value(QStringLiteral("state"));
-        if (area != QJsonValue::Undefined) {
-            mudlet::self()->mDiscord.setArea(this, area.toString());
+    if (hasInvite) {
+        if (hasCustomAppID) {
+            qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
+        } else if (hasApplicationId) {
+            qDebug() << "Game using Mudlets Discord server. Invite URL: " << inviteUrl.toString();
+        } else {
+            qDebug() << "Discord invite URL: " << inviteUrl.toString();
         }
-
-        auto smallImage = json.value(QStringLiteral("smallimage"));
-        if (smallImage != QJsonValue::Undefined) {
-            auto image = smallImage.toArray().first();
-
-            if (image != QJsonValue::Undefined) {
-                mudlet::self()->mDiscord.setCharacterIcon(this, image.toString());
-            }
-        }
-
-        auto character = json.value(QStringLiteral("smallimagetext"));
-        if (character != QJsonValue::Undefined) {
-            mudlet::self()->mDiscord.setCharacter(this, character.toString());
+    } else {
+        if (hasCustomAppID) {
+            qDebug() << "Game is using custom server Discord application ID";
+        } else if (hasApplicationId) {
+            qDebug() << "Game is using Mudlets Discord application ID";
         }
     }
 }
 
-void Host::clearDiscordData() {
-    mudlet::self()->mDiscord.setGame(this, QString());
-    mudlet::self()->mDiscord.setArea(this, QString());
-    mudlet::self()->mDiscord.setCharacter(this, QString());
-    mudlet::self()->mDiscord.setCharacterIcon(this, QString());
+void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
+{
+    auto pMudlet = mudlet::self();
+    auto gameName = discordInfo.value(QStringLiteral("game"));
+    if (gameName != QJsonValue::Undefined) {
+        QPair<bool, QString> richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
+        if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
+            pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
+            pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
+            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(richPresenceSupported.second, getUrl(), QString::number(getPort())));
+        } else {
+            // We are using a custom application id, so the top line is
+            // likely to be saying "Playing MudName"
+            if (richPresenceSupported.first) {
+                pMudlet->mDiscord.setDetailText(this, tr("Using Mudlet"));
+                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(richPresenceSupported.second, getUrl(), QString::number(getPort())));
+                pMudlet->mDiscord.setLargeImage(this, QStringLiteral("server-icon"));
+            }
+        }
+    }
+
+    auto details = discordInfo.value(QStringLiteral("details"));
+    if (details != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setDetailText(this, details.toString());
+    }
+
+    auto state = discordInfo.value(QStringLiteral("state"));
+    if (state != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setStateText(this, state.toString());
+    }
+
+    auto largeImages = discordInfo.value(QStringLiteral("largeimage"));
+    if (largeImages != QJsonValue::Undefined) {
+        auto largeImage = largeImages.toArray().first();
+        if (largeImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setSmallImage(this, largeImage.toString());
+        }
+    }
+
+    auto largeImageText = discordInfo.value(QStringLiteral("largeimagetext"));
+    if (largeImageText != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setSmallImageText(this, largeImageText.toString());
+    }
+
+    auto smallImages = discordInfo.value(QStringLiteral("smallimage"));
+    if (smallImages != QJsonValue::Undefined) {
+        auto smallImage = smallImages.toArray().first();
+        if (smallImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setSmallImage(this, smallImage.toString());
+        }
+    }
+
+    auto smallImageText = discordInfo.value(QStringLiteral("smallimagetext"));
+    if ((smallImageText != QJsonValue::Undefined)) {
+        pMudlet->mDiscord.setSmallImageText(this, smallImageText.toString());
+    }
+
+    // Use -1 so we can detect (at least during debugging) that a value of 0
+    // has been seen:
+    int64_t timeStamp = -1;
+    auto endTimeStamp = discordInfo.value(QStringLiteral("endtime"));
+    if (endTimeStamp.isDouble()) {
+        // It is not entirely clear from the proposed specification
+        // whether the integral seconds since epoch is a string or a
+        // double, so handle both:
+        // This only works properly when the value is less than
+        // 9007199254740992 but since when I last checked it was
+        //       1533042027 second since beginning of 1970 it should be
+        // good enough!
+        timeStamp = static_cast<int64_t>(endTimeStamp.toDouble());
+        pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
+    } else if (endTimeStamp.isString()) {
+        timeStamp = endTimeStamp.toString().toLongLong();
+        pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
+    } else {
+        auto startTimeStamp = discordInfo.value(QStringLiteral("starttime"));
+        if (startTimeStamp.isDouble()) {
+            timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
+            pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
+        } else if (endTimeStamp.isString()) {
+            timeStamp = endTimeStamp.toString().toLongLong();
+            pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
+        }
+    }
+
+    // Use -1 so we can detect (at least during debugging) that a value of 0
+    // has been seen:
+    int partySizeValue = -1;
+    int partyMaxValue = -1;
+    auto partyMax = discordInfo.value(QStringLiteral("partymax"));
+    auto partySize = discordInfo.value(QStringLiteral("partysize"));
+    if (partyMax.isDouble()) {
+        partyMaxValue = static_cast<int>(partyMax.toDouble());
+        if (partyMaxValue > 0 && partySize.isDouble()) {
+            partySizeValue = static_cast<int>(partySize.toDouble());
+            pMudlet->mDiscord.setParty(this, partySizeValue, partyMaxValue);
+        } else {
+            // Switches off the party detail from the RP
+            pMudlet->mDiscord.setParty(this, 0, 0);
+        }
+    } else {
+        if (partySize.isDouble()) {
+            partySizeValue = static_cast<int>(partySize.toDouble());
+            pMudlet->mDiscord.setParty(this, partySizeValue);
+        } else {
+            pMudlet->mDiscord.setParty(this, 0, 0);
+        }
+    }
 }
+
+// Called from dlgConnectionPreferences if the discord opt-in is unclicked
+void Host::clearDiscordData()
+{
+    mudlet* pMudlet = mudlet::self();
+    pMudlet->mDiscord.setDetailText(this, QString());
+    pMudlet->mDiscord.setStateText(this, QString());
+    pMudlet->mDiscord.setLargeImage(this, QString());
+    pMudlet->mDiscord.setLargeImageText(this, QString());
+    pMudlet->mDiscord.setSmallImage(this, QString());
+    pMudlet->mDiscord.setSmallImageText(this, QString());
+    pMudlet->mDiscord.setStartTimeStamp(this, 0);
+    pMudlet->mDiscord.setParty(this, 0, 0);
+}
+
 
 void Host::processDiscordMSDP(const QString& variable, QString value)
 {
@@ -1338,22 +1473,53 @@ void Host::processDiscordMSDP(const QString& variable, QString value)
         return;
     }
 
-    if (!(variable == QLatin1String("SERVER_ID") || variable == QLatin1String("AREA_NAME"))) {
-        return;
+    Q_UNUSED(variable)
+    Q_UNUSED(value)
+// TODO:
+//    if (!(variable == QLatin1String("SERVER_ID") || variable == QLatin1String("AREA_NAME"))) {
+//        return;
+//    }
+
+//    // MSDP value comes padded with quotes - strip them (from the local copy of
+//    // the supplied argument):
+//    if (value.startsWith(QLatin1String("\""))) {
+//        value = value.mid(1);
+//    }
+
+//    if (value.endsWith(QLatin1String("\""))) {
+//        value.chop(1);
+//    }
+
+//    if (variable == QLatin1String("SERVER_ID")) {
+//        mudlet::self()->mDiscord.setGame(this, value);
+//    } else if (variable == QLatin1String("AREA_NAME")) {
+//        mudlet::self()->mDiscord.setArea(this, value);
+//    }
+}
+
+void Host::setDiscordApplicationID(const QString& s)
+{
+    QMutexLocker locker(& mLock);
+    mDiscordApplicationID = s;
+    locker.unlock();
+
+    writeProfileData(QStringLiteral("discordApplicationId"), s);
+}
+
+// Compares the current discord username and discriminator against the non-empty
+// arguments. Returns true if neither match, otherwise false.
+bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const
+{
+    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty()
+            && userName != mRequiredDiscordUserName) {
+        return false;
     }
 
-    if (value.startsWith(QLatin1String("\""))) {
-        value = value.remove(0, 1);
-    }
-
-    if (value.endsWith(QLatin1String("\""))) {
-        value = value.remove(value.length()-1, 1);
-    }
-
-    // MSDP value comes padded with quotes - strip them
-    if (variable == QLatin1String("SERVER_ID")) {
-        mudlet::self()->mDiscord.setGame(this, value);
-    } else if (variable == QLatin1String("AREA_NAME")) {
-        mudlet::self()->mDiscord.setArea(this, value);
+    if (!userDiscriminator.isEmpty()
+            && !mRequiredDiscordUserDiscriminator.isEmpty()
+            && userDiscriminator != mRequiredDiscordUserDiscriminator) {
+        return false;
+    } else {
+        return true;
     }
 }

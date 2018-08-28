@@ -714,6 +714,9 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 #endif // defined(Q_OS_MACOS)
 #endif // defined(INCLUDE_UPDATER)
 
+    QString DiscordHeader(tr("<h2><u>Discord - Rich Presence - RPC library</u></h2>"
+                             "<h3>Copyright © 2017 Discord, Inc.</h3>"));
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(QStringLiteral("<html>%1<body>%2<hr>")
@@ -790,6 +793,13 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     license_3rdParty_texts.append(QStringLiteral("<hr>%31")
                                   .arg(UbuntuFontText));               // 31 - Ubuntu Font Text - not translatable
 #endif
+
+    license_3rdParty_texts.append(QStringLiteral("<hr><br>"
+                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center><br>"
+                                                 "%32%33")
+                                  .arg(DiscordHeader,                  // 32 - Discord header - translatable
+                                       MIT_Body));                     // 33 - Discord body MIT - not translatable
+
     license_3rdParty_texts.append(QStringLiteral("</body></html>"));
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));

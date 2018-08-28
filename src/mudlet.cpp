@@ -47,7 +47,6 @@
 #include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
-#include "discord.h"
 
 #include "pre_guard.h"
 #include <QtUiTools/quiloader.h>

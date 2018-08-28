@@ -429,14 +429,30 @@ public:
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
     static int getAvailableFonts(lua_State* L);
-    static int setDiscordGame(lua_State* L);
-    static int setDiscordCharacterIcon(lua_State* L);
-    static int setDiscordCharacter(lua_State* L);
-    static int setDiscordArea(lua_State *L);
+    static int setDiscordApplicationID(lua_State* L);
+    static int usingMudletsDiscordID(lua_State*);
+    static int setDiscordState(lua_State*);
+    static int setDiscordDetail(lua_State*);
+    static int setDiscordLargeIcon(lua_State*);
+    static int setDiscordLargeIconText(lua_State*);
+    static int setDiscordSmallIcon(lua_State*);
+    static int setDiscordSmallIconText(lua_State*);
+    static int setDiscordElapsedStartTime(lua_State*);
+    static int setDiscordRemainingEndTime(lua_State*);
+    static int setDiscordParty(lua_State*);
+    static int getDiscordState(lua_State*);
+    static int getDiscordDetail(lua_State*);
+    static int getDiscordLargeIcon(lua_State*);
+    static int getDiscordLargeIconText(lua_State*);
+    static int getDiscordSmallIcon(lua_State*);
+    static int getDiscordSmallIconText(lua_State*);
+    static int getDiscordTimeStamps(lua_State*);
+    static int getDiscordParty(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
+
+
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
-
 public slots:
     void slot_replyFinished(QNetworkReply*);
     void slotPurge();

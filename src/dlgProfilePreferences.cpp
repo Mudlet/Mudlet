@@ -62,6 +62,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // temporary/development/testing controls can be placed if needed...
     groupBox_debug->hide();
 
+    // Only unhide this if it is needed
+    groupBox_discordPrivacy->hide();
+
     QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
@@ -98,15 +101,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     // Set the properties of the log options
-    lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
-    pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Select a directory where logs will be saved.</p>"));
-    pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
-    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
-                                                   .arg("<p>This option sets the format of the log name.</p>"
-                                                        "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
-    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</p>"));
-    lineEdit_logFileName->setPlaceholderText(
-            tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
+    lineEdit_logFileFolder->setToolTip(mudlet::htmlWrapper(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
+    pushButton_whereToLog->setToolTip(mudlet::htmlWrapper(tr("<p>Select a directory where logs will be saved.</p>")));
+    pushButton_resetLogDir->setToolTip(mudlet::htmlWrapper(tr("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>")));
+    comboBox_logFileNameFormat->setToolTip(mudlet::htmlWrapper(tr("<p>This option sets the format of the log name.</p>"
+                                                                  "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended "
+                                                                  "if a log file of the same name already exists.)</p>")));
+    lineEdit_logFileName->setToolTip(mudlet::htmlWrapper(tr("<p>Set a custom name for your log. (New logs are appended if a log file of the same name "
+                                                            "already exists).</p>")));
+    lineEdit_logFileName->setPlaceholderText(tr("logfile",
+                                                "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
     label_logFileNameExtension->setVisible(false);
     label_logFileName->setVisible(false);
     lineEdit_logFileName->setVisible(false);
@@ -124,7 +128,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
-        checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
+        checkbox_noAutomaticUpdates->setToolTip(mudlet::htmlWrapper(tr("<p>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</p>")));
     } else {
         checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
     }
@@ -139,51 +143,59 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
-    pushButton_showGlyphUsage->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                          .arg(tr("<p>This will bring up a display showing all the symbols used in the current "
-                                                  "map and whether they can be drawn using just the specifed font, any other "
-                                                  "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                                  "that make up that symbol, so that they can be identified even if they "
-                                                  "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                  "that symbol are listed, which may help to identify any unexpected or odd cases.<p>")));
-    fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                        .arg(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                                "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                     .arg(tr("<p>Using a single font is likely to produce a more consistent style but may "
-                                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
-    checkBox_runAllKeyBindings->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                           .arg(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
-                                                   "(combination of key and modifiers) even if more than one of them is set to be "
-                                                   "active. This means that a temporary keybinding (not visible in the Editor) "
-                                                   "created by a script or package may be used in preference to a permanent one "
-                                                   "that is shown and is set to be active. If checked then all matching keybindings "
-                                                   "will be run.</p>"
-                                                   "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                                   "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>")));
-    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                         .arg("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                              "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                              "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                              "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                              "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                              "<p>This control has three settings:"
-                                                              "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                              "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                              "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
-                                                              "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
-                                                              "full support for languages other than English.</i></p>"));
+    pushButton_showGlyphUsage->setToolTip(mudlet::htmlWrapper(tr("<p>This will bring up a display showing all the symbols used in the current "
+                                                                 "map and whether they can be drawn using just the specifed font, any other "
+                                                                 "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                                                 "that make up that symbol, so that they can be identified even if they "
+                                                                 "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                                                 "that symbol are listed, which may help to identify any unexpected or odd cases.<p>")));
+    fontComboBox_mapSymbols->setToolTip(mudlet::htmlWrapper(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                                               "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(mudlet::htmlWrapper(tr("<p>Using a single font is likely to produce a more consistent style but may "
+                                                                            "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                                            "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                                            "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                                            "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
+    checkBox_runAllKeyBindings->setToolTip(mudlet::htmlWrapper(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
+                                                                  "(combination of key and modifiers) even if more than one of them is set to be "
+                                                                  "active. This means that a temporary keybinding (not visible in the Editor) "
+                                                                  "created by a script or package may be used in preference to a permanent one "
+                                                                  "that is shown and is set to be active. If checked then all matching keybindings "
+                                                                  "will be run.</p>"
+                                                                  "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
+                                                                  "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>")));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(mudlet::htmlWrapper(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                                                "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                                                "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                                                "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                                                "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                                                "<p>This control has three settings:"
+                                                                                "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                                                "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                                                "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                                                "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                                                "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
+                                                                                "full support for languages other than English.</i></p>")));
 
-    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
-    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
+    checkBox_discordServerAccessToDetail->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set the upper line of text in the Rich Presence.</p>")));
+    checkBox_discordServerAccessToState->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set the lower line of text in the Rich Presence.</p>")));
+
+    checkBox_discordServerAccessToPartyInfo->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set additional '(X of Y)` party infomation at the "
+                                                                               "end of the the lower line of text in the Rich Presence.</p>")));
+    checkBox_discordServerAccessToTimerInfo->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set additional time elapsed or time remaining "
+                                                                               "infomation at the bottom of the Rich Presence.</p>")));
+    checkBox_discordLuaAPI->setToolTip(mudlet::htmlWrapper(tr("<p>Allow Lua to set Discord status</p>")));
+
+    lineEdit_discordUserName->setToolTip(mudlet::htmlWrapper(tr("<p>Mudlet will only show Rich Presence information while you use this Discord username and/or discriminator (####). Useful if you have multiple Discord accounts, leave empty to show it for any Discord account you log in to.</p>")));
+    lineEdit_discordUserDiscriminator->setToolTip(mudlet::htmlWrapper(tr("<p>Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.</p>")));
+
+
+    connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
+    connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
-    connect(mudlet::self(), SIGNAL(signal_hostCreated(Host*, quint8)), this, SLOT(slot_handleHostAddition(Host*, quint8)));
-    connect(mudlet::self(), SIGNAL(signal_hostDestroyed(Host*, quint8)), this, SLOT(slot_handleHostDeletion(Host*)));
-    connect(comboBox_menuBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowMenuBar(int)));
+    connect(mudlet::self(), &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
+    connect(mudlet::self(), &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
+    connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_changeShowToolBar(int)));
 }
 
@@ -261,6 +273,7 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_ircOptions enabled...
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
+    groupBox_discordPrivacy->hide();
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -439,19 +452,33 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
-    if (!mudlet::self()->mDiscord.libraryLoaded()) {
-        groupBox_discordPrivacy->hide();
-    } else {
-        checkBox_discordGameAddress->setChecked(pHost->mDiscordHideAddress);
-        checkBox_discordCurrentArea->setChecked(pHost->mDiscordHideCurrentArea);
-        checkBox_discordLuaAPI->setChecked(!pHost->mDiscordDisableLua);
-        if (!pHost->mDiscordHideCharacterIcon && !pHost->mDiscordHideCharacterText) {
-            comboBox_discordCharacter->setCurrentIndex(0);
-        } else if (!pHost->mDiscordHideCharacterIcon && pHost->mDiscordHideCharacterText) {
-            comboBox_discordCharacter->setCurrentIndex(1);
+    if (mudlet::self()->mDiscord.libraryLoaded()) {
+        Host::DiscordOptionFlags discordFlags = pHost->mDiscordAccessFlags;
+        groupBox_discordPrivacy->show();
+        checkBox_discordLuaAPI->setChecked(discordFlags & Host::DiscordLuaAccessEnabled);
+
+        if ((discordFlags & Host::DiscordSetLargeIcon) && (discordFlags & Host::DiscordSetLargeIconText)) {
+            comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
+        } else if ((discordFlags & Host::DiscordSetLargeIcon) && !(discordFlags & Host::DiscordSetLargeIconText)) {
+            comboBox_discordLargeIconPrivacy->setCurrentIndex(1);
         } else {
-            comboBox_discordCharacter->setCurrentIndex(2);
+            comboBox_discordLargeIconPrivacy->setCurrentIndex(2);
         }
+
+        if ((discordFlags & Host::DiscordSetSmallIcon) && (discordFlags & Host::DiscordSetSmallIconText)) {
+            comboBox_discordSmallIconPrivacy->setCurrentIndex(0);
+        } else if ((discordFlags & Host::DiscordSetSmallIcon) && !(discordFlags & Host::DiscordSetSmallIconText)) {
+            comboBox_discordSmallIconPrivacy->setCurrentIndex(1);
+        } else {
+            comboBox_discordSmallIconPrivacy->setCurrentIndex(2);
+        }
+
+        checkBox_discordServerAccessToDetail->setChecked(!(discordFlags & Host::DiscordSetDetail));
+        checkBox_discordServerAccessToState->setChecked(!(discordFlags & Host::DiscordSetState));
+        checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
+        checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
+        lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
@@ -695,7 +722,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, SIGNAL(clicked()), this, SLOT(slot_resetLogDir()));
     connect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_logFileNameFormatChange(int)));
     connect(mIsToLogInHtml, SIGNAL(clicked(bool)), this, SLOT(slot_changeLogFileAsHtml(bool)));
-    connect(checkBox_discordGameAddress, &QAbstractButton::clicked, &mudlet::self()->mDiscord, &Discord::UpdatePresence);
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -772,7 +798,6 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_resetLogDir, SIGNAL(clicked()));
     disconnect(comboBox_logFileNameFormat, SIGNAL(currentIndexChanged(int)));
     disconnect(mIsToLogInHtml, SIGNAL(clicked(bool)));
-    disconnect(checkBox_discordGameAddress, &QAbstractButton::clicked, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -862,10 +887,15 @@ void dlgProfilePreferences::clearHostDetails()
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
 
-    checkBox_discordGameAddress->setChecked(false);
     checkBox_discordLuaAPI->setChecked(false);
-    checkBox_discordCurrentArea->setChecked(false);
-    comboBox_discordCharacter->setCurrentIndex(0);
+    comboBox_discordLargeIconPrivacy->setCurrentIndex(0);
+    comboBox_discordSmallIconPrivacy->setCurrentIndex(0);
+    checkBox_discordServerAccessToDetail->setChecked(false);
+    checkBox_discordServerAccessToState->setChecked(false);
+    checkBox_discordServerAccessToPartyInfo->setChecked(false);
+    checkBox_discordServerAccessToTimerInfo->setChecked(false);
+    lineEdit_discordUserName->clear();
+    lineEdit_discordUserDiscriminator->clear();
 }
 
 void dlgProfilePreferences::loadEditorTab()
@@ -2050,18 +2080,47 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
 
-        pHost->mDiscordHideAddress = checkBox_discordGameAddress->isChecked();
-        pHost->mDiscordDisableLua = !checkBox_discordLuaAPI->isChecked();
-        pHost->mDiscordHideCurrentArea = checkBox_discordCurrentArea->isChecked();
-        if (comboBox_discordCharacter->currentIndex() == 0) {
-            pHost->mDiscordHideCharacterText = false;
-            pHost->mDiscordHideCharacterIcon = false;
-        } else if (comboBox_discordCharacter->currentIndex() == 1) {
-            pHost->mDiscordHideCharacterIcon = false;
-            pHost->mDiscordHideCharacterText = true;
+        auto hideSmallIcon = false, hideSmallIconText = false;
+        if (comboBox_discordSmallIconPrivacy->currentIndex() == 0) {
+            hideSmallIcon = false;
+            hideSmallIconText = false;
+        } else if (comboBox_discordSmallIconPrivacy->currentIndex() == 1) {
+            hideSmallIcon = false;
+            hideSmallIconText = true;
         } else {
-            pHost->mDiscordHideCharacterText = true;
-            pHost->mDiscordHideCharacterIcon = true;
+            hideSmallIcon = true;
+            hideSmallIconText = true;
+        }
+
+        auto hideLargeIcon = false, hideLargeIconText = false;
+        if (comboBox_discordLargeIconPrivacy->currentIndex() == 0) {
+            hideLargeIcon = false;
+            hideLargeIconText = false;
+        } else if (comboBox_discordLargeIconPrivacy->currentIndex() == 1) {
+            hideLargeIcon = false;
+            hideLargeIconText = true;
+        } else {
+            hideLargeIcon = true;
+            hideLargeIconText = true;
+        }
+
+        pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(
+                                         (hideLargeIcon ? Host::DiscordNoOption : Host::DiscordSetLargeIcon)
+                                         | (hideLargeIconText ? Host::DiscordNoOption : Host::DiscordSetLargeIconText)
+                                         | (hideSmallIcon ? Host::DiscordNoOption : Host::DiscordSetSmallIcon)
+                                         | (hideSmallIconText ? Host::DiscordNoOption : Host::DiscordSetSmallIconText)
+                                         | (checkBox_discordServerAccessToDetail->isChecked() ? Host::DiscordNoOption : Host::DiscordSetDetail)
+                                         | (checkBox_discordServerAccessToState->isChecked() ? Host::DiscordNoOption : Host::DiscordSetState)
+                                         | (checkBox_discordServerAccessToPartyInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetPartyInfo)
+                                         | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo)
+                                         | (checkBox_discordLuaAPI->isChecked() ? Host::DiscordLuaAccessEnabled : Host::DiscordNoOption));
+
+        pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
+        if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
+            // The input mask specifies 4 digits [0-9]
+            pHost->mRequiredDiscordUserDiscriminator = lineEdit_discordUserDiscriminator->text();
+        } else {
+            pHost->mRequiredDiscordUserDiscriminator.clear();
         }
     }
 

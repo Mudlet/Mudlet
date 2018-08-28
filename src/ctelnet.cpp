@@ -254,18 +254,21 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
 
 void cTelnet::requestDiscordInfo()
 {
-    string data;
-    data = TN_IAC;
-    data += TN_SB;
-    data += GMCP;
-    data += string("External.Discord.Get");
-    data += TN_IAC;
-    data += TN_SE;
+    mudlet* pMudlet = mudlet::self();
+    if (pMudlet->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+        string data;
+        data = TN_IAC;
+        data += TN_SB;
+        data += GMCP;
+        data += string("External.Discord.Get");
+        data += TN_IAC;
+        data += TN_SE;
 
-    // some games are buggy with MCCP on and require actual input before GMCP is processed
-    data += "\n";
+        // some games are buggy with MCCP on and require actual input before GMCP is processed
+        data += "\n";
 
-    socketOutRaw(data);
+        socketOutRaw(data);
+    }
 }
 
 void cTelnet::connectIt(const QString& address, int port)
@@ -282,6 +285,8 @@ void cTelnet::connectIt(const QString& address, int port)
         connectIt(address, port);
         return;
     }
+
+    emit signal_connecting(mpHost);
 
     hostName = address;
     hostPort = port;
@@ -326,6 +331,12 @@ void cTelnet::handle_socket_signal_connected()
         mTimerPass->start(3000);
     }
 
+// put out this signal (which affects the start time used for elapsed time
+// before raising the Lua sysConnectionEvent - so that a non-default Discord
+// Application Id can be activated before any user/package/module code that might
+// be called from a lua event handler for that event is run.
+    emit signal_connected(mpHost);
+
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -335,6 +346,8 @@ void cTelnet::handle_socket_signal_connected()
 void cTelnet::handle_socket_signal_disconnected()
 {
     postData();
+
+    emit signal_disconnected(mpHost);
 
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
@@ -677,14 +690,19 @@ void cTelnet::processTelnetCommand(const string& command)
 
             socketOutRaw(_h);
 
-            _h = TN_IAC;
-            _h += TN_SB;
-            _h += GMCP;
-            _h += "External.Discord.Hello";
-            _h += TN_IAC;
-            _h += TN_SE;
+            if (mudlet::self()->mDiscord.libraryLoaded()
+                    && !mpHost->mDiscordDisableServerSide) {
 
-            socketOutRaw(_h);
+                _h = TN_IAC;
+                _h += TN_SB;
+                _h += GMCP;
+                _h += "External.Discord.Hello";
+                QStringList discordUserDetails = mudlet::self()->mDiscord.getDiscordUserDetails();
+                _h += TN_IAC;
+                _h += TN_SE;
+
+                socketOutRaw(_h);
+            }
 
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
@@ -935,6 +953,7 @@ void cTelnet::processTelnetCommand(const string& command)
             mpHost->mLuaInterpreter.msdp2Lua(_m.toUtf8().data(), _m.length());
             return;
         }
+
         // ATCP
         if (option == static_cast<char>(200)) {
             QString _m = command.c_str();
@@ -1162,6 +1181,7 @@ void cTelnet::setATCPVariables(const QString& msg)
     }
 }
 
+// Called for any GMCP Telnet Suboption negotiation:
 void cTelnet::setGMCPVariables(const QString& msg)
 {
     QString packageMessage;
@@ -1224,7 +1244,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar('\r'));
 
-    if (packageMessage.startsWith(QStringLiteral("External.Discord.Status"))) {
+    if (packageMessage.startsWith(QStringLiteral("External.Discord.Status"))
+        || packageMessage.startsWith(QStringLiteral("External.Discord.Info"))) {
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 

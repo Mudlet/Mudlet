@@ -215,7 +215,6 @@ linux|macx|win32 {
 # else we are on another platform which the updater code will not support so
 # don't include it either
 
-
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -340,6 +339,9 @@ macx:LIBS += \
     -lz \
     -lzzip
 
+# Pull in the headers for the Discord RPC library
+    INCLUDEPATH += ../3rdparty/discord/rpc/include
+
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
 # platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
@@ -454,6 +456,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     ctelnet.cpp \
+    discord.cpp \
     dlgAboutDialog.cpp \
     dlgActionMainArea.cpp \
     dlgAliasMainArea.cpp \
@@ -520,14 +523,13 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp \
-    wcwidth.cpp \
-    discord.cpp
-
+    wcwidth.cpp
 
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     ctelnet.h \
+    discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
     dlgAliasMainArea.h \
@@ -599,8 +601,7 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h \
-    wcwidth.h \
-    discord.h
+    wcwidth.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -660,18 +661,6 @@ linux|macx|win32 {
     !build_pass{
         message("The Updater code is excluded as on-line updating is not available on this platform")
     }
-}
-
-linux {
-    HEADERS += ../3rdparty/discord/discord-rpc-linux/discord-rpc/linux-dynamic/include
-}
-
-macx {
-    HEADERS += ../3rdparty/discord/discord-rpc-osx/discord-rpc/osx-dynamic/include
-}
-
-win32 {
-    HEADERS += ../3rdparty/discord/discord-rpc-win/discord-rpc/win32-dynamic/include
 }
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
