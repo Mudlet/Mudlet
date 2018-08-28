@@ -400,22 +400,23 @@ end
 
 
 --- <b><u>TODO</u></b> speedwalktimer()
-function speedwalktimer(walklist, walkdelay)
-  send(walklist[1])
+function speedwalktimer(walklist, walkdelay, show)
+  send(walklist[1], show)
   table.remove(walklist, 1)
   if #walklist > 0 then
     tempTimer(walkdelay, function()
-      speedwalktimer(walklist, walkdelay)
+      speedwalktimer(walklist, walkdelay, show)
     end)
   end
 end
 
 
 
---- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
-function speedwalk(dirString, backwards, delay)
+--- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
+function speedwalk(dirString, backwards, delay, show)
   local dirString = dirString:lower()
   local walkdelay = delay
+  if show ~= false then show = true end
   local walklist = {}
   local reversedir = {
     n = "s",
@@ -437,7 +438,7 @@ function speedwalk(dirString, backwards, delay)
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = direction
-        else send(direction)
+        else send(direction, show)
         end
       end
     end
@@ -447,13 +448,13 @@ function speedwalk(dirString, backwards, delay)
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = reversedir[direction]
-        else send(reversedir[direction])
+        else send(reversedir[direction], show)
         end
       end
     end
   end
   if walkdelay then
-    speedwalktimer(walklist, walkdelay)
+    speedwalktimer(walklist, walkdelay, show)
   end
 end
 
