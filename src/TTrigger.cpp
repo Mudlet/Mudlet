@@ -31,8 +31,7 @@
 #include "TMatchState.h"
 #include "mudlet.h"
 
-#include <assert.h>
-
+#include <cassert>
 #include <sstream>
 
 

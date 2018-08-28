@@ -131,7 +131,7 @@ QSize TTabBar::tabSizeHint(int index) const
 
         const int bw = bfm.width(tabText(index));
 
-        return QSize(s.width() - w + bw, s.height());
+        return {s.width() - w + bw, s.height()};
     } else {
         return QTabBar::tabSizeHint(index);
     }
