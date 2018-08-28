@@ -360,6 +360,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // future - phpBB code might be useful if it can be done.
     host.append_attribute("mRawStreamDump") = pHost->mIsNextLogFileInHtmlFormat ? "yes" : "no";
     host.append_attribute("mIsLoggingTimestamps") = pHost->mIsLoggingTimestamps ? "yes" : "no";
+    host.append_attribute("logDirectory") = pHost->mLogDir.toUtf8().constData();
+    host.append_attribute("logFileName") = pHost->mLogFileName.toUtf8().constData();
+    host.append_attribute("logFileNameFormat") = pHost->mLogFileNameFormat.toUtf8().constData();
     host.append_attribute("mAlertOnNewData") = pHost->mAlertOnNewData ? "yes" : "no";
     host.append_attribute("mFORCE_NO_COMPRESSION") = pHost->mFORCE_NO_COMPRESSION ? "yes" : "no";
     host.append_attribute("mFORCE_GA_OFF") = pHost->mFORCE_GA_OFF ? "yes" : "no";
@@ -622,7 +625,7 @@ void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
     }
 }
 
-bool XMLexport::exportGenericPackage(const QString& exportFileName)
+bool XMLexport::exportProfile(const QString& exportFileName)
 {
     auto mudletPackage = writeXmlHeader();
 
@@ -635,6 +638,19 @@ bool XMLexport::exportGenericPackage(const QString& exportFileName)
 
         return true;
     }
+
+    return false;
+}
+
+bool XMLexport::exportPackage(const QString& exportFileName)
+{
+    auto mudletPackage = writeXmlHeader();
+
+    if (writeGenericPackage(mpHost, mudletPackage)) {
+        return saveXml(exportFileName);
+    }
+
+    return false;
 }
 
 bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage)
@@ -734,11 +750,7 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-#if QT_VERSION < QT_VERSION_CHECK(5, 7, 0)
-            for (int i : pT->mRegexCodePropertyList) {
-#else
             for (int i : qAsConst(pT->mRegexCodePropertyList)) {
-#endif
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }

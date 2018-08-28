@@ -41,6 +41,23 @@
 #include <queue>
 #include <string>
 
+#if defined(Q_OS_WIN32)
+#include <Winsock2.h>
+#include <ws2tcpip.h>
+#include "mstcpip.h"
+#else
+#include <sys/socket.h>
+/*
+ * The Linux documentation for setsockopt(2), indicates that "sys/types.h" is
+ * optional for that OS but is suggested for portability with other OSes also
+ * derived from BSD code - it is included in the corresponding FreeBSD manpage!
+ */
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+#endif
+
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
@@ -168,6 +185,8 @@ private:
     void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void setKeepAlive(int socketHandle);
+    void processChunks();
 
     QPointer<Host> mpHost;
     QTcpSocket socket;

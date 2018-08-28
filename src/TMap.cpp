@@ -122,7 +122,7 @@ TMap::TMap(Host* pH)
     // (was dlgMapper) instance has one...!
     mpNetworkAccessManager = new QNetworkAccessManager(this);
 
-    connect(mpNetworkAccessManager, SIGNAL(finished(QNetworkReply*)), this, SLOT(slot_replyFinished(QNetworkReply*)));
+    connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }
 
 TMap::~TMap()
@@ -1100,7 +1100,7 @@ bool TMap::serialize(QDataStream& ofs)
             QList<int> _oldList = pA->rooms.toList();
             ofs << _oldList;
         }
-        ofs << pA->ebenen;
+        ofs << pA->zLevels;
         ofs << pA->exits;
         ofs << pA->gridMode;
         ofs << pA->max_x;
@@ -1117,7 +1117,7 @@ bool TMap::serialize(QDataStream& ofs)
             ofs << pA->yminEbene;
         } else { // Recreate the pointless z{min|max}Ebene items
             QMap<int, int> dummyMinMaxEbene;
-            QListIterator<int> itZ(pA->ebenen);
+            QListIterator<int> itZ(pA->zLevels);
             while (itZ.hasNext()) {
                 int dummyEbenValue = itZ.next();
                 dummyMinMaxEbene.insert(dummyEbenValue, dummyEbenValue);
@@ -1397,7 +1397,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
-                ifs >> pA->ebenen;
+                ifs >> pA->zLevels;
                 ifs >> pA->exits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
@@ -1667,7 +1667,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
-            ifs >> pA.ebenen;
+            ifs >> pA.zLevels;
             ifs >> pA.exits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
@@ -2156,11 +2156,11 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     mpProgressDialog->setAutoReset(false);
     mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
 
-    connect(mpNetworkReply, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(slot_setDownloadProgress(qint64, qint64)));
+    connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     // Not used:    connect(mpNetworkReply, SIGNAL( readyRead() ), this, SLOT( slot_readyRead() ) );
-    connect(mpNetworkReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(slot_downloadError(QNetworkReply::NetworkError)));
+    connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
     // Not used:    connect(mpNetworkReply, SIGNAL( sslErrors( QList<QSslError> ) ), this, SLOT( slot_sslErrors( QList<QSslError> ) ) );
-    connect(mpProgressDialog, SIGNAL(canceled()), this, SLOT(slot_downloadCancel()));
+    connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
     mpProgressDialog->show();
 }

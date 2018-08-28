@@ -56,9 +56,11 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
         args << ((char*)luaL_checkstring(L, i));
     }
 
-    connect(this, SIGNAL(finished(int)), interpreter, SLOT(slotDeleteSender()));
-    connect(this, SIGNAL(finished(int)), this, SLOT(slotFinish()));
-    connect(this, SIGNAL(readyReadStandardOutput()), this, SLOT(slotReceivedData()));
+    // QProcess::finished is overloaded so we have to say which form we are
+    // connecting here
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), interpreter, &TLuaInterpreter::slotDeleteSender);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slotFinish);
+    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slotReceivedData);
 
     setReadChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
@@ -66,8 +68,11 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
     running = true;
 }
 
-void TForkedProcess::slotFinish()
+void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
 {
+    Q_UNUSED(exitCode);
+    Q_UNUSED(exitStatus);
+
     running = false;
 }
 

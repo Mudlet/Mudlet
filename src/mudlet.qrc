@@ -46,13 +46,16 @@
         <file>icons/document-encrypt.png</file>
         <file>icons/document-new.png</file>
         <file>icons/document-properties.png</file>
+        <file>icons/document-save.png</file>
         <file>icons/document-save-all.png</file>
         <file>icons/document-save-as.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
+        <file>icons/edit-cut.png</file>
         <file>icons/edit-delete.png</file>
-        <file>icons/edit-delete-shred.png</file>
         <file>icons/edit-paste.png</file>
+        <file>icons/edit-select-all.png</file>
+        <file>icons/edit-web-search.png</file>
         <file>icons/errors.png</file>
         <file>icons/export.png</file>
         <file>icons/filter-grey-locked.png</file>
@@ -124,6 +127,7 @@
         <file>icons/rating.png</file>
         <file>icons/red-bomb.png</file>
         <file>icons/reinosdeleyenda_mud.png</file>
+        <file>icons/run-build-clean.png</file>
         <file>icons/searchOptions-caseSensitive.png</file>
         <file>icons/searchOptions-none.png</file>
         <file>icons/searchOptions-unspecified.png</file>
@@ -159,5 +163,7 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>send-text-to-all-games.xml</file>
+        <file>lua-function-list.json</file>
     </qresource>
 </RCC>

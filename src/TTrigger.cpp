@@ -70,6 +70,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
 , mRegisteredAnonymousLuaFunction(false)
+, mExpiryCount(-1)
 {
 }
 
@@ -105,6 +106,7 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
 , mRegisteredAnonymousLuaFunction(false)
+, mExpiryCount(-1)
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -530,6 +532,16 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
         trigger->match(filterSubject, text, -1, posOffset);
     }
     free(filterSubject);
+}
+
+int TTrigger::getExpiryCount() const
+{
+    return mExpiryCount;
+}
+
+void TTrigger::setExpiryCount(int expiryCount)
+{
+    mExpiryCount = expiryCount;
 }
 
 bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
@@ -988,6 +1000,19 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
             return true;
         }
 
+        if (conditionMet && mExpiryCount > -1) {
+            mExpiryCount--;
+
+            if (mExpiryCount == 0) {
+                mpHost->getTriggerUnit()->markCleanup(this);
+
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 expired.\n").arg(mName) >> 0;
+                }
+            } else if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::yellow), QColor(Qt::darkMagenta)) << tr("Trigger name=%1 will fire %n more time(s).\n", "", mExpiryCount).arg(mName) >> 0;
+            }
+        }
 
         return conditionMet;
     }
@@ -1325,7 +1350,17 @@ void TTrigger::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpLua->call_luafunction(this);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->call_luafunction(this);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callLuaFunctionReturnBool(this);
+            // if the function ran okay and returned true, it wants to extend the expiry count
+            if (result.first && result.second) {
+                mExpiryCount++;
+            }
+        }
         return;
     }
 
@@ -1334,9 +1369,27 @@ void TTrigger::execute()
     }
 
     if (mIsMultiline) {
-        mpLua->callMulti(mFuncName, mName);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->callMulti(mFuncName, mName);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callMultiReturnBool(mFuncName, mName);
+            if (result.second) {
+                mExpiryCount++;
+            }
+        }
     } else {
-        mpLua->call(mFuncName, mName);
+        if (Q_LIKELY(mExpiryCount <= 0)) {
+            mpLua->call(mFuncName, mName);
+        } else {
+            // if the trigger is a temporary expiring one,
+            // don't expire if it returned true
+            auto result = mpLua->callReturnBool(mFuncName, mName);
+            if (result.second) {
+                mExpiryCount++;
+            }
+        }
     }
 }
 

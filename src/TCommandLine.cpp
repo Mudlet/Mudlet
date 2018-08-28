@@ -496,7 +496,7 @@ bool TCommandLine::event(QEvent* event)
 
                 // Only process as a Control-C if it is EXACTLY those two keys
                 // and no other AND there is a selection active in the TConsole
-                mpConsole->mUpperPane->copySelectionToClipboard();
+                mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
 
@@ -632,7 +632,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             for (int i = 0; i < mHunspellSuggestionNumber; i++) {
                 QAction* pA;
                 pA = popup->addAction(sl[i]);
-                connect(pA, SIGNAL(triggered()), this, SLOT(slot_popupMenu()));
+                connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             }
             mpHunspellSuggestionList = sl;
             mPopupPosition = event->pos();

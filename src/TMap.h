@@ -57,7 +57,7 @@ class TMapLabel
 public:
     TMapLabel()
     {
-        hilite = false;
+        highlight = false;
         showOnTop = false;
         noScaling = false;
     }
@@ -70,7 +70,7 @@ public:
     QColor fgColor;
     QColor bgColor;
     QPixmap pix;
-    bool hilite;
+    bool highlight;
     bool showOnTop;
     bool noScaling;
 };

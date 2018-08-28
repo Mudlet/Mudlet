@@ -1,8 +1,0 @@
-zlib_libs= -lz
-zlib_cflags=
- 
-Name: zzip-zlib-config
-Version: 1.2.5
-Description: ZLib Config (for ZZipLib)
-Libs: ${zlib_libs}
-Cflags: ${zlib_cflags}

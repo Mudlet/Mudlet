@@ -789,9 +789,15 @@ void XMLimport::readHostPackage(Host* pHost)
     }
     pHost->mIsNextLogFileInHtmlFormat = (attributes().value("mRawStreamDump") == "yes");
     pHost->mIsLoggingTimestamps = (attributes().value("mIsLoggingTimestamps") == "yes");
-    pHost->mLogDir = attributes().value("mLogDir").toString();
-    pHost->mLogFileName = attributes().value("mLogFileName").toString();
-    pHost->mLogFileNameFormat = attributes().value("mLogFileNameFormat").toString();
+    pHost->mLogDir = attributes().value("logDirectory").toString();
+    if (attributes().hasAttribute("logFileNameFormat")) {
+        // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
+        // which is slightly different {always use 24-hour clock even if AM/PM is
+        // present (it isn't)} and that broke some code that requires an exact
+        // string to work with - now always change it to "HH":
+        pHost->mLogFileNameFormat = attributes().value("logFileNameFormat").toString().replace(QLatin1String("hh"), QLatin1String("HH"), Qt::CaseSensitive);
+        pHost->mLogFileName = attributes().value("logFileName").toString();
+    }
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
