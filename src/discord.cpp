@@ -49,7 +49,6 @@ Discord::Discord(QObject* parent)
 , mHostApplicationIDs{{nullptr, mMudletApplicationId}}
 // lowercase list of known games
 // {game name, {game addresses}}
-// The values are not currently used!
 , mKnownGames{{"midmud", {"midmud.com"}},
               {"wotmud", {"game.wotmud.org"}},
               {"luminari", {"luminarimud.com"}},
@@ -91,13 +90,8 @@ Discord::Discord(QObject* parent)
     mpHandlers->spectateGame = handleDiscordSpectateGame;
     mpHandlers->joinRequest = handleDiscordJoinRequest;
 
-    // Initialise the default Mudlet presence - we are not registering an
-    // application protocol to start a game on the player's computer from Discord:
-    qDebug().nospace().noquote() << "Discord::Discord(...) INFO - calling Discord_Initialize(\"" << mHostApplicationIDs.value(nullptr) << "\", mpHandlers, 0)";
+    // Initialise the default Mudlet presence
     Discord_Initialize(mHostApplicationIDs.value(nullptr).toUtf8().constData(), mpHandlers, 0);
-    // A new localDiscordPresence instance (with an empty key) will be generated
-    // on the first call to UpdatePresence()
-
 
     // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
     QTimer::singleShot(0, [this]() {
@@ -256,9 +250,6 @@ void Discord::handleDiscordReady(const DiscordUser* request)
     Discord::smAvatar = QString::fromUtf8(request->avatar);
     Discord::smReadWriteLock.unlock();
 
-    qDebug() << "Discord Ready received - user:" << Discord::smUserName << "descriminator:" << Discord::smDiscriminator;
-    qDebug() << "                       userId:" << Discord::smUserId << "avatar:" << Discord::smAvatar;
-
     // Must use indirection via mudlet pointer because UpdatePresence is not a static method:
     mudlet::self()->mDiscord.UpdatePresence();
 }
@@ -326,7 +317,7 @@ void Discord::UpdatePresence()
     if (mPresencePtrs.isEmpty()) {
         // First time only - with no localDiscordPresence in collection,
         // must just create the default one:
-        localDiscordPresence* pTempPresence = new localDiscordPresence;
+        auto* pTempPresence = new localDiscordPresence;
         mPresencePtrs.insert(QString(), pTempPresence);
     }
 
@@ -351,12 +342,8 @@ void Discord::UpdatePresence()
     if (mCurrentApplicationId != applicationID) {
         // It has changed - must shutdown and reopen the library instance with
         // the alternate application id:
-        qDebug() << "Discord::UpdatePresence() INFO - calling Discord_Shutdown()";
         Discord_Shutdown();
 
-        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - calling Discord_Initialize(\"" << applicationID << "\", mpHandlers, 0)";
-        // Using toUtf8() but only for paranoic reasons - toLatin1() would
-        // probably work:
         Discord_Initialize(applicationID.toUtf8().constData(), mpHandlers, 0);
         mCurrentApplicationId = applicationID;
     }
@@ -387,9 +374,14 @@ void Discord::UpdatePresence()
 
     if (pHost->mDiscordAccessFlags & Host::DiscordSetSmallIcon) {
         pDiscordPresence->setSmallImageKey(mSmallImages.value(pHost));
+    } else {
+        pDiscordPresence->setSmallImageKey(QString());
     }
+
     if (pHost->mDiscordAccessFlags & Host::DiscordSetSmallIconText) {
         pDiscordPresence->setSmallImageText(mSmallImageTexts.value(pHost));
+    } else {
+        pDiscordPresence->setSmallImageText(QString());
     }
 
     if (mPartyMax.value(pHost) && (pHost->mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
@@ -414,13 +406,10 @@ void Discord::UpdatePresence()
     }
 
     // Convert our stored presence into the format that the RPC library wants:
-    qDebug() << "Discord::UpdatePresence() INFO - calling Discord_UpdatePresence(...) using:" << *pDiscordPresence;
-
     DiscordRichPresence convertedPresence(pDiscordPresence->convert());
     Discord_UpdatePresence(&convertedPresence);
 }
 
-// TODO: This is likely to need development as more use cases come to light
 QString Discord::deduceGameName(const QString& address)
 {
     // Handle using localhost as an off-line testing case
@@ -509,7 +498,7 @@ QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
 
         return qMakePair(true, deducedName);
     } else {
-        return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);;
+        return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
     }
 }
 
@@ -548,9 +537,7 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
         UpdatePresence();
 
         return true;
-
     } else {
-
         return false;
     }
 }

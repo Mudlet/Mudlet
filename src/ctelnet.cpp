@@ -702,7 +702,6 @@ void cTelnet::processTelnetCommand(const string& command)
                 _h += TN_SB;
                 _h += GMCP;
                 _h += "External.Discord.Hello";
-                QStringList discordUserDetails = mudlet::self()->mDiscord.getDiscordUserDetails();
                 _h += TN_IAC;
                 _h += TN_SE;
 

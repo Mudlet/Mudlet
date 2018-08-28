@@ -300,7 +300,6 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
 
     if (state == Qt::Checked) {
         pHost->mDiscordDisableServerSide = false;
-        // FIXME: this requests GMCP data to get Discord data but that is NOT a requirement to use DISCORD!
         pHost->mTelnet.requestDiscordInfo();
     } else {
         pHost->mDiscordDisableServerSide = true;
