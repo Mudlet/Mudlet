@@ -389,7 +389,17 @@ else()
   find_package(HUNSPELL REQUIRED)
 endif()
 
-find_package(Boost 1.44 COMPONENTS graph)
+if(WIN32)
+  if(BOOST_INCLUDEDIR)
+  else()
+    SET(BOOST_INCLUDEDIR "C:/Libraries/boost_1_67_0")
+  endif()
+# We must not specify components as that breaks the header-only way that we use
+# the boost libraries:
+  find_package(Boost 1.44)
+else()
+  find_package(Boost 1.44 COMPONENTS graph)
+endif()
 
 add_definitions(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
