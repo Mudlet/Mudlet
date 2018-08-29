@@ -493,17 +493,17 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2731"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Назначить один или несколько символов или букв, чтобы отметить особые комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Перенести выбранную группу в заданную позицию</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Задать ID области комнат</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2746"/>
