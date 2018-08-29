@@ -829,6 +829,16 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mSearchEngineName = QString("Google");
     }
 
+    if (attributes().hasAttribute(QLatin1String("MinimumTimeForTimerDebugOutput"))) {
+        pHost->mTimerDebugOutputSuppressionInterval = QTime::fromString(attributes().value(QLatin1String("MinimumTimeForTimerDebugOutput")).toString(), QLatin1String("hh:mm:ss.zzz"));
+    } else {
+        // Ensure a null (zero) interval is used if none is stored (although the
+        // Host constructor does default to a zero value - if a previous profile
+        // save had set a different value and then another profile was read
+        // without the setting then it would not get reset in that case):
+        pHost->mTimerDebugOutputSuppressionInterval = QTime();
+    }
+
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {

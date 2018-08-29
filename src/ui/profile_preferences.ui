@@ -991,6 +991,71 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_timerDebugOutputMinimumInterval" stretch="0,1">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_timerDebugOutputMinimumInterval">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Show debug info for functional Timers only when their interval is equal to or more than (h:mm:ss.zzz):</string>
+               </property>
+               <property name="buddy">
+                <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QTimeEdit" name="timeEdit_timerDebugOutputMinimumInterval">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="wrapping">
+                <bool>true</bool>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+               <property name="buttonSymbols">
+                <enum>QAbstractSpinBox::PlusMinus</enum>
+               </property>
+               <property name="accelerated">
+                <bool>true</bool>
+               </property>
+               <property name="showGroupSeparator" stdset="0">
+                <bool>true</bool>
+               </property>
+               <property name="currentSection">
+                <enum>QDateTimeEdit::HourSection</enum>
+               </property>
+               <property name="displayFormat">
+                <string comment="Used to set a time interval only">h:mm:ss.zzz</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -2420,50 +2485,6 @@
             </property>
             <property name="tristate">
              <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>1</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Suppress non-error debug output from Timers with interval less than (h:mm:ss.zzz):</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QTimeEdit" name="timeEdit_timerDebugOutputMinimumInterval">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="wrapping">
-             <bool>true</bool>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="buttonSymbols">
-             <enum>QAbstractSpinBox::PlusMinus</enum>
-            </property>
-            <property name="accelerated">
-             <bool>true</bool>
-            </property>
-            <property name="showGroupSeparator" stdset="0">
-             <bool>true</bool>
-            </property>
-            <property name="currentSection">
-             <enum>QDateTimeEdit::SecondSection</enum>
-            </property>
-            <property name="displayFormat">
-             <string comment="Used to set a time interval only">h:mm:ss.zzz</string>
             </property>
            </widget>
           </item>

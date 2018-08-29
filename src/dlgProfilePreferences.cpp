@@ -189,6 +189,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                                "<p><i>This setting is only processed when individual menus are created and changes may not "
                                                "propogate everywhere until Mudlet is restarted.</i></p>"));
+    // Set the tooltip on the containing widget so both the label and the
+    // control have the same tool-tip:
+    widget_timerDebugOutputMinimumInterval->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                         .arg(tr("<p>If a timer has only a short interval it can quickly fill up the <i>Central Debug Console</i> "
+                                                                 "windows with messages that it ran okay on each occasion it is called; this (per profile) "
+                                                                 "control adjusts a threshold that will mute the debug output for those timers which "
+                                                                 "executed <b>correctly</b> but have an interval less than the duration set; this can be used "
+                                                                 "so that just other more useful debug output to <i>that</i> display can be seen.</p>")));
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -226,6 +234,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
+    widget_timerDebugOutputMinimumInterval->setEnabled(false);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -296,6 +305,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
+    widget_timerDebugOutputMinimumInterval->setEnabled(true);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(true);
