@@ -11118,7 +11118,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 
     float fRate;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetRate: argument expected number, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetRate: bad argument #1 type (rate as number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11155,7 +11155,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 
     float fPitch;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetPitch: argument expected number, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetPitch: bad argument #1 type (pitch as number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11192,7 +11192,7 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
 
     float fVol;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetVolume: argument expected number, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetVolume: bad argument #1 type (volume as number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11298,7 +11298,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     QString nextVoice;
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsSetVoiceByName: argument expected string, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetVoiceByName: bad argument #1 type (voice as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11338,7 +11338,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 
     int index;
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetVoiceByIndex: argument expected number, got %s!", luaL_typename(L, 1));
+        lua_pushfstring(L, "ttsSetVoiceByIndex: bad argument #1 type (voice as index number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -11434,7 +11434,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     if (lua_gettop(L) > 1) {
         if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "ttsQueueText: bad argument #2 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "ttsQueueText: bad argument #2 type (index as number expected, got %s!)", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         }
@@ -11486,7 +11486,7 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
 
     if (lua_gettop(L) > 0) {
         if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "ttsGetQueue. bad argument #1 type (optional index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "ttsGetQueue: bad argument #1 type (index as number expected, got %s!)", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         }
@@ -11549,7 +11549,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
 
     if (lua_gettop(L) > 0) {
         if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "ttsClearQueue: bad argument #1 type (optional index as int expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "ttsClearQueue: bad argument #1 type (index as number expected, got %s!)", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         }
