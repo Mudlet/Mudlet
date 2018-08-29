@@ -77,7 +77,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
       <source>! %1 sets mode %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>! %1 устанавливает режим %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
@@ -393,17 +393,17 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2226"/>
       <source>Foreground color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать изображение</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2238"/>
       <source>Draw label as background or on top of everything?</source>
-      <translation type="unfinished"/>
+      <translation>Отобразить метку в качестве фона или поверх всего?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2239"/>
@@ -418,7 +418,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2486"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Зажмите кнопку мыши, чтобы выбрать несколько комнат или меток; отпустите кнопку мыши, чтобы закончить...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2645"/>
@@ -463,32 +463,32 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2707"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Увеличить X-Y интервал карты для выбранных групп комнат</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2711"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Уменьшить X-Y интервал карты для выбранных групп комнат</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Закрыть комнату для быстрого перемещения</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2719"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Открыть комнату для быстрого перемещения</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2723"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Введите вес комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Введите выходы из комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2731"/>
