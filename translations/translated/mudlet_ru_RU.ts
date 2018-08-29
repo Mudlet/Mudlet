@@ -318,12 +318,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="106"/>
       <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column willl only show if at least one of the rooms has a name.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Нажмите на строку, чтобы выбрать или отменить выбор номера комнаты (или названия комнаты, если оно было задано), чтобы добавить или удалить комнату из выборки. Для сортировки нажмите на соответствующий заголовок. Обратите внимание, что имя столбца будет отображаться только, если хотя бы одна из комнат имеет  название.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="626"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Карта или корректная позиция недоступны.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2035"/>
@@ -363,12 +363,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2100"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
-      <translation type="unfinished"/>
+      <translation>время обработки: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2212"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>Тип метки?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2213"/>
@@ -383,12 +383,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2218"/>
       <source>Enter label text.</source>
-      <translation type="unfinished"/>
+      <translation>Введите текст метки.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2225"/>
       <source>Background color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет фона</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2226"/>
