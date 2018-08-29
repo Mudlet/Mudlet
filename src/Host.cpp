@@ -257,16 +257,19 @@ void Host::saveModules(int sync, bool backup)
 
 void Host::slot_reloadModules()
 {
+    // update the module zips
+    updateModuleZips();
+
     //synchronize modules across sessions
     QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
     QMapIterator<Host*, TConsole*> sessionIterator(activeSessions);
     while (sessionIterator.hasNext()) {
         sessionIterator.next();
-        Host* host = sessionIterator.key();
-        if (host->mHostName == mHostName) {
+        Host* otherHost = sessionIterator.key();
+        if (otherHost->getName() == mHostName) {
             continue;
         }
-        QMap<QString, int> modulePri = host->mModulePriorities;
+        QMap<QString, int> modulePri = otherHost->mModulePriorities;
         QMap<int, QStringList> moduleOrder;
         for (auto it = modulePri.keyBegin(); it != modulePri.keyEnd(); ++it) {
             moduleOrder[modulePri[*it]].append(*it);
@@ -278,14 +281,11 @@ void Host::slot_reloadModules()
             for (int i = 0, total = moduleList.size(); i < total; ++i) {
                 QString moduleName = moduleList[i];
                 if (mModulesToSync.contains(moduleName)) {
-                    host->reloadModule(moduleName);
+                    otherHost->reloadModule(moduleName);
                 }
             }
         }
     }
-
-    // update the module zips
-    updateModuleZips();
 
     // disconnect the one-time event so we're not always reloading modules whenever a profile save happens
     mModulesToSync.clear();
