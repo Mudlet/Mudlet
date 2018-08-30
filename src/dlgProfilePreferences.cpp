@@ -67,11 +67,12 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
 
-    // As we reflect the state of these next two checkboxes in the preview
-    // widget on another tab we have to track their changes in state and update
-    // that edbee widget straight away and as we can now have multiple profiles
-    // each with their own instance of this form open we have to update any open
-    // widgets of the same sort in use in ANY profile's editor immediately.
+    // As we demonstrate the options that these next two checkboxes control in
+    // the editor "preview" widget (on another tab) we will need to track
+    // changes and update the edbee widget straight away. As we can have
+    // multiple profiles each with a separate instance of this form open we also
+    // have to respond to changes in the settings when *another* profile saves
+    // them.
     checkBox_showSpacesAndTabs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
@@ -134,10 +135,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->updater->updateAutomatically());
-        // This is also one of the group of signal/slot connections that handle
-        // updating one profile's preferences form/dialog when a different
-        // profile saves new settings that are application wide - so that this
-        // instance takes on the new settings for those controls
+        // This is the extra connect(...) relating to settings' changes saved by
+        // a different profile mentioned further down in this constructor:
         connect(pMudlet->updater, &Updater::signal_automaticUpdatesChanged, this, &dlgProfilePreferences::slot_changeAutomaticUpdates);
     }
 #else
@@ -210,10 +209,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 
-    // This group of signal/slot connections handle updating one profile's
-    // preferences form/dialog when a different profile saves new settings that
-    // are application wide - so that this instance takes on the new settings
-    // for those controls:
+    // This group of signal/slot connections handle updating *this* instance of
+    // the "Profile preferences" form/dialog when a *different* profile saves
+    // new settings from it's one - there is a further connect(...) above which
+    // is also involved but it is conditional on having the updater code being
+    // included in compliation:
     connect(pMudlet, &mudlet::signal_enableFulScreenModeChanged, this, &dlgProfilePreferences::slot_changeEnableFullScreenMode);
     connect(pMudlet, &mudlet::signal_editorTextOptionsChanged, this, &dlgProfilePreferences::slot_changeEditorTextOptions);
     connect(pMudlet, &mudlet::signal_showMapAuditErrorsChanged, this, &dlgProfilePreferences::slot_changeShowMapAuditErrors);
