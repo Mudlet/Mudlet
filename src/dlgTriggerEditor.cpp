@@ -531,8 +531,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // QLineEdit does not provide a signal to hook on for the clear action
     // see https://bugreports.qt.io/browse/QTBUG-36257 for problem
     // credit to Albert for the workaround
-    for (auto i : pLineEdit_searchTerm->children()) {
-        auto *pAction_clear(qobject_cast<QAction *>(i));
+    for (auto child : pLineEdit_searchTerm->children()) {
+        auto *pAction_clear(qobject_cast<QAction *>(child));
 
         // The name was found by inspection - but as it is a QT internal it
         // might change in the future:
