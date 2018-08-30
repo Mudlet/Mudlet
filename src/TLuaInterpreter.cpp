@@ -3932,6 +3932,32 @@ int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomHashByID
+int TLuaInterpreter::getRoomHashByID(lua_State* L)
+{
+    int id;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "getRoomHashByID: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        id = lua_tonumber(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    QMapIterator<QString, int> it(host.mpMap->mpRoomDB->hashTable);
+
+    while (it.hasNext()) {
+        it.next();
+        if (it.value() == id) {
+            lua_pushstring(L, it.key().toUtf8().constData());
+            return 1;
+        }
+    }
+    lua_pushnil(L);
+    lua_pushfstring(L, "getRoomHashByID: Room %d not found.", id);
+    return 2;
+}
+
 int TLuaInterpreter::solveRoomCollisions(lua_State* L)
 {
     return 0;
@@ -5873,7 +5899,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     }
     int backgroundColor = lua_tointeger(L, 2);
 
-    int triggerID;    
+    int triggerID;
     int expiryCount = -1;
 
     if (lua_isnumber(L, 4)) {
@@ -6210,7 +6236,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempButtonToolbar
 int TLuaInterpreter::tempButtonToolbar(lua_State* L)
-{ 
+{
     QString name;
     QString cmdButtonUp = "";
     QString cmdButtonDown = "";
@@ -12702,6 +12728,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);
     lua_register(pGlobalLua, "getRoomIDbyHash", TLuaInterpreter::getRoomIDbyHash);
+    lua_register(pGlobalLua, "getRoomHashByID", TLuaInterpreter::getRoomHashByID);
     lua_register(pGlobalLua, "addAreaName", TLuaInterpreter::addAreaName);
     lua_register(pGlobalLua, "getRoomAreaName", TLuaInterpreter::getRoomAreaName);
     lua_register(pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea);
