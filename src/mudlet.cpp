@@ -2352,7 +2352,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
     mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
 
-    // TODO: At some point (between mudlet 4.0 and 4.1 perhaps) removal this "if" and only consider the QSetting - drop considering the sentinel file:
+    // PLACEMARKER: FULLSCREENMODECONTROLFILE_1_OF_2 At some point we might removal this "if" and only consider the QSetting - dropping consideration of the sentinel file:
     if (settings.contains(QStringLiteral("enableFullScreenMode"))) {
         // We have a setting stored for this
         mEnableFullScreenMode = settings.value(QStringLiteral("enableFullScreenMode"), QVariant(false)).toBool();
@@ -2510,7 +2510,6 @@ void mudlet::writeSettings()
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
-    // TODO: At some point (between mudlet 4.0 and 4.1 perhaps) remove writing the (old) sentinel file:
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
 }
 
@@ -3802,7 +3801,7 @@ QStringList mudlet::getAvailableFonts()
 
 void mudlet::setEnableFullScreenMode(const bool state)
 {
-    // TODO: At some point (between mudlet 4.0 and 4.1 perhaps) removal this entire "if" and drop maintaining the sentinel file presence/absence:
+    // PLACEMARKER: FULLSCREENMODECONTROLFILE_2_OF_2 At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
     if (state != mEnableFullScreenMode) {
         mEnableFullScreenMode = state;
         QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));

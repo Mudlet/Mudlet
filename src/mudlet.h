@@ -348,9 +348,9 @@ public:
     void setEnableFullScreenMode(const bool);
 
     // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
-    // will eventually (Mudlet 4.0?) migrate to the "EnableFullScreenMode" in
-    // the main QSetting file - there is no need to have it stored as a file now
-    // except to maintain backwards compatibility...
+    // may eventually migrate solely to the "EnableFullScreenMode" in the main
+    // QSetting file - it is only stored as a file now to maintain backwards
+    // compatibility...
     bool mEnableFullScreenMode;
 
 public slots:
