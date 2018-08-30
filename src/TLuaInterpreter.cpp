@@ -3785,7 +3785,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "getRoomName: bad argument #1 value (number %d is not a valid room id).", id);
+        lua_pushfstring(L, "room %d doesn't exist", id);
         return 2;
     }
 }
@@ -3954,7 +3954,7 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
         }
     }
     lua_pushnil(L);
-    lua_pushfstring(L, "getRoomHashByID: Room %d not found.", id);
+    lua_pushfstring(L, "room %d doesn't exist", id);
     return 2;
 }
 
