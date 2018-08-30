@@ -4646,7 +4646,7 @@ int TLuaInterpreter::getRooms(lua_State* L)
     while (it.hasNext()) {
         it.next();
         lua_pushnumber(L, it.key());
-        lua_pushstring(L, it.value()->name.toLatin1().data());
+        lua_pushstring(L, it.value()->name.toUtf8().constData());
         lua_settable(L, -3);
     }
     return 1;
