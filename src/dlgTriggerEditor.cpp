@@ -196,7 +196,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
-    edbee::StringTextAutoCompleteProvider* provider = new edbee::StringTextAutoCompleteProvider();
+    auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
@@ -531,8 +531,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // QLineEdit does not provide a signal to hook on for the clear action
     // see https://bugreports.qt.io/browse/QTBUG-36257 for problem
     // credit to Albert for the workaround
-    for (int i(0); i < pLineEdit_searchTerm->children().size(); ++i) {
-        auto *pAction_clear(qobject_cast<QAction *>(pLineEdit_searchTerm->children().at(i)));
+    for (auto child : pLineEdit_searchTerm->children()) {
+        auto *pAction_clear(qobject_cast<QAction *>(child));
 
         // The name was found by inspection - but as it is a QT internal it
         // might change in the future:
@@ -4717,7 +4717,7 @@ void dlgTriggerEditor::saveKey()
 
 void dlgTriggerEditor::slot_set_pattern_type_color(int type)
 {
-    QComboBox* pBox = qobject_cast<QComboBox*>(sender());
+    auto* pBox = qobject_cast<QComboBox*>(sender());
     if (!pBox) {
         return;
     }
