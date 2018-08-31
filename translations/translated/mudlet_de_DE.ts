@@ -1948,7 +1948,12 @@ Mudlet - is your system running out of memory?</source>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ] - Der fehlende Bereich heißt nun:
+(ID) ==&gt; &quot;Name&quot;</numerusform>
+        <numerusform>[ INFO ] - Die fehlenden Bereiche heißen nun:
+(ID) ==&gt; &quot;Name&quot;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="751"/>
