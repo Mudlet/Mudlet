@@ -192,11 +192,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
     widget_timerDebugOutputMinimumInterval->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                         .arg(tr("<p>If a timer has only a short interval it can quickly fill up the <i>Central Debug Console</i> "
-                                                                 "windows with messages that it ran okay on each occasion it is called; this (per profile) "
-                                                                 "control adjusts a threshold that will mute the debug output for those timers which "
-                                                                 "executed <b>correctly</b> but have an interval less than the duration set; this can be used "
-                                                                 "so that just other more useful debug output to <i>that</i> display can be seen.</p>")));
+                                                         .arg(tr("<p>A timer will a short interval will quickly fill up the <i>Central Debug Console</i> "
+                                                                 "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
+                                                                 "control adjusts a threshold that will hide those messages in just that window for those timers which "
+                                                                 "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
+                                                                 "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>")));
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
