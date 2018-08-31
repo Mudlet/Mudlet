@@ -1970,7 +1970,8 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Die neuen Bereichs-ID lauten:
+Alt ==&gt; Neu</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="781"/>
