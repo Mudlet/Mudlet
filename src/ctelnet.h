@@ -31,10 +31,10 @@
 #include <QHostInfo>
 #include <QPointer>
 #include <QStringList>
-#ifndef QT_NO_SSL
-#include <QSslSocket>
-#else
+#if defined(QT_NO_SSL)
 #include <QTcpSocket>
+#else
+#include <QSslSocket>
 #endif
 #include <QTime>
 #include "post_guard.h"
@@ -145,7 +145,7 @@ public:
     const QString& getFriendlyEncoding();
     QAbstractSocket::SocketError error();
     QString errorString();
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
     QList<QSslError> getSslErrors();
 #endif
@@ -192,12 +192,10 @@ private:
     void processChunks();
 
     QPointer<Host> mpHost;
-#ifndef QT_NO_SSL
-    QSslSocket socket;
-    void handle_socket_signal_sslError(const QList<QSslError> &errors);
-
-#else
+#if defined(QT_NO_SSL)
     QTcpSocket socket;
+#else
+    QSslSocket socket;
 #endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
@@ -255,6 +253,12 @@ private:
     bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
+
+private slots:
+
+#if !defined(QT_NO_SSL)
+    void handle_socket_signal_sslError(const QList<QSslError> &errors);
+#endif
 };
 
 #endif // MUDLET_CTELNET_H

@@ -216,6 +216,9 @@ public:
     bool mAutoReconnect;
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
+    bool mSslIgnoreCertificateChain;
+    bool mSslIgnoreAll;
+
     bool mIsGoingDown;
     bool mIsProfileLoadingSequence;
 
@@ -359,9 +362,6 @@ signals:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
-    void encrypted();
-    void connected();
-    void error();
 
 private:
     QScopedPointer<LuaInterface> mLuaInterface;

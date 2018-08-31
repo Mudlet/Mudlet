@@ -159,7 +159,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     notificationAreaIconLabelInformation->hide();
     notificationAreaMessageBox->hide();
 
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl()) {
         port_ssl_tsl->setEnabled(true);
     } else
@@ -196,7 +196,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 // accepting invalid data
 void dlgConnectionProfiles::accept()
 {
-    if (validateConnect()) {
+    if (validName && validUrl && validPort) {
         slot_connectToServer();
         QDialog::accept();
     }
@@ -250,7 +250,7 @@ void dlgConnectionProfiles::slot_update_url(const QString &url)
         return;
     }
 
-    validateHost();
+    validateProfile();
 }
 
 void dlgConnectionProfiles::slot_update_autologin(int state)
@@ -279,17 +279,18 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
 
     if (ignoreBlank.isEmpty()) {
         validPort = false;
-        if (connect_button)
+        if (connect_button) {
             connect_button->setDisabled(true);
+        }
         return;
     }
 
-    validateHost();
+    validateProfile();
 }
 
 void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 {
-    validateHost();
+    validateProfile();
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (!pItem) {
         return;
@@ -300,7 +301,7 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 
 void dlgConnectionProfiles::slot_update_name(const QString newName)
 {
-    validateHost();
+    validateProfile();
 
 }
 
@@ -308,12 +309,12 @@ void dlgConnectionProfiles::slot_save_name()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     QString newProfileName = profile_name_entry->text().trimmed();
+    validName = true;
 
     if (notificationAreaIconLabelError->isVisible() || newProfileName.isEmpty()) {
         return;
     }
 
-    validName = true;
     if (pItem) {
         QString currentProfileEditName = pItem->text();
         int row = mProfileList.indexOf(currentProfileEditName); // This returns -1 if currentProfileEditName not present!
@@ -549,10 +550,9 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->raise();
 }
 
-void dlgConnectionProfiles::validateHost()
+void dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
-
 
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -575,7 +575,6 @@ void dlgConnectionProfiles::validateHost()
             valid = false;
         }
 
-
         bool ok;
         int num = port.trimmed().toInt(&ok);
         if (num > 65536 && ok) {
@@ -586,11 +585,11 @@ void dlgConnectionProfiles::validateHost()
             valid = false;
         }
 
-#ifndef QT_NO_SSL
-        if (port_ssl_tsl->isChecked() && !QSslSocket::supportsSsl())
+#if defined(QT_NO_SSL)
+        if (port_ssl_tsl->isChecked() && port_ssl_tsl->isEnabled())
         {
 #else
-        if (port_ssl_tsl->isChecked() && port_ssl_tsl->isEnabled())
+        if (port_ssl_tsl->isChecked() && !QSslSocket::supportsSsl())
         {
 #endif
             notificationAreaIconLabelError->show();
@@ -631,11 +630,13 @@ void dlgConnectionProfiles::validateHost()
             notificationAreaIconLabelError->hide();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->hide();
-            validUrl = true;
             validPort = true;
             validUrl = true;
-            validateConnect();
 
+            if (connect_button) {
+                connect_button->setEnabled(true);
+                connect_button->setToolTip(QString());
+            }
 
             QString profile = pItem->text();
             writeProfileData(profile, QStringLiteral("port"), port);
@@ -644,7 +645,10 @@ void dlgConnectionProfiles::validateHost()
         } else {
             notificationArea->show();
             notificationAreaMessageBox->show();
-            connect_button->setDisabled(true);
+            if (connect_button) {
+                connect_button->setDisabled(true);
+                connect_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+            }
         }
     }
 }
@@ -964,7 +968,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
 
     val = readProfileData(profile, QStringLiteral("autoreconnect"));
-    if (val.toInt() == Qt::Checked) {
+    if (!val.isEmpty() && val.toInt() == Qt::Checked) {
         auto_reconnect->setChecked(true);
     } else {
         auto_reconnect->setChecked(false);
@@ -1678,7 +1682,7 @@ void dlgConnectionProfiles::slot_connectToServer()
             slot_update_port(QString::number(pHost->getPort()));
         }
 
-        pHost->mSslTsl = (bool) port_ssl_tsl->checkState();
+        pHost->mSslTsl = port_ssl_tsl->isChecked();
 
         if (character_password_entry->text().trimmed().size() > 0) {
             pHost->setPass(character_password_entry->text().trimmed());
@@ -1718,24 +1722,6 @@ void dlgConnectionProfiles::slot_connectToServer()
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
     emit signal_establish_connection(profile_name, 0);
 }
-
-bool dlgConnectionProfiles::validateConnect()
-{
-    if (validName && validUrl && validPort) {
-        if (connect_button) {
-            connect_button->setEnabled(true);
-            connect_button->setToolTip(QString());
-        }
-        return true;
-    }
-
-    if (connect_button) {
-        connect_button->setDisabled(true);
-        connect_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
-    }
-    return false;
-}
-
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
 void dlgConnectionProfiles::copyFolder(QString sourceFolder, QString destFolder)

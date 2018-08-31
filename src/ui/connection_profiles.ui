@@ -2348,7 +2348,7 @@
                <enum>Qt::RightToLeft</enum>
               </property>
               <property name="text">
-               <string>SSL \ TSL Port</string>
+               <string>Secure Port</string>
               </property>
              </widget>
             </item>

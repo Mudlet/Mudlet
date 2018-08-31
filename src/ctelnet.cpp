@@ -126,8 +126,8 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
     connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
     //connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
- #ifndef QT_NO_SSL
-    connect(&socket, qOverload<const QList<QSslError>&> (&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+ #if !defined(QT_NO_SSL)
+    connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
 #endif
 
     // initialize telnet session
@@ -217,7 +217,7 @@ const QString& cTelnet::getComputerEncoding(const QString& encoding)
     return TBuffer::getComputerEncoding(encoding);
 }
 
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
 
 QSslCertificate cTelnet::getPeerCertificate()
 {
@@ -298,19 +298,6 @@ void cTelnet::connectIt(const QString& address, int port)
         return;
     }
 
-#ifndef QT_NO_SSL
-    if (mpHost->mSslTsl) {
-        QList<QSslError> exceptions =QList<QSslError>();
-        if (mpHost->mSslIgnoreExpired) {
-            exceptions.append(QSslError::CertificateExpired);
-        }
-        if (mpHost->mSslIgnoreSelfSigned) {
-            exceptions.append(QSslError::SelfSignedCertificate);
-        }
-        socket.ignoreSslErrors(exceptions);
-    }
-#endif
-
     hostName = address;
     hostPort = port;
     QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
@@ -343,11 +330,17 @@ void cTelnet::slot_send_pass()
 
 void cTelnet::handle_socket_signal_connected()
 {
-    reset();
+    QString msg;
 
+    reset();
     setKeepAlive(socket.socketDescriptor());
 
-    QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
+    if (mpHost->mSslTsl)
+    {
+        msg = "[ INFO ]  - A secure connection has been established successfully.\n    \n    ";
+    } else {
+        msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
+    }
     postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
@@ -380,7 +373,7 @@ void cTelnet::handle_socket_signal_disconnected()
     reset();
     QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
     QString spacer = "    ";
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
     bool sslerr = (!socket.sslErrors().empty() ||
                    (socket.error() == QAbstractSocket::SslHandshakeFailedError) ||
                    (socket.error() == QAbstractSocket::SslInvalidUserDataError) ||
@@ -395,7 +388,7 @@ void cTelnet::handle_socket_signal_disconnected()
         postMessage(msg);
     }
 
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
     if (sslerr) {
         mudlet::self()->show_options_dialog("Security");
     }
@@ -406,35 +399,40 @@ void cTelnet::handle_socket_signal_disconnected()
     }
 }
 
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
 void cTelnet::handle_socket_signal_sslError(const QList<QSslError> &errors)
 {
-    QSslError::SslError expired = QSslError::CertificateExpired;
-    QSslError::SslError selfsigned = QSslError::SelfSignedCertificate;
+//socket.ignoreSslErrors();
+    auto cert = socket.peerCertificate();
+    QList<QSslError> ignoreErrorList;
+
     if (mpHost->mSslIgnoreExpired) {
-        //errors.removeOne(<QSslError::SslError *> &expired);
+        ignoreErrorList<<QSslError(QSslError::CertificateExpired,cert);
     }
     if (mpHost->mSslIgnoreSelfSigned) {
-        //errors.removeOne(const_cast<QSslError::SslError *> &selfsigned);
+        ignoreErrorList<<QSslError(QSslError::SelfSignedCertificate,cert);
     }
-    if (errors.isEmpty()) {
-        socket.ignoreSslErrors();
+    if (mpHost->mSslIgnoreCertificateChain) {
+        ignoreErrorList<<QSslError(QSslError::UnableToGetLocalIssuerCertificate,cert);
     }
+
+    if (mpHost->mSslIgnoreAll)
+    {
+    socket.ignoreSslErrors(errors);
+    } else
+    {
+    socket.ignoreSslErrors(ignoreErrorList);
+    }
+
 }
 #endif
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
-#ifndef QT_NO_SSL
-    if (mpHost->mSslTsl) {
-        QList<QSslError> exceptions =QList<QSslError>();
-        if (mpHost->mSslIgnoreExpired) {
-            exceptions.append(QSslError::CertificateExpired);
-        }
-        if (mpHost->mSslIgnoreSelfSigned) {
-            exceptions.append(QSslError::SelfSignedCertificate);
-        }
-        socket.ignoreSslErrors(exceptions);
+#if !defined(QT_NO_SSL)
+    if (mpHost->mSslTsl)
+    {
+        postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
     } else
