@@ -5777,6 +5777,10 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded(true);
     std::list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : baseNodeList_alias) {
+        if (alias->isTemporary()) {
+            continue;
+        }
+
         QString s = alias->getName();
         QStringList sList;
         sList << s;
