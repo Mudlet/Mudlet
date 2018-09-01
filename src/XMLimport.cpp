@@ -822,6 +822,10 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("mThemePreviewType"))) {
         pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     }
+    qDebug() << "(attributes().value(\"mAutocompleteAutoShow\"))" << (attributes().value("mAutocompleteAutoShow"));
+    qDebug() << "(attributes().value(\"mAutocompleteAutoShow\") != \"no\")" << (attributes().value("mAutocompleteAutoShow") != "no");
+    pHost->mAutocompleteAutoShow = (attributes().value("mAutocompleteAutoShow") != "no");
+    qDebug() << "pHost->mAutocompleteAutoShow =" << pHost->mAutocompleteAutoShow;
 
     if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();

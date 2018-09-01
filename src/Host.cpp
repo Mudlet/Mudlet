@@ -89,6 +89,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWrapIndentCount(0)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
+, mAutocompleteAutoShow(true)
 , mThemePreviewItemID(-1)
 , mThemePreviewType(QString())
 , mBlack(Qt::black)

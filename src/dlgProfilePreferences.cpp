@@ -875,6 +875,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setIndentSize(2);
     config->setThemeName(pHost->mEditorTheme);
     config->setCaretWidth(1);
+    config->setAutocompleteAutoShow(pHost->mAutocompleteAutoShow);
     config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->mDisplayFont);
@@ -907,6 +908,8 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setDuplicatesEnabled(true);
 
     theme_download_label->hide();
+
+    checkBox_autocompleteAutoShow->setChecked(pHost->mAutocompleteAutoShow);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -2040,6 +2043,9 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+
+        pHost->mAutocompleteAutoShow = checkBox_autocompleteAutoShow->isChecked();
+
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }

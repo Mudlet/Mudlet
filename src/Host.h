@@ -107,6 +107,8 @@ public:
     KeyUnit* getKeyUnit() { return &mKeyUnit; }
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
 
+    dlgTriggerEditor* getDlgTriggerEditor() { return mpEditorDialog; }
+
     void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
     void sendRaw(QString s);
@@ -266,6 +268,8 @@ public:
     QString mEditorTheme;
     // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
+    // code editor autocomplete automatically displays while typing
+    bool mAutocompleteAutoShow;
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
