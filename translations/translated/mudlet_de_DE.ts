@@ -3494,7 +3494,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="550"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Standard, empfohlen}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="561"/>
