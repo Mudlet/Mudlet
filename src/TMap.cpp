@@ -1534,7 +1534,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
             || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
+            || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
