@@ -3479,12 +3479,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="479"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="480"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>Benannte Datei (Logs in einer Datei aneinander hängen)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="512"/>
