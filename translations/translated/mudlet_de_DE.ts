@@ -3449,7 +3449,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="129"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Automatische Updates sind in Entwicklungsversionen deaktiviert, um zu verhindern, dass ein Update dein Mudlet überschreibt</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
@@ -3464,17 +3464,17 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="473"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="475"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="476"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="479"/>
