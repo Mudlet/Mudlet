@@ -1495,7 +1495,11 @@ void dlgProfilePreferences::downloadMap()
         mudlet::self()->createMapper(false);
     }
 
-    pHost->mpMap->downloadMap();
+    if (pHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
+        pHost->mpMap->downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
+    } else {
+        pHost->mpMap->downloadMap();
+    }
 }
 
 void dlgProfilePreferences::loadMap()
