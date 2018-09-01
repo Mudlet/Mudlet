@@ -3751,7 +3751,8 @@ int TLuaInterpreter::setRoomName(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->name = name;
-        lua_pushboolean(L, true); // Might conceivably wish to update the mappers after this...!
+        updateMap(L);
+        lua_pushboolean(L, true);
         return 1;
     } else {
         lua_pushnil(L);
@@ -7129,13 +7130,13 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
-        // Update mapper Area names widget, using method designed for it...!
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
                 host.mpMap->mpMapper->showArea->setCurrentText(newName);
             }
         }
+        updateMap(L);
     }
     lua_pushboolean(L, result);
     return 1;
