@@ -1713,25 +1713,25 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="958"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Entferne in Raum ID:%1 den ungültigen (besonderen) Ausgang zu %2 {ohne Name!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="965"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Raum hatte einen ungültigen (besonderen) Ausgang zu %1 {ohne Name!} - dieser wurde entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Behebe im Raum ID:%1 den (besonderen) Ausgang zu %2 {interne Korrektur}, von: &quot;%3&quot; zu: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1014"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Korrigiere im Raum mit ID: %1 den besonderen Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1055"/>
