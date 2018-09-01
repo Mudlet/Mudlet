@@ -7781,6 +7781,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
         if (host.mpMap->mpMapper) {
             if (host.mpMap->mpMapper->mp2dMap) {
                 host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom);
+                updateMap(L);
             }
         }
     }
