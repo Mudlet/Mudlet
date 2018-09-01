@@ -1161,9 +1161,6 @@
                 <height>16777215</height>
                </size>
               </property>
-              <property name="toolTip">
-               <string/>
-              </property>
               <property name="text">
                <string>only pass matches to children as trigger input</string>
               </property>
