@@ -3372,27 +3372,27 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timers</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="41"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="46"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="51"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Buttons</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="62"/>
@@ -3402,27 +3402,27 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="75"/>
       <source>Add Files</source>
-      <translation type="unfinished"/>
+      <translation>Dateien hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>Speicherort für Export:</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="95"/>
       <source>Select</source>
-      <translation type="unfinished"/>
+      <translation>Wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="64"/>
       <source>&amp;Export</source>
-      <translation type="unfinished"/>
+      <translation>&amp; Exportieren</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="130"/>
       <source>Failed to export - couldn&apos;t open %1 for writing in. Do you have the necessary permissions to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Exportieren - Konnte %1 nicht für das Schreiben öffnen. Haben Sie die notwendigen Berechtigungen zum Schreiben in diesem Ordner?</translation>
     </message>
   </context>
   <context>
@@ -3430,7 +3430,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="103"/>
       <source>&lt;p&gt;Location which will be used to store log files - matching logs will be appended to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Standort, der zum Speichern von Log-Dateien verwendet wird - übereinstimmende Logs werden angehängt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="104"/>
