@@ -3499,12 +3499,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="561"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Neuere Version, experimentell/testweise, NICHT empfohlen}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="563"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Ältere Version, zum Austausch mit anderen Benutzern, NICHT empfohlen}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="572"/>
