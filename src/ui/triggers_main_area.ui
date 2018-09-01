@@ -1117,7 +1117,7 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>act as filter, i.e. only pass matches to its children to trigger on, instead of the original line from the MUD</string>
+            <string>&lt;p&gt;Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)&lt;/p&gt;</string>
            </property>
            <property name="title">
             <string>filter</string>
@@ -1162,7 +1162,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)</string>
+               <string/>
               </property>
               <property name="text">
                <string>only pass matches to children as trigger input</string>
