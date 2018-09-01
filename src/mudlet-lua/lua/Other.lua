@@ -418,6 +418,10 @@ function speedwalk(dirString, backwards, delay, show)
   local walkdelay = delay
   if show ~= false then show = true end
   local walklist = {}
+  local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
+  for k,v in pairs(long_dir) do
+    dirString = dirString:gsub(k,v)
+  end
   local reversedir = {
     n = "s",
     en = "sw",
