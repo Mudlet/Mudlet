@@ -185,9 +185,11 @@ map.help = [[
         in implementing more advanced scripts and functions that rely on map information.
 ]]
 
-map.recall = map.recall or {}
 map.character = map.character or ""
 map.prompt = map.prompt or {}
+map.save = map.save or {}
+map.save.recall = map.save.recall or {}
+map.save.prompt_pattern = map.save.prompt_pattern or {}
 
 local oldstring = string
 local string = utf8
@@ -202,7 +204,6 @@ map.configs = {
     stretch_map = true,
     search_on_look = true,
     prompt_test_patterns = {"^&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]"},
-    prompt_pattern = nil,
     custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
                         -- ex: { us = {"upsouth", "downnorth", 0, -1, 1}, dn = {"downnorth", "upsouth", 0, 1, -1} }
 }
@@ -260,6 +261,7 @@ local function config()
     end
 
     make_aliases()
+    table.load(getMudletHomeDir() .. "/map_save.dat",map.save)
 end
 
 local move_queue = {}
@@ -582,11 +584,6 @@ local function find_link(name, exits, dir, max_distance)
     end
 end
 
-local function get_recall()
-    table.load(getMudletHomeDir() .. "/map_recalls.dat",map.recall)
-    return map.recall[map.character]
-end
-
 local function move_map()
     -- tries to move the map to the next room
     local move = table.remove(move_queue,1)
@@ -616,8 +613,8 @@ local function move_map()
             print("CREATING PORTAL DESTINATION")
             create_room(currentName, currentExits, nil, {getRoomCoordinates(currentRoom)})
             force_portal = false
-        elseif move == "recall" then
-            set_room(get_recall())
+        elseif move == "recall" and map.save.recall[map.character] then
+            set_room(map.save.recall[map.character])
         elseif move == "look" then
             map.find_me(currentName,currentExits)
         else
@@ -867,8 +864,8 @@ end
 
 function map.set_recall()
     -- assigned the current room to be recall for the current character
-    map.recall[map.character] = currentRoom
-    table.save(getMudletHomeDir() .. "/map_recalls.dat",map.recall)
+    map.save.recall[map.character] = currentRoom
+    table.save(getMudletHomeDir() .. "/map_save.dat",map.save)
     print("Recall room set to: " .. getRoomName(currentRoom) .. ".")
 end
 
@@ -1157,7 +1154,8 @@ end
 
 function map.make_prompt_pattern(str)
     str = str:gsub("%*",".*")
-    map.configs.prompt_pattern = "^"..str
+    map.save.prompt_pattern[map.character] = "^"..str
+    table.save(getMudletHomeDir() .. "/map_save.dat",map.save)
 end
 
 local function grab_line()
@@ -1165,7 +1163,8 @@ local function grab_line()
     if find_prompt then
         for k,v in ipairs(map.configs.prompt_test_patterns) do
             if string.match(line,v) then
-                map.configs.prompt_pattern = v
+                map.save.prompt_pattern[map.character] = v
+                table.save(getMudletHomeDir() .. "/map_save.dat",map.save)
                 find_prompt = false
                 break
             end
@@ -1176,7 +1175,7 @@ end
 local function name_search()
     local line_count = #lines
     local room_name, cur_line, last_line
-    local prompt_pattern = map.configs.prompt_pattern
+    local prompt_pattern = map.save.prompt_pattern[map.character]
     if not prompt_pattern then return end
     while not room_name do
         line_count = line_count - 1
