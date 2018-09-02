@@ -7135,8 +7135,8 @@ int TLuaInterpreter::setAreaName(lua_State* L)
             if (isCurrentAreaRenamed) {
                 host.mpMap->mpMapper->showArea->setCurrentText(newName);
             }
+            updateMap(L);
         }
-        updateMap(L);
     }
     lua_pushboolean(L, result);
     return 1;
