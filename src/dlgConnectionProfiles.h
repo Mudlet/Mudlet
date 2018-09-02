@@ -26,65 +26,59 @@
 #include "ui_connection_profiles.h"
 #include "post_guard.h"
 
-class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
+class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
 public:
-
-    dlgConnectionProfiles(QWidget * parent = 0);
+    Q_DISABLE_COPY(dlgConnectionProfiles)
+    dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
-    void copy_profile( QString );
-    void writeProfileData( QString, QString, QString );
-    QString readProfileData( QString, QString );
-    QStringList readProfileHistory( QString, QString );
+    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    QString readProfileData(QString, QString);
     void accept() override;
 
 signals:
-
-    void signal_establish_connection( QString profile_name, int historyVersion );
+    void signal_establish_connection(QString profile_name, int historyVersion);
 
 public slots:
-
-    void slot_update_name( const QString ) ;
-    void slot_save_name() ;
-    void slot_update_url( const QString ) ;
-    void slot_update_port( const QString ) ;
-    void slot_update_login( const QString );
-    void slot_update_pass( const QString );
-    void slot_update_website( const QString );
-    void slot_deleteprofile_check (const QString);
+    void slot_update_name(QString);
+    void slot_save_name();
+    void slot_update_url(const QString &);
+    void slot_update_port(QString);
+    void slot_update_login(const QString &);
+    void slot_update_pass(const QString &);
+    void slot_update_website(const QString &);
+    void slot_deleteprofile_check(QString);
     void slot_update_description();
 
-    void slot_item_clicked( QListWidgetItem * );
+    void slot_item_clicked(QListWidgetItem*);
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
 
-    void slot_update_autologin( int state );
+    void slot_update_autologin(int state);
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();
 
-
 private:
-    bool removeDir( QString dirName, QString originalPath );
     void copyFolder(QString sourceFolder, QString destFolder);
+    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
 
     bool validName;
     bool validUrl;
     bool validPort;
     bool validateConnect();
 
-    QStringList        mProfileList;
-    QPalette           mRegularPalette;
-    QPalette           mOKPalette;
-    QPalette           mErrorPalette;
-    QPalette           mReadOnlyPalette;
-    QPushButton *      connect_button;
-    QLineEdit *        delete_profile_lineedit;
-    QPushButton *      delete_button;
-
+    QStringList mProfileList;
+    QPalette mRegularPalette;
+    QPalette mOKPalette;
+    QPalette mErrorPalette;
+    QPalette mReadOnlyPalette;
+    QPushButton* connect_button;
+    QLineEdit* delete_profile_lineedit;
+    QPushButton* delete_button;
 };
 
 #endif // MUDLET_DLGCONNECTIONPROFILES_H

@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,50 +22,57 @@
 
 #include "dlgNotepad.h"
 
-
-#include "Host.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDir>
 #include "post_guard.h"
 
-
-dlgNotepad::dlgNotepad( Host * pH )
-: mpHost( pH )
-
+dlgNotepad::dlgNotepad(Host* pH)
+: mpHost(pH)
 {
     setupUi(this);
+
+    if (mpHost) {
+        restore();
+    }
 }
 
+dlgNotepad::~dlgNotepad()
+{
+    // Safety step, just in case:
+    if (mpHost && mpHost->mpNotePad) {
+        save();
+        mpHost->mpNotePad = nullptr;
+    }
+}
 
 void dlgNotepad::save()
 {
-    QString directoryFile = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName();
-    QString fileName = directoryFile + "/notes.txt";
+    QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
+    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"));
     QDir dirFile;
-    if( ! dirFile.exists( directoryFile ) )
-    {
-        dirFile.mkpath( directoryFile );
+    if (!dirFile.exists(directoryFile)) {
+        dirFile.mkpath(directoryFile);
     }
     QFile file;
-    file.setFileName( fileName );
-    file.open( QIODevice::WriteOnly );
+    file.setFileName(fileName);
+    file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
-    fileStream.setDevice( &file );
+    fileStream.setDevice(&file);
     fileStream << notesEdit->toPlainText();
     file.close();
 }
 
 void dlgNotepad::restore()
 {
-    QString directoryFile = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName();
-    QString fileName = directoryFile + "/notes.txt";
-    QDir dirFile;
+    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"));
     QFile file;
-    file.setFileName( fileName );
-    file.open( QIODevice::ReadOnly );
+    file.setFileName(fileName);
+    file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
-    fileStream.setDevice( &file );
+    fileStream.setDevice(&file);
     QString txt = fileStream.readAll();
     notesEdit->setPlainText(txt);
+    file.close();
 }

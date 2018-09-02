@@ -24,9 +24,9 @@
 
 
 #include "Host.h"
+#include "TAction.h"
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
-#include "TAction.h"
 
 #include "pre_guard.h"
 #include <QMenu>
@@ -34,8 +34,8 @@
 #include <QStylePainter>
 #include "post_guard.h"
 
-TFlipButton::TFlipButton( TAction * pTAction, Host * pHost )
-: QPushButton( 0 )
+TFlipButton::TFlipButton(TAction* pTAction, Host* pHost)
+: QPushButton( nullptr )
 , mpTAction( pTAction )
 , mID( pTAction->getID() )
 , mpHost( pHost )
@@ -49,17 +49,16 @@ Qt::Orientation TFlipButton::orientation() const
     return mOrientation;
 }
 
-void TFlipButton::setOrientation( Qt::Orientation orientation )
+void TFlipButton::setOrientation(Qt::Orientation orientation)
 {
     mOrientation = orientation;
-    switch( orientation )
-    {
+    switch (orientation) {
     case Qt::Horizontal:
-        setSizePolicy( QSizePolicy::Minimum, QSizePolicy::Fixed );
+        setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
         break;
-        
+
     case Qt::Vertical:
-        setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Minimum );
+        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
         break;
     }
 }
@@ -69,7 +68,7 @@ bool TFlipButton::mirrored() const
     return mMirrored;
 }
 
-void TFlipButton::setMirrored( bool mirrored )
+void TFlipButton::setMirrored(bool mirrored)
 {
     mMirrored = mirrored;
 }
@@ -77,8 +76,7 @@ void TFlipButton::setMirrored( bool mirrored )
 QSize TFlipButton::sizeHint() const
 {
     QSize size = QPushButton::sizeHint();
-    if( mOrientation == Qt::Vertical )
-    {
+    if (mOrientation == Qt::Vertical) {
         size.transpose();
     }
     return size;
@@ -87,59 +85,58 @@ QSize TFlipButton::sizeHint() const
 QSize TFlipButton::minimumSizeHint() const
 {
     QSize size = QPushButton::minimumSizeHint();
-    if( mOrientation == Qt::Vertical )
-    {
+    if (mOrientation == Qt::Vertical) {
         size.transpose();
     }
     return size;
 }
 
-void TFlipButton::paintEvent( QPaintEvent * event )
+void TFlipButton::paintEvent(QPaintEvent* event)
 {
-    Q_UNUSED( event );
-    QStylePainter p( this );
-    
-    switch( mOrientation )
-    {
+    Q_UNUSED(event);
+    QStylePainter p(this);
+
+    switch (mOrientation) {
     case Qt::Horizontal:
-        if( mMirrored )
-        {
-            p.rotate( 180 );
-            p.translate( -width(), -height() );
+        if (mMirrored) {
+            p.rotate(180);
+            p.translate(-width(), -height());
         }
         break;
-        
+
     case Qt::Vertical:
-        if( mMirrored )
-        {
-            p.rotate( -90 );
-            p.translate( -height(), 0 );
-        }
-        else
-        {
-            p.rotate( 90 );
-            p.translate( 0, -width() );
+        if (mMirrored) {
+            p.rotate(-90);
+            p.translate(-height(), 0);
+        } else {
+            p.rotate(90);
+            p.translate(0, -width());
         }
         break;
     }
-    
-    p.drawControl( QStyle::CE_PushButton, getStyleOption() );
+
+    p.drawControl(QStyle::CE_PushButton, getStyleOption());
 }
 
 QStyleOptionButton TFlipButton::getStyleOption() const
 {
     QStyleOptionButton opt;
-    opt.initFrom( this );
-    if( mOrientation == Qt::Vertical )
-    {
+    opt.initFrom(this);
+    if (mOrientation == Qt::Vertical) {
         QSize size = opt.rect.size();
         size.transpose();
         opt.rect.setSize(size);
     }
     opt.features = QStyleOptionButton::None;
-    if( menu() ) opt.features |= QStyleOptionButton::HasMenu;
-    if( isDown() || ( menu() && menu()->isVisible() ) ) opt.state |= QStyle::State_Sunken;
-    if( isChecked() ) opt.state |= QStyle::State_On;
+    if (menu()) {
+        opt.features |= QStyleOptionButton::HasMenu;
+    }
+    if (isDown() || (menu() && menu()->isVisible())) {
+        opt.state |= QStyle::State_Sunken;
+    }
+    if (isChecked()) {
+        opt.state |= QStyle::State_On;
+    }
     opt.text = text();
     opt.icon = icon();
     opt.iconSize = iconSize();

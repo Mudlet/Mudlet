@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>color_trigger_dlg</class>
- <widget class="QDialog" name="color_trigger_dlg">
+ <class>color_trigger</class>
+ <widget class="QDialog" name="color_trigger">
   <property name="windowModality">
    <enum>Qt::ApplicationModal</enum>
   </property>
@@ -12,9 +12,6 @@
     <width>364</width>
     <height>270</height>
    </rect>
-  </property>
-  <property name="windowTitle">
-   <string>Dialog</string>
   </property>
   <property name="modal">
    <bool>true</bool>
@@ -42,7 +39,7 @@
     </rect>
    </property>
    <property name="title">
-    <string>chose color to trigger on</string>
+    <string>choose color to trigger on</string>
    </property>
    <layout class="QGridLayout" name="gridLayout_8">
     <item row="0" column="0">

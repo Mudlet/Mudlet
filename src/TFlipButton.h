@@ -34,28 +34,28 @@ class TAction;
 class TFlipButton : public QPushButton
 {
 public:
-    TFlipButton( TAction *, Host * );
+    TFlipButton(TAction*, Host*);
 
     Qt::Orientation orientation() const;
-    void            setOrientation( Qt::Orientation );
+    void setOrientation(Qt::Orientation);
 
-    bool            mirrored() const;
-    void            setMirrored( bool );
+    bool mirrored() const;
+    void setMirrored(bool);
 
-    QSize           sizeHint() const override;
-    QSize           minimumSizeHint() const override;
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
 
 protected:
-    void            paintEvent( QPaintEvent * ) override;
+    void paintEvent(QPaintEvent*) override;
 
 public:
-    QStyleOptionButton  getStyleOption() const;
+    QStyleOptionButton getStyleOption() const;
 
-    TAction *       mpTAction;
-    int             mID;
-    QPointer<Host>  mpHost;
+    TAction* mpTAction;
+    int mID;
+    QPointer<Host> mpHost;
     Qt::Orientation mOrientation;
-    bool            mMirrored;
+    bool mMirrored;
 };
 
 #endif // MUDLET_TFLIPBUTTON_H

@@ -37,35 +37,31 @@ class QGridLayout;
 
 class TEasyButtonBar : public QWidget
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
-                     TEasyButtonBar( TAction *, QString, QWidget * pW = 0 );
-    void             addButton( TFlipButton * pW );
-    void             setVerticalOrientation(){ mVerticalOrientation = true; }
-    void             setHorizontalOrientation(){ mVerticalOrientation = false; }
-    void             clear();
-    void             finalize();
-    TAction *        mpTAction;
-    void             recordMove(){ mRecordMove = true; }
+    Q_DISABLE_COPY(TEasyButtonBar)
+    TEasyButtonBar(TAction*, QString, QWidget* pW = nullptr);
+    void addButton(TFlipButton* pW);
+    void setVerticalOrientation() { mVerticalOrientation = true; }
+    void setHorizontalOrientation() { mVerticalOrientation = false; }
+    void clear();
+    void finalize();
+    TAction* mpTAction;
+    void recordMove() { mRecordMove = true; }
 
-//private:
-
-    bool             mVerticalOrientation;
-    QWidget *        mpWidget;
-    QString          mName;
-    bool             mRecordMove;
-    QGridLayout *    mpLayout;
-    int              mItemCount;
-    QWidget *        mpBar;
-    std::list<TFlipButton *> mButtonList;
-
-signals:
-
+private:
+    bool mVerticalOrientation;
+    QWidget* mpWidget;
+    QString mName;
+    bool mRecordMove;
+    QGridLayout* mpLayout;
+    int mItemCount;
+    QWidget* mpBar;
+    std::list<TFlipButton*> mButtonList;
 
 public slots:
-
-    void            slot_pressed( const bool );
+    void slot_pressed(bool);
 };
 
 #endif // MUDLET_TEASYBUTTONBAR_H

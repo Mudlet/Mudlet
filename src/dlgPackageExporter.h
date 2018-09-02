@@ -41,10 +41,11 @@ class dlgPackageExporter : public QDialog
     Q_OBJECT
 
 public:
-    explicit dlgPackageExporter(QWidget *parent = 0);
-    explicit dlgPackageExporter(QWidget *parent, Host*);
+    Q_DISABLE_COPY(dlgPackageExporter)
+    explicit dlgPackageExporter(QWidget* parent = nullptr);
+    explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
-    void recurseTree(QTreeWidgetItem *, QList<QTreeWidgetItem *>&);
+    void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
     void listTriggers();
     void recurseTriggers(TTrigger*, QTreeWidgetItem*);
     void listAliases();
@@ -57,32 +58,33 @@ public:
     void recurseActions(TAction*, QTreeWidgetItem*);
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
-    QMap<QTreeWidgetItem *, TTrigger*> triggerMap;
-    QMap<QTreeWidgetItem *, TTrigger*> modTriggerMap;
-    QMap<QTreeWidgetItem *, TAlias*> aliasMap;
-    QMap<QTreeWidgetItem *, TAlias*> modAliasMap;
-    QMap<QTreeWidgetItem *, TScript*> scriptMap;
-    QMap<QTreeWidgetItem *, TScript*> modScriptMap;
-    QMap<QTreeWidgetItem *, TKey*> keyMap;
-    QMap<QTreeWidgetItem *, TKey*> modKeyMap;
-    QMap<QTreeWidgetItem *, TAction*> actionMap;
-    QMap<QTreeWidgetItem *, TAction*> modActionMap;
-    QMap<QTreeWidgetItem *, TTimer*> timerMap;
-    QMap<QTreeWidgetItem *, TTimer*> modTimerMap;
+    QMap<QTreeWidgetItem*, TTrigger*> triggerMap;
+    QMap<QTreeWidgetItem*, TTrigger*> modTriggerMap;
+    QMap<QTreeWidgetItem*, TAlias*> aliasMap;
+    QMap<QTreeWidgetItem*, TAlias*> modAliasMap;
+    QMap<QTreeWidgetItem*, TScript*> scriptMap;
+    QMap<QTreeWidgetItem*, TScript*> modScriptMap;
+    QMap<QTreeWidgetItem*, TKey*> keyMap;
+    QMap<QTreeWidgetItem*, TKey*> modKeyMap;
+    QMap<QTreeWidgetItem*, TAction*> actionMap;
+    QMap<QTreeWidgetItem*, TAction*> modActionMap;
+    QMap<QTreeWidgetItem*, TTimer*> timerMap;
+    QMap<QTreeWidgetItem*, TTimer*> modTimerMap;
     QString filePath;
+
+public slots:
+    void slot_addFiles();
+    void slot_export_package();
+
 private:
-    Ui::dlgPackageExporter *ui;
+    Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
-    QTreeWidget * treeWidget;
-    QPushButton *exportButton;
-    QPushButton *closeButton;
+    QTreeWidget* treeWidget;
+    QPushButton* exportButton;
+    QPushButton* closeButton;
     QString tempDir;
     QString packageName;
     QString zipFile;
-public slots:
-    void slot_addFiles();
-// Not used:    void slot_browse_button();
-    void slot_export_package();
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

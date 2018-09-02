@@ -37,21 +37,20 @@ class TDebug
     QColor bgColor;
 
 public:
-    TDebug( QColor, QColor );
+    TDebug(QColor, QColor);
     ~TDebug();
-    TDebug & operator>>( const int );
-    TDebug & operator<<( const QString & t );
-    TDebug & operator<<( const int & t );
-    TDebug & operator<<( QString & t );
-    TDebug & operator<<( const QMap<QString, QString> &map );
-    TDebug & operator<<( const QMap<QString, int> &map );
-    TDebug & operator<<( const QMap<int, QString> &map );
-    TDebug & operator<<( const QMap<int, int> &map );
-    TDebug & operator<<( const QList<QString> &list );
-    TDebug & operator<<( const QList<int> &list );
+    TDebug& operator>>(int);
+    TDebug& operator<<(const QString& t);
+    TDebug& operator<<(const int& t);
+    TDebug& operator<<(const QMap<QString, QString>& map);
+    TDebug& operator<<(const QMap<QString, int>& map);
+    TDebug& operator<<(const QMap<int, QString>& map);
+    TDebug& operator<<(const QMap<int, int>& map);
+    TDebug& operator<<(const QList<QString>& list);
+    TDebug& operator<<(const QList<int>& list);
 
 private:
-    TDebug(){};
+    TDebug() = default;
 };
 
 #endif // MUDLET_TDEBUG_H

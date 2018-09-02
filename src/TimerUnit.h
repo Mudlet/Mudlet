@@ -23,8 +23,8 @@
 
 
 #include "pre_guard.h"
-#include <QMutex>
 #include <QMultiMap>
+#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -41,51 +41,50 @@ class TimerUnit
     friend class XMLimport;
 
 public:
-                          TimerUnit( Host * pHost ) : statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0), mpHost(pHost), mMaxID(0) {;}
-    void                  removeAllTempTimers();
-    std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
-    TTimer *              getTimer( int id );
-    TTimer *              findTimer(const QString & name );
-    void                  compileAll();
-    bool                  enableTimer(const QString & );
-    bool                  disableTimer(const QString & );
-    bool                  killTimer(const QString & name );
-    bool                  registerTimer( TTimer * pT );
-    void                  unregisterTimer( TTimer * pT );
-    void                  reParentTimer( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    void                  stopAllTriggers();
-    void                  reenableAllTriggers();
-    void                  markCleanup( TTimer * );
-    void                  doCleanup();
-    QString               assembleReport();
-    int                     getNewID();
-    void                  uninstall( QString );
-    void                  _uninstall( TTimer * pChild, QString packageName );
+    TimerUnit(Host* pHost) : statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0), mpHost(pHost), mMaxID(0), mModuleMember() {}
+    void removeAllTempTimers();
+    std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
+    TTimer* getTimer(int id);
+    TTimer* findTimer(const QString& name);
+    void compileAll();
+    bool enableTimer(const QString&);
+    bool disableTimer(const QString&);
+    bool killTimer(const QString& name);
+    bool registerTimer(TTimer* pT);
+    void unregisterTimer(TTimer* pT);
+    void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void stopAllTriggers();
+    void reenableAllTriggers();
+    void markCleanup(TTimer*);
+    void doCleanup();
+    QString assembleReport();
+    int getNewID();
+    void uninstall(QString);
+    void _uninstall(TTimer* pChild, QString packageName);
 
 
-    QMultiMap<QString, TTimer *> mLookupTable;
-    QMutex                mTimerUnitLock;
-    int                   statsActiveTriggers;
-    int                   statsTriggerTotal;
-    int                   statsTempTriggers;
-    QList<TTimer*>        uninstallList;
+    QMultiMap<QString, TTimer*> mLookupTable;
+    QMutex mTimerUnitLock;
+    int statsActiveTriggers;
+    int statsTriggerTotal;
+    int statsTempTriggers;
+    QList<TTimer*> uninstallList;
 
 private:
-    TimerUnit(){;}
-    void                  _assembleReport(TTimer *);
-    TTimer *              getTimerPrivate( int id );
-    void                  addTimerRootNode( TTimer * pT, int parentPosition = -1, int childPosition = -1 );
-    void                  addTimer( TTimer * pT );
-    void                  _removeTimerRootNode( TTimer * pT );
-    void                  _removeTimer( TTimer *);
-    QPointer<Host>        mpHost;
-    QMap<int, TTimer *>   mTimerMap;
-    std::list<TTimer *>   mTimerRootNodeList;
-    int                     mMaxID;
-    bool                  mModuleMember;
-    std::list<TTimer *>   mCleanupList;
+    TimerUnit() = default;
 
-
+    void _assembleReport(TTimer*);
+    TTimer* getTimerPrivate(int id);
+    void addTimerRootNode(TTimer* pT, int parentPosition = -1, int childPosition = -1);
+    void addTimer(TTimer* pT);
+    void _removeTimerRootNode(TTimer* pT);
+    void _removeTimer(TTimer*);
+    QPointer<Host> mpHost;
+    QMap<int, TTimer*> mTimerMap;
+    std::list<TTimer*> mTimerRootNodeList;
+    int mMaxID;
+    bool mModuleMember;
+    std::list<TTimer*> mCleanupList;
 };
 
 #endif // MUDLET_TIMERUNIT_H

@@ -19,14 +19,14 @@ fi
 
 if [ ! -z "${DEPLOY_URL}" ]; then
   curl \
-    --data-urlencode "message=Deployed Mudlet \`${VERSION}${BUILD}\` (${TRAVIS_OS_NAME}${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
+    --data-urlencode "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${TRAVIS_OS_NAME}${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
     https://webhooks.gitter.im/e/cc99072d43b642c4673a
 fi
 
 echo ""
 echo "******************************************************"
 echo ""
-echo "Finished building Mudlet ${VERSION}${BUILD}"
+echo "Finished building Mudlet ${VERSION}${MUDLET_VERSION_BUILD}"
 if [ ! -z "${DEPLOY_URL}" ]; then
   echo "Deployed the output to ${DEPLOY_URL}"
 fi

@@ -23,8 +23,8 @@
 
 
 #include "pre_guard.h"
-#include <QMutex>
 #include <QMultiMap>
+#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -41,61 +41,61 @@ class AliasUnit
     friend class XMLimport;
 
 public:
-                                    AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
-    std::list<TAlias *>             getAliasRootNodeList()   { return mAliasRootNodeList; }
-    TAlias *                        getAlias( int id );
-    void                            compileAll();
-    TAlias *                        findAlias(const QString & name );
-    bool                            enableAlias(const QString & );
-    bool                            disableAlias(const QString & );
-    bool                            killAlias(const QString & name );
-    bool                            registerAlias( TAlias * pT );
-    void                            unregisterAlias( TAlias * pT );
-    void                            uninstall( QString );
-    void                            _uninstall( TAlias * pChild, QString packageName );
-    void                            reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    bool                            processDataStream(const QString & );
-    void                            setAliasStayOpen( QString, int );
-    void                            stopAllTriggers();
-    void                            reenableAllTriggers();
-    QString                         assembleReport();
-    int                             getNewID();
-    void                            markCleanup( TAlias * pT );
-    void                            doCleanup();
+    AliasUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mModuleMember() { initStats(); }
+    std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
+    TAlias* getAlias(int id);
+    void compileAll();
+    TAlias* findAlias(const QString& name);
+    bool enableAlias(const QString&);
+    bool disableAlias(const QString&);
+    bool killAlias(const QString& name);
+    bool registerAlias(TAlias* pT);
+    void unregisterAlias(TAlias* pT);
+    void uninstall(const QString&);
+    void _uninstall(TAlias* pChild, const QString& packageName);
+    void reParentAlias(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    bool processDataStream(const QString&);
+    void stopAllTriggers();
+    void reenableAllTriggers();
+    QString assembleReport();
+    int getNewID();
+    void markCleanup(TAlias* pT);
+    void doCleanup();
 
-    QMultiMap<QString, TAlias *>    mLookupTable;
-    std::list<TAlias *>             mCleanupList;
-    QMutex                          mAliasUnitLock;
-    int                             statsAliasTotal;
-    int                             statsTempAliass;
-    int                             statsActiveAliass;
-    int                             statsActiveAliassMax;
-    int                             statsActiveAliassMin;
-    int                             statsActiveAliassAverage;
-    int                             statsTempAliassCreated;
-    int                             statsTempAliassKilled;
-    int                             statsAverageLineProcessingTime;
-    int                             statsMaxLineProcessingTime;
-    int                             statsMinLineProcessingTime;
-    int                             statsRegexAliass;
-    QList<TAlias*>                  uninstallList;
+    QMultiMap<QString, TAlias*> mLookupTable;
+    std::list<TAlias*> mCleanupList;
+    QMutex mAliasUnitLock;
+    int statsAliasTotal;
+    int statsTempAliases;
+    int statsActiveAliases;
+    int statsActiveAliasesMax;
+    int statsActiveAliasesMin;
+    int statsActiveAliasesAverage;
+    int statsTempAliasesCreated;
+    int statsTempAliasesKilled;
+    int statsAverageLineProcessingTime;
+    int statsMaxLineProcessingTime;
+    int statsMinLineProcessingTime;
+    int statsRegexAliases;
+    QList<TAlias*> uninstallList;
 
 
 private:
-                                    AliasUnit(){;}
-    void                            initStats();
-    void                            _assembleReport( TAlias * );
-    TAlias *                        getAliasPrivate( int id );
-    void                            addAliasRootNode( TAlias * pT, int parentPosition = -1, int childPosition = -1, bool moveAlias = false );
-    void                            addAlias( TAlias * pT );
-    void                            removeAliasRootNode( TAlias * pT );
-    void                            removeAlias( TAlias *);
+    AliasUnit() = default;
 
-    QPointer<Host>                  mpHost;
-    QMap<int, TAlias *>             mAliasMap;
-    std::list<TAlias *>             mAliasRootNodeList;
-    int                             mMaxID;
-    bool                            mModuleMember;
+    void initStats();
+    void _assembleReport(TAlias*);
+    TAlias* getAliasPrivate(int id);
+    void addAliasRootNode(TAlias* pT, int parentPosition = -1, int childPosition = -1, bool moveAlias = false);
+    void addAlias(TAlias* pT);
+    void removeAliasRootNode(TAlias* pT);
+    void removeAlias(TAlias*);
+
+    QPointer<Host> mpHost;
+    QMap<int, TAlias*> mAliasMap;
+    std::list<TAlias*> mAliasRootNodeList;
+    int mMaxID;
+    bool mModuleMember;
 };
 
 #endif // MUDLET_ALIASUNIT_H

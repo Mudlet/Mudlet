@@ -32,6 +32,7 @@ class dlgActionMainArea : public QWidget, public Ui::actions_main_area
     Q_OBJECT
 
 public:
+    Q_DISABLE_COPY(dlgActionMainArea)
     dlgActionMainArea(QWidget*);
 };
 

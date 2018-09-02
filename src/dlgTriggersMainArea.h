@@ -32,7 +32,14 @@ class dlgTriggersMainArea : public QWidget, public Ui::trigger_main_area
     Q_OBJECT
 
 public:
+    Q_DISABLE_COPY(dlgTriggersMainArea)
     dlgTriggersMainArea(QWidget*);
+
+    // public function allow to trim even when QLineEdit::editingFinished()
+    // is not raised. Example: When the user saves without leaving the LineEdit
+    void trimName();
+private slots:
+    void slot_editing_name_finished();
 };
 
 #endif // MUDLET_DLGTRIGGERSMAINAREA_H

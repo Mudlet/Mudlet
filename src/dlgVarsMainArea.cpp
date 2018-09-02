@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,31 +22,68 @@
 
 #include "dlgVarsMainArea.h"
 
+#include "pre_guard.h"
+#include <QListWidgetItem>
+#include "post_guard.h"
+
+extern "C" {
+#include <lua.h>
+}
 
 dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
-    key_type->setItemData(0, -1, Qt::UserRole);
-    key_type->setItemData(1, 4, Qt::UserRole);
-    key_type->setItemData(2, 3, Qt::UserRole);
-    var_type->setItemData(0, -1, Qt::UserRole);
-    var_type->setItemData(1, 4, Qt::UserRole);
-    var_type->setItemData(2, 3, Qt::UserRole);
-    var_type->setItemData(3, 1, Qt::UserRole);
-    var_type->setItemData(4, 5, Qt::UserRole);
-    /*var_type->setText("Variable Name Type");
-    var_type->setPopupMode(QToolButton::InstantPopup);
-    QMenu * varTypeMenu = new QMenu(var_type);
-    varTypeMenu->addAction("String(default)");
-    varTypeMenu->addAction("Integer");
-    var_type->setMenu(varTypeMenu);
-    value_type->setText("Variable Value Type");
-    value_type->setPopupMode(QToolButton::InstantPopup);
-    QMenu * valueTypeMenu = new QMenu(value_type);
-    valueTypeMenu->addAction("String(default)");
-    valueTypeMenu->addAction("Integer");
-    valueTypeMenu->addAction("Boolean");
-    value_type->setMenu(valueTypeMenu);
-    hideVariable->setText("Hidden Variable");*/
+
+    // Modify the normal QComboBoxes with customised data models that impliment
+    // https://stackoverflow.com/a/21376774/4805858 so that individual entries
+    // can be "disabled":
+    // Key type widget:
+
+    // Magic - part 1 set up a replacement data model:
+    auto *contents = new QListWidget(comboBox_variable_key_type);
+    contents->hide();
+    comboBox_variable_key_type->setModel(contents->model());
+
+    // Now populate the widget - throw away stuff entered from form design
+    // before substitute model was attached:
+    comboBox_variable_key_type->clear();
+    comboBox_variable_key_type->insertItem(0, tr("Auto-Type"), -1); // LUA_TNONE
+    comboBox_variable_key_type->insertItem(1, tr("key (string)"), 4);  // LUA_TSTRING
+    comboBox_variable_key_type->insertItem(2, tr("index (integer number)"), 3);  // LUA_TNUMBER
+    comboBox_variable_key_type->insertItem(3, tr("table (use \"Add Group\" to create)"), 5);  // LUA_TTABLE
+    comboBox_variable_key_type->insertItem(4, tr("function (cannot create from GUI)"), 6);  // LUA_TFUNCTION
+
+    // Magic - part 2 use the features of the substitute data model to disable
+    // the required entries - they can still be set programmatically for display
+    // purposes:
+    // Disable table type:
+    QListWidgetItem *item = contents->item(3);
+    item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+
+    // Disable function type:
+    item = contents->item(4);
+    item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+
+
+    // Value type widget:
+    // Magic - part 1 set up a replacement data model:
+    contents = new QListWidget(comboBox_variable_value_type);
+    contents->hide();
+    comboBox_variable_value_type->setModel(contents->model());
+
+    // Now populate the widget - throw away stuff entered from form design
+    // before substitute model was attached:
+    comboBox_variable_value_type->clear();
+    comboBox_variable_value_type->insertItem(0, tr("Auto-Type"), LUA_TNONE);
+    comboBox_variable_value_type->insertItem(1, tr("string"), LUA_TSTRING);
+    comboBox_variable_value_type->insertItem(2, tr("number"), LUA_TNUMBER);
+    comboBox_variable_value_type->insertItem(3, tr("boolean"), LUA_TBOOLEAN);
+    comboBox_variable_value_type->insertItem(4, tr("table"), LUA_TTABLE);
+    comboBox_variable_value_type->insertItem(5, tr("function"), LUA_TFUNCTION);
+
+    // Magic - part 2 use the features of the substitute data model:
+    // Disable function type:
+    item = contents->item(5);
+    item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
 }

@@ -1,0 +1,34 @@
+# This file does not signify real code owners. We use it to automate the 
+# process of assigning code reviews. But generally all members of the
+# project own the whole product.
+
+# Normally, *.ui, *.cpp and *.h files are reviewed by the core-cpp team only
+# All files containing UI text are reviewed by the ui-review team
+*.cpp                           @Mudlet/core-cpp @Mudlet/ui-review
+*.h                             @Mudlet/core-cpp
+*.ui                            @Mudlet/core-cpp @Mudlet/ui-review
+
+# But the lua interface has additional reviewers
+/src/LuaInterface.cpp           @Mudlet/core-cpp @Mudlet/lua-interface @Mudlet/ui-review
+/src/LuaInterface.h             @Mudlet/core-cpp @Mudlet/lua-interface
+/src/TLuaInterpreter.cpp        @Mudlet/core-cpp @Mudlet/lua-interface @Mudlet/ui-review
+/src/TLuaInterpreter.h          @Mudlet/core-cpp @Mudlet/lua-interface
+
+# The lua-interface team is also reviewing everything below the mudlet-lua
+# folder and some pre-installed packages
+/src/mudlet-lua/                @Mudlet/lua-interface
+/src/3k-mapper.xml              @Mudlet/lua-interface
+/src/deleteOldProfiles.xml      @Mudlet/lua-interface
+/src/echo.xml                   @Mudlet/lua-interface
+/src/generic_mapper_script.xml  @Mudlet/lua-interface
+/src/mudlet-mapper.xml          @Mudlet/lua-interface
+/src/run-lua-code-v4.xml        @Mudlet/lua-interface
+
+# CI and compiler files are reviewed by the infrastructure team
+.travis.yml                     @Mudlet/infrastructure
+.appveyor.yml                   @Mudlet/infrastructure
+/CI/                            @Mudlet/infrastructure
+*.pro                           @Mudlet/infrastructure
+*.pri                           @Mudlet/infrastructure
+CMakeLists.txt                  @Mudlet/infrastructure
+/cmake/                         @Mudlet/infrastructure

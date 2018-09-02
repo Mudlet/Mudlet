@@ -35,35 +35,34 @@ class Host;
 class TMap;
 
 
-class dlgMapper : public QWidget , public Ui::mapper
+class dlgMapper : public QWidget, public Ui::mapper
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
-        dlgMapper( QWidget *, Host *, TMap * );
-        void updateAreaComboBox();
-    void                setDefaultAreaShown( const bool );
-    bool                getDefaultAreaShown() { return mShowDefaultArea; }
-    void                resetAreaComboBoxToPlayerRoomArea();
-
-    TMap *              mpMap;
-    QPointer<Host>      mpHost;
-
+    Q_DISABLE_COPY(dlgMapper)
+    dlgMapper(QWidget*, Host*, TMap*);
+    void updateAreaComboBox();
+    void setDefaultAreaShown(bool);
+    bool getDefaultAreaShown() { return mShowDefaultArea; }
+    void resetAreaComboBoxToPlayerRoomArea();
 
 public slots:
-        void slot_bubbles();
-        void slot_info();
-        void slot_toggleShowRoomIDs(int s);
-        void slot_toggleStrongHighlight( int v );
-        void show2dView();
-        void slot_togglePanel();
-        void goRoom();
-        void choseRoom( QListWidgetItem * );
-        void slot_roomSize(int d);
-        void slot_lineSize(int d);
+    void slot_bubbles();
+    void slot_info();
+    void slot_toggleShowRoomIDs(int s);
+    void slot_toggleStrongHighlight(int v);
+    void show2dView();
+    void slot_togglePanel();
+    void goRoom();
+    void choseRoom(QListWidgetItem*);
+    void slot_roomSize(int d);
+    void slot_lineSize(int d);
 
 private:
-    bool                mShowDefaultArea;
+    TMap* mpMap;
+    QPointer<Host> mpHost;
+    bool mShowDefaultArea;
 };
 
 #endif // MUDLET_DLGMAPPER_H

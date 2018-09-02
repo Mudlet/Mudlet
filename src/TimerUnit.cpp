@@ -23,298 +23,254 @@
 
 
 #include "Host.h"
-#include "TLuaInterpreter.h"
 #include "TTimer.h"
 
 
 using namespace std;
 
-void TimerUnit::_uninstall( TTimer * pChild, QString packageName )
+void TimerUnit::_uninstall(TTimer* pChild, QString packageName)
 {
-    list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
-    {
-        TTimer * pT = *it2;
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+    list<TTimer*>* childrenList = pChild->mpMyChildrenList;
+    for (auto timer : *childrenList) {
+        _uninstall(timer, packageName);
+        uninstallList.append(timer);
     }
 }
 
 
-void TimerUnit::uninstall( QString packageName )
+void TimerUnit::uninstall(QString packageName)
 {
-    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
-    {
-        TTimer * pT = *it;
-
-        if( pT->mPackageName == packageName )
-        {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+    for (auto rootTimer : mTimerRootNodeList) {
+        if (rootTimer->mPackageName == packageName) {
+            _uninstall(rootTimer, packageName);
+            uninstallList.append(rootTimer);
         }
     }
-    for( int i=0; i<uninstallList.size(); i++ )
-    {
-        unregisterTimer(uninstallList[i]);
+    for (auto& timer : uninstallList) {
+        unregisterTimer(timer);
     }
-     uninstallList.clear();
+    uninstallList.clear();
 }
 
 void TimerUnit::stopAllTriggers()
 {
-    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        pChild->disableTimer( pChild->getID() );
+    for (auto timer : mTimerRootNodeList) {
+        timer->disableTimer(timer->getID());
     }
 }
 
 void TimerUnit::compileAll()
 {
-    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        if( pChild->isActive() )
-        {
-            pChild->mNeedsToBeCompiled = true;
+    for (auto timer : mTimerRootNodeList) {
+        if (timer->isActive()) {
+            timer->mNeedsToBeCompiled = true;
         }
     }
 }
 
 void TimerUnit::reenableAllTriggers()
 {
-    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        pChild->enableTimer( pChild->getID() );
+    for (auto timer : mTimerRootNodeList) {
+        timer->enableTimer(timer->getID());
     }
 }
 
 
-void TimerUnit::addTimerRootNode( TTimer * pT, int parentPosition, int childPosition )
+void TimerUnit::addTimerRootNode(TTimer* pT, int parentPosition, int childPosition)
 {
-    if( ! pT ) return;
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
+    if (!pT) {
+        return;
+    }
+    if (!pT->getID()) {
+        pT->setID(getNewID());
     }
 
-    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mTimerRootNodeList.size()) ) )
-    {
-        mTimerRootNodeList.push_back( pT );
-    }
-    else
-    {
+    if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTimerRootNodeList.size()))) {
+        mTimerRootNodeList.push_back(pT);
+    } else {
         // insert item at proper position
         int cnt = 0;
-        for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
-        {
-            if( cnt >= childPosition )
-            {
-                mTimerRootNodeList.insert( it, pT );
+        for (auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++) {
+            if (cnt >= childPosition) {
+                mTimerRootNodeList.insert(it, pT);
                 break;
             }
             cnt++;
         }
     }
 
-    mTimerMap.insert( pT->getID(), pT );
+    mTimerMap.insert(pT->getID(), pT);
     // kein lookup table eintrag siehe addTimer()
 }
 
-void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
+void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
-    TTimer * pOldParent = getTimerPrivate( oldParentID );
-    TTimer * pNewParent = getTimerPrivate( newParentID );
-    TTimer * pChild = getTimerPrivate( childID );
-    if( ! pChild )
-    {
+    TTimer* pOldParent = getTimerPrivate(oldParentID);
+    TTimer* pNewParent = getTimerPrivate(newParentID);
+    TTimer* pChild = getTimerPrivate(childID);
+    if (!pChild) {
         return;
     }
 
-    pChild->disableTimer( childID );
+    pChild->disableTimer(childID);
 
-    if( pOldParent )
-    {
-        pOldParent->popChild( pChild );
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
     }
-    if( ! pOldParent )
-    {
-        mTimerRootNodeList.remove( pChild );
+    if (!pOldParent) {
+        mTimerRootNodeList.remove(pChild);
     }
-    if( pNewParent )
-    {
-        pNewParent->addChild( pChild, parentPosition, childPosition );
-        if( pChild ) pChild->setParent( pNewParent );
-    }
-    else
-    {
-        pChild->Tree<TTimer>::setParent( 0 );
-        addTimerRootNode( pChild, parentPosition, childPosition );
+    if (pNewParent) {
+        pNewParent->addChild(pChild, parentPosition, childPosition);
+        pChild->setParent(pNewParent);
+    } else {
+        pChild->Tree<TTimer>::setParent(nullptr);
+        addTimerRootNode(pChild, parentPosition, childPosition);
     }
 
-    pChild->enableTimer( childID );
+    pChild->enableTimer(childID);
 }
 
 void TimerUnit::removeAllTempTimers()
 {
     mCleanupList.clear();
-    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        if( pChild->isTempTimer() )
-        {
-            pChild->killTimer();
-            pChild->mOK_code = false; //important to not crash on stale Lua function args
-            markCleanup( pChild );
+    for (auto timer : mTimerRootNodeList) {
+        if (timer->isTemporary()) {
+            timer->killTimer();
+            timer->mOK_code = false; //important to not crash on stale Lua function args
+            markCleanup(timer);
         }
     }
 }
 
-void TimerUnit::_removeTimerRootNode( TTimer * pT )
+void TimerUnit::_removeTimerRootNode(TTimer* pT)
 {
-    if( ! pT ) return;
+    if (!pT) {
+        return;
+    }
     // temp timers do not need to check for names referring to multiple different
     // objects as names=ID -> much faster tempTimer creation
-    if( ! pT->mIsTempTimer )
-    {
-        mLookupTable.remove( pT->mName, pT );
+    if (!pT->isTemporary()) {
+        mLookupTable.remove(pT->mName, pT);
+    } else {
+        mLookupTable.remove(pT->getName());
     }
-    else
-        mLookupTable.remove( pT->getName() );
 
-    mTimerMap.remove( pT->getID() );
-    mTimerRootNodeList.remove( pT );
+    mTimerMap.remove(pT->getID());
+    mTimerRootNodeList.remove(pT);
 }
 
-TTimer * TimerUnit::getTimer( int id )
+TTimer* TimerUnit::getTimer(int id)
 {
-    if( mTimerMap.find( id ) != mTimerMap.end() )
-    {
-        return mTimerMap.value( id );
-    }
-    else
-    {
-        return 0;
+    if (mTimerMap.find(id) != mTimerMap.end()) {
+        return mTimerMap.value(id);
+    } else {
+        return nullptr;
     }
 }
 
-TTimer * TimerUnit::getTimerPrivate( int id )
+TTimer* TimerUnit::getTimerPrivate(int id)
 {
-    if( mTimerMap.find( id ) != mTimerMap.end() )
-    {
-        return mTimerMap.value( id );
-    }
-    else
-    {
-        return 0;
+    if (mTimerMap.find(id) != mTimerMap.end()) {
+        return mTimerMap.value(id);
+    } else {
+        return nullptr;
     }
 }
 
-bool TimerUnit::registerTimer( TTimer * pT )
+bool TimerUnit::registerTimer(TTimer* pT)
 {
-    if( ! pT ) return false;
+    if (!pT) {
+        return false;
+    }
 
-    if( pT->getParent() )
-    {
-        addTimer( pT );
-        pT->setIsActive( false );
+    if (pT->getParent()) {
+        addTimer(pT);
+        pT->setIsActive(false);
         return true;
-    }
-    else
-    {
-        addTimerRootNode( pT );
-        pT->setIsActive( false );
+    } else {
+        addTimerRootNode(pT);
+        pT->setIsActive(false);
         return true;
     }
 }
 
-void TimerUnit::unregisterTimer( TTimer * pT )
+void TimerUnit::unregisterTimer(TTimer* pT)
 {
-    if( ! pT ) return;
+    if (!pT) {
+        return;
+    }
     pT->deactivate();
     pT->stop();
-    if( pT->getParent() )
-    {
-        _removeTimer( pT );
+    if (pT->getParent()) {
+        _removeTimer(pT);
         return;
-    }
-    else
-    {
-        _removeTimerRootNode( pT );
+    } else {
+        _removeTimerRootNode(pT);
         return;
     }
 }
 
 
-
-void TimerUnit::addTimer( TTimer * pT )
+void TimerUnit::addTimer(TTimer* pT)
 {
-    if( ! pT ) return;
-
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
+    if (!pT) {
+        return;
     }
 
-    mTimerMap.insert( pT->getID(), pT );
+    if (!pT->getID()) {
+        pT->setID(getNewID());
+    }
+
+    mTimerMap.insert(pT->getID(), pT);
     // in den lookup table wird der timer erst dann eingetragen, wenn er auch einen namen hat -> setName()
 }
 
-void TimerUnit::_removeTimer( TTimer * pT )
+void TimerUnit::_removeTimer(TTimer* pT)
 {
-    if( ! pT ) return;
+    if (!pT) {
+        return;
+    }
 
     // temp timers do not need to check for names referring to multiple different
     // objects as names=ID -> much faster tempTimer creation
-    if( ! pT->mIsTempTimer )
-    {
-        mLookupTable.remove( pT->mName, pT );
+    if (!pT->isTemporary()) {
+        mLookupTable.remove(pT->mName, pT);
+    } else {
+        mLookupTable.remove(pT->getName());
     }
-    else
-        mLookupTable.remove( pT->getName() );
-    mTimerMap.remove( pT->getID() );
+    mTimerMap.remove(pT->getID());
 }
 
 
-bool TimerUnit::enableTimer(const QString & name )
+bool TimerUnit::enableTimer(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTimer * pT = it.value();
+    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
+        TTimer* pT = it.value();
 
-        if( ! pT->isOffsetTimer() )
-           /* ret = */ pT->setIsActive( true );
-        else
-            pT->setShouldBeActive( true );
+        if (!pT->isOffsetTimer()) {
+            /* ret = */ pT->setIsActive(true);
+        } else {
+            pT->setShouldBeActive(true);
+        }
 
 
-        if( pT->isFolder() )
-        {
+        if (pT->isFolder()) {
             // disable or enable all timers in the respective branch
             // irrespective of the user defined state.
-            if( pT->shouldBeActive() )
-            {
+            if (pT->shouldBeActive()) {
                 pT->enableTimer();
-            }
-            else
-            {
+            } else {
                 pT->disableTimer();
             }
-        }
-        else
-        {
-            if( pT->isOffsetTimer() )
-            {
+        } else {
+            if (pT->isOffsetTimer()) {
                 // state of offset timers is managed by the trigger engine
-                if( pT->shouldBeActive() )
-                {
+                if (pT->shouldBeActive()) {
                     pT->enableTimer();
-                }
-                else
-                {
+                } else {
                     pT->disableTimer();
                 }
             }
@@ -326,17 +282,17 @@ bool TimerUnit::enableTimer(const QString & name )
     return found;
 }
 
-bool TimerUnit::disableTimer(const QString & name )
+bool TimerUnit::disableTimer(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTimer * pT = it.value();
-        if( pT->isOffsetTimer() )
-            pT->setShouldBeActive( false );
-        else
-            pT->setIsActive( false );
+    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
+        TTimer* pT = it.value();
+        if (pT->isOffsetTimer()) {
+            pT->setShouldBeActive(false);
+        } else {
+            pT->setIsActive(false);
+        }
 
         pT->disableTimer();
         ++it;
@@ -345,29 +301,27 @@ bool TimerUnit::disableTimer(const QString & name )
     return found;
 }
 
-TTimer * TimerUnit::findTimer(const QString & name )
+TTimer* TimerUnit::findTimer(const QString& name)
 {
-    QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTimer * pT = it.value();
+    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
+        TTimer* pT = it.value();
         return pT;
     }
-    return 0;
+    return nullptr;
 }
 
 
-bool TimerUnit::killTimer(const QString & name )
+bool TimerUnit::killTimer(const QString& name)
 {
-    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        if( pChild->getName() == name )
-        {
+    for (auto timer : mTimerRootNodeList) {
+        if (timer->getName() == name) {
             // only temporary timers can be killed
-            if( ! pChild->isTempTimer() ) return false;
-            pChild->killTimer();
-            markCleanup( pChild );
+            if (!timer->isTemporary()) {
+                return false;
+            }
+            timer->killTimer();
+            markCleanup(timer);
             return true;
         }
     }
@@ -381,35 +335,34 @@ int TimerUnit::getNewID()
 
 void TimerUnit::doCleanup()
 {
-    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
-    {
-        delete (*it);
+    for (auto timer : mCleanupList) {
+        delete timer;
     }
     mCleanupList.clear();
 }
 
-void TimerUnit::markCleanup( TTimer * pT )
+void TimerUnit::markCleanup(TTimer* pT)
 {
-    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
-    {
-        if( *it == pT )
-        {
+    for (auto timer : mCleanupList) {
+        if (timer == pT) {
             return;
         }
     }
 
-    mCleanupList.push_back( pT );
+    mCleanupList.push_back(pT);
 }
 
-void TimerUnit::_assembleReport( TTimer * pChild )
+void TimerUnit::_assembleReport(TTimer* pChild)
 {
-    list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
-    {
-        TTimer * pT = *it2;
-        _assembleReport( pT );
-        if( pT->isActive() ) statsActiveTriggers++;
-        if( pT->isTempTimer() ) statsTempTriggers++;
+    list<TTimer*>* childrenList = pChild->mpMyChildrenList;
+    for (auto timer : *childrenList) {
+        _assembleReport(timer);
+        if (timer->isActive()) {
+            statsActiveTriggers++;
+        }
+        if (timer->isTemporary()) {
+            statsTempTriggers++;
+        }
         statsTriggerTotal++;
     }
 }
@@ -419,19 +372,23 @@ QString TimerUnit::assembleReport()
     statsActiveTriggers = 0;
     statsTriggerTotal = 0;
     statsTempTriggers = 0;
-    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        if( pChild->isActive() ) statsActiveTriggers++;
-        if( pChild->isTempTimer() ) statsTempTriggers++;
+    for (auto rootTimer : mTimerRootNodeList) {
+        if (rootTimer->isActive()) {
+            statsActiveTriggers++;
+        }
+        if (rootTimer->isTemporary()) {
+            statsTempTriggers++;
+        }
         statsTriggerTotal++;
-        list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-        for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
-        {
-            TTimer * pT = *it2;
-            _assembleReport( pT );
-            if( pT->isActive() ) statsActiveTriggers++;
-            if( pT->isTempTimer() ) statsTempTriggers++;
+        list<TTimer*>* childrenList = rootTimer->mpMyChildrenList;
+        for (auto childTimer : *childrenList) {
+            _assembleReport(childTimer);
+            if (childTimer->isActive()) {
+                statsActiveTriggers++;
+            }
+            if (childTimer->isTemporary()) {
+                statsTempTriggers++;
+            }
             statsTriggerTotal++;
         }
     }

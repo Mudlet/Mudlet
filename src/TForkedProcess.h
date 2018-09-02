@@ -29,29 +29,30 @@
 #include "TLuaInterpreter.h"
 
 
-class TForkedProcess : public QProcess {
-
+class TForkedProcess : public QProcess
+{
     Q_OBJECT
 
 public:
+    Q_DISABLE_COPY(TForkedProcess)
     virtual ~TForkedProcess();
 
-    static int startProcess( TLuaInterpreter *, lua_State *);
+    static int startProcess(TLuaInterpreter*, lua_State*);
 
 private:
-    TForkedProcess( TLuaInterpreter *, lua_State * );
+    TForkedProcess(TLuaInterpreter*, lua_State*);
 
     int callBackFunctionRef;
-    TLuaInterpreter *interpreter;
+    TLuaInterpreter* interpreter;
     bool running;
 
-    static int closeInputOfProcess( lua_State * L );
-    static int isProcessRunning( lua_State * L );
-    static int sendMessage( lua_State * L );
+    static int closeInputOfProcess(lua_State* L);
+    static int isProcessRunning(lua_State* L);
+    static int sendMessage(lua_State* L);
 
 private slots:
     void slotReceivedData();
-    void slotFinish();
+    void slotFinish(int, QProcess::ExitStatus);
 };
 
 #endif // MUDLET_TFORKEDPROCESS_H

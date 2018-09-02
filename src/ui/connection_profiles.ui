@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>profile_dialog</class>
- <widget class="QDialog" name="profile_dialog">
+ <class>connection_profiles</class>
+ <widget class="QDialog" name="connection_profiles">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>875</width>
-    <height>561</height>
+    <width>760</width>
+    <height>620</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -62,14 +62,8 @@
          </size>
         </property>
         <layout class="QGridLayout" name="gridLayout_5">
-         <property name="leftMargin">
-          <number>9</number>
-         </property>
          <property name="topMargin">
           <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>9</number>
          </property>
          <property name="bottomMargin">
           <number>0</number>
@@ -77,7 +71,7 @@
          <property name="spacing">
           <number>0</number>
          </property>
-         <item row="2" column="1">
+         <item row="0" column="0">
           <widget class="QListWidget" name="profiles_tree_widget">
            <property name="minimumSize">
             <size>
@@ -90,134 +84,7 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="0" colspan="2">
-          <widget class="QWidget" name="profileAdminArea" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>50</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
-            <item>
-             <spacer name="horizontalSpacer_4">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>15</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QPushButton" name="remove_profile_button">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Remove</string>
-              </property>
-              <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
-                <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png</iconset>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="copy_profile_button">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Copy</string>
-              </property>
-              <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
-                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="new_profile_button">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>New</string>
-              </property>
-              <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
-                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="1" column="1">
+         <item row="1" column="0">
           <widget class="QFrame" name="notificationArea">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -763,7 +630,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-warning.png</pixmap>
+               <pixmap resource="../mudlet.qrc">:/icons/dialog-warning.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -1212,7 +1079,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-error.png</pixmap>
+               <pixmap resource="../mudlet.qrc">:/icons/dialog-error.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -1661,7 +1528,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-information.png</pixmap>
+               <pixmap resource="../mudlet.qrc">:/icons/dialog-information.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -2135,6 +2002,121 @@
            </layout>
           </widget>
          </item>
+         <item row="2" column="0">
+          <widget class="QWidget" name="profileAdminArea" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>50</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <spacer name="horizontalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>15</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="remove_profile_button">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Remove</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="copy_profile_button">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Copy</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="new_profile_button">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>New</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
@@ -2169,7 +2151,7 @@
           <number>12</number>
          </property>
          <property name="rightMargin">
-          <number>0</number>
+          <number>9</number>
          </property>
          <property name="bottomMargin">
           <number>0</number>
@@ -2197,26 +2179,6 @@
              <height>16777215</height>
             </size>
            </property>
-           <property name="html">
-            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;table border=&quot;0&quot; style=&quot;-qt-table-type: root; margin-top:4px; margin-bottom:4px; margin-left:4px; margin-right:4px;&quot;&gt;
-&lt;tr&gt;
-&lt;td style=&quot;border: none;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:10pt; font-weight:600;&quot;&gt;Welcome to Mudlet!&lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt; font-weight:600;&quot;&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; font-weight:600;&quot;&gt;Click on one of the MUDs on the list below to play.&lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:9pt;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt;&quot;&gt;If you want to play on a server that is not on the list, click on the &lt;/span&gt;&lt;img src=&quot;:/icons/icons/list-add_small.png&quot; /&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; color:#aa0000;&quot;&gt; Create New Profile&lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt;&quot;&gt; button on your left, create your own profile, and fill in the &lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; font-style:italic;&quot;&gt;Profile Name&lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt;&quot;&gt;, &lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; font-style:italic;&quot;&gt;Host&lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt;&quot;&gt;, and &lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; font-style:italic;&quot;&gt;Port&lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt;&quot;&gt; fields in the R&lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; font-style:italic;&quot;&gt;equired &lt;/span&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt;&quot;&gt;area. &lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:9pt;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; font-weight:600;&quot;&gt;After that, click Connect to play.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:9pt; font-weight:600;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt;&quot;&gt;Have fun!&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:9pt; font-weight:600;&quot;&gt;&lt;/p&gt;
-&lt;p align=&quot;right&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:9pt; font-weight:600;&quot;&gt;- The Mudlet Team&lt;/span&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
            <property name="openLinks">
             <bool>false</bool>
            </property>
@@ -2239,14 +2201,6 @@ p, li { white-space: pre-wrap; }
             </property>
             <item row="0" column="0">
              <widget class="QLabel" name="label">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-                <weight>50</weight>
-                <bold>false</bold>
-               </font>
-              </property>
               <property name="text">
                <string>Profile name:</string>
               </property>
@@ -2267,13 +2221,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_2">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-                <underline>false</underline>
-               </font>
-              </property>
               <property name="text">
                <string>Server address:</string>
               </property>
@@ -2297,12 +2244,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="2">
              <widget class="QLabel" name="label_3">
-              <property name="font">
-               <font>
-                <family>Bitstream Charter</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Port:</string>
               </property>
@@ -2344,12 +2285,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="2" column="0">
              <widget class="QLabel" name="label_9">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Profile history:</string>
               </property>
@@ -2368,11 +2303,6 @@ p, li { white-space: pre-wrap; }
                 <width>0</width>
                 <height>0</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>8</pointsize>
-               </font>
               </property>
               <item>
                <property name="text">
@@ -2409,12 +2339,6 @@ p, li { white-space: pre-wrap; }
            <layout class="QGridLayout" name="gridLayout_2">
             <item row="0" column="0">
              <widget class="QLabel" name="label_4">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Character name:</string>
               </property>
@@ -2432,12 +2356,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_5">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Password:</string>
               </property>
@@ -2455,14 +2373,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="2" column="0" colspan="2">
              <widget class="QCheckBox" name="autologin_checkBox">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>10</pointsize>
-                <weight>50</weight>
-                <bold>false</bold>
-               </font>
-              </property>
               <property name="toolTip">
                <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
               </property>
@@ -2508,12 +2418,6 @@ p, li { white-space: pre-wrap; }
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
-              </property>
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
               </property>
               <property name="text">
                <string>Website:</string>
@@ -2651,7 +2555,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>remove_profile_button</tabstop>
  </tabstops>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>

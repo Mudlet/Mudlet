@@ -26,9 +26,9 @@
 #include "Tree.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QPointer>
 #include <QSharedPointer>
-#include <QApplication>
 #include "post_guard.h"
 
 #include <pcre.h>
@@ -43,47 +43,39 @@ class TAlias : public Tree<TAlias>
     friend class XMLimport;
 
 public:
+    virtual ~TAlias();
+    TAlias(TAlias* parent, Host* pHost);
+    TAlias(const QString& name, Host* pHost);
+    void compileAll();
+    void compileRegex();
+    QString getName() { return mName; }
+    void setName(const QString& name);
+    void compile();
+    bool compileScript();
+    void execute();
+    QString getScript() { return mScript; }
+    bool setScript(const QString& script);
+    QString getRegexCode() { return mRegexCode; }
+    void setRegexCode(const QString&);
+    void setCommand(const QString& command) { mCommand = command; }
+    QString getCommand() { return mCommand; }
 
+    bool match(const QString& toMatch);
+    bool registerAlias();
 
-    virtual          ~TAlias();
-                     TAlias( TAlias * parent, Host * pHost );
-                     TAlias(const QString& name, Host * pHost );
-    void             compileAll();
-    void            compileRegex();
-    QString          getName()                       { return mName; }
-    void             setName(const QString& name );
-    void             compile();
-    bool             compileScript();
-    void             execute();
-    QString          getScript()                     { return mScript; }
-    bool             setScript( const QString & script );
-    QString          getRegexCode()                  { return mRegexCode; }
-    void             setRegexCode(const QString& );
-    void             setCommand(const QString& command ) { mCommand = command; }
-    QString          getCommand()                    { return mCommand; }
-    bool             isFolder()                      { return mIsFolder; }
-    void             setIsFolder( bool b )           { mIsFolder = b; }
-    bool             match(const QString & toMatch );
-    bool             registerAlias();
-    bool             isTempAlias()                   { return mIsTempAlias; }
-    void             setIsTempAlias( bool b )        { mIsTempAlias = b; }
+    TAlias() = default;
 
-
-
-                     TAlias(){}
-    QString          mName;
-    QString          mCommand;
-    QString          mRegexCode;
+    QString mName;
+    QString mCommand;
+    QString mRegexCode;
     QSharedPointer<pcre> mpRegex;
-    QString          mScript;
-    bool             mIsFolder;
-    QPointer<Host>   mpHost;
-    bool             mNeedsToBeCompiled;
-    bool             mIsTempAlias;
-    bool                  mModuleMember;
-    bool            mModuleMasterFolder;
-    QString          mFuncName;
-    bool             exportItem;
+    QString mScript;
+    QPointer<Host> mpHost;
+    bool mNeedsToBeCompiled;
+    bool mModuleMember;
+    bool mModuleMasterFolder;
+    QString mFuncName;
+    bool exportItem;
 };
 
 #endif // MUDLET_TALIAS_H

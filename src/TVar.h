@@ -33,46 +33,44 @@ class TVar
 {
 public:
     TVar();
-    TVar(TVar *);
-    TVar(TVar *, const QString, const int, const QString, const int);
-    void    addChild(TVar *);
-    void    setParent(TVar *);
-    void    removeChild(TVar *);
-    bool    setValue(const QString);
-    bool    setValue(const QString, const int);
-    bool    setValueType(const int);
-    bool    setKeyType(const int);
-    bool    setName(const QString);
-    bool    setName(const QString, int);
-    void    setNewName(const QString, int);
-// Not used:    void    setNewName(const QString);
-    void    setReference(const bool);
-    QList<TVar *> getChildren(const bool isToSort = true);
-    TVar *  getParent();
+    TVar(TVar*);
+    TVar(TVar*, QString, int, QString, int);
+    void addChild(TVar*);
+    void setParent(TVar*);
+    void removeChild(TVar*);
+    bool setValue(QString);
+    bool setValue(QString, int);
+    bool setValueType(int);
+    bool setName(QString);
+    bool setName(QString, int);
+    void setNewName(QString, int);
+    void setReference(bool);
+    QList<TVar*> getChildren(bool isToSort = true);
+    TVar* getParent();
     QString getValue();
     QString getName();
     QString getNewName();
     void clearNewName();
-    int     getKeyType();
-    int     getNewKeyType();
-    int     getValueType();
-    bool    isReference();
+    int getKeyType();
+    int getNewKeyType();
+    int getValueType();
+    bool isReference();
 
 public:
-    bool    hidden;
+    bool hidden;
     const void* kpointer;
     const void* vpointer;
-    bool    saved;
+    bool saved;
 
 private:
-    bool    reference;
-    QList<TVar *> children;
-    TVar * parent;
+    bool reference;
+    QList<TVar*> children;
+    TVar* parent;
     QString name;
-    int     kType;
+    int kType;
     QString value;
-    int     vType;
-    int     nkType;
+    int vType;
+    int nkType;
     QString nName;
 };
 

@@ -39,40 +39,34 @@ class TScript : public Tree<TScript>
     friend class XMLimport;
 
 public:
+    virtual ~TScript();
+    TScript(TScript* parent, Host* pHost);
+    TScript(const QString& name, Host* pHost);
 
+    QString getName() { return mName; }
+    void setName(const QString& name) { mName = name; }
+    void compile();
+    void compileAll();
+    bool compileScript();
+    void execute();
+    QString getScript() { return mScript; }
+    bool setScript(const QString& script);
+    bool registerScript();
+    void callEventHandler(const TEvent&);
+    void setEventHandlerList(QStringList handlerList);
+    QStringList getEventHandlerList() { return mEventHandlerList; }
+    bool exportItem;
+    bool mModuleMasterFolder;
 
-    virtual          ~TScript();
-                     TScript( TScript * parent, Host * pHost );
-                     TScript(const QString& name, Host * pHost );
-
-    QString          getName()                                         { return mName; }
-    void             setName(const QString& name )                           { mName = name; }
-    void             compile();
-    void             compileAll();
-    bool             compileScript();
-    void             execute();
-    QString          getScript()                                       { return mScript; }
-    bool             setScript(const QString & script );
-    bool             isFolder()                                        { return mIsFolder; }
-    void             setIsFolder( bool b )                             { mIsFolder = b; }
-    bool             registerScript();
-    void             callEventHandler( const TEvent & );
-    void             setEventHandlerList( QStringList handlerList );
-    QStringList      getEventHandlerList()                             { return mEventHandlerList; }
-    bool             exportItem;
-    bool            mModuleMasterFolder;
 private:
-
-                     TScript(){};
-    QString          mName;
-    QString          mScript;
-    QString          mFuncName;
-    bool             mIsFolder;
-    QPointer<Host>   mpHost;
-    bool             mNeedsToBeCompiled;
-    QStringList      mEventHandlerList;
-    bool                  mModuleMember;
-
+    TScript() = default;
+    QString mName;
+    QString mScript;
+    QString mFuncName;
+    QPointer<Host> mpHost;
+    bool mNeedsToBeCompiled;
+    QStringList mEventHandlerList;
+    bool mModuleMember;
 };
 
 #endif // MUDLET_TSCRIPT_H

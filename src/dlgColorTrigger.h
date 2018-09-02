@@ -30,17 +30,15 @@ class Host;
 class TTrigger;
 
 
-class dlgColorTrigger : public QDialog, public Ui::color_trigger_dlg
+class dlgColorTrigger : public QDialog, public Ui::color_trigger
 {
     Q_OBJECT
 
 public:
+    Q_DISABLE_COPY(dlgColorTrigger)
     dlgColorTrigger(QWidget*, TTrigger*, int);
-signals:
-
 
 public slots:
-
     void setColorBlack();
     void setColorLightBlack();
     void setColorRed();

@@ -2,22 +2,30 @@
 --- Mudlet Unsorted Stuff
 ----------------------------------------------------------------------------------
 
+mudlet = mudlet or {}
+mudlet.supports = {
+  coroutines = true
+}
+
+-- enforce uniform locale so scripts don't get
+-- tripped up on number representation differences (. vs ,)
+os.setlocale("C")
 
 -- Extending default libraries makes Babelfish happy.
 setmetatable( _G, {
-	["__call"] = function(func, ...)
-		if type(func) == "function" then
-			return func(...)
-		else
-			local h = metatable(func).__call
-			if h then
-				return h(func, ...)
-			elseif _G[type(func)][func] then
-				_G[type(func)][func](...)
-			end
-		end
-	end,
-	})
+  ["__call"] = function(func, ...)
+    if type(func) == "function" then
+      return func(...)
+    else
+      local h = metatable(func).__call
+      if h then
+        return h(func, ...)
+      elseif _G[type(func)][func] then
+        _G[type(func)][func](...)
+      end
+    end
+  end,
+})
 
 
 
@@ -113,21 +121,38 @@ SavedVariables = {}
 ---
 --- @see send
 function sendAll(...)
-	local args = {...}
-	local echo = true
-	if type(args[#args]) == 'boolean' then
-		echo = table.remove(args, #args)
-	end
-	for i, v in ipairs(args) do
-		if type(v) == 'string' then send(v, echo) end
-	end
+  local args = { ... }
+  local echo = true
+  if type(args[#args]) == 'boolean' then
+    echo = table.remove(args, #args)
+  end
+  for i, v in ipairs(args) do
+    if type(v) == 'string' then
+      send(v, echo)
+    end
+  end
 end
 
 
+--- Table of functions used by permGroup to create the appropriate group, based on itemtype.
+local group_creation_functions = {
+  timer = function(name, parent)
+    return not (permTimer(name, parent, 0, "") == -1)
+  end,
+  trigger = function(name, parent)
+    return not (permSubstringTrigger(name, parent, { "" }, "") == -1)
+  end,
+  alias = function(name, parent)
+    return not (permAlias(name, parent, "", "") == -1)
+  end
+}
+
 --- Creates a group of a given type that will persist through sessions.
 ---
---- @param name name of the teim
+--- @param name name of the item
 --- @param itemtype type of the item - can be trigger, alias, or timer
+--- @param parent optional name of existing item which the new item
+---   will be created as a child of
 ---
 --- @usage
 --- <pre>
@@ -141,24 +166,11 @@ end
 ---     permGroup("Defensive aliases", "alias")
 ---   end
 --- </pre>
-function permGroup(name, itemtype)
+function permGroup(name, itemtype, parent)
   assert(type(name) == "string", "permGroup: need a name for the new thing")
-
-  local t = {
-    timer = function(name)
-        return (permTimer(name, "", 0, "") == -1) and false or true
-       end,
-    trigger = function(name)
-        return (permSubstringTrigger(name, "", {""}, "") == -1) and false or true
-      end,
-    alias = function(name)
-        return (permAlias(name, "", "", "") == -1) and false or true
-      end
- }
-
- assert(t[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
-
- return t[itemtype](name)
+  parent = parent or ""
+  assert(group_creation_functions[itemtype], "permGroup: " .. tostring(itemtype) .. " isn't a valid type")
+  return group_creation_functions[itemtype](name, parent)
 end
 
 
@@ -182,7 +194,7 @@ end
 ---
 --- @return true or false
 function io.exists(item)
-	return lfs.attributes(item) and true or false
+  return lfs.attributes(item) and true or false
 end
 
 
@@ -197,37 +209,12 @@ end
 ---
 --- @return true or false
 function xor(a, b)
-	if (a and (not b)) or (b and (not a)) then
-		return true
-	else
-		return false
-	end
+  if (a and (not b)) or (b and (not a)) then
+    return true
+  else
+    return false
+  end
 end
-
-
-
---- Determine operating system.
----
---- @usage
----   <pre>
----   if "linux" == getOS() then
----	     echo("We are using GNU/Linux!")
----   end
----   </pre>
----
---- @return "linux", "mac" or "windows" string
-function getOS()
-	if string.char(getMudletHomeDir():byte()) == "/" then
-		if io.exists("/Applications") then
-			return "mac"
-		else
-			return "linux"
-		end
-	else
-		return "windows"
-	end
-end
-
 
 
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
@@ -238,10 +225,10 @@ end
 ---
 --- @see loadVars
 function remember(varName)
-	if not _saveTable then
-		_saveTable = {}
-	end
-    _saveTable[varName] = _G[varName]
+  if not _saveTable then
+    _saveTable = {}
+  end
+  _saveTable[varName] = _G[varName]
 end
 
 
@@ -251,15 +238,17 @@ end
 ---
 --- @see remember
 function loadVars()
-	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
-	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
-	local lt_VariableHolder = {}
-	if (io.exists(l_SettingsFile)) then
-		table.load(l_SettingsFile, lt_VariableHolder)
-		for k,v in pairs(lt_VariableHolder) do
-				_G[k] = v
-		end
-	end
+  if string.char(getMudletHomeDir():byte()) == "/" then
+    _sep = "/" else _sep = "\\"
+  end
+  local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+  local lt_VariableHolder = {}
+  if (io.exists(l_SettingsFile)) then
+    table.load(l_SettingsFile, lt_VariableHolder)
+    for k, v in pairs(lt_VariableHolder) do
+      _G[k] = v
+    end
+  end
 end
 
 
@@ -268,12 +257,14 @@ end
 ---
 --- @see loadVars
 function saveVars()
-	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
-	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
-    for k,_ in pairs(_saveTable) do
-        remember(k)
-    end
-	table.save(l_SettingsFile, _saveTable)
+  if string.char(getMudletHomeDir():byte()) == "/" then
+    _sep = "/" else _sep = "\\"
+  end
+  local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+  for k, _ in pairs(_saveTable) do
+    remember(k)
+  end
+  table.save(l_SettingsFile, _saveTable)
 end
 
 
@@ -300,52 +291,53 @@ end
 ---
 --- @see table.load
 function table.save( sfile, t )
-	assert(type(sfile) == "string", "table.save requires a file path to save to")
-	local tables = {}
-	table.insert( tables, t )
-	local lookup = { [t] = 1 }
-	local file = io.open( sfile, "w" )
-	file:write( "return {" )
-	for i,v in ipairs( tables ) do
-		table.pickle( v, file, tables, lookup )
-	end
-	file:write( "}" )
-	file:close()
+  assert(type(sfile) == "string", "table.save requires a file path to save to")
+  local tables = {}
+  table.insert( tables, t )
+  local lookup = { [t] = 1 }
+  local file, msg = io.open( sfile, "w" )
+  if not file then return nil, msg end
+  file:write( "return {" )
+  for i, v in ipairs( tables ) do
+    table.pickle( v, file, tables, lookup )
+  end
+  file:write( "}" )
+  file:close()
 end
 
 
 
 --- <b><u>TODO</u></b> table.pickle( t, file, tables, lookup )
 function table.pickle( t, file, tables, lookup )
-	file:write( "{" )
-	for i,v in pairs( t ) do
-		-- escape functions
-		if type( v ) ~= "function" and type( v ) ~= "userdata" and (i ~= "string" and i ~= "xpcall" and i ~= "package" and i ~= "os" and i ~= "io" and i ~= "math" and i ~= "debug" and i ~= "coroutine" and i ~= "_G" and i ~= "_VERSION" and i ~= "table") then
-			-- handle index
-			if type( i ) == "table" then
-				if not lookup[i] then
-					table.insert( tables, i )
-					lookup[i] = table.maxn( tables )
-				end
-				file:write( "[{"..lookup[i].."}] = " )
-			else
-				local index = ( type( i ) == "string" and "[ "..string.enclose( i, 50 ).." ]" ) or string.format( "[%d]", i )
-				file:write( index.." = " )
-			end
-			-- handle value
-			if type( v ) == "table" then
-				if not lookup[v] then
-					table.insert( tables, v )
-					lookup[v] = table.maxn( tables )
-				end
-				file:write( "{"..lookup[v].."}," )
-			else
-				local value =  ( type( v ) == "string" and string.enclose( v, 50 ) ) or tostring( v )
-				file:write( value.."," )
-			end
-		end
-	end
-	file:write( "},\n" )
+  file:write( "{" )
+  for i, v in pairs( t ) do
+    -- escape functions
+    if type( v ) ~= "function" and type( v ) ~= "userdata" and (i ~= "string" and i ~= "xpcall" and i ~= "package" and i ~= "os" and i ~= "io" and i ~= "math" and i ~= "debug" and i ~= "coroutine" and i ~= "_G" and i ~= "_VERSION" and i ~= "table") then
+      -- handle index
+      if type( i ) == "table" then
+        if not lookup[i] then
+          table.insert( tables, i )
+          lookup[i] = table.maxn( tables )
+        end
+        file:write( "[{" .. lookup[i] .. "}] = " )
+      else
+        local index = ( type( i ) == "string" and "[ " .. string.enclose( i, 50 ) .. " ]" ) or string.format( "[%d]", i )
+        file:write( index .. " = " )
+      end
+      -- handle value
+      if type( v ) == "table" then
+        if not lookup[v] then
+          table.insert( tables, v )
+          lookup[v] = table.maxn( tables )
+        end
+        file:write( "{" .. lookup[v] .. "}," )
+      else
+        local value = ( type( v ) == "string" and string.enclose( v, 50 ) ) or tostring( v )
+        file:write( value .. "," )
+      end
+    end
+  end
+  file:write( "},\n" )
 end
 
 
@@ -363,274 +355,548 @@ end
 ---
 --- @see table.save
 function table.load( sfile, loadinto )
-	assert(type(sfile) == "string", "table.load requires a file path to load")
-	local tables = dofile( sfile )
-	if tables then
-		if loadinto ~= nil and type(loadinto) == "table" then
-			table.unpickle( tables[1], tables, loadinto )
-		else
-			table.unpickle( tables[1], tables, _G )
-		end
-	end
+  assert(type(sfile) == "string", "table.load requires a file path to load")
+  local tables = dofile( sfile )
+  if tables then
+    if loadinto ~= nil and type(loadinto) == "table" then
+      table.unpickle( tables[1], tables, loadinto )
+    else
+      table.unpickle( tables[1], tables, _G )
+    end
+  end
 end
 
 
 
 --- <b><u>TODO</u></b> table.unpickle( t, tables, tcopy, pickled )
 function table.unpickle( t, tables, tcopy, pickled )
-	pickled = pickled or {}
-	pickled[t] = tcopy
-	for i,v in pairs( t ) do
-		local i2 = i
-		if type( i ) == "table" then
-			local pointer = tables[ i[1] ]
-			if pickled[pointer] then
-				i2 = pickled[pointer]
-			else
-				i2 = {}
-				table.unpickle( pointer, tables, i2, pickled )
-			end
-		end
-		local v2 = v
-		if type( v ) == "table" then
-			local pointer = tables[ v[1] ]
-			if pickled[pointer] then
-				v2 = pickled[pointer]
-			else
-				v2 = {}
-				table.unpickle( pointer, tables, v2, pickled )
-			end
-		end
-		tcopy[i2] = v2
-	end
+  pickled = pickled or {}
+  pickled[t] = tcopy
+  for i, v in pairs( t ) do
+    local i2 = i
+    if type( i ) == "table" then
+      local pointer = tables[ i[1] ]
+      if pickled[pointer] then
+        i2 = pickled[pointer]
+      else
+        i2 = {}
+        table.unpickle( pointer, tables, i2, pickled )
+      end
+    end
+    local v2 = v
+    if type( v ) == "table" then
+      local pointer = tables[ v[1] ]
+      if pickled[pointer] then
+        v2 = pickled[pointer]
+      else
+        v2 = {}
+        table.unpickle( pointer, tables, v2, pickled )
+      end
+    end
+    tcopy[i2] = v2
+  end
 end
 
 
 
 --- <b><u>TODO</u></b> speedwalktimer()
-function speedwalktimer(walklist, walkdelay)
-    send(walklist[1])
-    table.remove(walklist, 1)
-    if #walklist>0 then
-        tempTimer(walkdelay, function() speedwalktimer(walklist, walkdelay) end)
-    end
+function speedwalktimer(walklist, walkdelay, show)
+  send(walklist[1], show)
+  table.remove(walklist, 1)
+  if #walklist > 0 then
+    tempTimer(walkdelay, function()
+      speedwalktimer(walklist, walkdelay, show)
+    end)
+  end
 end
 
 
 
---- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
-function speedwalk(dirString, backwards, delay)
-	local dirString = dirString:lower()
-	local walkdelay = delay
-	local walklist  = {}
-	local reversedir        = {
-		n       = "s",
-		en      = "sw",
-		e       = "w",
-		es      = "nw",
-		s       = "n",
-		ws      = "ne",
-		w       = "e",
-		wn      = "se",
-		u       = "d",
-		d       = "u",
-		ni      = "out",
-		tuo     = "in"
-	}
-	if not backwards then
-		for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
-			count = (count == "" and 1 or count)
-			for i=1, count do
-				if delay then walklist[#walklist+1] = direction
-				else send(direction)
-				end
-			end
-		end
-	else
-		for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
-			count = (count == "" and 1 or count)
-			for i=1, count do
-				if delay then walklist[#walklist+1] = reversedir[direction]
-				else send(reversedir[direction])
-				end
-			end
-		end
-	end
-	if walkdelay then
-		speedwalktimer(walklist, walkdelay)
-	end
+--- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
+function speedwalk(dirString, backwards, delay, show)
+  local dirString = dirString:lower()
+  local walkdelay = delay
+  if show ~= false then show = true end
+  local walklist = {}
+  local reversedir = {
+    n = "s",
+    en = "sw",
+    e = "w",
+    es = "nw",
+    s = "n",
+    ws = "ne",
+    w = "e",
+    wn = "se",
+    u = "d",
+    d = "u",
+    ni = "out",
+    tuo = "in"
+  }
+  if not backwards then
+    for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
+      count = (count == "" and 1 or count)
+      for i = 1, count do
+        if delay then
+          walklist[#walklist + 1] = direction
+        else send(direction, show)
+        end
+      end
+    end
+  else
+    for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
+      count = (count == "" and 1 or count)
+      for i = 1, count do
+        if delay then
+          walklist[#walklist + 1] = reversedir[direction]
+        else send(reversedir[direction], show)
+        end
+      end
+    end
+  end
+  if walkdelay then
+    speedwalktimer(walklist, walkdelay, show)
+  end
 end
 
 
 
 --- <b><u>TODO</u></b> _comp(a, b)
 function _comp(a, b)
-	if type(a) ~= type(b) then return false end
-	if type(a) == 'table' then
-		for k, v in pairs(a) do
-			if not b[k] then return false end
-			if not _comp(v, b[k]) then return false end
-		end
-	else
-		if a ~= b then return false end
-	end
-	return true
+  if type(a) ~= type(b) then
+    return false
+  end
+  if type(a) == 'table' then
+    for k, v in pairs(a) do
+      if not b[k] then
+        return false
+      end
+      if not _comp(v, b[k]) then
+        return false
+      end
+    end
+  else
+    if a ~= b then
+      return false
+    end
+  end
+  return true
 end
 
 
 
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
 function phpTable(...)
-	local newTable, keys, values = {}, {}, {}
-	newTable.pairs = function(self) -- pairs iterator
-		local count = 0
-		return function()
-			count = count + 1
-			return keys[count], values[keys[count]]
-		end
-	end
-	setmetatable(newTable, {
-		__newindex = function(self, key, value)
-			if not self[key] then table.insert(keys, key)
-			elseif value == nil then -- Handle item delete
-				local count = 1
-				while keys[count] ~= key do count = count + 1 end
-				table.remove(keys, count)
-			end
-			values[key] = value -- replace/create
-		end,
-		__index=function(self, key) return values[key] end,
-		isPhpTable = true,
-	})
-	local args = {...}
-	for x=1, #args do
-		for k, v in pairs(args[x]) do newTable[k] = v end
-	end
-	return newTable
+  local newTable, keys, values = {}, {}, {}
+  newTable.pairs = function(self)
+    -- pairs iterator
+    local count = 0
+    return function()
+      count = count + 1
+      return keys[count], values[keys[count]]
+    end
+  end
+  setmetatable(newTable, {
+    __newindex = function(self, key, value)
+      if not self[key] then
+        table.insert(keys, key)
+      elseif value == nil then
+        -- Handle item delete
+        local count = 1
+        while keys[count] ~= key do
+          count = count + 1
+        end
+        table.remove(keys, count)
+      end
+      values[key] = value -- replace/create
+    end,
+    __index = function(self, key)
+      return values[key]
+    end,
+    isPhpTable = true,
+  })
+  local args = { ... }
+  for x = 1, #args do
+    for k, v in pairs(args[x]) do
+      newTable[k] = v
+    end
+  end
+  return newTable
 end
 
 
 
 --- <b><u>TODO</u></b> getColorWildcard(color)
 function getColorWildcard(color)
-        local color, results, startc, endc = tonumber(color), {}, nil, nil
+  local color, results, startc, endc = tonumber(color), {}, nil, nil
 
-        for i = 0, string.len(line) do
-                selectSection(i, 1)
-                if isAnsiFgColor(color) then
-                        if not startc then 
-                                startc = i + 1
-                                endc = i + 1
-                        else 
-                                endc = i + 1
-                                if i == line:len() then
-                                        results[#results + 1] = line:sub(startc, endc)
-                                end
-                        end
-                elseif startc then
-                        results[#results + 1] = line:sub(startc, endc)
-                        startc = nil
-                end
+  for i = 0, string.len(line) do
+    selectSection(i, 1)
+    if isAnsiFgColor(color) then
+      if not startc then
+        startc = i + 1
+        endc = i + 1
+      else
+        endc = i + 1
+        if i == line:len() then
+          results[#results + 1] = line:sub(startc, endc)
         end
-        return results[1] and results or false
-end
-
-
-do
-	local oldsetExit = setExit
-
-	local exitmap = {
-	  n = 1,
-	  ne = 2,
-	  nw = 3,
-	  e = 4,
-	  w = 5,
-	  s = 6,
-	  se = 7,
-	  sw = 8,
-	  u = 9,
-	  d = 10,
-	  ["in"] = 11,
-	  out = 12
-	}
-
-	function setExit(from, to, direction)
-	  if type(direction) == "string" and not exitmap[direction] then return false end
-
-	  return oldsetExit(from, to, type(direction) == "string" and exitmap[direction] or direction)
-	end
+      end
+    elseif startc then
+      results[#results + 1] = line:sub(startc, endc)
+      startc = nil
+    end
+  end
+  return results[1] and results or false
 end
 
 do
-	local oldlockExit = lockExit
-	local oldhasExitLock = hasExitLock
+  local oldlockExit = lockExit
+  local oldhasExitLock = hasExitLock
 
-	local exitmap = {
-	  n = 1,
-	  north = 1,
-	  ne = 2,
-	  northeast = 2,
-	  nw = 3,
-	  northwest = 3,
-	  e = 4,
-	  east = 4,
-	  w = 5,
-	  west = 5,
-	  s = 6,
-	  south = 6,
-	  se = 7,
-	  southeast = 7,
-	  sw = 8,
-	  southwest = 8,
-	  u = 9,
-	  up = 9,
-	  d = 10,
-	  down = 10,
-	  ["in"] = 11,
-	  out = 12
-	}
+  local exitmap = {
+    n = 1,
+    north = 1,
+    ne = 2,
+    northeast = 2,
+    nw = 3,
+    northwest = 3,
+    e = 4,
+    east = 4,
+    w = 5,
+    west = 5,
+    s = 6,
+    south = 6,
+    se = 7,
+    southeast = 7,
+    sw = 8,
+    southwest = 8,
+    u = 9,
+    up = 9,
+    d = 10,
+    down = 10,
+    ["in"] = 11,
+    out = 12
+  }
 
-	function lockExit(from, direction, status)
-	  if type(direction) == "string" and not exitmap[direction] then return false end
+  function lockExit(from, direction, status)
+    if type(direction) == "string" and not exitmap[direction] then
+      return false
+    end
 
-	  return oldlockExit(from, type(direction) == "string" and exitmap[direction] or direction, status)
-	end
+    return oldlockExit(from, type(direction) == "string" and exitmap[direction] or direction, status)
+  end
 
-	function hasExitLock(from, direction)
-	  if type(direction) == "string" and not exitmap[direction] then return false end
+  function hasExitLock(from, direction)
+    if type(direction) == "string" and not exitmap[direction] then
+      return false
+    end
 
-	  return oldhasExitLock(from, type(direction) == "string" and exitmap[direction] or direction)
-	end
+    return oldhasExitLock(from, type(direction) == "string" and exitmap[direction] or direction)
+  end
 end
 
-if not _TEST then  -- special exception, as overwriting print() messes up printing in the test environment
-	ioprint = print
-	function print(...)
-	  local t, echo, tostring = {...}, echo, tostring
-	  for i = 1, #t do
-	    echo((tostring(t[i]) or '?').."    ")
-	  end
-	  echo("\n")
-	end
+if not _TEST then
+  -- special exception, as overwriting print() messes up printing in the test environment
+  ioprint = print
+  function print(...)
+    local t, echo, tostring = { ... }, echo, tostring
+    for i = 1, #t do
+      echo((tostring(t[i]) or '?') .. "    ")
+    end
+    echo("\n")
+  end
 end
 
 function deleteFull()
-	deleteLine()
-	tempLineTrigger(1,1, [[if isPrompt() then deleteLine() end]])
+  deleteLine()
+  tempLineTrigger(1, 1, [[if isPrompt() then deleteLine() end]])
 end
 
 function shms(seconds, bool)
-	local seconds = tonumber(seconds)
-	assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
+  local seconds = tonumber(seconds)
+  assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
 
-	local s  = seconds
-	local ss = string.format("%02d", math.fmod(s, 60))
-	local mm = string.format("%02d", math.fmod((s / 60 ), 60))
-	local hh = string.format("%02d", (s / (60 * 60)))
+  local s = seconds
+  local ss = string.format("%02d", math.fmod(s, 60))
+  local mm = string.format("%02d", math.fmod((s / 60 ), 60))
+  local hh = string.format("%02d", (s / (60 * 60)))
 
-	if bool then
-		cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
-	else
-		return hh, mm, ss
-	end
+  if bool then
+    cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
+  else
+    return hh, mm, ss
+  end
+end
+
+-- returns true if your Mudlet is older than the given version
+-- for example, it'll return true if you're on 2.1 and you do mudletOlderThan(3,1)
+-- it'll return false if you're on 4.0 and you do mudletOlderThan(4,0,0)
+function mudletOlderThan(inputmajor, inputminor, inputpatch)
+  local mudletmajor, mudletminor, mudletpatch = getMudletVersion("table")
+  local type, sformat = type, string.format
+
+  assert(type(inputmajor) == "number", sformat("bad argument #1 type (major version as number expected, got %s!)", type(inputmajor)))
+  assert(inputminor == nil or type(inputminor) == "number", sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor)))
+  assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #3 type (optional patch version as number expected, got %s!)", type(inputpatch)))
+
+
+  if mudletmajor < inputmajor then
+    return true
+  end
+  if inputminor and (mudletminor < inputminor) then
+    return true
+  end
+  if inputpatch and (mudletpatch < inputpatch) then
+    return true
+  end
+
+  return false
+end
+
+-- condendenses the output from map loading if no map load errors
+-- were encountered
+-- returns: the amount of time map loading took or nil+msg
+-- if it failed
+function condenseMapLoad()
+  local linestodelete
+  local startswith = string.starts
+
+  -- first, figure out how many lines back do we need to delete
+  -- this isn't a static amount due to line wrapping
+  for i = 1, 30 do
+    moveCursor(0, getLineCount() - i)
+    local line = getCurrentLine()
+    if line:find("ALERT") or line:find("WARN") or line:find("ERROR") then
+      return nil, "an alert, warning, or error that the user must see is present"
+    elseif startswith(line, "[ INFO ]  - Reading map") then
+      linestodelete = i
+      moveCursorEnd()
+      break
+    end
+  end
+
+  if not linestodelete then
+    return nil, "couldn't find the starting line for map load output"
+  end
+
+  local loadtime = 0
+  for i = linestodelete, 1, -1 do
+    moveCursor(0, getLineCount() - i)
+    local time = getCurrentLine():match("([%.%d]+)s")
+    if time then
+      loadtime = loadtime + tonumber(time)
+    end
+    deleteLine()
+  end
+
+  return loadtime
+end
+
+do
+  -- management things
+
+  -- Dictionary with events as keys and lists of lua functions as values to dispatch events
+  -- to the right functions.
+  local handlers = {}
+
+  -- Remember highest hander ID to avoid ID reuse.
+  local highestHandlerId = 0
+  -- Helps us finding the right event handler from an ID.
+  local handlerIdsToHandlers = {}
+
+  -- C functions that get overwritten.
+  local origRegisterAnonymousEventHandler = registerAnonymousEventHandler
+
+  -- helper function to find an already existing string event handler
+  -- This function may not the most performant one as it uses debug.getinfo,
+  -- but since event handlers are only rarely registered, this may be ok.
+  local function findStringEventHandler(existingHandlers, functionString)
+    local functionExists = false
+    if existingHandlers then
+      for index, handlerFunction in pairs(existingHandlers) do
+        local info = debug.getinfo(handlerFunction, "S")
+        if info.source == functionString then
+          functionExists = index
+          break
+        end
+      end
+    end
+    return functionExists
+  end
+
+  function registerAnonymousEventHandler(event, func, isOneShot)
+    if type(event) ~= "string" then
+      error(
+      string.format(
+      "registerAnonymousEventHandler: bad argument #1 type (event name as string expected, got %s!)",
+      type(event)
+      )
+      )
+    end
+
+    if type(func) ~= "function" and type(func) ~= "string" then
+      error(
+      string.format(
+      "registerAnonymousEventHandler: bad argument #2 type (function as string or function type expected, got %s!)",
+      type(func)
+      )
+      )
+    end
+
+    local existinghandlers = handlers[event]
+    if type(func) == "string" then
+      local functionString = string.format("return %s(...)", func)
+      local functionExists = findStringEventHandler(existinghandlers, functionString)
+
+      if not functionExists then
+        func = assert(loadstring(functionString))
+      else
+        -- find and return the ID of existing event handlers
+        for id, findObject in pairs(handlerIdsToHandlers) do
+          if findObject.event == event and findObject.index == functionExists then
+            return id
+          end
+        end
+      end
+
+    end
+
+    local eventHandlerId
+    if isOneShot then
+      -- wrap the original function to remove itself from the event handler list.
+      local origFunc = func
+      func = function(...)
+        local keepEvaluating = origFunc(...)
+        if not keepEvaluating then
+          killAnonymousEventHandler(eventHandlerId)
+        end
+      end
+    end
+
+    if not existinghandlers then
+      existinghandlers = {}
+      handlers[event] = existinghandlers
+      origRegisterAnonymousEventHandler(event, "dispatchEventToFunctions")
+    end
+    local newId = #existinghandlers + 1
+    existinghandlers[newId] = func
+    -- Above may fill gaps if handlers have been deleted, but that's okay.
+    highestHandlerId = highestHandlerId + 1
+    handlerIdsToHandlers[highestHandlerId] = {
+      event = event,
+      index = newId
+    }
+    -- do not remove the line below as it must be part of the closure for one shot event handlers.
+    eventHandlerId = highestHandlerId
+    return eventHandlerId
+  end
+
+  function killAnonymousEventHandler(id)
+    if type(id) ~= "number" then
+      error(
+      string.format(
+      "killAnonymousEventHandler: bad argument #1 type (handler ID as number expected, got %s!)",
+      type(id)
+      )
+      )
+    end
+
+    local findObject = handlerIdsToHandlers[id]
+    if not findObject then
+      return nil, string.format("Handler with ID '%s' not found.", id)
+    end
+
+    handlerIdsToHandlers[id] = nil
+    handlers[findObject.event][findObject.index] = nil
+    return true
+  end
+
+  -- Dispatches an event to the registered lua functions.
+  -- The order of registered events is not preserved.
+  -- name: The name of the event that was fired.
+  -- ...:  All arguments passed to the raised event.
+  function dispatchEventToFunctions(event, ...)
+    if handlers[event] then
+      for _, func in pairs(handlers[event]) do
+        func(event, ...)
+      end
+    end
+  end
+end
+
+local timeframetable = {}
+
+function timeframe(vname, true_time, nil_time, ...)
+  local format = string.format
+
+  assert(type(vname) == "string" or type(vname) == "function", format("timeframe: bad argument #1 type (vname as a string or function expected, got %s!", type(vname)))
+  assert(type(true_time) == "number" or type(true_time) == "table", format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!)", type(true_time)))
+  assert(type(nil_time) == "nil" or type(nil_time) == "number" or type(nil_time) == "table", format("timeframe: bad argument #3 type (nil time as a number or table expected, got %s!)", type(nil_time)))
+
+  -- aggregate timerlist data
+  local timerlist = {
+    {0, nil},
+    type(true_time) == "number" and {true_time, true} or type(true_time) == "table" and true_time,
+    type(nil_time) == "number" and {nil_time, nil} or type(nil_time) == "table" and nil_time,
+    ...
+  }
+
+  -- reinitialise timeframe for vname
+  killtimeframe(vname)
+  timeframetable[vname] = {}
+
+  local vtype = type(vname)
+
+  -- loop through timerlist and create tempTimers
+  local maxtime = 0
+  local vcount = 1
+  for step, data in ipairs(timerlist) do
+    assert(type(data) == "table", format("timeframe: bad argument #%d type (timerlist data as a table expected, got %s!", step, type(data)))
+    local time, value = data[1], data[2]
+    assert(type(time) == "number", format("timeframe: bad argument #%d type (timerlist data table argument #1 as a number expected, got %s!", step, type(time)))
+
+    maxtime = (time > maxtime) and time or maxtime
+
+    local fun
+    if vtype == "function" then
+      fun = function()
+        local s,m = pcall(vname, value)
+        if not s then error(m) end
+      end
+    else
+      assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #%d type (timerlist data argument #2 expects a string, number or boolean value; got %s!", step, type(value)))
+      fun = assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))
+    end
+
+    if time <= 0 then
+      fun()
+    else
+      timeframetable[vname][vcount] = tempTimer(time, fun)
+      vcount = vcount + 1
+    end
+  end
+
+  -- add final tempTimer to kill the timeframe
+  timeframetable[vname][vcount] = tempTimer(maxtime + 0.1, function()
+    killtimeframe(vname)
+  end)
+
+  -- return vname as id
+  return vname
+end
+
+function killtimeframe(vname)
+  if timeframetable[vname] then
+    for _, timerId in ipairs(timeframetable[vname]) do
+      killTimer(timerId); _G["Timer" .. timerId] = nil
+    end
+    timeframetable[vname] = nil
+  end
+end
+
+-- replace line from MUD with colour-tagged string
+creplaceLine = function(str)
+	selectString(line,1)
+	replace("")
+	cinsertText(str)
 end

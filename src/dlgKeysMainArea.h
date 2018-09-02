@@ -27,11 +27,12 @@
 #include "post_guard.h"
 
 
-class dlgKeysMainArea : public QWidget, public Ui::keys_main_area
+class dlgKeysMainArea : public QWidget, public Ui::keybindings_main_area
 {
     Q_OBJECT
 
 public:
+    Q_DISABLE_COPY(dlgKeysMainArea)
     dlgKeysMainArea(QWidget*);
 };
 

@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,62 +39,63 @@ class Host;
 class TConsole;
 
 
-class TCommandLine : public QPlainTextEdit//QLineEdit
+class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
 public:
-
-                      TCommandLine( Host *, TConsole *, QWidget * );
-                      ~TCommandLine();
-//    void              keyPressEvent(QKeyEvent *event);
-    void              focusInEvent ( QFocusEvent * ) override;
-    void              focusOutEvent ( QFocusEvent * ) override;
-    QPalette          mRegularPalette;
+    Q_DISABLE_COPY(TCommandLine)
+    TCommandLine(Host*, TConsole*, QWidget*);
+    ~TCommandLine();
+    void focusInEvent(QFocusEvent*) override;
+    void focusOutEvent(QFocusEvent*) override;
+    QPalette mRegularPalette;
 
 private:
-    QString           mLastCompletion;
-    void              handleAutoCompletion();
-    void              spellCheck();
-    void              handleTabCompletion( bool direction );
-    void              historyUp(QKeyEvent *event);
-    void              historyDown(QKeyEvent *event);
-    bool              event(QEvent *event) override;
-    void              enterCommand(QKeyEvent *event);
-    void              adjustHeight();
-    void              mousePressEvent( QMouseEvent * event ) override;
+    QString mLastCompletion;
+    void handleAutoCompletion();
+    void spellCheck();
+    void handleTabCompletion(bool direction);
+    void historyUp(QKeyEvent* event);
+    void historyDown(QKeyEvent* event);
+    bool event(QEvent* event) override;
+    void enterCommand(QKeyEvent* event);
+    void adjustHeight();
+    void mousePressEvent(QMouseEvent* event) override;
+    void processNormalKey(QEvent*);
+    bool processPotentialKeyBinding(QKeyEvent*);
 
-    int               mHistoryBuffer;
-    QStringList       mHistoryList;
-    QMap<QString,int> mHistoryMap;
-    bool              mAutoCompletion;
-    bool              mTabCompletion;
-    QPointer<Host>    mpHost;
-    int               mTabCompletionCount;
-    int               mAutoCompletionCount;
-    QString           mTabCompletionTyped;
-    QString           mAutoCompletionTyped;
-    bool              mUserKeptOnTyping;
+    int mHistoryBuffer;
+    QStringList mHistoryList;
+    QMap<QString, int> mHistoryMap;
+    bool mAutoCompletion;
+    bool mTabCompletion;
+    QPointer<Host> mpHost;
+    int mTabCompletionCount;
+    int mAutoCompletionCount;
+    QString mTabCompletionTyped;
+    QString mAutoCompletionTyped;
+    bool mUserKeptOnTyping;
 
-    QPalette          mTabCompletionPalette;
-    QPalette          mAutoCompletionPalette;
-    KeyUnit *         mpKeyUnit;
-    TConsole *        mpConsole;
-    QString           mSelectedText;
-    int               mSelectionStart;
-    QString           mTabCompletionOld;
-    Hunhandle *       mpHunspell;
-    QPoint            mPopupPosition;
-    int               mHunspellSuggestionNumber;
-    char **           mpHunspellSuggestionList;
+    QPalette mTabCompletionPalette;
+    QPalette mAutoCompletionPalette;
+    KeyUnit* mpKeyUnit;
+    TConsole* mpConsole;
+    QString mSelectedText;
+    int mSelectionStart;
+    QString mTabCompletionOld;
+    Hunhandle* mpHunspell;
+    QPoint mPopupPosition;
+    int mHunspellSuggestionNumber;
+    char** mpHunspellSuggestionList;
 
 signals:
-    void              textChanged ( const QString & );
+    void textChanged(const QString&);
 
 public slots:
-    void              slot_textChanged(const QString &);
-    void              slot_sendCommand(const char * pS);
-    void              slot_popupMenu();
+    void slot_textChanged(const QString&);
+    void slot_sendCommand(const char* pS);
+    void slot_popupMenu();
 };
 
 #endif // MUDLET_TCOMMANDLINE_H

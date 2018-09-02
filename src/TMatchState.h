@@ -24,7 +24,7 @@
 class TMatchState
 {
 public:
-    TMatchState( int NumberOfConditions, int delta )
+    TMatchState(int NumberOfConditions, int delta)
     {
         mNumberOfConditions = NumberOfConditions;
         mNextCondition = 1; // first condition was true when the state was created
@@ -33,7 +33,7 @@ public:
         mSpacer = 0;
     }
 
-    TMatchState( const TMatchState &ms )
+    TMatchState(const TMatchState& ms)
     {
         mNumberOfConditions = ms.mNumberOfConditions;
         mNextCondition = ms.mNextCondition;
@@ -42,38 +42,29 @@ public:
     }
 
     int nextCondition() { return mNextCondition; }
-    void conditionMatched(){ mNextCondition++; }
-    bool isComplete()
-    {
-        return ( mNextCondition >= mNumberOfConditions );
-    }
-    void newLineArrived(){ mLineCount++; }
-    bool newLine()
-    {
-        return !( mLineCount > mDelta );
-    }
+    void conditionMatched() { mNextCondition++; }
+    bool isComplete() { return (mNextCondition >= mNumberOfConditions); }
+    void newLineArrived() { mLineCount++; }
+    bool newLine() { return !(mLineCount > mDelta); }
 
-    bool lineSpacerMatch( int lines )
+    bool lineSpacerMatch(int lines)
     {
-        if( mSpacer >= lines )
-        {
+        if (mSpacer >= lines) {
             mSpacer = 0;
             return true;
-        }
-        else
-        {
+        } else {
             mSpacer++;
             return false;
         }
     }
 
-    int                                 mSpacer;
-    std::list< std::list<std::string> > multiCaptureList;
-    std::list< std::list<int> >         multiCapturePosList;
-    int                                 mNumberOfConditions;
-    int                                 mNextCondition;
-    int                                 mLineCount;
-    int                                 mDelta;
+    int mSpacer;
+    std::list<std::list<std::string>> multiCaptureList;
+    std::list<std::list<int>> multiCapturePosList;
+    int mNumberOfConditions;
+    int mNextCondition;
+    int mLineCount;
+    int mDelta;
 };
 
 #endif // MUDLET_TMATCHSTATE_H

@@ -4,9 +4,10 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,16 +30,33 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringList>
 #include <QTcpSocket>
 #include <QTime>
 #include "post_guard.h"
-#include <QStringList>
 
 #include <zlib.h>
 
 #include <iostream>
 #include <queue>
 #include <string>
+
+#if defined(Q_OS_WIN32)
+#include <Winsock2.h>
+#include <ws2tcpip.h>
+#include "mstcpip.h"
+#else
+#include <sys/socket.h>
+/*
+ * The Linux documentation for setsockopt(2), indicates that "sys/types.h" is
+ * optional for that OS but is suggested for portability with other OSes also
+ * derived from BSD code - it is included in the corresponding FreeBSD manpage!
+ */
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+#endif
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -52,30 +70,30 @@ class Host;
 class dlgComposer;
 
 
-const char TN_SE = 240;
-const char TN_NOP = 241;
-const char TN_DM = 242;
-const char TN_B = 243;
-const char TN_IP = 244;
-const char TN_AO = 245;
-const char TN_AYT = 246;
-const char TN_EC = 247;
-const char TN_EL = 248;
-const char TN_GA = 249;
-const char TN_SB = 250;
-const char TN_WILL = 251;
-const char TN_WONT = 252;
-const char TN_DO = 253;
-const char TN_DONT = 254;
-const char TN_IAC = 255;
-const char TN_EOR = 239;
+const char TN_SE = static_cast<char>(240);
+const char TN_NOP = static_cast<char>(241);
+const char TN_DM = static_cast<char>(242);
+const char TN_B = static_cast<char>(243);
+const char TN_IP = static_cast<char>(244);
+const char TN_AO = static_cast<char>(245);
+const char TN_AYT = static_cast<char>(246);
+const char TN_EC = static_cast<char>(247);
+const char TN_EL = static_cast<char>(248);
+const char TN_GA = static_cast<char>(249);
+const char TN_SB = static_cast<char>(250);
+const char TN_WILL = static_cast<char>(251);
+const char TN_WONT = static_cast<char>(252);
+const char TN_DO = static_cast<char>(253);
+const char TN_DONT = static_cast<char>(254);
+const char TN_IAC = static_cast<char>(255);
+const char TN_EOR = static_cast<char>(239);
+const char TN_BELL = static_cast<char>(7);
 
-const char GMCP = 201; /* GMCP */
-const char MXP = 91; // MXP
-const char MSDP = 69; // MSDP, documented at http://tintin.sourceforge.net/msdp/
+const char GMCP = static_cast<char>(201);
+const char MXP = 91;
+const char MSDP = 69; // http://tintin.sourceforge.net/msdp/
 
 const char OPT_ECHO = 1;
-const char OPT_SUPPRESS_GA = 3;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
@@ -93,127 +111,131 @@ class cTelnet : public QObject
     Q_OBJECT
 
 public:
-                      cTelnet( Host * pH );
-                      ~cTelnet();
-    void              connectIt(const QString &address, int port);
-    void              disconnect();
-    bool              sendData( QString & data );
-    void              setCommandEcho( bool cmdEcho );
-    void              setATCPVariables(const QString & _msg );
-    void              setGMCPVariables(const QString & _msg );
-    void              atcpComposerCancel();
-    void              atcpComposerSave( QString );
-    void              setLPMudStyle( bool lpmustyle );
-    void              setNegotiateOnStartup( bool startupneg );
-    void              setDisplayDimensions();
-    void              encodingChanged(QString encoding);
-    void              set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
-    void              set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
-    void              recordReplay();
-    void              loadReplay( QString & );
-    void              _loadReplay();
-    bool              isReplaying() { return loadingReplay; }
-    void              setChannel102Variables(const QString & );
+    Q_DISABLE_COPY(cTelnet)
+    cTelnet(Host* pH);
+    ~cTelnet();
+    void connectIt(const QString& address, int port);
+    void disconnect();
+    bool sendData(QString& data);
+    void setATCPVariables(const QString& _msg);
+    void setGMCPVariables(const QString& _msg);
+    void atcpComposerCancel();
+    void atcpComposerSave(QString);
+    void setDisplayDimensions();
+    void encodingChanged(const QString&);
+    void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
+    void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
+    void recordReplay();
+    bool loadReplay(const QString&, QString* pErrMsg = nullptr);
+    void loadReplayChunk();
+    bool isReplaying() { return loadingReplay; }
+    void setChannel102Variables(const QString&);
+    bool socketOutRaw(std::string& data);
+    const QString & getEncoding() const { return mEncoding; }
+    QPair<bool, QString> setEncoding(const QString &, bool isToStore = true);
+    void postMessage(QString);
+    const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
+    const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
+    const QString& getComputerEncoding(const QString& encoding);
+    const QString& getFriendlyEncoding();
 
-
-
-
-    bool              socketOutRaw(std::string & data);
-
-    QMap<int, bool>   supportedTelnetOptions;
-    bool              mResponseProcessed;
-    double            networkLatency;
-    QTime             networkLatencyTime;
-    bool              mAlertOnNewData;
-    bool              mGA_Driver;
-    bool              mFORCE_GA_OFF;
-    dlgComposer *     mpComposer;
-    QNetworkAccessManager * mpDownloader;
-    QProgressDialog * mpProgressDialog;
-    QString           mServerPackage;
-    void              postMessage( QString msg );
+    QMap<int, bool> supportedTelnetOptions;
+    bool mResponseProcessed;
+    double networkLatency;
+    QTime networkLatencyTime;
+    bool mAlertOnNewData;
+    bool mGA_Driver;
+    bool mFORCE_GA_OFF;
+    dlgComposer* mpComposer;
+    QNetworkAccessManager* mpDownloader;
+    QProgressDialog* mpProgressDialog;
+    QString mServerPackage;
 
 public slots:
-    void              setDownloadProgress( qint64, qint64 );
-    void              replyFinished( QNetworkReply * );
-    void              readPipe();
-    void              handle_socket_signal_hostFound(QHostInfo);
-    void              handle_socket_signal_connected();
-    void              handle_socket_signal_disconnected();
-    void              handle_socket_signal_readyRead();
-    void              handle_socket_signal_error();
-    void              slot_timerPosting();
-    void              slot_send_login();
-    void              slot_send_pass();
+    void setDownloadProgress(qint64, qint64);
+    void replyFinished(QNetworkReply*);
+    void slot_processReplayChunk();
+    void handle_socket_signal_hostFound(QHostInfo);
+    void handle_socket_signal_connected();
+    void handle_socket_signal_disconnected();
+    void handle_socket_signal_readyRead();
+    void handle_socket_signal_error();
+    void slot_timerPosting();
+    void slot_send_login();
+    void slot_send_pass();
 
 
 private:
-                      cTelnet(){}
-    void              initStreamDecompressor();
-    int               decompressBuffer( char *& in_buffer, int& length, char* out_buffer );
-    void              reset();
-    void              connectionFailed();
+    cTelnet() = default;
 
-    void              processTelnetCommand(const std::string &command);
-    void              sendTelnetOption( char type, char option);
-    // string getCurrentTime(); //NOTE: not w32 compatible
-    void              gotRest( std::string & );
-    void              gotPrompt( std::string & );
-    void              postData();
-    void              raiseProtocolEvent( const QString & name, const QString & protocol );
+    void initStreamDecompressor();
+    int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    void reset();
 
+    void processTelnetCommand(const std::string& command);
+    void sendTelnetOption(char type, char option);
+    void gotRest(std::string&);
+    void gotPrompt(std::string&);
+    void postData();
+    void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void setKeepAlive(int socketHandle);
+    void processChunks();
 
+    QPointer<Host> mpHost;
+    QTcpSocket socket;
+    QHostAddress mHostAddress;
+//    QTextCodec* incomingDataCodec;
+    QTextCodec* outgoingDataCodec;
+//    QTextDecoder* incomingDataDecoder;
+    QTextEncoder* outgoingDataEncoder;
+    QString hostName;
+    int hostPort;
+    double networkLatencyMin;
+    double networkLatencyMax;
+    bool mWaitingForResponse;
+    std::queue<int> mCommandQueue;
 
-    QPointer<Host>    mpHost;
-    QTcpSocket        socket;
-    QHostAddress      mHostAddress;
-    QTextCodec *      incomingDataCodec;
-    QTextCodec *      outgoingDataCodec;
-    QTextDecoder *    incomingDataDecoder;
-    QTextEncoder *    outgoingDataDecoder;
-    QString           hostName;
-    int               hostPort;
-    double            networkLatencyMin;
-    double            networkLatencyMax;
-    bool              mWaitingForResponse;
-    std::queue<int>   mCommandQueue;
+    z_stream mZstream;
 
-    z_stream          mZstream;
+    bool mNeedDecompression;
+    std::string command;
+    bool iac, iac2, insb;
+    bool myOptionState[256], hisOptionState[256];
+    bool announcedState[256];
+    bool heAnnouncedState[256];
+    bool triedToEnable[256];
+    bool recvdGA;
 
-    bool              mNeedDecompression;
-    bool              mWaitingForCompressedStreamToStart;
-    std::string       command;
-    bool              iac, iac2, insb;
-    bool              myOptionState[256], hisOptionState[256];
-    bool              announcedState[256];
-    bool              heAnnouncedState[256];
-    bool              triedToEnable[256];
-    bool              recvdGA;
+    int curX, curY;
+    QString termType;
+    QString mEncoding;
+    QTimer* mpPostingTimer;
+    bool mUSE_IRE_DRIVER_BUGFIX;
+    bool mLF_ON_GA;
 
-    int               curX, curY;
-    QString           termType;
-    QString           encoding;
-    QTimer *          mpPostingTimer;
-    bool              mUSE_IRE_DRIVER_BUGFIX;
-    bool              mLF_ON_GA;
-
-    int               mCommands;
-    bool              mMCCP_version_1;
-    bool              mMCCP_version_2;
+    int mCommands;
+    bool mMCCP_version_1;
+    bool mMCCP_version_2;
 
 
-    std::string       mMudData;
-    bool              mIsTimerPosting;
-    QTimer *          mTimerLogin;
-    QTimer *          mTimerPass;
-    QTime             timeOffset;
-    QTime             mConnectionTime;
-    int               lastTimeOffset;
-    bool              enableATCP;
-    bool              enableGMCP;
-    bool              enableChannel102;
-    QStringList       messageStack;
-    bool              loadingReplay;
+    std::string mMudData;
+    bool mIsTimerPosting;
+    QTimer* mTimerLogin;
+    QTimer* mTimerPass;
+    QTime timeOffset;
+    QTime mConnectionTime;
+    int lastTimeOffset;
+    bool enableATCP;
+    bool enableGMCP;
+    bool enableChannel102;
+    QStringList messageStack;
+    // True if THIS profile is playing a replay, does not know about any OTHER
+    // active profile...
+    bool loadingReplay;
+    // Used to disable the TConsole ending messages if run from lua:
+    bool mIsReplayRunFromLua;
+    QStringList mAcceptableEncodings;
+    QStringList mFriendlyEncodings;
 };
 
 #endif // MUDLET_CTELNET_H

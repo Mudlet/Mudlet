@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<testconfig version="1.0">
+<information>
+<summary>A collection of various test cases that don't fit into the main suite</summary>
+<description>Useful for storing long-running spam test suites to ensure application stability.</description>
+</information>
+</testconfig>

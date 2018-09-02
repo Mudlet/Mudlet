@@ -32,6 +32,7 @@ class ExitsTreeWidget : public QTreeWidget
     Q_OBJECT
 
 public:
+    Q_DISABLE_COPY(ExitsTreeWidget)
     ExitsTreeWidget(QWidget* pW);
     void keyPressEvent(QKeyEvent* event) override;
 };

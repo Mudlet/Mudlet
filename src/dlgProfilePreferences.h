@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,11 +23,20 @@
  ***************************************************************************/
 
 
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+
 #include "pre_guard.h"
 #include "ui_profile_preferences.h"
-#include <QDialog>
 #include <QtCore>
+#include <QDialog>
 #include <QDir>
+#include <QDoubleSpinBox>
+#include <QMap>
 #include "post_guard.h"
 
 class Host;
@@ -37,10 +47,8 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
     Q_OBJECT
 
 public:
-    dlgProfilePreferences(QWidget*, Host*);
-
-    int mFontSize;
-
+    Q_DISABLE_COPY(dlgProfilePreferences)
+    dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
 
 public slots:
     // Fonts.
@@ -99,17 +107,66 @@ public slots:
     void loadMap();
     void saveMap();
     void copyMap();
-    void slot_chooseProfilesChanged(QAction *);
+    void slot_chooseProfilesChanged(QAction*);
+    void slot_showMapGlyphUsage();
+
+
+    // Log.
+    void slot_setLogDir();
+    void slot_resetLogDir();
+    void slot_logFileNameFormatChange(int index);
+    void slot_changeLogFileAsHtml(bool isHtml);
 
     // Save.
     void slot_save_and_exit();
 
     void hideActionLabel();
+    void slot_setEncoding(const QString&);
+
+    void slot_handleHostAddition(Host*, quint8);
+    void slot_handleHostDeletion(Host*);
+
+private slots:
+    void slot_changeShowSpacesAndTabs(bool);
+    void slot_changeShowLineFeedsAndParagraphs(bool);
+    void slot_script_selected(int index);
+    void slot_editor_tab_selected(int tabIndex);
+    void slot_theme_selected(int index);
+    void slot_setMapSymbolFont(const QFont&);
+    void slot_setMapSymbolFontStrategy(bool);
+    void slot_changeShowMenuBar(int);
+    void slot_changeShowToolBar(int);
 
 private:
     void setColors();
-    void setColor(QPushButton* b, QColor& c);
+    void setColors2();
+    void setColor(QPushButton*, QColor&);
+    void setButtonColor(QPushButton*, const QColor&);
+    void loadEditorTab();
+    void populateThemesList();
+    void populateScriptsList();
+    void addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void initWithHost(Host*);
+    void disableHostDetails();
+    void enableHostDetails();
+    void clearHostDetails();
+    void disconnectHostRelatedControls();
+    void generateMapGlyphDisplay();
+
+    int mFontSize;
     QPointer<Host> mpHost;
+    QPointer<QTemporaryFile> tempThemesArchive;
+    QMap<QString, QString> mSearchEngineMap;
+    QPointer<QMenu> mpMenu;
+    QPointer<QDialog> mpDialogMapGlyphUsage;
+    QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+
+    QString mLogDirPath;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

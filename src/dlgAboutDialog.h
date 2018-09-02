@@ -32,7 +32,8 @@ class dlgAboutDialog : public QDialog, public Ui::about_dialog
     Q_OBJECT
 
 public:
-    dlgAboutDialog(QWidget* parent = 0);
+    Q_DISABLE_COPY(dlgAboutDialog)
+    dlgAboutDialog(QWidget* parent = nullptr);
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H

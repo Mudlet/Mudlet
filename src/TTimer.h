@@ -43,61 +43,55 @@ class TTimer : public Tree<TTimer>
     friend class XMLimport;
 
 public:
+    ~TTimer();
+    TTimer(TTimer* parent, Host* pHost);
+    TTimer(const QString& name, QTime time, Host* pHost);
+    void compileAll();
+    QString& getName() { return mName; }
+    void setName(const QString& name);
+    QTime& getTime() { return mTime; }
+    void compile();
+    bool checkRestart();
+    bool compileScript();
+    void execute();
+    void setTime(QTime time);
+    QString getCommand() { return mCommand; }
+    void setCommand(const QString& cmd) { mCommand = cmd; }
+    QString getScript() { return mScript; }
+    bool setScript(const QString& script);
+    bool canBeUnlocked(TTimer*);
+    bool registerTimer();
+    bool setIsActive(bool);
+    void stop();
+    void start();
+    void enableTimer();
+    void disableTimer();
+    void enableTimer(const QString&);
+    void disableTimer(const QString&);
+    void enableTimer(int);
+    void disableTimer(int);
+    void killTimer();
 
-                    ~TTimer();
-                     TTimer( TTimer * parent, Host * pHost );
-                     TTimer(const QString& name, QTime time, Host * pHost );
-    void             compileAll();
-    QString &        getName()                       { return mName; }
-    void             setName(const QString& name );
-    QTime &          getTime()                       { return mTime; }
-    void             compile();
-    bool             checkRestart();
-    bool             compileScript();
-    void             execute();
-    void             setTime( QTime time );
-    QString          getCommand()                    { return mCommand; }
-    void             setCommand(const QString & cmd ) { mCommand = cmd; }
-    QString          getScript()                     { return mScript; }
-    bool             setScript(const QString & script );
-    bool             canBeUnlocked( TTimer * );
-    bool             isFolder()                      { return mIsFolder; }
-    void             setIsTempTimer( bool b )        { mIsTempTimer = b; }
-    bool             isTempTimer()                   { return mIsTempTimer; }
-    void             setIsFolder( bool b )           { mIsFolder = b; }
-    bool             registerTimer();
-    bool             setIsActive( bool );
-    void             stop();
-    void             start();
-    void             enableTimer();
-    void             disableTimer();
-    void             enableTimer( const QString & );
-    void             disableTimer( const QString & );
-    void             enableTimer( int );
-    void             disableTimer( int );
-    void             killTimer();
+    bool isOffsetTimer();
+    // specifies whenever the payload is Lua code as a string
+    // or a function
+    bool mRegisteredAnonymousLuaFunction;
+    bool exportItem;
+    bool mModuleMasterFolder;
 
-    bool             isOffsetTimer();
-    bool             mRegisteredAnonymousLuaFunction;
-    bool             exportItem;
-    bool            mModuleMasterFolder;
 private:
-
-                       TTimer(){};
-    QString            mName;
-    QString            mScript;
-    QTime              mTime;
-    QString            mCommand;
-    QString            mFuncName;
-    bool               mIsFolder;
-    QPointer<Host>     mpHost;
-    bool               mNeedsToBeCompiled;
-    bool               mIsTempTimer;
-    QMutex             mLock;
-    QTimer *           mpTimer;
-    bool                  mModuleMember;
+    TTimer() = default;
+    QString mName;
+    QString mScript;
+    QTime mTime;
+    QString mCommand;
+    QString mFuncName;
+    QPointer<Host> mpHost;
+    bool mNeedsToBeCompiled;
+    QMutex mLock;
+    QTimer* mpTimer;
+    bool mModuleMember;
     //TLuaInterpreter *  mpLua;
-
 };
 
 #endif // MUDLET_TTIMER_H

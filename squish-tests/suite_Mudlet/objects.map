@@ -1,0 +1,44 @@
+:MainWindow.Avalon.de_TConsole	{name='Avalon.de' type='TConsole' visible='1' window=':MainWindow_mudlet'}
+:MainWindow.Connect_QToolButton	{text='Connect' type='QToolButton' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow.Map - Achaea_QDockWidget	{type='QDockWidget' unnamed='1' visible='1' window=':MainWindow_mudlet' windowTitle='Map - Achaea'}
+:MainWindow.Map_QToolButton	{text='Map' type='QToolButton' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow.Triggers_QToolButton	{text='Triggers' type='QToolButton' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow.mp2dMap_T2DMap	{name='mp2dMap' type='T2DMap' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_QMenu	{type='QMenu' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_QWidget	{occurrence='23' type='QWidget' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_TCommandLine	{type='TCommandLine' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_TTextEdit	{type='TTextEdit' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_mudlet	{name='MainWindow' type='mudlet' visible='1'}
+:Map - Achaea.mp2dMap_T2DMap	{container=':MainWindow.Map - Achaea_QDockWidget' name='mp2dMap' type='T2DMap' visible='1'}
+:Triggers.Simple highlight trigger_QModelIndex	{column='0' container=':treeWidget_triggers.Triggers_QModelIndex' text='Simple highlight trigger' type='QModelIndex'}
+:_QSplashScreen	{type='QSplashScreen' unnamed='1' visible='0'}
+:frame_left.treeWidget_triggers_TTreeWidget	{container=':splitter_main.frame_left_QFrame' name='treeWidget_triggers' type='TTreeWidget' visible='1'}
+:frame_right.splitter_rightTopBottom_QSplitter	{container=':splitter_main.frame_right_QFrame' name='splitter_rightTopBottom' type='QSplitter' visible='1'}
+:frame_rightTop.colorizerTrigger_QGroupBox	{container=':splitter_rightTopBottom.frame_rightTop_QFrame' name='colorizerTrigger' type='QGroupBox' visible='1'}
+:frame_rightTop.label_4_QLabel	{container=':splitter_rightTopBottom.frame_rightTop_QFrame' name='label_4' type='QLabel' visible='1'}
+:frame_rightTop.label_5_QLabel	{container=':splitter_rightTopBottom.frame_rightTop_QFrame' name='label_5' type='QLabel' visible='1'}
+:frame_rightTop.scrollArea_QScrollArea	{container=':splitter_rightTopBottom.frame_rightTop_QFrame' name='scrollArea' type='QScrollArea' visible='1'}
+:informationalArea.website_entry_QLabel	{container=':profile_dialog.informationalArea_QGroupBox' name='website_entry' type='QLabel' visible='1'}
+:lineEdit_trigger_name_QLineEdit	{buddy=':frame_rightTop.label_4_QLabel' name='lineEdit_trigger_name' type='QLineEdit' visible='1'}
+:profile_dialog.Cancel_QPushButton	{text='Cancel' type='QPushButton' unnamed='1' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog.Connect_QPushButton	{text='Connect' type='QPushButton' unnamed='1' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog.informationalArea_QGroupBox	{name='informationalArea' type='QGroupBox' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog.new_profile_button_QPushButton	{name='new_profile_button' type='QPushButton' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog.profiles_tree_widget_QListWidget	{name='profiles_tree_widget' type='QListWidget' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog.requiredArea_QGroupBox	{name='requiredArea' type='QGroupBox' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog_dlgConnectionProfiles	{name='profile_dialog' type='dlgConnectionProfiles' visible='1'}
+:requiredArea.host_name_entry_QLineEdit	{container=':profile_dialog.requiredArea_QGroupBox' name='host_name_entry' type='QLineEdit' visible='1'}
+:requiredArea.port_entry_QLineEdit	{container=':profile_dialog.requiredArea_QGroupBox' name='port_entry' type='QLineEdit' visible='1'}
+:requiredArea.profile_name_entry_QLineEdit	{container=':profile_dialog.requiredArea_QGroupBox' name='profile_name_entry' type='QLineEdit' visible='1'}
+:roomExits_QDialog	{name='roomExits' type='QDialog' visible='1'}
+:scrollArea.lineEdit_QLineEdit	{container=':frame_rightTop.scrollArea_QScrollArea' name='lineEdit' type='QLineEdit' visible='1'}
+:splitter_main.frame_left_QFrame	{container=':trigger_editor.splitter_main_QSplitter' name='frame_left' type='QFrame' visible='1'}
+:splitter_main.frame_right_QFrame	{container=':trigger_editor.splitter_main_QSplitter' name='frame_right' type='QFrame' visible='1'}
+:splitter_rightTopBottom.frame_rightTop_QFrame	{container=':frame_right.splitter_rightTopBottom_QSplitter' name='frame_rightTop' type='QFrame' visible='1'}
+:treeWidget_triggers.Triggers_QModelIndex	{column='0' container=':frame_left.treeWidget_triggers_TTreeWidget' text='Triggers' type='QModelIndex'}
+:trigger_command_QLineEdit	{buddy=':frame_rightTop.label_5_QLabel' name='trigger_command' type='QLineEdit' visible='1'}
+:trigger_editor.Add Item_QToolButton	{text='Add Item' type='QToolButton' unnamed='1' visible='1' window=':trigger_editor_dlgTriggerEditor'}
+:trigger_editor.Delete Item_QToolButton	{text='Delete Item' type='QToolButton' unnamed='1' visible='1' window=':trigger_editor_dlgTriggerEditor'}
+:trigger_editor.Save Item_QToolButton	{text='Save Item' type='QToolButton' unnamed='1' visible='1' window=':trigger_editor_dlgTriggerEditor'}
+:trigger_editor.splitter_main_QSplitter	{name='splitter_main' type='QSplitter' visible='1' window=':trigger_editor_dlgTriggerEditor'}
+:trigger_editor_dlgTriggerEditor	{name='trigger_editor' type='dlgTriggerEditor' visible='1'}

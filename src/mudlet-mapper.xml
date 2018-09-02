@@ -4440,6 +4440,7 @@ function createOptionsTable(defaultTable)
 			local opt = rawget(self[index], option)
 			if opt.onChange  and not silent then opt.onChange(option, value) end
 		end
+		if mmp and mmp.clearpathcache then mmp.clearpathcache() end
 	end
 
 
@@ -4503,7 +4504,7 @@ mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
 
 
-local newversion = &quot;17.3.2&quot;
+local newversion = &quot;17.6.2&quot;
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then mmp.echo(&quot;Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.&quot;)
   else mmp.echo(&quot;Mapper script updated - thanks! You don't need to restart.&quot;) end
@@ -7731,6 +7732,26 @@ end</script>
                             <string>mmapper changed continent</string>
                         </eventHandlerList>
                     </Script>
+                    <Script isActive="yes" isFolder="no">
+                        <name>achaea_gaia_whirlpool_reset</name>
+                        <packageName></packageName>
+                        <script>-------------------------------------------------
+--         Put your Lua functions here.        --
+--                                             --
+-- Note that you can also use external Scripts --
+-------------------------------------------------
+function achaea_gaia_whirlpool_reset(event, game)
+	if game == &quot;Achaea&quot; then
+		mmp.whirlString = 'script: send(&quot;enter whirlpool&quot;) if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end if tempWhirlTimer then killTimer(killWhirlTimer) tempWhirlTimer = nil end tempWhirlTrigger = tempTrigger(&quot;What do you wish to enter?&quot;, [[if tempWhirlTimer then killTimer(tempWhirlTimer) tempWhirlTimer = nil end mmp.echo(&quot;Whirlpool not found here. Trying another room.&quot;) local x = {45817, 45780, 45903, 45868, 46254, 45866} if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end clearSpecialExits(]]..mmp.currentroom..[[) local y = table.index_of(x, ]]..mmp.currentroom..[[) + 1 if y &gt; #x then y = 1 end addSpecialExit(x[y], 793, mmp.whirlString) mmp.clearpathcache() mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath]) mmp.echo(&quot;Moved whirlpool to &quot;..x[y]..&quot;.&quot;)]]) tempWhirlTimer = tempTimer(1, [[if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end if tempWhirlTimer then killTimer(tempWhirlTimer) tempWhirlTimer = nil end]])'
+		local x = {45817, 45780, 45903, 45868, 46254, 45866}
+		for i, v in ipairs(x) do clearSpecialExits(v) end
+		addSpecialExit(45868, 793, mmp.whirlString)
+	end
+end</script>
+                        <eventHandlerList>
+                            <string>mmp logged in</string>
+                        </eventHandlerList>
+                    </Script>
                 </Script>
                 <Script isActive="yes" isFolder="no">
                     <name>Aetolia</name>
@@ -8739,7 +8760,7 @@ end</script>
                         </eventHandlerList>
                     </Script>
                 </Script>
-                <Script isActive="yes" isFolder="no">
+                <Script isActive="no" isFolder="no">
                     <name>mmp_see_dl_errors</name>
                     <packageName></packageName>
                     <script>-- this should be off by default

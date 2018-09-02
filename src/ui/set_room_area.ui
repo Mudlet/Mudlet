@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>set_room_area_dialog</class>
- <widget class="QDialog" name="set_room_area_dialog">
+ <class>set_room_area</class>
+ <widget class="QDialog" name="set_room_area">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -54,7 +54,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>set_room_area_dialog</receiver>
+   <receiver>set_room_area</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -70,7 +70,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>set_room_area_dialog</receiver>
+   <receiver>set_room_area</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

@@ -25,17 +25,18 @@
 
 #include "pre_guard.h"
 #include <QDebug>
-#if QT_VERSION >= 0x050100
 #include <QDebugStateSaver>
-#endif
-#include <QStringList>
 #include <QList>
+#include <QStringBuilder>
+#include <QStringList>
 #include "post_guard.h"
 
 #define ARGUMENT_TYPE_NUMBER 0
 #define ARGUMENT_TYPE_STRING 1
 #define ARGUMENT_TYPE_BOOLEAN 2
 #define ARGUMENT_TYPE_NIL 3
+#define ARGUMENT_TYPE_TABLE 4
+#define ARGUMENT_TYPE_FUNCTION 5
 
 class TEvent
 {
@@ -46,54 +47,51 @@ public:
 
 #ifndef QT_NO_DEBUG_STREAM
 // Note "inline" is REQUIRED:
-inline QDebug & operator<<( QDebug & debug, const TEvent & event )
+inline QDebug& operator<<(QDebug& debug, const TEvent& event)
 {
-#if QT_VERSION >= 0x050100
     QDebugStateSaver saver(debug);
-#endif
     const int argCount = event.mArgumentList.count();
     const int typeCount = event.mArgumentTypeList.count();
     int i = 0;
-    QString result( "TEvent(" );
-    while( i < argCount && i < typeCount ) {
-        if( Q_UNLIKELY( i >= typeCount ) ) {
-            result.append( QStringLiteral( "[%1{missing}%2]" ).arg( i ).arg( event.mArgumentList.at( i ) ) );
-        }
-        else {
-            if( Q_UNLIKELY( i >=argCount ) ) {
-                switch( event.mArgumentTypeList.at( i ) ) {
+    QString result = QLatin1String("TEvent(");
+    while (i < argCount && i < typeCount) {
+        if (Q_UNLIKELY(i >= typeCount)) {
+            result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{missing}") % event.mArgumentList.at(i) % QLatin1String("]"));
+        } else {
+            if (Q_UNLIKELY(i >= argCount)) {
+                switch (event.mArgumentTypeList.at(i)) {
                 case ARGUMENT_TYPE_NUMBER:
-                    result.append( QStringLiteral( "[%1{number}missing]" ).arg( i ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{number}missing]"));
                     break;
                 case ARGUMENT_TYPE_BOOLEAN:
-                    result.append( QStringLiteral( "[%1{bool}missing]" ).arg( i ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{bool}missing]"));
                     break;
                 case ARGUMENT_TYPE_NIL:
-                    result.append( QStringLiteral( "[%1{nil}missing]" ).arg( i ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{nil}missing]"));
                     break;
                 default:
-                    result.append( QStringLiteral( "[%1{string}missing]" ).arg( i ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{string}missing]"));
                 }
-            }
-            else {
-                switch( event.mArgumentTypeList.at( i ) ) {
+            } else {
+                switch (event.mArgumentTypeList.at(i)) {
                 case ARGUMENT_TYPE_NUMBER:
-                    result.append( QStringLiteral( "[%1{number}%2]" ).arg( i ).arg( event.mArgumentList.at( i ).toDouble() ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{number}") % QString::number(event.mArgumentList.at(i).toDouble()) % QLatin1String("]"));
                     break;
                 case ARGUMENT_TYPE_BOOLEAN:
-                    result.append( QStringLiteral( "[%1{bool}%2]" ).arg( i ).arg( event.mArgumentList.at( i ).toInt() ? "true" : "false" ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{bool}") % (event.mArgumentList.at(i).toInt() ? QLatin1String("true") : QLatin1String("false"))
+                                  % QLatin1String("]"));
                     break;
                 case ARGUMENT_TYPE_NIL:
-                    result.append( QStringLiteral( "[%1{nil}nil]" ).arg( i ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{nil}nil]"));
                     break;
                 default:
-                    result.append( QStringLiteral( "[%1{string}%2]" ).arg( i ).arg( event.mArgumentList.at( i ) ) );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{string}") % event.mArgumentList.at(i) % QLatin1String("]"));
                 }
             }
             ++i;
         }
     }
-    result.append( QStringLiteral( ")" ) );
+    result.append(QLatin1String(")"));
     debug.nospace() << result;
     return debug;
 }

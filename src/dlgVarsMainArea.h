@@ -32,12 +32,8 @@ class dlgVarsMainArea : public QWidget, public Ui::vars_main_area
     Q_OBJECT
 
 public:
+    Q_DISABLE_COPY(dlgVarsMainArea)
     dlgVarsMainArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGVARSMAINAREA_H

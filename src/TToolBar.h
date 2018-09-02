@@ -34,31 +34,34 @@ class QGridLayout;
 
 class TToolBar : public QDockWidget
 {
-Q_OBJECT
-        
-public:
-                     TToolBar( TAction *, const QString&, QWidget * pW = 0 );
-    void             addButton( TFlipButton * pW );
-    void             moveEvent( QMoveEvent * e ) override;
-    void             setVerticalOrientation(){ mVerticalOrientation = true; }
-    void             setHorizontalOrientation(){ mVerticalOrientation = false; }
-    void             clear();
-    void             finalize();
-    TAction *        mpTAction;
-    void             recordMove(){ mRecordMove = true; }
-    
-//private:
-        
-    bool             mVerticalOrientation;
-    QWidget *        mpWidget;
-    QString          mName;
-    bool             mRecordMove;
-    QGridLayout *    mpLayout;
-    int              mItemCount;
+    Q_OBJECT
 
+public:
+    Q_DISABLE_COPY(TToolBar)
+    TToolBar(TAction*, const QString&, QWidget* pW = nullptr);
+    void addButton(TFlipButton* pW);
+    void resizeEvent(QResizeEvent* e) override;
+    void moveEvent(QMoveEvent* e) override;
+    void setVerticalOrientation() { mVerticalOrientation = true; }
+    void setHorizontalOrientation() { mVerticalOrientation = false; }
+    void clear();
+    void finalize();
+    TAction* mpTAction;
+    void recordMove() { mRecordMove = true; }
+    QString getName() { return mName; }
+
+private:
+    bool mVerticalOrientation;
+    QWidget* mpWidget;
+    QString mName;
+    bool mRecordMove;
+    QGridLayout* mpLayout;
+    int mItemCount;
 
 public slots:
-    void             slot_pressed( const bool );
+    void slot_pressed(bool);
+    void slot_topLevelChanged(bool);
+    void slot_dockLocationChanged(Qt::DockWidgetArea);
 };
 
 #endif // MUDLET_TTOOLBAR_H
