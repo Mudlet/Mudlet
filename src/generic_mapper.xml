@@ -46,12 +46,14 @@
 			<colorTriggerFgColor>#000000</colorTriggerFgColor>
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
-				<string>^(?:Alas, )?[Yy]ou can(?:no|')t go that way.</string>
+				<string>^(?:Alas, )?[Yy]ou can(?:no|')t (?:go|move) .*</string>
 				<string>^The .+ is closed.</string>
 				<string>.+ (?:is not going to|will not) let you pass.</string>
 				<string>^That exit is blocked.</string>
+				<string>^You are blocked by .*</string>
 			</regexCodeList>
 			<regexCodePropertyList>
+				<integer>1</integer>
 				<integer>1</integer>
 				<integer>1</integer>
 				<integer>1</integer>
@@ -310,6 +312,20 @@ end</script>
 			<packageName></packageName>
 			<regex>^map show$</regex>
 		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>Map Help Alias</name>
+			<script>cecho(map.help)</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^map help$</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>Map Quick Start Alias</name>
+			<script>cecho(map.quick_start)</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^map basics$</regex>
+		</Alias>
 	</AliasPackage>
 	<ActionPackage />
 	<ScriptPackage>
@@ -326,6 +342,8 @@ map = map or {}
 map.help = [[
     Jor'Mox's Generic Map Script
 
+    This needs to be massively overhauled.
+		
     This script allows for semi-automatic mapping using just room names and exits. It is
     a good idea to know the general layout of the area you are trying to map before
     turning on mapping with this script, so as to minimize how much you need to move
@@ -425,6 +443,19 @@ map.help = [[
         in implementing more advanced scripts and functions that rely on map information.
 ]]
 
+map.quick_start = [[
+    This is supposed to be a quick start guide. It sucks right now.
+    
+    Use "&lt;yellow&gt;map basics&lt;reset&gt;" to see this again
+    Use "map help" to see more detailed help
+    Use "map show" to show or hide the map window
+    Use "find prompt" to have script auto-detect common prompts
+    Use "map prompt" followed by a Lua-type pattern to set a specific prompt pattern
+    Use "map ignore" followed by a Lua-type pattern to tell mapper to ignore certain
+        text when looking for a room name
+    Use "map debug" to turn debug mode on or off
+]]
+
 map.character = map.character or ""
 map.prompt = map.prompt or {}
 map.save = map.save or {}
@@ -444,7 +475,7 @@ map.configs = {
     download_path = "",
     stretch_map = true,
     search_on_look = true,
-    prompt_test_patterns = {"^&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]"},
+    prompt_test_patterns = {"^%[?%a*%]?&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]", "^[Hh][Pp]:.*&gt;"},
     custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
                         -- ex: { us = {"upsouth", "downnorth", 0, -1, 1}, dn = {"downnorth", "upsouth", 0, 1, -1} }
     use_lang_dirs = false,
@@ -591,8 +622,10 @@ local function add_door(roomID, dir, status)
     if not table.contains(exitmap,dir) then
         error("Add Door: invalid direction.",2)
     end
-    status = assert(table.index_of({"none","open","closed","locked"},status),
-        "Add Door: Invald status, must be none, open, closed, or locked") - 1
+    if type(status) ~= "number" then
+        status = assert(table.index_of({"none","open","closed","locked"},status),
+            "Add Door: Invald status, must be none, open, closed, or locked") - 1
+    end
     local exits = getRoomExits(roomID)
     -- check handling of custom exits here
     if not exits[dir] then
@@ -685,6 +718,15 @@ local function connect_rooms(ID1, ID2, dir1, dir2, no_check)
     if stubmap[dir1] &gt; 13 then
         -- check handling of custom exits here
         setRoomUserData(ID1,"stub"..dir1,"")
+    end
+    local doors1, doors2 = getDoors(ID1), getDoors(ID2)
+    local dstatus1, dstatus2 = doors1[short[dir1]] or doors1[dir1], doors2[short[dir2]] or doors2[dir2]
+    if dstatus1 ~= dstatus2 then
+        if not dstatus1 then
+            add_door(ID1,dir1,dstatus2)
+        elseif not dstatus2 then
+            add_door(ID2,dir2,dstatus1)
+        end
     end
     if map_mode ~= "complex" then
         local stubs = getRoomStubs(ID2)
@@ -874,7 +916,6 @@ local function move_map()
                 end
             end
         end
-
         if find_portal then
             map.find_me(currentName,currentExits,move)
             find_portal = false
@@ -888,7 +929,7 @@ local function move_map()
         elseif move == "look" then
             map.find_me(currentName,currentExits)
         else
-						if exits[move] and (vision_fail or check_room(exits[move], currentName, currentExits)) then
+            if exits[move] and (vision_fail or check_room(exits[move], currentName, currentExits)) then
                 set_room(exits[move])
             elseif special[move] and (vision_fail or check_room(special[move], currentName, currentExits)) then
                 set_room(special[move])
@@ -915,6 +956,20 @@ local function capture_move_cmd(dir,priority)
     if dir == "l" then dir = "look" end
     if configs.use_lang_dirs then
         dir = configs.lang_dirs[dir] or dir
+    end
+    local door = string.match(dir,"open (%a+)")
+    if mapping and door then
+        local doors = getDoors(currentRoom)
+        if not doors[door] and not doors[short[door]] then
+            map.set_door(door,"","")
+        end
+    end
+    local portal = string.match(dir,"enter (%a+)")
+    if mapping and portal then
+        local portals = getSpecialExitsSwap(currentRoom)
+        if not portals[dir] then
+            map.set_portal(dir, true)
+        end
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
         if priority then
@@ -944,11 +999,14 @@ local function capture_room_info(name, exits)
         name = string.trim(name)
         currentName = name
         exits = string.gsub(string.lower(exits)," and "," ")
-				if exits:ends(".") then exits = exits:sub(1,#exits-1) end
+        if exits:ends(".") then exits = exits:sub(1,#exits-1) end
         if map.configs.use_lang_dirs then
             exits = exits:gsub("%a+",map.configs.lang_dirs)
         end
-        currentExits = (exits ~= "" and string.split(exits,"[, ]+")) or {}
+        currentExits = {}
+        for w in string.gmatch(exits,"%a+") do
+            table.insert(currentExits,w)
+        end
         move_map()
     elseif vision_fail then
         move_map()
@@ -1163,7 +1221,7 @@ function map.set_recall()
     map.echo("Recall room set to: " .. getRoomName(currentRoom) .. ".")
 end
 
-function map.set_portal(name)
+function map.set_portal(name, is_auto)
     -- creates a new portal in the room
     if mapping then
         if not string.starts(name,"-f ") then
@@ -1173,7 +1231,9 @@ function map.set_portal(name)
             force_portal = name
         end
         move_queue = {name}
-        send(name)
+        if not is_auto then
+            send(name)
+        end
     else
         map.echo("Not mapping",false,true)
     end
@@ -1628,23 +1688,23 @@ local function name_search()
         if not lines[line_count] then break end
         cur_line = lines[line_count]
         for k,v in ipairs(map.save.ignore_patterns) do
-	            cur_line = cur_line:gsub(v,""):trim()
+	          cur_line = string.trim(string.gsub(cur_line,v,""))
         end
-        if cur_line:find(prompt_pattern) then
-            cur_line = cur_line:gsub(prompt_pattern,""):trim()
+        if string.find(cur_line,prompt_pattern) then
+            cur_line = string.trim(string.gsub(cur_line,prompt_pattern,""))
             if cur_line ~= "" then
                 room_name = cur_line
             else
                 room_name = last_line
             end
         elseif line_count == 1 then
-            cur_line = cur_line:trim()
+            cur_line = string.trim(cur_line)
             if cur_line ~= "" then
                 room_name = cur_line
             else
                 room_name = last_line
             end
-        elseif not cur_line:match("^%s*$") then
+        elseif not string.match(cur_line,"^%s*$") then
             last_line = cur_line
         end
     end
@@ -1654,11 +1714,12 @@ end
 
 local function handle_exits(exits)
     local room = name_search()
-    exits = exits:gsub("%a+", exitmap)
+    exits = string.lower(exits)
+    exits = string.gsub(exits,"%a+", exitmap)
     map.echo("Exits Captured: " .. exits,true)
     if room then
         map.echo("Room Name Captured: " .. room, true)
-        room = room:trim()
+        room = string.trim(room)
         map.prompt.room = room
         map.prompt.exits = exits
         capture_room_info(room, exits)
@@ -1697,6 +1758,10 @@ function map.eventHandler(event,...)
         map.echo("Map File Loaded.")
     elseif event == "sysConnectionEvent" or event == "sysInstall" then
         config()
+    elseif event == "mapOpenEvent" then
+        if not map.save.prompt_pattern[""] then
+            cecho(map.quick_start)
+        end
     end
 end
 
@@ -1709,7 +1774,8 @@ registerAnonymousEventHandler("onVisionFail"," map.eventHandler")
 registerAnonymousEventHandler("onRandomMove"," map.eventHandler")
 registerAnonymousEventHandler("onForcedMove"," map.eventHandler")
 registerAnonymousEventHandler("onNewRoom"," map.eventHandler")
-registerAnonymousEventHandler("onNewLine"," map.eventHandler")</script>
+registerAnonymousEventHandler("onNewLine"," map.eventHandler")
+registerAnonymousEventHandler("mapOpenEvent"," map.eventHandler")</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>
