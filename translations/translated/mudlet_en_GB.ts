@@ -1873,7 +1873,9 @@ Mudlet - is your system running out of memory?</source>
  Look for further messsages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation type="unfinished">
+        <numerusform>[ ALERT ] - Areas detected as missing in map: adding them in. Look for further messages related to the rooms that are supposed to be in these areas...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="716"/>
