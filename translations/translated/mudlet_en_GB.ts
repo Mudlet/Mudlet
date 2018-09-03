@@ -602,7 +602,10 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3387"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished"/>
+      <translation type="unfinished">
+        <numerusform>Enter the symbol to use
+for these %n rooms:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3397"/>
