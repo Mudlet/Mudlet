@@ -78,7 +78,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
     
     cd "${TRAVIS_BUILD_DIR}"
     # generate and upload the tarball
-    bash ../git-archive-all.sh "Mudlet-${VERSION}.tar"
+    bash "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
     xz "Mudlet-${VERSION}.tar"
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
   fi
