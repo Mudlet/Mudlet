@@ -1309,6 +1309,21 @@ int TLuaInterpreter::centerview(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getView
+int TLuaInterpreter::getView(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+        lua_pushnil(L);
+        lua_pushstring(L, "you haven't opened a map yet");
+        return 2;
+    }
+
+    lua_pushnumber(L, host.mpMap->mRoomIdHash[host.getName()]);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
@@ -12827,6 +12842,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
+    lua_register(pGlobalLua, "getView", TLuaInterpreter::getView);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
