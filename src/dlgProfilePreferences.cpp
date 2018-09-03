@@ -398,7 +398,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     if (url.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-     || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+     || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
 
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
@@ -1494,7 +1495,11 @@ void dlgProfilePreferences::downloadMap()
         mudlet::self()->createMapper(false);
     }
 
-    pHost->mpMap->downloadMap();
+    if (pHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
+        pHost->mpMap->downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
+    } else {
+        pHost->mpMap->downloadMap();
+    }
 }
 
 void dlgProfilePreferences::loadMap()

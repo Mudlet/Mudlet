@@ -5777,6 +5777,10 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded(true);
     std::list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : baseNodeList_alias) {
+        if (alias->isTemporary()) {
+            continue;
+        }
+
         QString s = alias->getName();
         QStringList sList;
         sList << s;
@@ -5842,6 +5846,10 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded(true);
     std::list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : baseNodeList_action) {
+        if (action->isTemporary()) {
+            continue;
+        }
+
         QString s = action->getName();
         QStringList sList;
         sList << s;
@@ -5899,6 +5907,10 @@ void dlgTriggerEditor::fillout_form()
     mpKeyBaseItem->setExpanded(true);
     std::list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : baseNodeList_key) {
+        if (key->isTemporary()) {
+            continue;
+        }
+
         QString s = key->getName();
         QStringList sList;
         sList << s;

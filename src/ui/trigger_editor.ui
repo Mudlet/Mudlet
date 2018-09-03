@@ -647,7 +647,7 @@
                     </size>
                    </property>
                    <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    <string>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</string>
                    </property>
                    <property name="text">
                     <string/>

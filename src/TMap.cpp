@@ -1534,13 +1534,19 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
             || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
+            || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
             msgBox.exec();
             if (msgBox.clickedButton() == yesButton) {
-                downloadMap();
+                // no https support
+                if (mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
+                    downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
+                } else {
+                    downloadMap();
+                }
             } else if (msgBox.clickedButton() == noButton) {
                 ; //No-op to avoid unused "noButton"
             }
@@ -2069,7 +2075,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     mIsFileViewingRecommended = false;
 }
 
-void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
+void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2088,11 +2094,11 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     // We have the mutex locked - MUST unlock it when done under ALL circumstances
     QUrl url;
 
-    if (!remoteUrl || remoteUrl->isEmpty()) {
+    if (remoteUrl.isEmpty()) {
         // TODO: Provide a per profile means to specify a "user settable" default Url...
         url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
     } else {
-        url = QUrl::fromUserInput(*remoteUrl);
+        url = QUrl::fromUserInput(remoteUrl);
     }
 
     if (!url.isValid()) {
@@ -2106,10 +2112,10 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
         return;
     }
 
-    if (!localFileName || localFileName->isEmpty()) {
+    if (localFileName.isEmpty()) {
         mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, pHost->getName());
     } else {
-        mLocalMapFileName = *localFileName;
+        mLocalMapFileName = localFileName;
     }
 
     QNetworkRequest request = QNetworkRequest(url);
