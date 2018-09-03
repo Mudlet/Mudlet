@@ -579,32 +579,40 @@ void dlgConnectionProfiles::validateProfile()
         int num = port.trimmed().toInt(&ok);
         if (num > 65536 && ok) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(),tr("Port number must be above zero and below 65535.\r\n")));
+            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.\r\n")));
             port_entry->setPalette(mErrorPalette);
             validPort = false;
             valid = false;
         }
 
 #if defined(QT_NO_SSL)
-        if (port_ssl_tsl->isChecked() && port_ssl_tsl->isEnabled())
-        {
-#else
-        if (port_ssl_tsl->isChecked() && !QSslSocket::supportsSsl())
-        {
-#endif
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(),tr("Mudlet is not Configured for SSL connections.\n\n")));
-            host_name_entry->setPalette(mErrorPalette);
+        port_ssl_tsl->setEnabled(false);
+        port_ssl_tsl->setToolTip("Mudlet is not configured for secure connections.");
+        if (port_ssl_tsl->isChecked()) {
+            //notificationAreaIconLabelError->show();
+            //notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.\n\n")));
             validPort = false;
             valid = false;
         }
-
+#else
+        if (!QSslSocket::supportsSsl()) {
+            port_ssl_tsl->setEnabled(false);
+            port_ssl_tsl->setToolTip("Mudlet can not load support for secure connections.");
+            if (port_ssl_tsl->isChecked()) {
+                //notificationAreaIconLabelError->show();
+                //notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.\n\n")));
+                validPort = false;
+                valid = false;
+            }
+        }
+#endif
         QUrl check;
         QString url = host_name_entry->text().trimmed();
         check.setHost(url);
-        if (!check.isValid()) {
+        if (!check.isValid())
+        {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(),tr("Please enter the URL or IP address of the MUD server.\n\n%1").arg(check.errorString())));
+            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the MUD server.\n\n%1").arg(check.errorString())));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
@@ -615,7 +623,7 @@ void dlgConnectionProfiles::validateProfile()
             if (port_ssl_tsl->isChecked())
             {
                 notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(),tr("SSL connections require the URL of the MUD server.\n\n%1").arg(check.errorString())));
+                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the MUD server.\n\n%1").arg(check.errorString())));
                 host_name_entry->setPalette(mErrorPalette);
                 validUrl = false;
                 valid = false;
