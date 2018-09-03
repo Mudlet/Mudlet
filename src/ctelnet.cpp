@@ -375,7 +375,7 @@ bool cTelnet::sendData(QString& data)
             if (! outgoingDataCodec->canEncode(data)) {
                 QString errorMsg = tr("[ WARN ] - Invalid characters in outgoing data, one or more characters cannot\n"
                                       "be encoded into the range that is acceptable for the character\n"
-                                      "encoding that is currently set {\"%1\"} for the MUD Server."
+                                      "encoding that is currently set {\"%1\"} for the game Server."
                                       "It may not understand what is sent to it.").arg(mEncoding);
                 postMessage(errorMsg);
             }

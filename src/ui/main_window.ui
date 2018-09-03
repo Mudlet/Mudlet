@@ -160,7 +160,7 @@
     <string>Play</string>
    </property>
    <property name="statusTip">
-    <string>configure connection details of, and make a connection to, MUD servers</string>
+    <string>configure connection details of, and make a connection to, game servers</string>
    </property>
    <property name="shortcut">
     <string>Alt+C</string>
@@ -171,7 +171,7 @@
     <string>Disconnect</string>
    </property>
    <property name="statusTip">
-    <string>disconnect from the current MUD server</string>
+    <string>disconnect from the current game server</string>
    </property>
    <property name="shortcut">
     <string>Alt+D</string>
@@ -182,7 +182,7 @@
     <string>Reconnect</string>
    </property>
    <property name="statusTip">
-    <string>disconnect and then reconnect to the current MUD server</string>
+    <string>disconnect and then reconnect to the current game server</string>
    </property>
    <property name="shortcut">
     <string>Alt+R</string>
@@ -266,7 +266,7 @@
     <string>Load replay</string>
    </property>
    <property name="statusTip">
-    <string>load a previous saved MUD session that can be used to test Mudlet lua systems (off-line!)</string>
+    <string>load a previous saved game session that can be used to test Mudlet lua systems (off-line!)</string>
    </property>
   </action>
   <action name="dactionForum">
@@ -303,7 +303,7 @@
     <string>Show map</string>
    </property>
    <property name="statusTip">
-    <string>show or hide the MUD Map</string>
+    <string>show or hide the game Map</string>
    </property>
    <property name="shortcut">
     <string>Alt+M</string>

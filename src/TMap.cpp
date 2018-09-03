@@ -997,18 +997,18 @@ bool TMap::findPath(int from, int to)
             // happens - Slysven
             mWeightList.prepend( r.cost );
             switch( r.direction ) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
-            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!" ) );      break;
-            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!" ) );       break;
-            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!" ) );      break;
-            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!" ) );       break;
-            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!" ) );        break;
-            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!" ) );    break;
-            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!" ) );        break;
-            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!" ) );      break;
+            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
+            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
+            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!" ) );      break;
+            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!" ) );       break;
+            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!" ) );        break;
+            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!" ) );    break;
+            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!" ) );        break;
+            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!" ) );      break;
             case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
             default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from id:" << previousRoomId << ", to id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
             }

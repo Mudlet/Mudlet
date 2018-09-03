@@ -218,7 +218,7 @@ mudlet::mudlet()
     }
 
     mpActionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
-    mpActionConnect->setToolTip(tr("Connect to a MUD"));
+    mpActionConnect->setToolTip(tr("Connect to a game"));
     mpMainToolBar->addAction(mpActionConnect);
 
     // add name to the action's widget in the toolbar, which doesn't have one by default

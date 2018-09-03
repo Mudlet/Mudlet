@@ -396,7 +396,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
     logButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Start logging MUD output to log file.")));
+        tr("Start logging game output to log file.")));
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
@@ -407,7 +407,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     networkLatency->setSizePolicy(sizePolicy4);
     networkLatency->setFocusPolicy(Qt::NoFocus);
     networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("<i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br>"
+        tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds), <br>"
            "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
     networkLatency->setMaximumSize(120, 30);
     networkLatency->setMinimumSize(120, 30);
@@ -1001,7 +1001,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         }
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Stop logging MUD output to log file.</p>")));
+                              .arg(tr("<p>Stop logging game output to log file.</p>")));
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
@@ -1019,7 +1019,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         mLogFile.flush();
         mLogFile.close();
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Start logging MUD output to log file.</p>")));
+                              .arg(tr("<p>Start logging game output to log file.</p>")));
     }
 }
 

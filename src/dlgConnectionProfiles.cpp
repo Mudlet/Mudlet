@@ -74,7 +74,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         // actual icon in use.
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
-                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
+                                           "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
                                            "<p>To play a game not in the list, click on NEW_PROFILE_ICON "
                                            "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
                                            "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
@@ -119,7 +119,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     } else {
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
-                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
+                                           "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
                                            "<p>To play a game not in the list, click on <span style=\" color:#555753;\">New</span>, fill in the "
                                            "<i>Profile Name</i>, <i>Server address</i>, and <i>Port</i> fields in the "
                                            "<i>Required </i> area.</p>"
@@ -261,7 +261,7 @@ void dlgConnectionProfiles::slot_update_url(const QString &url)
             notificationAreaIconLabelError->show();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(tr("Please enter the URL or IP address of the MUD server.\n\n%1").arg(check.errorString()));
+            notificationAreaMessageBox->setText(tr("Please enter the URL or IP address of the game server.\n\n%1").arg(check.errorString()));
             validUrl = false;
             connect_button->setDisabled(true);
         }
