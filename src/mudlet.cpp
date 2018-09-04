@@ -1066,6 +1066,12 @@ void mudlet::slot_tab_changed(int tabID)
         if (!mpCurrentActiveHost) {
             return;
         }
+
+        if (mpCurrentActiveHost->mpConsole->mpMapper) {
+            mpCurrentActiveHost->mpConsole->mpMapper->activateWindow();
+            mpCurrentActiveHost->mpConsole->mpMapper->raise();
+        }
+
         mpCurrentActiveHost->mpConsole->show();
         mpCurrentActiveHost->mpConsole->repaint();
         mpCurrentActiveHost->mpConsole->refresh();
