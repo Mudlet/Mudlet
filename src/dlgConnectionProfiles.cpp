@@ -84,7 +84,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         // particular sequence of characters with an image generated from the
         // actual icon in use.
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(Welcome_text_template.arg("NEW_PROFILE_ICON", "CONNECT_PROFILE_ICON")));
+                                   .arg(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"), 
+                                                                  QStringLiteral("CONNECT_PROFILE_ICON")));
 
         // As we are repurposing the cancel to be a close button we do want to
         // change it anyhow:
@@ -118,7 +119,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         cursor.clearSelection();
     } else {
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(Welcome_text_template.arg("", "")));
+                                   .arg(Welcome_text_template.arg(QString(), QString())));
     }
     welcome_message->setDocument(pWelcome_document);
 
