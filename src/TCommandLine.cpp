@@ -701,33 +701,32 @@ void TCommandLine::handleTabCompletion(bool direction)
     }
 
     QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
-    QString buffer = bufferList.join(" ");
+    QString buffer = bufferList.join(QStringLiteral(" "));
 
-    buffer.replace(QChar(0x21af), "\n");
-    buffer.replace(QChar('\n'), " ");
+    buffer.replace(QChar(0x21af), QLatin1String("\n"));
+    buffer.replace(QChar('\n'), QLatin1String(" "));
 
-    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)")), QString::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
     if (direction) {
         mTabCompletionCount++;
     } else {
         mTabCompletionCount--;
     }
     if (!wordList.empty()) {
-        if (mTabCompletionTyped.endsWith(" ")) {
+        if (mTabCompletionTyped.endsWith(QLatin1String(" "))) {
             return;
         }
         QString lastWord;
-        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"));
+        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
         QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
         int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
             lastWord = match.captured(1);
         } else {
-            lastWord = "";
+            lastWord = QLatin1String("");
         }
 
-        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral("^") + lastWord + QStringLiteral(R"(\w+)"),
-                                                                    QRegularExpression::CaseInsensitiveOption));
+        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral("^") + lastWord + QStringLiteral(R"(\w+)"), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
         if (filterList.empty()) {
             return;
         }
