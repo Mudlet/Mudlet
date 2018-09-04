@@ -934,7 +934,7 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
-             <string>&lt;p&gt;Some games (notably all IRE ones) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Fix unnecessary linebreaks on GA servers</string>
@@ -1127,7 +1127,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_foreground_color">
             <property name="toolTip">
-             <string>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game Server).&lt;/p&gt;</string>
+             <string>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1150,7 +1150,7 @@
           <item row="0" column="3">
            <widget class="QPushButton" name="pushButton_background_color">
             <property name="toolTip">
-             <string>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game Server).&lt;/p&gt;</string>
+             <string>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>

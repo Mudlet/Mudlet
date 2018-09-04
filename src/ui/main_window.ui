@@ -303,7 +303,7 @@
     <string>Show map</string>
    </property>
    <property name="statusTip">
-    <string>show or hide the game Map</string>
+    <string>show or hide the game map</string>
    </property>
    <property name="shortcut">
     <string>Alt+M</string>
