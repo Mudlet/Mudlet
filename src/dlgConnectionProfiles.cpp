@@ -85,7 +85,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         // actual icon in use.
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"), 
-                                                                  QStringLiteral("CONNECT_PROFILE_ICON")));
+                                                                  QStringLiteral("CONNECT_PROFILE_ICON"))));
 
         // As we are repurposing the cancel to be a close button we do want to
         // change it anyhow:
