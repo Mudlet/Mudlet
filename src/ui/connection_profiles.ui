@@ -2482,7 +2482,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>MUD description</string>
+               <string>Game description</string>
               </property>
               <property name="readOnly">
                <bool>false</bool>
