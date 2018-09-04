@@ -701,10 +701,10 @@ void TCommandLine::handleTabCompletion(bool direction)
     }
 
     QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
-    QString buffer = bufferList.join(QStringLiteral(" "));
+    QString buffer = bufferList.join(QChar::Space);
 
-    buffer.replace(QChar(0x21af), QLatin1String("\n"));
-    buffer.replace(QChar('\n'), QLatin1String(" "));
+    buffer.replace(QChar(0x21af), QChar::LineFeed);
+    buffer.replace(QChar::LineFeed, QChar::Space);
 
     QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
     if (direction) {
@@ -713,7 +713,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         mTabCompletionCount--;
     }
     if (!wordList.empty()) {
-        if (mTabCompletionTyped.endsWith(QLatin1String(" "))) {
+        if (mTabCompletionTyped.endsWith(QChar::Space)) {
             return;
         }
         QString lastWord;
@@ -726,7 +726,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             lastWord = QLatin1String("");
         }
 
-        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral("^") + lastWord + QStringLiteral(R"(\w+)"), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
+        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
         if (filterList.empty()) {
             return;
         }
