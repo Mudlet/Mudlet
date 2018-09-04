@@ -186,7 +186,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;If you are playing a non-English MUD and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your MUD.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
+             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
@@ -934,7 +934,7 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
-             <string>&lt;p&gt;Some MUDs (notably all IRE ones) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Fix unnecessary linebreaks on GA servers</string>
@@ -1127,7 +1127,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_foreground_color">
             <property name="toolTip">
-             <string>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;</string>
+             <string>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1150,7 +1150,7 @@
           <item row="0" column="3">
            <widget class="QPushButton" name="pushButton_background_color">
             <property name="toolTip">
-             <string>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;</string>
+             <string>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1754,10 +1754,10 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_11">
             <property name="toolTip">
-             <string>&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
+             <string>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Download latest map provided by your MUD:</string>
+             <string>Download latest map provided by your game:</string>
             </property>
             <property name="buddy">
              <cstring>buttonDownloadMap</cstring>
@@ -1767,7 +1767,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="buttonDownloadMap">
             <property name="toolTip">
-             <string>&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
+             <string>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Download</string>
@@ -2240,7 +2240,7 @@
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_specialOptions">
          <property name="title">
-          <string>Special options needed for some older MUD drivers (needs client restart to take effect)</string>
+          <string>Special options needed for some older game drivers (needs client restart to take effect)</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
