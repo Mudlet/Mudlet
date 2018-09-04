@@ -723,7 +723,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         if (reg.captureCount() >= 1) {
             lastWord = match.captured(1);
         } else {
-            lastWord = QLatin1String("");
+            lastWord = QString();
         }
 
         QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
