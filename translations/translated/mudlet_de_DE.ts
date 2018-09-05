@@ -2227,13 +2227,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1010"/>
       <source>Trigger name=%1 expired.
 </source>
-      <translation type="unfinished"/>
+      <translation>Trigger name=%1 abgelaufen.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1013"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Trigger name=%1 wird noch %n mal auslösen.
+</numerusform>
+        <numerusform>Trigger name=%1 wird noch %n mal auslösen.
+</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -2248,7 +2254,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/updater.cpp" line="307"/>
       <source>Restart to apply update</source>
-      <translation>Neu starten, um die Aktualisierung anzuwenden</translation>
+      <translation>Neu starten zum Aktualisieren</translation>
     </message>
   </context>
   <context>
@@ -3152,7 +3158,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="693"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="703"/>
