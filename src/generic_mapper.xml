@@ -18,10 +18,11 @@
 			<regexCodeList>
 				<string>^\s*\[\s*[Ee]xits:\s*(.*)\]</string>
 				<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
-				<string>^\s*(?:Visible|Obvious) [Ee]xit[s]?(?: is| are)?:\s*(.*)</string>
+				<string>^\[?\s*(?:[Vv]isible|[Oo]bvious) [Ee]xit[s]?(?: is| are)?:?\s*(.*)\]?</string>
 				<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>
 				<string>Exits:\s*(.*)</string>
 				<string>There are no obvious exits.</string>
+				<string>^\s*The (?:only )?obvious exit[s]? (?:is|are):? (.*)</string>
 			</regexCodeList>
 			<regexCodePropertyList>
 				<integer>1</integer>
@@ -30,6 +31,7 @@
 				<integer>1</integer>
 				<integer>1</integer>
 				<integer>2</integer>
+				<integer>1</integer>
 			</regexCodePropertyList>
 		</Trigger>
 		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -51,8 +53,10 @@
 				<string>.+ (?:is not going to|will not) let you pass.</string>
 				<string>^That exit is blocked.</string>
 				<string>^You are blocked by .*</string>
+				<string>^There is no exit in that direction.</string>
 			</regexCodeList>
 			<regexCodePropertyList>
+				<integer>1</integer>
 				<integer>1</integer>
 				<integer>1</integer>
 				<integer>1</integer>
@@ -82,7 +86,12 @@
 		</Trigger>
 		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 			<name>Tab Trigger</name>
-			<script></script>
+			<script>local text = line
+local pos = selectString("\t",1)
+while pos ~= -1 do
+	replace(string.rep(" ",8 - math.fmod(pos,8)))
+	pos = selectString("\t",1)
+end</script>
 			<triggerType>0</triggerType>
 			<conditonLineDelta>0</conditonLineDelta>
 			<mStayOpen>0</mStayOpen>
@@ -95,6 +104,46 @@
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
 				<string>\t</string>
+			</regexCodeList>
+			<regexCodePropertyList>
+				<integer>1</integer>
+			</regexCodePropertyList>
+		</Trigger>
+		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Forced Move Trigger</name>
+			<script>raiseEvent("onForcedMove",matches[2])</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList>
+				<string>^Carefully getting your bearings, you set off (\w+) toward your goal.</string>
+			</regexCodeList>
+			<regexCodePropertyList>
+				<integer>1</integer>
+			</regexCodePropertyList>
+		</Trigger>
+		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Vision Fail Trigger</name>
+			<script>raiseEvent("onVisionFail")</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList>
+				<string>^It is pitch black...</string>
 			</regexCodeList>
 			<regexCodePropertyList>
 				<integer>1</integer>
@@ -255,7 +304,7 @@ map.make_ignore_pattern(matches[2])</script>
 		<Alias isActive="yes" isFolder="no">
 			<name>Map Debug Alias</name>
 			<script>map.configs.debug = not map.configs.debug
-map.echo("Map debug set to: " .. (maps.configs.debug and "on" or "off"))</script>
+map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
 			<command></command>
 			<packageName></packageName>
 			<regex>^map debug$</regex>
@@ -333,7 +382,7 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 9/03/2018
+-- 9/04/2018
 -- v2.0
 --
 
@@ -566,8 +615,8 @@ local function show_err(msg,debug)
 end
 
 local function print_echoes(what, debug, err)
-    local curline = getCurrentLine()
     moveCursorEnd("main")
+    local curline = getCurrentLine()
     if curline ~= "" then echo("\n") end
     decho(mapper_tag)
     if debug then decho(debug_tag) end
@@ -795,7 +844,7 @@ local function create_room(name, exits, dir, coords)
     -- links with other rooms as appropriate
     -- links to adjacent rooms in direction of exits if in simple mode
     if mapping then
-        map.echo("New Room: " .. name .. "\n",false,false,true)
+        map.echo("New Room: " .. name,false,false,true)
         local newID = createRoomID()
         addRoom(newID)
         setRoomArea(newID, currentArea)
@@ -1713,16 +1762,17 @@ local function name_search()
 end
 
 local function handle_exits(exits)
-    local room = name_search()
+    local room = map.prompt.room or name_search()
+    exits = map.prompt.exits or exits
     exits = string.lower(exits)
     exits = string.gsub(exits,"%a+", exitmap)
     map.echo("Exits Captured: " .. exits,true)
     if room then
         map.echo("Room Name Captured: " .. room, true)
         room = string.trim(room)
-        map.prompt.room = room
-        map.prompt.exits = exits
         capture_room_info(room, exits)
+        map.prompt.room = nil
+        map.prompt.exits = nil
     end
 end
 
