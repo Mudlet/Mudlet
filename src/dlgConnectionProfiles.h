@@ -71,7 +71,7 @@ private:
     bool validName;
     bool validUrl;
     bool validPort;
-    void validateProfile();
+    bool validateProfile();
 
     QStringList mProfileList;
     QPalette mRegularPalette;

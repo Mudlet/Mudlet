@@ -224,7 +224,8 @@ QSslCertificate cTelnet::getPeerCertificate()
     return socket.peerCertificate();
 }
 
-QList<QSslError> cTelnet::getSslErrors() {
+QList<QSslError> cTelnet::getSslErrors()
+{
     return socket.sslErrors();
 }
 
@@ -374,10 +375,8 @@ void cTelnet::handle_socket_signal_disconnected()
     QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
     QString spacer = "    ";
 #if !defined(QT_NO_SSL)
-    bool sslerr = (!socket.sslErrors().empty() ||
-                   (socket.error() == QAbstractSocket::SslHandshakeFailedError) ||
-                   (socket.error() == QAbstractSocket::SslInvalidUserDataError) ||
-                   (socket.error() == QAbstractSocket::QAbstractSocket::SslInternalError));
+    bool sslerr = (!socket.sslErrors().empty() || (socket.error() == QAbstractSocket::SslHandshakeFailedError) || (socket.error() == QAbstractSocket::SslInvalidUserDataError)
+                   || (socket.error() == QAbstractSocket::QAbstractSocket::SslInternalError));
     if (sslerr) {
         gagReconnect = true;
     }
@@ -395,43 +394,38 @@ void cTelnet::handle_socket_signal_disconnected()
 #endif
 
     if ((!gagReconnect) && (mAutoReconnect)) {
-        connectIt(hostName,hostPort);
+        connectIt(hostName, hostPort);
     }
 }
 
 #if !defined(QT_NO_SSL)
-void cTelnet::handle_socket_signal_sslError(const QList<QSslError> &errors)
+void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
 {
-//socket.ignoreSslErrors();
     auto cert = socket.peerCertificate();
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
-        ignoreErrorList<<QSslError(QSslError::CertificateExpired,cert);
+        ignoreErrorList << QSslError(QSslError::CertificateExpired, cert);
     }
     if (mpHost->mSslIgnoreSelfSigned) {
-        ignoreErrorList<<QSslError(QSslError::SelfSignedCertificate,cert);
+        ignoreErrorList << QSslError(QSslError::SelfSignedCertificate, cert);
     }
     if (mpHost->mSslIgnoreCertificateChain) {
-        ignoreErrorList<<QSslError(QSslError::UnableToGetLocalIssuerCertificate,cert);
+        ignoreErrorList << QSslError(QSslError::UnableToGetLocalIssuerCertificate, cert);
     }
 
-    if (mpHost->mSslIgnoreAll)
-    {
-    socket.ignoreSslErrors(errors);
-    } else
-    {
-    socket.ignoreSslErrors(ignoreErrorList);
+    if (mpHost->mSslIgnoreAll) {
+        socket.ignoreSslErrors(errors);
+    } else {
+        socket.ignoreSslErrors(ignoreErrorList);
     }
-
 }
 #endif
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
 #if !defined(QT_NO_SSL)
-    if (mpHost->mSslTsl)
-    {
+    if (mpHost->mSslTsl) {
         postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
@@ -444,7 +438,8 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        postMessage(tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."));
+        postMessage(
+                tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."));
         return;
     }
 }

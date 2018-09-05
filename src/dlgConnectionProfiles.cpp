@@ -242,7 +242,7 @@ void dlgConnectionProfiles::slot_update_login(const QString &login)
     }
 }
 
-void dlgConnectionProfiles::slot_update_url(const QString &url)
+void dlgConnectionProfiles::slot_update_url(const QString& url)
 {
     if (url.isEmpty()) {
         validUrl = false;
@@ -250,7 +250,14 @@ void dlgConnectionProfiles::slot_update_url(const QString &url)
         return;
     }
 
-    validateProfile();
+    if (validateProfile()) {
+        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+        if (!pItem) {
+            return;
+        }
+        QString profile = pItem->text();
+        writeProfileData(profile, QStringLiteral("url"), host_name_entry->text());
+    }
 }
 
 void dlgConnectionProfiles::slot_update_autologin(int state)
@@ -285,33 +292,39 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
         return;
     }
 
-    validateProfile();
+    if (validateProfile()) {
+        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+        if (!pItem) {
+            return;
+        }
+        QString profile = pItem->text();
+        writeProfileData(profile, QStringLiteral("port"), port);
+    }
 }
 
 void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 {
-    validateProfile();
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (!pItem) {
-        return;
+    if (validateProfile()) {
+        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+        if (!pItem) {
+            return;
+        }
+        QString profile = pItem->text();
+        writeProfileData(profile, QStringLiteral("ssl_tsl"), QString::number(state));
     }
-    QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("ssl_tsl"), QString::number(state));
 }
 
 void dlgConnectionProfiles::slot_update_name(const QString newName)
 {
     validateProfile();
-
 }
 
 void dlgConnectionProfiles::slot_save_name()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     QString newProfileName = profile_name_entry->text().trimmed();
-    validName = true;
 
-    if (notificationAreaIconLabelError->isVisible() || newProfileName.isEmpty()) {
+    if (!validName || newProfileName.isEmpty()) {
         return;
     }
 
@@ -550,7 +563,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->raise();
 }
 
-void dlgConnectionProfiles::validateProfile()
+bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
 
@@ -563,13 +576,39 @@ void dlgConnectionProfiles::validateProfile()
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
     if (pItem) {
+        QString name = profile_name_entry->text().trimmed();
+        const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+
+        for (int i = 0; i < name.size(); ++i) {
+            if (!allowedChars.contains(name.at(i))) {
+                notificationAreaIconLabelWarning->show();
+                notificationAreaMessageBox->setText(
+                        QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:\n\"%2\".\n").arg(name.at(i), allowedChars)));
+                name.replace(name.at(i--), QString());
+                profile_name_entry->setText(name);
+                validName = false;
+                valid = false;
+                break;
+            }
+        }
+
+        // see if there is an edit that already uses a similar name
+        if (pItem->text() != name && mProfileList.contains(name)) {
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
+            validName = false;
+            valid = false;
+        } else {
+            pItem->setText(name);
+        }
+
         QString port = port_entry->text().trimmed();
-        if (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1) {
+        if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
             QString val = port;
             val.chop(1);
             port_entry->setText(val);
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(),tr("You have to enter a number. Other characters are not permitted.")));
+            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("You have to enter a number. Other characters are not permitted.")));
             port_entry->setPalette(mErrorPalette);
             validPort = false;
             valid = false;
@@ -577,7 +616,7 @@ void dlgConnectionProfiles::validateProfile()
 
         bool ok;
         int num = port.trimmed().toInt(&ok);
-        if (num > 65536 && ok) {
+        if (!port.isEmpty() && (num > 65536 && ok)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.\r\n")));
             port_entry->setPalette(mErrorPalette);
@@ -587,7 +626,7 @@ void dlgConnectionProfiles::validateProfile()
 
 #if defined(QT_NO_SSL)
         port_ssl_tsl->setEnabled(false);
-        port_ssl_tsl->setToolTip("Mudlet is not configured for secure connections.");
+        port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
         if (port_ssl_tsl->isChecked()) {
             //notificationAreaIconLabelError->show();
             //notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.\n\n")));
@@ -597,20 +636,22 @@ void dlgConnectionProfiles::validateProfile()
 #else
         if (!QSslSocket::supportsSsl()) {
             port_ssl_tsl->setEnabled(false);
-            port_ssl_tsl->setToolTip("Mudlet can not load support for secure connections.");
+            port_ssl_tsl->setToolTip(tr("Mudlet can not load support for secure connections."));
             if (port_ssl_tsl->isChecked()) {
                 //notificationAreaIconLabelError->show();
                 //notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.\n\n")));
                 validPort = false;
                 valid = false;
             }
+        } else {
+            port_ssl_tsl->setEnabled(true);
+            port_ssl_tsl->setToolTip("");
         }
 #endif
         QUrl check;
         QString url = host_name_entry->text().trimmed();
         check.setHost(url);
-        if (!check.isValid())
-        {
+        if (!check.isValid()) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the MUD server.\n\n%1").arg(check.errorString())));
             host_name_entry->setPalette(mErrorPalette);
@@ -618,10 +659,8 @@ void dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1)
-        {
-            if (port_ssl_tsl->isChecked())
-            {
+        if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
+            if (port_ssl_tsl->isChecked()) {
                 notificationAreaIconLabelError->show();
                 notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the MUD server.\n\n%1").arg(check.errorString())));
                 host_name_entry->setPalette(mErrorPalette);
@@ -638,6 +677,7 @@ void dlgConnectionProfiles::validateProfile()
             notificationAreaIconLabelError->hide();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->hide();
+            validName = true;
             validPort = true;
             validUrl = true;
 
@@ -646,19 +686,20 @@ void dlgConnectionProfiles::validateProfile()
                 connect_button->setToolTip(QString());
             }
 
-            QString profile = pItem->text();
-            writeProfileData(profile, QStringLiteral("port"), port);
-            writeProfileData(profile, QStringLiteral("url"), url);
+            return true;
 
         } else {
             notificationArea->show();
             notificationAreaMessageBox->show();
             if (connect_button) {
                 connect_button->setDisabled(true);
-                connect_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+                connect_button->setToolTip(
+                        QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
             }
+            return false;
         }
     }
+    return false;
 }
 
 QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
@@ -677,7 +718,8 @@ QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
 
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
+    auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
+    QFile file(f);
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;

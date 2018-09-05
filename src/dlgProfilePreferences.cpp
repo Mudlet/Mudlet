@@ -345,7 +345,6 @@ void dlgProfilePreferences::enableHostDetails()
     {
         groupBox_ssl->setEnabled(false);
     }
-
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -643,8 +642,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     notificationAreaMessageBox->hide();
 
 #if !defined(QT_NO_SSL)
-    if (QSslSocket::supportsSsl() && pHost->mSslTsl == true)
-    {
+    if (QSslSocket::supportsSsl() && pHost->mSslTsl == true) {
         QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
         ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
         ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
@@ -659,22 +657,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         ssl_expires_label->setStyleSheet("");
         checkBox_ssl->setStyleSheet("");
 
-        if (!pHost->mTelnet.getSslErrors().empty())
-        {
+        if (!pHost->mTelnet.getSslErrors().empty()) {
             // handle ssl errors
             notificationAreaIconLabelWarning->show();
             notificationArea->show();
             notificationAreaMessageBox->show();
             //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
 
-            QList <QSslError> sslErrors = pHost->mTelnet.getSslErrors();
+            QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
 
             for (int a = 0; a < sslErrors.count(); a++) {
                 //auto test = sslErrors.at(a);
                 //auto tes2 = QSslError(QSslError::SelfSignedCertificate);
 
-                QString thisError = QString("%1)\t%2").arg(QString::number(a+1),sslErrors.at(a).errorString());
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(),thisError));
+                QString thisError = QString("%1)\t%2").arg(QString::number(a + 1), sslErrors.at(a).errorString());
+                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
 
                 if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
                     checkBox_self_signed->setStyleSheet("font-weight: bold; background: yellow");
@@ -693,9 +690,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 }
             }
 
-        } else
-        if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError )
-        {
+        } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
             // handle failed handshake, likely not ssl socket
             notificationAreaIconLabelError->show();
             notificationArea->show();
@@ -703,16 +698,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             checkBox_ssl->setStyleSheet("font-weight: bold; background: yellow");
         }
-        if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError)
-        {
+        if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
             // handle ssl library error
             notificationAreaIconLabelError->show();
             notificationArea->show();
             notificationAreaMessageBox->show();
             notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-       }
-        if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError)
-        {
+        }
+        if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
             // handle Invalid data (certificate, key, cypher, etc.)
             notificationAreaIconLabelError->show();
             notificationArea->show();
@@ -722,11 +715,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 #endif
 
-    checkBox_ssl->setChecked((Qt::CheckState) pHost->mSslTsl);
-    checkBox_self_signed->setChecked((Qt::CheckState) pHost->mSslIgnoreSelfSigned);
-    checkBox_expired->setChecked((Qt::CheckState) pHost->mSslIgnoreExpired);
-    checkBox_cert_chain->setChecked((Qt::CheckState) pHost->mSslIgnoreCertificateChain);
-    checkBox_ignore_all->setChecked((Qt::CheckState) pHost->mSslIgnoreAll);
+    checkBox_ssl->setChecked((Qt::CheckState)pHost->mSslTsl);
+    checkBox_self_signed->setChecked((Qt::CheckState)pHost->mSslIgnoreSelfSigned);
+    checkBox_expired->setChecked((Qt::CheckState)pHost->mSslIgnoreExpired);
+    checkBox_cert_chain->setChecked((Qt::CheckState)pHost->mSslIgnoreCertificateChain);
+    checkBox_ignore_all->setChecked((Qt::CheckState)pHost->mSslIgnoreAll);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:

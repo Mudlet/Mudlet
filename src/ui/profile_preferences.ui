@@ -2570,6 +2570,9 @@
           </item>
           <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_self_signed">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
             <property name="text">
              <string>Accept Self Signed Certificates</string>
             </property>
@@ -4504,13 +4507,19 @@
           </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_ssl">
+            <property name="toolTip">
+             <string extracomment="Enable SSL / TLS for this game"/>
+            </property>
             <property name="text">
-             <string>SSL / TSL Connection</string>
+             <string>Secure Connection</string>
             </property>
            </widget>
           </item>
           <item row="2" column="1">
            <widget class="QCheckBox" name="checkBox_expired">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
             <property name="text">
              <string>Accept Expired Certificates</string>
             </property>
@@ -4518,6 +4527,9 @@
           </item>
           <item row="3" column="0">
            <widget class="QCheckBox" name="checkBox_cert_chain">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if your computer does not trust them. Be sure that the Serial number of the certificate matches that what the game lists on their website"/>
+            </property>
             <property name="text">
              <string>Accept Certificate Chain Errors</string>
             </property>
@@ -4525,6 +4537,9 @@
           </item>
           <item row="4" column="0">
            <widget class="QCheckBox" name="checkBox_ignore_all">
+            <property name="toolTip">
+             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
+            </property>
             <property name="text">
              <string>Ignore All Ssl Errors       !! DANGEROUS !!</string>
             </property>
