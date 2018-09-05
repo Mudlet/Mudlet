@@ -216,7 +216,6 @@ public:
     bool mAutoReconnect;
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
-    bool mSslIgnoreCertificateChain;
     bool mSslIgnoreAll;
 
     bool mIsGoingDown;

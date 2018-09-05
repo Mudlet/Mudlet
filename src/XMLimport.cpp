@@ -1013,7 +1013,6 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
     pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
-    pHost->mSslIgnoreCertificateChain = (attributes().value("mSslIgnoreCertificateChain") == "yes");
     //explicitly not loading ignore all ssl errors
     //pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
 }

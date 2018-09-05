@@ -652,7 +652,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         checkBox_self_signed->setStyleSheet("");
         checkBox_expired->setStyleSheet("");
-        checkBox_cert_chain->setStyleSheet("");
         ssl_issuer_label->setStyleSheet("");
         ssl_expires_label->setStyleSheet("");
         checkBox_ssl->setStyleSheet("");
@@ -680,10 +679,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
                     checkBox_expired->setStyleSheet("font-weight: bold; background: yellow");
                     ssl_expires_label->setStyleSheet("font-weight: bold; color: red; background: yellow");
-                }
-                if (sslErrors.at(a).error() == QSslError::UnableToGetLocalIssuerCertificate) {
-                    checkBox_cert_chain->setStyleSheet("font-weight: bold; background: yellow");
-                    ssl_issuer_label->setStyleSheet("font-weight: bold; color: red; background: yellow");
                 }
                 if (sslErrors.at(a).error() == pHost->mTelnet.error()) {
                     socketErrorHandled = true;
@@ -718,7 +713,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_ssl->setChecked((Qt::CheckState)pHost->mSslTsl);
     checkBox_self_signed->setChecked((Qt::CheckState)pHost->mSslIgnoreSelfSigned);
     checkBox_expired->setChecked((Qt::CheckState)pHost->mSslIgnoreExpired);
-    checkBox_cert_chain->setChecked((Qt::CheckState)pHost->mSslIgnoreCertificateChain);
     checkBox_ignore_all->setChecked((Qt::CheckState)pHost->mSslIgnoreAll);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
@@ -2064,7 +2058,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslTsl = checkBox_ssl->isChecked();
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
-        pHost->mSslIgnoreCertificateChain = checkBox_cert_chain->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
 
 

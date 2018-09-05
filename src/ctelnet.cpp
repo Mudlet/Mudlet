@@ -410,9 +410,6 @@ void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
     if (mpHost->mSslIgnoreSelfSigned) {
         ignoreErrorList << QSslError(QSslError::SelfSignedCertificate, cert);
     }
-    if (mpHost->mSslIgnoreCertificateChain) {
-        ignoreErrorList << QSslError(QSslError::UnableToGetLocalIssuerCertificate, cert);
-    }
 
     if (mpHost->mSslIgnoreAll) {
         socket.ignoreSslErrors(errors);
