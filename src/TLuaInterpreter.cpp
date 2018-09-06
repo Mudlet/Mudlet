@@ -9342,7 +9342,11 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 9, 0))
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+#else
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+#endif
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_OPENSSL
