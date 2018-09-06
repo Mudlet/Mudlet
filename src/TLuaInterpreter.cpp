@@ -1309,8 +1309,8 @@ int TLuaInterpreter::centerview(lua_State* L)
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getView
-int TLuaInterpreter::getView(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPlayerRoom
+int TLuaInterpreter::getPlayerRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
@@ -12842,7 +12842,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
-    lua_register(pGlobalLua, "getView", TLuaInterpreter::getView);
+    lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
