@@ -496,7 +496,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 
@@ -7963,11 +7965,10 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 {
     edbee::TextEditorConfig* config = mpSourceEditorEdbee->config();
 
-    // Although this option seems to be a binary choice the Edbee editor widget
-    // needs a integer 1 to show whitespace characters and an integer 0 to hide
-    // them:
     config->beginChanges();
-    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((state & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(state & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 }
@@ -7992,7 +7993,9 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setSmartTab(true);
     config->setCaretBlinkRate(200);
@@ -8017,7 +8020,9 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
         localConfig->beginChanges();
         localConfig->setThemeName(theme);
         localConfig->setFont(mpHost->mDisplayFont);
-        localConfig->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+        localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                           ? edbee::TextEditorConfig::ShowWhitespaces
+                                           : edbee::TextEditorConfig::HideWhitespaces);
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
         localConfig->endChanges();
 }
