@@ -1809,7 +1809,7 @@ were removed: %2.</source>
       <location filename="../src/TRoom.cpp" line="1331"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Korrigiere im Raum mit ID: %1 den Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1351"/>
@@ -2316,77 +2316,77 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
       <source>Button Bar Properties</source>
-      <translation type="unfinished"/>
+      <translation>Eigenschaften der Button-Leiste</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>Anzahl der Spalten/Zeilen (je nach Ausrichtung):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>Horizontale Ausrichtung</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="155"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>Vertikale Ausrichtung</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation>Dock-Bereich oben</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="175"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>Dock-Bereich links</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
       <source>Dock Area Right</source>
-      <translation type="unfinished"/>
+      <translation>Dock-Bereich rechts</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
       <source>Floating Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Schwebende Werkzeugleiste</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
       <source>Button Properties</source>
-      <translation type="unfinished"/>
+      <translation>Button-Eigenschaften</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>Drehung des Buttons:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
       <source>no rotation</source>
-      <translation type="unfinished"/>
+      <translation>Keine Drehung</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
       <source>90° rotation to the left</source>
-      <translation type="unfinished"/>
+      <translation>90° Drehung nach links</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="241"/>
       <source>90° rotation to the right</source>
-      <translation type="unfinished"/>
+      <translation>90° Drehung nach rechts</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
       <source>Push down button</source>
-      <translation type="unfinished"/>
+      <translation>Einrastender Button</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Befehl:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
@@ -2401,12 +2401,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="273"/>
       <source>Command (up):</source>
-      <translation type="unfinished"/>
+      <translation>Befehl (nach oben):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
       <source>Stylesheet:</source>
-      <translation type="unfinished"/>
+      <translation>Stylesheet:</translation>
     </message>
   </context>
   <context>
