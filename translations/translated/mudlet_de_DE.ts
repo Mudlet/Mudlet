@@ -3183,24 +3183,26 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="299"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
-      <translation type="unfinished"/>
+      <translation>Sie müssen eine Zahl eingeben. Andere Zeichen sind nicht zulässig.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="326"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>Die Portnummer muss größer als null sein und unter 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="356"/>
       <source>This character is not permitted. Use one of the following:
 &quot;%1&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Dieses Zeichen ist nicht gestattet. Verwenden Sie eines der folgenden:
+&quot;%1&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="367"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Dieser Profilname wird bereits verwendet.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="418"/>
@@ -3215,12 +3217,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="522"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>neuer Profilname</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="619"/>
       <source>Deleting &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Lösche &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1026"/>
