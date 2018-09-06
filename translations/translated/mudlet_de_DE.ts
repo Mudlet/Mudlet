@@ -2639,17 +2639,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Wählen Sie ein Profil zum verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2063"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2088"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopieren</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2113"/>
@@ -3159,7 +3159,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="55"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Verbinden</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="76"/>
