@@ -2654,92 +2654,92 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2113"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Neu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2196"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>Erforderlich</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2205"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Profilname:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2225"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Serveradresse:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2248"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Port:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2289"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>Profilverlauf:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2309"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>das neueste Profil laden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2314"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>das älteste Profil laden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2337"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>Optional</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2343"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Charaktername:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2350"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Der Name des Charakters</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2360"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Passwort:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2367"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Das Passwort des Charakters. Beachte, dass das Kennwort nicht verschlüsselt gespeichert wird</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2377"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>Wenn dies aktiviert ist, wird sich Mudlet automatisch beim Start mit diesem Profil verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2383"/>
       <source>Auto connect this profile on startup</source>
-      <translation type="unfinished"/>
+      <translation>Profil automatisch beim Start verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2405"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>Informationen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2423"/>
       <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>Webseite:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2485"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>Beschreibung des Spiels</translation>
     </message>
   </context>
   <context>
