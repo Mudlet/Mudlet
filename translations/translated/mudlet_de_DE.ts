@@ -4056,52 +4056,52 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1719"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>nordwesten</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1720"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>norden</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1721"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>nordosten</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>oben</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>westen</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1724"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>osten</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>unten</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>südwesten</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1727"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>süden</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1728"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>südosten</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
