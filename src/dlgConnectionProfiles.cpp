@@ -63,10 +63,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
                                     "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
-                                    "<p>To play a game not in the list, click on %1"
+                                    "<p>To play a game not in the list, click on %1 "
                                     "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
                                     "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
-                                    "<p>After that, click %2<span style=\" color:#555753;\">Connect</span> "
+                                    "<p>After that, click %2 <span style=\" color:#555753;\">Connect</span> "
                                     "to play.</p>"
                                     "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
                                     "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
