@@ -4172,23 +4172,23 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="331"/>
       <source>Show Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer anzeigen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="334"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5721"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="335"/>
       <source>Show Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte anzeigen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="338"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
