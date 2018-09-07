@@ -4758,17 +4758,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7508"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Paket %1 ist bereits installiert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7634"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Konnte Profil nicht speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7634"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Leider konnte das Profil nicht gespeichert werden - folgende Fehlermeldung erhalten: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
@@ -4778,7 +4778,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Trigger-Dateien (*.trigger *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
@@ -4788,44 +4788,44 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>Bilder (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7766"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Befehl (unten):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7816"/>
       <source>choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>wähle eine Audiodatei</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7816"/>
       <source>*</source>
-      <translation type="unfinished"/>
+      <translation>*</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7952"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Speichere…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8090"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8096"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Ausschneiden</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8094"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8100"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Alles auswählen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8087"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Alles formatieren</translation>
     </message>
   </context>
   <context>
