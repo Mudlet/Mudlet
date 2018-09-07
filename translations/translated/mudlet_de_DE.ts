@@ -4214,50 +4214,50 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="347"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
-      <translation type="unfinished"/>
+      <translation>Wechsle aktiven und inaktiven Status des Triggers.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="357"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>Element hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="358"/>
       <source>Add new Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Ergänze neue Trigger, Skripte, Aliase oder Filter</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="361"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="363"/>
       <source>Delete Item</source>
-      <translation type="unfinished"/>
+      <translation>Element löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="362"/>
       <source>Delete Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Lösche Trigger, Skripte, Aliase oder Filter</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="369"/>
       <source>Add Group</source>
-      <translation type="unfinished"/>
+      <translation>Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="370"/>
       <source>Add new Group</source>
-      <translation type="unfinished"/>
+      <translation>Neue Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="373"/>
       <source>Save Item</source>
-      <translation type="unfinished"/>
+      <translation>Element speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="374"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7687"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7706"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="376"/>
@@ -4275,20 +4275,20 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8091"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8097"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="385"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere Trigger/Skript/Alias/etc</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="395"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8092"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8098"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Einfügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="399"/>
