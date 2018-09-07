@@ -4520,7 +4520,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2113"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2118"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>Befehl {Down}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1475"/>
@@ -4528,13 +4528,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2132"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2137"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>Befehl {Up}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1504"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2161"/>
       <source>Action</source>
-      <translation type="unfinished"/>
+      <translation>Aktion</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1504"/>
@@ -4542,7 +4542,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2161"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2166"/>
       <source>Stylesheet {L: %1 C: %2}</source>
-      <translation type="unfinished"/>
+      <translation>Stylesheet {L: %1 C: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1565"/>
@@ -4552,7 +4552,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2237"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2267"/>
       <source>Timer</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1636"/>
@@ -4562,68 +4562,68 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2311"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2341"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>Taste</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1759"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1773"/>
       <source>Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1773"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1779"/>
       <source>Value</source>
-      <translation type="unfinished"/>
+      <translation>Wert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3322"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Tabellenname...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3329"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Variablenname...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4786"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4916"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>Promptzeile erkennen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4789"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4919"/>
       <source>match on the prompt line (disabled)</source>
-      <translation type="unfinished"/>
+      <translation>Promptzeile erkennen (deaktiviert)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4790"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4920"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
-      <translation type="unfinished"/>
+      <translation>Ein Go-Ahead (GA) Signal aus dem Spiel ist erforderlich, damit dieses Feature funktioniert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5370"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7770"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Befehl:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5409"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>Menü-Eigenschaften</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5419"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>Button-Eigenschaften</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5427"/>
       <source>Command (down);</source>
-      <translation type="unfinished"/>
+      <translation>Befehl (unten);</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5773"/>
@@ -4661,7 +4661,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7223"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7228"/>
       <source>Export Package:</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6963"/>
@@ -4677,7 +4677,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7083"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7088"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Sie müssen zuerst ein Element für den Export wählen. Bitte wählen Sie ein Element aus dem Baum und klicken Sie dann erneut auf Exportieren.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6972"/>
@@ -4687,7 +4687,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7068"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7093"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>Paket %1 gespeichert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7108"/>
@@ -4713,45 +4713,47 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7209"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7233"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>In die Zwischenablage kopiert: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7239"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger exportieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7239"/>
       <source>Mudlet packages (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Pakete (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7253"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7253"/>
       <source>Cannot write file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Kann Datei %1 nicht schreiben:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7487"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Paket importieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7494"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7508"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Paket importieren:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7494"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Kann Datei %1 nicht lesen:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7508"/>
