@@ -4257,7 +4257,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="7687"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7706"/>
       <source>Ctrl+S</source>
-      <translation>Ctrl+S</translation>
+      <translation>Strg+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="376"/>
@@ -4294,40 +4294,40 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="399"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="400"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Trigger/Skripte/Aliase/Etc aus der Zwischenablage einfügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="414"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>Importieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>Exportieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7959"/>
       <source>Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="424"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7689"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7708"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Strg+Shift+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>Profil speichern als</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>Statistiken</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
@@ -4337,43 +4337,43 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="440"/>
       <source>errors</source>
-      <translation type="unfinished"/>
+      <translation>Fehler</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
       <source>Shows/Hides the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>Zeigt/Versteckt die Fehler-Konsole in der unteren rechten Seite des Editors.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="444"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>Debug</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
       <source>Activates Debug Messages -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Aktiviert Debug-Nachrichten -&gt; Das System wird &lt;b&gt;&lt;i&gt;langsamer&lt;/i&gt;&lt;/b&gt; sein.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
       <source>Shows/Hides the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Zeigt/Versteckt die separate zentrale Debug-Konsole - während der Anzeige wird das System langsamer sein.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="547"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="550"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Suchoptionen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="554"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Groß-/Kleinschreibung beachten</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="557"/>
       <source>If checked then what is searched for must match the case precisely otherwise case is ignored.</source>
-      <translation type="unfinished"/>
+      <translation>Wenn aktiviert, dann muss die gesuchte Groß-/Kleinschreibung exakt übereinstimmen, ansonsten wird sie ignoriert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1174"/>
@@ -4385,7 +4385,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1859"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1894"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1174"/>
@@ -4402,7 +4402,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2225"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2299"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>Name</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1186"/>
@@ -4426,7 +4426,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2311"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2316"/>
       <source>Command</source>
-      <translation type="unfinished"/>
+      <translation>Befehl</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1214"/>
@@ -4434,7 +4434,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1859"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1864"/>
       <source>Pattern {%1}</source>
-      <translation type="unfinished"/>
+      <translation>Muster {%1}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1246"/>
@@ -4462,7 +4462,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2341"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2346"/>
       <source>Lua code (%1:%2)</source>
-      <translation type="unfinished"/>
+      <translation>Lua-code (%1:%2)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1275"/>
@@ -4474,7 +4474,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1953"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1983"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1302"/>
@@ -4482,7 +4482,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1953"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1958"/>
       <source>Pattern</source>
-      <translation type="unfinished"/>
+      <translation>Muster</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1361"/>
@@ -4492,7 +4492,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2037"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2069"/>
       <source>Script</source>
-      <translation type="unfinished"/>
+      <translation>Skript</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1383"/>
@@ -4500,7 +4500,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2037"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2042"/>
       <source>Event Handler</source>
-      <translation type="unfinished"/>
+      <translation>Ereignisbehandlung</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1444"/>
@@ -4512,7 +4512,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2132"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2193"/>
       <source>Button</source>
-      <translation type="unfinished"/>
+      <translation>Button</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1456"/>
