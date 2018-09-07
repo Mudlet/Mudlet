@@ -4193,23 +4193,23 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
       <source>Show Keybindings</source>
-      <translation type="unfinished"/>
+      <translation>Verbundene Tasten anzeigen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="342"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5976"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variablen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="343"/>
       <source>Show Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variablen anzeigen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="346"/>
       <source>Activate</source>
-      <translation type="unfinished"/>
+      <translation>Aktivieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="347"/>
