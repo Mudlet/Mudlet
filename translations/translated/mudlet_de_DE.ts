@@ -4135,39 +4135,39 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="316"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5577"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="317"/>
       <source>Show Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger anzeigen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="320"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5842"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Buttons</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="321"/>
       <source>Show Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Buttons anzeigen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="325"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="326"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase anzeigen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="330"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5659"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="331"/>
