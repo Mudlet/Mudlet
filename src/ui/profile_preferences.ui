@@ -1015,7 +1015,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string comment="The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!">Show &lt;i&gt;Central Debug Console&lt;/i&gt; messages for working &lt;i&gt;Timers&lt;/i&gt; with an interval at least (h:mm:ss.zzz):</string>
+                <string comment="The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!">Show 'LUA OK' messages for Timers with minimum interval of (h:mm:ss.zzz):</string>
                </property>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
