@@ -1060,7 +1060,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Suchpuffer.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
@@ -4257,7 +4257,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="7687"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7706"/>
       <source>Ctrl+S</source>
-      <translation>Strg+S</translation>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="376"/>
