@@ -981,7 +981,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="850"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation>Logdatei</translation>
+      <translation>Protokolldatei</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="885"/>
@@ -3427,7 +3427,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="111"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>Protokolldatei</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="129"/>
@@ -3606,7 +3606,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1825"/>
       <source>Where should Mudlet save log files?</source>
-      <translation type="unfinished"/>
+      <translation>Wo soll Mudlet Protokolldateien speichern?</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2133"/>
@@ -3666,12 +3666,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="104"/>
       <source>&lt;p&gt;Select a directory where logs will be saved.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle ein Verzeichnis, in dem Protokolle gespeichert werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="105"/>
       <source>&lt;p&gt;Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Setze das Verzeichnis zurück, damit Protokolle in den &lt;i&gt;log&lt;/i&gt;-Ordner des Profils gespeichert werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="107"/>
