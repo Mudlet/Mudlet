@@ -3532,7 +3532,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
@@ -3548,12 +3548,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1586"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte gespeichert nach %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1588"/>
       <source>Could not save map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte die Karte nicht nach %1 speichern.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1626"/>
