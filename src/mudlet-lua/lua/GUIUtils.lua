@@ -920,90 +920,79 @@ if rex then
   --- @see cinsertText
   --- @see dinsertText
   --- @see hinsertText
-  function xEcho(style, func, ...)
-    local win, str, cmd, hint, fmt
-    local out, reset
-    local args = { ... }
-    local n = #args
+	function xEcho(style, func, ...)
+		local win, str, cmd, hint, fmt
+		local out, reset
+		local args = {...}
+		local n = #args
 
-    if func == 'echoLink' then
-      if n < 3 then
-        error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
-      elseif n == 3 then
-        str, cmd, hint = ...
-      elseif n == 4 and type(args[4]) == 'boolean' then
-        str, cmd, hint, fmt = ...
-      elseif n >= 4 and type(args[4]) == 'string' then
-        win, str, cmd, hint, fmt = ...
-        if win == "main" then
-          win = nil
-        end
-      else
-        error 'Improper arguments, usage: ([window, ] string, command, hint)'
-      end
-    else
-      if args[1] and args[2] and args[1] ~= "main" then
-        win, str = args[1], args[2]
-      elseif args[1] and args[2] and args[1] == "main" then
-        str = args[2]
-      else
-        str = args[1]
-      end
-    end
+		if func == 'echoLink' or func == "insertLink" then
+			if n < 3 then
+				error'Insufficient arguments, usage: ([window, ] string, command, hint)'
+			elseif n == 3 then
+				str, cmd, hint = ...
+			elseif n == 4 and type(args[4]) == 'boolean' then
+				str, cmd, hint, fmt = ...
+			elseif n >= 4 and type(args[4]) == 'string' then
+				win, str, cmd, hint = ...
+				if win == "main" then win = nil end
+			else
+				error'Improper arguments, usage: ([window, ] string, command, hint)'
+			end
+		else
+			if args[1] and args[2] and args[1] ~= "main" then
+				win, str = args[1], args[2]
+			elseif args[1] and args[2] and args[1] == "main" then
+				str = args[2]
+			else
+				str = args[1]
+			end
+		end
 
-    out = function(...)
-      _G[func](...)
-    end
+		out = function(...)
+			_G[func](...)
+		end
 
-    if win then
-      reset = function()
-        resetFormat(win)
-      end
-    else
-      reset = function()
-        resetFormat()
-      end
-    end
+		if win then
+			reset = function()
+				resetFormat(win)
+			end
+		else
+			reset = function()
+				resetFormat()
+			end
+		end
 
-    local t = _Echos.Process(str, style)
+		local t = _Echos.Process(str, style)
 
-    deselect()
-    reset()
+		deselect()
+		reset()
 
-    for _, v in ipairs(t) do
-      if type(v) == 'table' then
-        if v.fg then
-          local fr, fg, fb = unpack(v.fg)
-          if win then
-            setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb)
-          end
-        end
-        if v.bg then
-          local br, bg, bb = unpack(v.bg)
-          if win then
-            setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb)
-          end
-        end
-      elseif v == "\27reset" then
-        reset()
-      else
-        if func == 'echo' or func == 'insertText' then
-          if win then
-            out(win, v) else out(v)
-          end
-          if func == 'insertText' then
-            moveCursor(window or "main", getColumnNumber() + string.len(v), getLineNumber())
-          end
-        else
-          -- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
-          if win then
-            out(win, v, cmd, hint, (fmt == true and true or false)) else out(v, cmd, hint, (fmt == true and true or false))
-          end
-        end
-      end
-    end
-    reset()
-  end
+		for _, v in ipairs(t) do
+			if type(v) == 'table' then
+				if v.fg then
+					local fr, fg, fb = unpack(v.fg)
+					if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
+				end
+				if v.bg then
+					local br, bg, bb = unpack(v.bg)
+					if win then setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb) end
+				end
+			elseif v == "\27reset" then
+				reset()
+			else
+				if func == 'echo' or func == 'insertText' then
+					if win then out(win, v) else out(v) end
+				else
+					if win then out(win, v, cmd, hint, true) else out(v, cmd, hint, true) end
+				end
+				if func == 'insertText' or func == 'insertLink' then
+					moveCursor(win or "main", getColumnNumber(win or "main") + string.len(v), getLineNumber(win or "main"))
+				end
+			end
+		end
+		reset()
+	end
 
 
 
@@ -1115,6 +1104,40 @@ if rex then
   --- @see cecho
   function cechoLink(...)
     xEcho("Color", "echoLink", ...)
+  end
+  end
+
+
+  --- Inserts a link with embedded hex color information.
+  ---
+  --- @usage hechoLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see hecho
+  function hinsertLink(...)
+    xEcho("Hex", "insertLink", ...)
+  end
+
+
+  --- Inserts a link with embedded decimal color information.
+  ---
+  --- @usage dechoLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see decho
+  function dinsertLink(...)
+    xEcho("Decimal", "insertLink", ...)
+  end
+
+
+  --- Inserts a link with embedded color name information.
+  ---
+  --- @usage cechoLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see cecho
+  function cinsertLink(...)
+    xEcho("Color", "insertLink", ...)
   end
 
 
