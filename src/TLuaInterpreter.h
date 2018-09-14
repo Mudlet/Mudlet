@@ -477,6 +477,7 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
+    //std::pair<bool, QString> discordApiEnabled(Host::DiscordOptionFlag flag);
     void setMatches(lua_State* L);
 
     QMap<QNetworkReply*, QString> downloadMap;
