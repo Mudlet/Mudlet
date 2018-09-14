@@ -43,7 +43,7 @@ public:
     bool setValueType(int);
     bool setName(QString);
     bool setName(QString, int);
-    void setNewName(QString, int);
+    void setNewName(const QString&, int);
     void setReference(bool);
     QList<TVar*> getChildren(bool isToSort = true);
     TVar* getParent();
