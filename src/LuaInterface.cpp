@@ -25,7 +25,7 @@
 #include "Host.h"
 #include "VarUnit.h"
 
-#include <setjmp.h>
+#include <csetjmp>
 
 
 static jmp_buf buf;

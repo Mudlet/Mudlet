@@ -61,6 +61,17 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     // settings suggest it:
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
+    auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
+                                    "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
+                                    "<p>To play a game not in the list, click on %1 "
+                                    "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
+                                    "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
+                                    "<p>After that, click %2 <span style=\" color:#555753;\">Connect</span> "
+                                    "to play.</p>"
+                                    "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
+                                    "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
+                                    "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
+
     auto pWelcome_document = new QTextDocument(this);
     if (mudlet::self()->mShowIconsOnDialogs) {
         // Since I've switched to allowing the possibility of theme replacement
@@ -73,18 +84,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         // particular sequence of characters with an image generated from the
         // actual icon in use.
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
-                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
-                                           "<p>To play a game not in the list, click on NEW_PROFILE_ICON "
-                                           "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
-                                           "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
-                                           "<p>After that, click CONNECT_PROFILE_ICON <span style=\" color:#555753;\">Connect</span> "
-                                           "to play.</p>"
-                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
-                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
-                                           "Welcome message when icons for control buttons are shown, please leave the XXXX_ICON marker words as "
-                                           "they are - they will be replaced by icons (images) when this text is used; otherwise the text should "
-                                           "be identical to the one without icons.")));
+                                   .arg(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"), 
+                                                                  QStringLiteral("CONNECT_PROFILE_ICON"))));
 
         // As we are repurposing the cancel to be a close button we do want to
         // change it anyhow:
@@ -118,17 +119,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         cursor.clearSelection();
     } else {
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
-                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
-                                           "<p>To play a game not in the list, click on <span style=\" color:#555753;\">New</span>, fill in the "
-                                           "<i>Profile Name</i>, <i>Server address</i>, and <i>Port</i> fields in the "
-                                           "<i>Required </i> area.</p>"
-                                           "<p>After that, click <span style=\" color:#555753;\">Connect</span> to play.</p>"
-                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
-                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
-                                           "Welcome message when icons for control buttons are NOT shown the text should "
-                                           "be identical to the one with icons except for a pair of XXXX_ICON markers not "
-                                           "in this version.")));
+                                   .arg(Welcome_text_template.arg(QString(), QString())));
     }
     welcome_message->setDocument(pWelcome_document);
 
@@ -263,7 +254,7 @@ void dlgConnectionProfiles::slot_update_url(const QString &url)
             notificationAreaIconLabelError->show();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(tr("Please enter the URL or IP address of the MUD server.\n\n%1").arg(check.errorString()));
+            notificationAreaMessageBox->setText(tr("Please enter the URL or IP address of the game server.\n\n%1").arg(check.errorString()));
             validUrl = false;
             connect_button->setDisabled(true);
         }

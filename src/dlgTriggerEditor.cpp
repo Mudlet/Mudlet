@@ -196,7 +196,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
-    edbee::StringTextAutoCompleteProvider* provider = new edbee::StringTextAutoCompleteProvider();
+    auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
@@ -496,7 +496,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 
@@ -531,8 +533,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // QLineEdit does not provide a signal to hook on for the clear action
     // see https://bugreports.qt.io/browse/QTBUG-36257 for problem
     // credit to Albert for the workaround
-    for (int i(0); i < pLineEdit_searchTerm->children().size(); ++i) {
-        auto *pAction_clear(qobject_cast<QAction *>(pLineEdit_searchTerm->children().at(i)));
+    for (auto child : pLineEdit_searchTerm->children()) {
+        auto *pAction_clear(qobject_cast<QAction *>(child));
 
         // The name was found by inspection - but as it is a QT internal it
         // might change in the future:
@@ -4717,7 +4719,7 @@ void dlgTriggerEditor::saveKey()
 
 void dlgTriggerEditor::slot_set_pattern_type_color(int type)
 {
-    QComboBox* pBox = qobject_cast<QComboBox*>(sender());
+    auto* pBox = qobject_cast<QComboBox*>(sender());
     if (!pBox) {
         return;
     }
@@ -5777,6 +5779,10 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded(true);
     std::list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : baseNodeList_alias) {
+        if (alias->isTemporary()) {
+            continue;
+        }
+
         QString s = alias->getName();
         QStringList sList;
         sList << s;
@@ -5842,6 +5848,10 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded(true);
     std::list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : baseNodeList_action) {
+        if (action->isTemporary()) {
+            continue;
+        }
+
         QString s = action->getName();
         QStringList sList;
         sList << s;
@@ -5899,6 +5909,10 @@ void dlgTriggerEditor::fillout_form()
     mpKeyBaseItem->setExpanded(true);
     std::list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : baseNodeList_key) {
+        if (key->isTemporary()) {
+            continue;
+        }
+
         QString s = key->getName();
         QStringList sList;
         sList << s;
@@ -7951,11 +7965,10 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 {
     edbee::TextEditorConfig* config = mpSourceEditorEdbee->config();
 
-    // Although this option seems to be a binary choice the Edbee editor widget
-    // needs a integer 1 to show whitespace characters and an integer 0 to hide
-    // them:
     config->beginChanges();
-    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((state & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(state & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 }
@@ -7980,7 +7993,9 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setSmartTab(true);
     config->setCaretBlinkRate(200);
@@ -8005,7 +8020,9 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
         localConfig->beginChanges();
         localConfig->setThemeName(theme);
         localConfig->setFont(mpHost->mDisplayFont);
-        localConfig->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+        localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                           ? edbee::TextEditorConfig::ShowWhitespaces
+                                           : edbee::TextEditorConfig::HideWhitespaces);
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
         localConfig->endChanges();
 }

@@ -231,7 +231,7 @@ public:
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
-    QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
+    QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
@@ -267,7 +267,7 @@ public:
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
-    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    void setShowMapAuditErrors(const bool);
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
@@ -353,6 +353,14 @@ public:
     Updater* updater;
 #endif
 
+    void setEnableFullScreenMode(const bool);
+
+    // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
+    // may eventually migrate solely to the "EnableFullScreenMode" in the main
+    // QSetting file - it is only stored as a file now to maintain backwards
+    // compatibility...
+    bool mEnableFullScreenMode;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -410,6 +418,10 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_enableFulScreenModeChanged(bool);
+    void signal_showMapAuditErrorsChanged(bool);
+    void signal_menuBarVisibilityChanged(const controlsVisibility);
+    void signal_toolBarVisibilityChanged(const controlsVisibility);
 
 private slots:
     void slot_close_profile();

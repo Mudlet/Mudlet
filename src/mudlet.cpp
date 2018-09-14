@@ -155,7 +155,6 @@ mudlet::mudlet()
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
-, mpProfilePreferencesDlg(nullptr)
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
@@ -219,7 +218,7 @@ mudlet::mudlet()
     }
 
     mpActionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
-    mpActionConnect->setToolTip(tr("Connect to a MUD"));
+    mpActionConnect->setToolTip(tr("Connect to a game"));
     mpMainToolBar->addAction(mpActionConnect);
 
     // add name to the action's widget in the toolbar, which doesn't have one by default
@@ -359,10 +358,8 @@ mudlet::mudlet()
     generalRule -= QSize(30, 30);
     mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
     mpDebugArea->hide();
-    QFont mainFont;
-    mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-    if (file_use_smallscreen.exists()) {
+    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    if (mEnableFullScreenMode) {
         showFullScreen();
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
@@ -477,7 +474,7 @@ mudlet::mudlet()
     // mToolbarIconSize has been set to 0 in the initialisation list but if it
     // has not been changed from that in readSettings() then set it now:
     if (!mToolbarIconSize) {
-        setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+        setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
     }
 
 #if defined(QT_GAMEPAD_LIB)
@@ -2357,6 +2354,16 @@ void mudlet::readEarlySettings(const QSettings& settings)
     // as soon as possible as well!
 
     mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
+
+    // PLACEMARKER: Full-screen mode controlled by File (1 of 2) At some point we might removal this "if" and only consider the QSetting - dropping consideration of the sentinel file:
+    if (settings.contains(QStringLiteral("enableFullScreenMode"))) {
+        // We have a setting stored for this
+        mEnableFullScreenMode = settings.value(QStringLiteral("enableFullScreenMode"), QVariant(false)).toBool();
+    } else {
+        // We do not have a QSettings value stored so check for the sentinel file:
+        QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+        mEnableFullScreenMode = file_use_smallscreen.exists();
+    }
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2424,6 +2431,7 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
     mMenuBarVisibility = state;
 
     adjustMenuBarVisibility();
+    emit signal_menuBarVisibilityChanged(state);
 }
 
 // This only adjusts the visibility as appropriate
@@ -2446,6 +2454,7 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
     mToolbarVisibility = state;
 
     adjustToolBarVisibility();
+    emit signal_toolBarVisibilityChanged(state);
 }
 
 // Override the main window context menu action to prevent the main tool bar
@@ -2504,6 +2513,7 @@ void mudlet::writeSettings()
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
+    settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2626,16 +2636,19 @@ void mudlet::show_options_dialog()
 {
     Host* pHost = getActiveHost();
 
-    if (!mpProfilePreferencesDlg) {
-        mpProfilePreferencesDlg = new dlgProfilePreferences(this, pHost);
-        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
-        mpProfilePreferencesDlg->setAttribute(Qt::WA_DeleteOnClose);
+    // value will automatically return a nullptr if there is NO entry for this
+    // Host in the QMap
+    if (!mpProfilePreferencesDlgMap.value(pHost)) {
+        mpProfilePreferencesDlgMap[pHost] = new dlgProfilePreferences(this, pHost);
+
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
+        mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
     }
-    mpProfilePreferencesDlg->raise();
-    mpProfilePreferencesDlg->show();
+    mpProfilePreferencesDlgMap.value(pHost)->raise();
+    mpProfilePreferencesDlgMap.value(pHost)->show();
 }
 
 void mudlet::show_help_dialog()
@@ -3787,4 +3800,35 @@ QStringList mudlet::getAvailableFonts()
     QFontDatabase database;
 
     return database.families(QFontDatabase::Any);
+}
+
+void mudlet::setEnableFullScreenMode(const bool state)
+{
+    // PLACEMARKER: Full-screen mode controlled by File (2 of 2) At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
+    if (state != mEnableFullScreenMode) {
+        mEnableFullScreenMode = state;
+        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+        if (state) {
+            file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream out(&file_use_smallscreen);
+            Q_UNUSED(out);
+            file_use_smallscreen.close();
+        } else {
+            file_use_smallscreen.remove();
+        }
+    }
+
+    // Emit the signal whatever the stored value is - so that if there are
+    // multiple profile preference dialogs open they all update themselves:
+    emit signal_enableFulScreenModeChanged(state);
+}
+
+void mudlet::setShowMapAuditErrors(const bool state)
+{
+    if (mshowMapAuditErrors != state) {
+        mshowMapAuditErrors = state;
+
+        emit signal_showMapAuditErrorsChanged(state);
+    }
+
 }
