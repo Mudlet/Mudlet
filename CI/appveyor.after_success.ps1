@@ -8,7 +8,7 @@ windeployqt.exe --release mudlet.exe
 
 Write-Output "=== Generating binary translations ==="
 lrelease.exe ..\..\src\mudlet.pro
-XCOPY /S /I /Q /Y ..\..\translations\translated .
+XCOPY /S /I /Q /Y ..\..\translations\translated\*.qm .
 
 Remove-Item * -include *.cpp, *.o
 
