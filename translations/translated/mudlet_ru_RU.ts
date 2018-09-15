@@ -4106,7 +4106,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="334"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5721"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Скрипты</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="335"/>
@@ -4116,7 +4116,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="338"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Ключи</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
@@ -4137,7 +4137,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="346"/>
       <source>Activate</source>
-      <translation type="unfinished"/>
+      <translation>Активировать</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="347"/>
@@ -4147,7 +4147,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="357"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>Добавить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="358"/>
@@ -4158,7 +4158,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="361"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="363"/>
       <source>Delete Item</source>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="362"/>
@@ -4168,7 +4168,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="369"/>
       <source>Add Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="370"/>
@@ -4227,12 +4227,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="414"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>Импорт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
@@ -4250,12 +4250,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>Cохранить профиль в</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>Статистика</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
@@ -4265,7 +4265,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="440"/>
       <source>errors</source>
-      <translation type="unfinished"/>
+      <translation>Ошибки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
@@ -4275,7 +4275,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="444"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>Отладчик</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
@@ -5657,7 +5657,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="260"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать ключи</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
@@ -7761,7 +7761,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1471"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>подсветка</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1534"/>
