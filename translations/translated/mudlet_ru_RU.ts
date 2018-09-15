@@ -5995,7 +5995,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
       <source>General</source>
-      <translation type="unfinished"/>
+      <translation>Общее</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
@@ -6021,13 +6021,13 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="127"/>
       <location filename="../src/ui/profile_preferences.ui" line="156"/>
       <source>Never</source>
-      <translation type="unfinished"/>
+      <translation>Никогда</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="132"/>
       <location filename="../src/ui/profile_preferences.ui" line="161"/>
       <source>Until a profile is loaded</source>
-      <translation type="unfinished"/>
+      <translation>До загрузки профиля</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="137"/>
@@ -6073,7 +6073,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="238"/>
       <source>Enable GMCP</source>
-      <translation type="unfinished"/>
+      <translation>Включить GMCP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="248"/>
@@ -6104,7 +6104,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Save log files in:</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить в:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
@@ -6119,7 +6119,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="336"/>
       <source>Log format:</source>
-      <translation type="unfinished"/>
+      <translation>Формат:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
@@ -6350,7 +6350,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1111"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>Цвета</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1117"/>
@@ -6370,12 +6370,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1166"/>
       <source>Command line foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Передний план строки ввода:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1183"/>
       <source>Command line background:</source>
-      <translation type="unfinished"/>
+      <translation>Задний план строки ввода:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
@@ -6853,7 +6853,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1892"/>
       <source>Mapper colors</source>
-      <translation type="unfinished"/>
+      <translation>Цвета на маппере</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1898"/>
@@ -6949,17 +6949,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2379"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Поисковые машины</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2391"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Обновление Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2397"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Отключить автоматическое обновление</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
