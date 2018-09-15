@@ -222,8 +222,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
 
-    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
     label_languageChangeWarning->hide();
+
+    for (auto& code : mudlet::self()->getAvailableTranslationCodes()) {
+        comboBox_guiLanguage->addItem(code);
+    }
+    comboBox_guiLanguage->setCurrentText(mudlet::self()->mInterfaceLanguage);
+    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -232,7 +237,8 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
-    groupBox_encoding->setEnabled(false);
+    label_encoding->setEnabled(false);
+    comboBox_encoding->setEnabled(false);
     groupBox_miscellaneous->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
@@ -304,7 +310,8 @@ void dlgProfilePreferences::disableHostDetails()
 
 void dlgProfilePreferences::enableHostDetails()
 {
-    groupBox_encoding->setEnabled(true);
+    label_encoding->setEnabled(true);
+    comboBox_encoding->setEnabled(true);
     groupBox_miscellaneous->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
@@ -722,13 +729,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
-
-
-    for (auto& code : mudlet::self()->getAvailableTranslationCodes()) {
-        comboBox_guiLanguage->addItem(code);
-    }
-
-    comboBox_guiLanguage->setCurrentText(mudlet::self()->mInterfaceLanguage);
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
