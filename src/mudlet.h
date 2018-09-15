@@ -339,7 +339,8 @@ public:
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
-    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);    
+    void setInterfaceLanguage(const QString &languageCode);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -413,6 +414,7 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
+    void signal_translatorsReloaded(const QString& newLanguage, const QString& oldLanguage);
 
 private slots:
     void slot_close_profile();
@@ -514,6 +516,20 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+
+
+    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    QString mInterfaceLanguage;
+
+    // QMap has key of interface languages (in format of mInterfaceLanguage)
+    // value: a QList of QPointers to all the translators needed (mudlet + Qt)
+    // for the specific GUI Language, on language change to remove
+    // the translators for the old settings and add the ones for
+    // the new language
+    QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
+    QList<QPointer <QTranslator>> mTranslatorsLoadedList;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

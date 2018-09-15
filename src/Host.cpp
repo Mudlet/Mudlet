@@ -205,6 +205,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"DuckDuckGo", "https://duckduckgo.com/?q="},
                     {"Google",     "https://www.google.com/search?q="}
     });
+
+    if (mudlet::self()) {
+        connect(mudlet::self(), SIGNAL(signal_translatorsReloaded(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange(const QString&, const QString&)));
+    }
 }
 
 Host::~Host()
@@ -1275,4 +1279,16 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
+}
+
+void Host::slot_guiLanguageChange(const QString& newLanguageCode, const QString& oldLanguageCode)
+{
+    TEvent event;
+    event.mArgumentList.append(QStringLiteral("sysGuiLanguageChange"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(newLanguageCode);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(oldLanguageCode);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
 }

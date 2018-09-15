@@ -3829,3 +3829,85 @@ void mudlet::setShowMapAuditErrors(const bool state)
     }
 
 }
+
+void mudlet::setInterfaceLanguage(const QString& languageCode)
+{
+    QString oldLanguageCode = QStringLiteral("none");
+    if (!mInterfaceLanguage.isEmpty()) {
+        oldLanguageCode = mInterfaceLanguage;
+    }
+
+    // Handle case where no translator is wanted
+    if (languageCode.isEmpty() || languageCode == QStringLiteral("none")) {
+        mInterfaceLanguage = QStringLiteral("none");
+        if (!mTranslatorsLoadedList.isEmpty()) {
+            QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
+            // Unload in reverse order to loading - may not be important but
+            // way not...
+            itTranslator.toBack();
+            while (itTranslator.hasPrevious()) {
+                // This cause a LanguageChangeEvent to be generated:
+                QPointer<QTranslator> pTranslator(itTranslator.previous());
+                if (pTranslator) {
+                    qApp->removeTranslator(pTranslator);
+                }
+                itTranslator.remove();
+            }
+        }
+
+        // Allow the Qt events to propogate through the system
+        qApp->processEvents();
+
+        // Translate the automatically generated form/dialog stuff and handle
+        // the GUI things we made
+        //guiLanguageChange();
+
+        emit signal_translatorsReloaded(mInterfaceLanguage, oldLanguageCode);
+
+        return;
+    }
+
+    // Check for whether we need to do anything:
+    if (mInterfaceLanguage == languageCode || !mTranslatorsMap.contains(languageCode)) {
+        return;
+    }
+
+    mInterfaceLanguage = languageCode;
+
+    // Handle other cases where translators are to be used - first, unload
+    // installed translators
+    if (!mTranslatorsLoadedList.isEmpty()) {
+        QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
+        // Unload in reverse order to loading - may not be important but
+        // way not...
+        itTranslator.toBack();
+        while (itTranslator.hasPrevious()) {
+            // This cause a LanguageChangeEvent to be generated:
+            QPointer<QTranslator> pTranslator(itTranslator.previous());
+            if (pTranslator) {
+                qApp->removeTranslator(pTranslator);
+            }
+            itTranslator.remove();
+        }
+    }
+
+    QListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsMap.value(languageCode));
+    while (itTranslator.hasNext()) {
+        QPointer<QTranslator> pTranslator(itTranslator.next());
+        if (pTranslator) {
+            // This cause a LanguageChangeEvent to be generated:
+            if (qApp->installTranslator(pTranslator)) {
+                // Managed to load translation, so add this one to loaded list
+                mTranslatorsLoadedList.append(pTranslator);
+            }
+        }
+    }
+
+    // Allow the Qt events to propogate through the system
+    qApp->processEvents();
+
+    // Handle the GUI things we made
+    //guiLanguageChange();
+
+    emit signal_translatorsReloaded(mInterfaceLanguage, oldLanguageCode);
+}

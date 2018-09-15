@@ -346,6 +346,8 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
 
+public slots:
+    void slot_guiLanguageChange(const QString& newLanguageCode, const QString& oldLanguageCode);
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
