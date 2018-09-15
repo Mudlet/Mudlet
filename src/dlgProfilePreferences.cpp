@@ -221,6 +221,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_setTreeIconSize, this, &dlgProfilePreferences::slot_setTreeWidgetIconSize);
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
+
+    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+    label_tempLabelWarning->hide();
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -719,6 +722,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
+
+
+    for (auto& code : mudlet::self()->getAvailableTranslationCodes()) {
+        comboBox_guiLanguage->addItem(code);
+    }
+
+    comboBox_guiLanguage->setCurrentText(mudlet::self()->mInterfaceLanguage);
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -2988,4 +2998,16 @@ void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsV
             comboBox_toolBarVisibility->setCurrentIndex(2);
         }
     }
+}
+
+void dlgProfilePreferences::slot_changeGuiLanguage(const QString &languageCode)
+{
+    // WIP remove hardcoding when PR is done and languages have names in Preferences
+    if (languageCode == QStringLiteral("English")) {
+        mudlet::self()->setInterfaceLanguage(QStringLiteral("en_US"));
+    } else {
+        mudlet::self()->setInterfaceLanguage(languageCode);
+    }
+
+    label_tempLabelWarning->show();
 }

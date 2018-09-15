@@ -333,7 +333,11 @@ public:
         editorWidgetThemeJsonFile,
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
-        moduleBackupsPath
+        moduleBackupsPath,
+        // Returns path to mudlet_xx(_YY).qm translations
+        mudletTranslationsPath,
+        // Returns path to Qt's own translation files
+        qtTranslationsPath
     };
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
@@ -341,6 +345,7 @@ public:
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);    
     void setInterfaceLanguage(const QString &languageCode);
+    QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -353,6 +358,11 @@ public:
     // QSetting file - it is only stored as a file now to maintain backwards
     // compatibility...
     bool mEnableFullScreenMode;
+
+    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    QString mInterfaceLanguage;
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -443,8 +453,9 @@ private slots:
 
 private:
     void initEdbee();
-
     void goingDown() { mIsGoingDown = true; }
+    void loadTranslators();
+
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
@@ -517,19 +528,14 @@ private:
     // on the mpToolBarReplay:
     QString mTimeFormat;
 
-
-    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
-    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
-    // file for GUI translation
-    QString mInterfaceLanguage;
-
     // QMap has key of interface languages (in format of mInterfaceLanguage)
     // value: a QList of QPointers to all the translators needed (mudlet + Qt)
     // for the specific GUI Language, on language change to remove
     // the translators for the old settings and add the ones for
     // the new language
     QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
-    QList<QPointer <QTranslator>> mTranslatorsLoadedList;
+    QList<QPointer<QTranslator>> mTranslatorsLoadedList;
+    void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

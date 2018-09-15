@@ -159,6 +159,7 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mShowIconsOnDialogs(true)
+, mInterfaceLanguage(QStringLiteral("en_US"))
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -168,6 +169,8 @@ mudlet::mudlet()
         // have to invert the sense because the attribute is a negative one:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
+
+    loadTranslators();
 
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -470,8 +473,6 @@ mudlet::mudlet()
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
-    // mToolbarIconSize has been set to 0 in the initialisation list but if it
-    // has not been changed from that in readSettings() then set it now:
     if (!mToolbarIconSize) {
         setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
     }
@@ -519,6 +520,72 @@ void mudlet::initEdbee()
     //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
 
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+}
+
+void mudlet::loadTranslationFile(const QString& fileName, const QString& filePath, QString& languageCode)
+{
+    QPointer<QTranslator> pMudletTranslator = new QTranslator();
+    auto translatorList = mTranslatorsMap.value(languageCode);
+
+    if (pMudletTranslator->load(fileName, filePath)) {
+        translatorList.append(pMudletTranslator);
+
+        if (!mTranslatorsMap.contains(languageCode)) {
+            mTranslatorsMap.insert(languageCode, translatorList);
+        }
+    } else {
+        qDebug() << "mudlet::mudlet() Failed to load translation file" << fileName << "from" << filePath;
+    }
+
+    if (languageCode != mInterfaceLanguage) {
+        return;
+    }
+
+    qDebug() << "mudlet::mudlet() INFO - loading Mudlet:" << languageCode << "translations from:" << fileName;
+
+    for (auto& translator : qAsConst(translatorList)) {
+        if (!qApp->installTranslator(translator)) {
+            qDebug() << "mudlet::mudlet() ERROR - Failed to directly load a translator for:" << languageCode << "a translation to the specified language will not be available";
+        } else {
+            mTranslatorsLoadedList.append(translator);
+        }
+    }
+}
+
+void mudlet::loadTranslators()
+{
+    auto loadTranslations =
+            [=](const QString& path) {
+                qDebug() << "mudlet::mudlet() INFO - Seeking Mudlet translations files in:" << path;
+
+                QDir translationDir(path);
+                translationDir.setNameFilters(QStringList() << QStringLiteral("mudlet_*.qm"));
+                QStringList translationFilesList(translationDir.entryList(QDir::Files | QDir::Readable, QDir::Name));
+
+                for (auto& translationFileName : qAsConst(translationFilesList)) {
+                    QString languageCode(translationFileName);
+
+                    languageCode.remove(QStringLiteral("mudlet_"), Qt::CaseInsensitive);
+                    languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
+
+                    loadTranslationFile(translationFileName, path, languageCode);
+                }
+            };
+
+
+    // Qt translations are not loaded properly at the moment
+    loadTranslations(getMudletPath(qtTranslationsPath));
+    loadTranslations(getMudletPath(mudletTranslationsPath));
+
+    auto repositoryPath = qEnvironmentVariable("MUDLET_REPOSITORY");
+    if (!repositoryPath.isEmpty()) {
+        auto repoTranslationsPath = QStringLiteral("%1/translations/translated").arg(repositoryPath);
+        loadTranslations(repoTranslationsPath);
+    } else {
+#ifdef DEBUG
+        qWarning() << "MUDLET_REPOSITORY environment variable not available, won't load translations from Git repository";
+#endif
+    }
 }
 
 bool mudlet::moduleTableVisible()
@@ -2361,6 +2428,8 @@ void mudlet::readEarlySettings(const QSettings& settings)
         QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
+
+    mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2384,6 +2453,8 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+
+
     resize(size);
     move(pos);
     if (settings.value("maximized", false).toBool()) {
@@ -2511,6 +2582,7 @@ void mudlet::writeSettings()
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
+    settings.setValue("interfaceLanguage", mInterfaceLanguage);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -3667,6 +3739,14 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
+    case mudletTranslationsPath:
+#if defined(Q_OS_MAC)
+        return QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#else
+        return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+#endif
+    case qtTranslationsPath:
+        return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
     }
     Q_UNREACHABLE();
     return QString();
@@ -3832,18 +3912,18 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
-    QString oldLanguageCode = QStringLiteral("none");
+    QString oldLanguageCode = QStringLiteral("en_US");
     if (!mInterfaceLanguage.isEmpty()) {
         oldLanguageCode = mInterfaceLanguage;
     }
 
     // Handle case where no translator is wanted
-    if (languageCode.isEmpty() || languageCode == QStringLiteral("none")) {
-        mInterfaceLanguage = QStringLiteral("none");
+    if (languageCode.isEmpty() || languageCode == QStringLiteral("en_US")) {
+        mInterfaceLanguage = QStringLiteral("en_US");
         if (!mTranslatorsLoadedList.isEmpty()) {
             QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
             // Unload in reverse order to loading - may not be important but
-            // way not...
+            // why not...
             itTranslator.toBack();
             while (itTranslator.hasPrevious()) {
                 // This cause a LanguageChangeEvent to be generated:
