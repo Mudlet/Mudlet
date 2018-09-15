@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>730</width>
-    <height>744</height>
+    <height>748</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -281,14 +281,14 @@
            </widget>
           </item>
           <item row="1" column="0" colspan="4">
-           <widget class="QLabel" name="label_tempLabelWarning">
+           <widget class="QLabel" name="label_languageChangeWarning">
             <property name="font">
              <font>
               <pointsize>8</pointsize>
              </font>
             </property>
             <property name="text">
-             <string>Please restart Mudlet for to apply the new language</string>
+             <string>Please restart Mudlet to apply the new language</string>
             </property>
            </widget>
           </item>
