@@ -995,7 +995,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="377"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Показывать марки времени</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
