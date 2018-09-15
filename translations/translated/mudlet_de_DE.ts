@@ -2124,7 +2124,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1214"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Ein unbenannter Bereich wurde in der Kartendatei festgestellt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1217"/>
