@@ -5703,7 +5703,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="289"/>
       <source>Settings</source>
-      <translation>Параметры</translation>
+      <translation>Настройки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
@@ -5724,7 +5724,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="304"/>
       <location filename="../src/mudlet.cpp" line="819"/>
       <source>Package Manager</source>
-      <translation>Менеджер пакетов</translation>
+      <translation>Управление пакетами</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
@@ -5749,7 +5749,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Reconnect</source>
-      <translation>Переподключить</translation>
+      <translation>Переподключиться</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
