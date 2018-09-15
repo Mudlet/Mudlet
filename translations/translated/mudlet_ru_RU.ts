@@ -1000,7 +1000,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Записать повтор.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
