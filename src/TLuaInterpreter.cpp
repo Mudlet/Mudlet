@@ -1320,8 +1320,15 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
         return 2;
     }
 
-    lua_pushnumber(L, host.mpMap->mRoomIdHash[host.getName()]);
-    return 1;
+    auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
+    if (roomID == -1) {
+        lua_pushnil(L);
+        lua_pushstring(L, "the player does not have a valid room id set");
+        return 2;
+    } else {
+        lua_pushnumber(L, roomID);
+        return 1;
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
