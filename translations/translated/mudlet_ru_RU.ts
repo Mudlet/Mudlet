@@ -6124,7 +6124,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
       <source>Log name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя журнала:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="369"/>
