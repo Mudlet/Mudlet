@@ -6,6 +6,8 @@ cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
 windeployqt.exe --release mudlet.exe
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
+lrelease.exe src\mudlet.pro
+
 Remove-Item * -include *.cpp, *.o
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
@@ -14,7 +16,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   Write-Output "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git C:\projects\installers
   cd C:\projects\installers\windows
-  
+
   Write-Output "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
 
