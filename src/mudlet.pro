@@ -660,6 +660,8 @@ linux|macx|win32 {
     }
 }
 
+TRANSLATIONS = $$files(../translations/translated/*.ts)
+
 # To use QtCreator as a Unix installer the generated Makefile must have the
 # following lists of files EXPLICITLY stated - IT DOESN'T WORK IF A WILD-CARD
 # PATH IS GIVEN AS AN ENTRY TO THE .files LIST as the needed relative positions
