@@ -375,7 +375,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2184"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz obraz</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
@@ -430,12 +430,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2652"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Usuń pokój</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2656"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Zmień kolor pokoju</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2660"/>
