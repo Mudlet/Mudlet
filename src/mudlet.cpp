@@ -577,7 +577,12 @@ void mudlet::loadTranslators()
     loadTranslations(getMudletPath(qtTranslationsPath));
     loadTranslations(getMudletPath(mudletTranslationsPath));
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
     auto repositoryPath = qEnvironmentVariable("MUDLET_REPOSITORY");
+#else
+    auto repositoryPath = QString::fromLocal8Bit(qgetenv("MUDLET_REPOSITORY"));
+#endif
+
     if (!repositoryPath.isEmpty()) {
         auto repoTranslationsPath = QStringLiteral("%1/translations/translated").arg(repositoryPath);
         loadTranslations(repoTranslationsPath);
