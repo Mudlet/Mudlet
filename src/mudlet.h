@@ -424,7 +424,6 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
-    void signal_translatorsReloaded(const QString& newLanguage, const QString& oldLanguage);
 
 private slots:
     void slot_close_profile();
