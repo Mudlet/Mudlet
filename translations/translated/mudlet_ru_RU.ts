@@ -995,12 +995,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="377"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Показывать марки времени</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Записать повтор.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
@@ -1020,7 +1020,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Поиск буфера.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
@@ -2087,17 +2087,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Скопировать</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1241"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>Скопировать HTML</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать все</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1249"/>
@@ -2668,7 +2668,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2485"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>Описание игры</translation>
     </message>
   </context>
   <context>
@@ -4106,7 +4106,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="334"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5721"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Скрипты</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="335"/>
@@ -4116,7 +4116,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="338"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Ключи</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
@@ -4137,7 +4137,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="346"/>
       <source>Activate</source>
-      <translation type="unfinished"/>
+      <translation>Активировать</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="347"/>
@@ -4147,7 +4147,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="357"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>Добавить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="358"/>
@@ -4158,7 +4158,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="361"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="363"/>
       <source>Delete Item</source>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="362"/>
@@ -4168,7 +4168,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="369"/>
       <source>Add Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="370"/>
@@ -4227,12 +4227,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="414"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>Импорт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
@@ -4250,12 +4250,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
       <source>Save Profile As</source>
-      <translation type="unfinished"/>
+      <translation>Cохранить профиль в</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
       <source>Statistics</source>
-      <translation type="unfinished"/>
+      <translation>Статистика</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
@@ -4265,7 +4265,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="440"/>
       <source>errors</source>
-      <translation type="unfinished"/>
+      <translation>Ошибки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
@@ -4275,7 +4275,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="444"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>Отладчик</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
@@ -5479,7 +5479,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Выходы</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
@@ -5576,7 +5576,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="160"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>чч:мм:сс</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="183"/>
@@ -5592,7 +5592,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
       <source>Connect to a game</source>
-      <translation type="unfinished"/>
+      <translation>Подключиться к игре</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="229"/>
@@ -5657,7 +5657,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="260"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать ключи</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
@@ -5703,7 +5703,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="289"/>
       <source>Settings</source>
-      <translation>Параметры</translation>
+      <translation>Настройки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
@@ -5724,7 +5724,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="304"/>
       <location filename="../src/mudlet.cpp" line="819"/>
       <source>Package Manager</source>
-      <translation>Менеджер пакетов</translation>
+      <translation>Управление пакетами</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
@@ -5749,7 +5749,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Reconnect</source>
-      <translation>Переподключить</translation>
+      <translation>Переподключиться</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
@@ -5760,7 +5760,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="327"/>
       <location filename="../src/mudlet.cpp" line="415"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Мульти-обзор</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
@@ -5990,17 +5990,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Настройки профиля</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
       <source>General</source>
-      <translation type="unfinished"/>
+      <translation>Общее</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
       <source>Icon sizes</source>
-      <translation type="unfinished"/>
+      <translation>Размер значков</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="73"/>
@@ -6021,13 +6021,13 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="127"/>
       <location filename="../src/ui/profile_preferences.ui" line="156"/>
       <source>Never</source>
-      <translation type="unfinished"/>
+      <translation>Никогда</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="132"/>
       <location filename="../src/ui/profile_preferences.ui" line="161"/>
       <source>Until a profile is loaded</source>
-      <translation type="unfinished"/>
+      <translation>До загрузки профиля</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="137"/>
@@ -6048,7 +6048,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
       <source>Misc</source>
-      <translation type="unfinished"/>
+      <translation>Прочее</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="205"/>
@@ -6068,12 +6068,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Game protocols</source>
-      <translation type="unfinished"/>
+      <translation>Протоколы игр</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="238"/>
       <source>Enable GMCP</source>
-      <translation type="unfinished"/>
+      <translation>Включить GMCP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="248"/>
@@ -6104,7 +6104,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Save log files in:</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить в:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="322"/>
@@ -6119,7 +6119,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="336"/>
       <source>Log format:</source>
-      <translation type="unfinished"/>
+      <translation>Формат:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
@@ -6350,7 +6350,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1111"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>Цвета</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1117"/>
@@ -6370,12 +6370,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1166"/>
       <source>Command line foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Передний план строки ввода:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1183"/>
       <source>Command line background:</source>
-      <translation type="unfinished"/>
+      <translation>Задний план строки ввода:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
@@ -6853,7 +6853,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1892"/>
       <source>Mapper colors</source>
-      <translation type="unfinished"/>
+      <translation>Цвета на маппере</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1898"/>
@@ -6949,17 +6949,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2379"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Поисковые машины</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2391"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Обновление Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2397"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Отключить автоматическое обновление</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
@@ -7761,7 +7761,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1471"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>подсветка</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1534"/>
