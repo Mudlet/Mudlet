@@ -223,7 +223,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
 
     connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
-    label_tempLabelWarning->hide();
+    label_languageChangeWarning->hide();
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -3009,5 +3009,5 @@ void dlgProfilePreferences::slot_changeGuiLanguage(const QString &languageCode)
         mudlet::self()->setInterfaceLanguage(languageCode);
     }
 
-    label_tempLabelWarning->show();
+    label_languageChangeWarning->show();
 }
