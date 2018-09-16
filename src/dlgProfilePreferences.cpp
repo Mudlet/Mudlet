@@ -2868,48 +2868,58 @@ void dlgProfilePreferences::generateDicordTooltips()
         state = QStringLiteral("(\"%1\")").arg(state);
     }
 
-    QString tooltip = QStringLiteral(R"(
-                                     <style type="text/css">
-                                     .tg  {border-collapse:collapse;border-spacing:0;}
-                                     .tg td{font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
-                                     .tg th{font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
-                                     .tg .tg-jn9l{background-color:#2f3135;border-color:#2f3135;text-align:left;vertical-align:top}
-                                     </style>
-                                     <table class="tg">
-                                     <tr>
-                                       <td class="tg-0lax" colspan="2">
-                                     <img src=":/icons/discord-rich-presence.png"/></td>
-                                     </tr>
-                                       <tr>
-                                         <td class="tg-jn9l">
-                                            <img src=":/icons/discord-rich-presence-large-icon.png"/>
-                                            <p style="color: #989A9F;">Large icon</p>
-                                        </td>
-                                        <td class="tg-jn9l"><p style="color: #C79698; background-color: #66373A">Detail %1</p></td>
-                                       </tr>
-                                       <tr>
-                                         <td class="tg-jn9l">
-                                            <img src=":/icons/discord-rich-presence-small-icon.png"/>
-                                            <p style="color: #989A9F;">Small icon</p>
-                                         </td>
-                                        <td class="tg-jn9l"><p style="color: #CBB38B; background-color: #69522E">State %2</p></td>
-                                       </tr>
-                                       <tr>
-                                         <td class="tg-jn9l"><p style="color: #80B5CC; background-color: #24556B">Party size</p></td>
-                                         <td class="tg-jn9l"><p style="color: #94B7AA; background-color: #35564A">Party max</p>
-                                       </tr>
-                                       <tr>
-                                         <td class="tg-jn9l" colspan="2"><p style="color: #AB93B7; background-color: #4D3659">Time</p></td>
-                                       </tr>
-                                     </table>
-    )")
-                              .arg(detail, state);
-    checkBox_discordServerAccessToDetail->setToolTip(tooltip);
-    checkBox_discordServerAccessToState->setToolTip(tooltip);
-    checkBox_discordServerAccessToPartyInfo->setToolTip(tooltip);
-    checkBox_discordServerAccessToTimerInfo->setToolTip(tooltip);
-    comboBox_discordLargeIconPrivacy->setToolTip(tooltip);
-    comboBox_discordSmallIconPrivacy->setToolTip(tooltip);
+    auto setToolTip = [=](QWidget* widget, const QString& highlight) {
+        QString tooltip = QStringLiteral(R"(
+                                         <style type="text/css">
+                                         .tg  {border-collapse:collapse;border-spacing:0;}
+                                         .tg td{font-size:12px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
+                                         .tg th{font-size:12px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
+                                         .tg .tg-jn9l{background-color:#2f3135;border-color:#2f3135;text-align:left;vertical-align:top;}
+                                         .detail {color: #C79698; background-color: #66373A;}
+                                         .state {color: #CBB38B; background-color: #69522E;}
+                                         .party-size {color: #80B5CC; background-color: #24556B;}
+                                         .party-max {color: #94B7AA; background-color: #35564A;}
+                                         .time {color: #AB93B7; background-color: #4D3659;}
+
+                                         #%1 {font-size:17px; font-weight:bold;}
+                                         </style>
+                                         <table class="tg">
+                                         <tr>
+                                           <td colspan="2">
+                                         <img src=":/icons/discord-rich-presence.png"/></td>
+                                         </tr>
+                                           <tr>
+                                             <td class="tg-jn9l">
+                                                <img src=":/icons/discord-rich-presence-large-icon.png"/>
+                                                <p style="color: #989A9F;" id="large-icon">Large icon</p>
+                                            </td>
+                                            <td class="tg-jn9l"><p class="detail" id="detail">Detail %2</p></td>
+                                           </tr>
+                                           <tr>
+                                             <td class="tg-jn9l">
+                                                <img src=":/icons/discord-rich-presence-small-icon.png"/>
+                                                <p style="color: #989A9F;" id="small-icon">Small icon</p>
+                                             </td>
+                                            <td class="tg-jn9l"><p class="state" id="state">State %3</p></td>
+                                           </tr>
+                                           <tr>
+                                             <td class="tg-jn9l"><p class="party-size" id="party">Party size</p></td>
+                                             <td class="tg-jn9l"><p class="party-max" id="party">Party max</p>
+                                           </tr>
+                                           <tr>
+                                             <td class="tg-jn9l" colspan="2"><p class="time" id="time">Time</p></td>
+                                           </tr>
+                                         </table>
+        )").arg(highlight, detail, state);
+        widget->setToolTip(tooltip);
+    };
+
+    setToolTip(checkBox_discordServerAccessToDetail, QStringLiteral("detail"));
+    setToolTip(checkBox_discordServerAccessToState, QStringLiteral("state"));
+    setToolTip(checkBox_discordServerAccessToPartyInfo, QStringLiteral("party"));
+    setToolTip(checkBox_discordServerAccessToTimerInfo, QStringLiteral("time"));
+    setToolTip(comboBox_discordLargeIconPrivacy, QStringLiteral("large-icon"));
+    setToolTip(comboBox_discordSmallIconPrivacy, QStringLiteral("small-icon"));
 }
 
 void dlgProfilePreferences::slot_showMapGlyphUsage()
