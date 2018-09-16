@@ -39,16 +39,17 @@
         <file>icons/dialog-ok-apply.png</file>
         <file>icons/dialog-ok-apply_small.png</file>
         <file>icons/dialog-warning.png</file>
-        <file>icons/Discord-Logo-Color.png</file>
         <file>icons/Discord-Logo+Wordmark-Color.png</file>
         <file>icons/Discord-Logo+Wordmark-Color_400x136px.png</file>
+        <file>icons/Discord-Logo-Color.png</file>
+        <file>icons/discord-rich-presence.png</file>
         <file>icons/document-decrypt.png</file>
         <file>icons/document-encrypt.png</file>
         <file>icons/document-new.png</file>
         <file>icons/document-properties.png</file>
-        <file>icons/document-save.png</file>
         <file>icons/document-save-all.png</file>
         <file>icons/document-save-as.png</file>
+        <file>icons/document-save.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
         <file>icons/edit-cut.png</file>
@@ -150,9 +151,11 @@
         <file>icons/window-close.png</file>
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
+        <file>lua-function-list.json</file>
         <file>mudlet-mapper.xml</file>
         <file>Mudlet_splashscreen_main.png</file>
         <file>run-lua-code-v4.xml</file>
+        <file>send-text-to-all-games.xml</file>
         <file>send-text-to-all-games.xml</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>
@@ -163,7 +166,5 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
-        <file>send-text-to-all-games.xml</file>
-        <file>lua-function-list.json</file>
     </qresource>
 </RCC>

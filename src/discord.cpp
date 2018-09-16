@@ -35,7 +35,7 @@ QString Discord::smUserName;
 QString Discord::smUserId;
 QString Discord::smDiscriminator;
 QString Discord::smAvatar;
-const QString Discord::mMudletApplicationId = QLatin1String("450571881909583884");
+const QString Discord::mMudletApplicationId = QStringLiteral("450571881909583884");
 
 Discord::Discord(QObject* parent)
 : QObject(parent)
@@ -415,7 +415,7 @@ QString Discord::deduceGameName(const QString& address)
     // Handle using localhost as an off-line testing case
     if (address == QLatin1String("localhost") || address == QLatin1String("127.0.0.1") || address == QLatin1String("::1")) {
 
-        return QLatin1String("localhost");
+        return QStringLiteral("localhost");
     }
 
     // Handle the cases where the server url contains the "well-known" Server

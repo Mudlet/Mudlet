@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>755</width>
-    <height>747</height>
+    <height>750</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -2341,6 +2341,9 @@
              </property>
              <item>
               <widget class="QLabel" name="label_discordUserName">
+               <property name="toolTip">
+                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>Restrict to:</string>
                </property>
@@ -2356,6 +2359,9 @@
             </property>
             <item>
              <widget class="QLineEdit" name="lineEdit_discordUserName">
+              <property name="toolTip">
+               <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+              </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
@@ -2369,6 +2375,9 @@
             </item>
             <item>
              <widget class="QLabel" name="label_discordUserDiscriminator">
+              <property name="toolTip">
+               <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username and/or discriminator (####). Useful if you have multiple Discord accounts, leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+              </property>
               <property name="text">
                <string> # </string>
               </property>
@@ -2381,6 +2390,9 @@
                 <width>75</width>
                 <height>16777215</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username and/or discriminator (####). Useful if you have multiple Discord accounts, leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
               </property>
               <property name="inputMethodHints">
                <set>Qt::ImhDigitsOnly</set>
@@ -2445,6 +2457,9 @@
           </item>
           <item row="3" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_discordLuaAPI">
+            <property name="toolTip">
+             <string>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</string>
+            </property>
             <property name="text">
              <string>Enable Lua API</string>
             </property>
@@ -2720,22 +2735,13 @@
   <tabstop>pushButton_command_foreground_color</tabstop>
   <tabstop>pushButton_command_background_color</tabstop>
   <tabstop>pushButton_black</tabstop>
-  <tabstop>pushButton_Lblack</tabstop>
   <tabstop>pushButton_red</tabstop>
-  <tabstop>pushButton_Lred</tabstop>
   <tabstop>pushButton_green</tabstop>
-  <tabstop>pushButton_Lgreen</tabstop>
   <tabstop>pushButton_yellow</tabstop>
-  <tabstop>pushButton_Lyellow</tabstop>
   <tabstop>pushButton_blue</tabstop>
-  <tabstop>pushButton_Lblue</tabstop>
   <tabstop>pushButton_magenta</tabstop>
-  <tabstop>pushButton_Lmagenta</tabstop>
   <tabstop>pushButton_cyan</tabstop>
-  <tabstop>pushButton_Lcyan</tabstop>
   <tabstop>pushButton_white</tabstop>
-  <tabstop>pushButton_Lwhite</tabstop>
-  <tabstop>reset_colors_button</tabstop>
   <tabstop>pushButton_saveMap</tabstop>
   <tabstop>pushButton_loadMap</tabstop>
   <tabstop>checkBox_reportMapIssuesOnScreen</tabstop>

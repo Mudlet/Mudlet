@@ -166,6 +166,7 @@ private:
     void clearHostDetails();
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
+    void generateDicordTooltips();
 
     int mFontSize;
     QPointer<Host> mpHost;

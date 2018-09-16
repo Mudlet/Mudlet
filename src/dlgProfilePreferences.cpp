@@ -187,19 +187,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                                                 "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
                                                                                 "full support for languages other than English.</i></p>")));
 
-    checkBox_discordServerAccessToDetail->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set the upper line of text in the Rich Presence.</p>")));
-    checkBox_discordServerAccessToState->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set the lower line of text in the Rich Presence.</p>")));
-
-    checkBox_discordServerAccessToPartyInfo->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set additional '(X of Y)` party infomation at the "
-                                                                               "end of the the lower line of text in the Rich Presence.</p>")));
-    checkBox_discordServerAccessToTimerInfo->setToolTip(mudlet::htmlWrapper(tr("<p>Leave this checked so that the Game Server can set additional time elapsed or time remaining "
-                                                                               "infomation at the bottom of the Rich Presence.</p>")));
-    checkBox_discordLuaAPI->setToolTip(mudlet::htmlWrapper(tr("<p>Allow Lua to set Discord status</p>")));
-
-    lineEdit_discordUserName->setToolTip(mudlet::htmlWrapper(tr("<p>Mudlet will only show Rich Presence information while you use this Discord username and/or discriminator (####). Useful if you have multiple Discord accounts, leave empty to show it for any Discord account you log in to.</p>")));
-    lineEdit_discordUserDiscriminator->setToolTip(mudlet::htmlWrapper(tr("<p>Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.</p>")));
-
-
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
@@ -222,6 +209,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_setTreeIconSize, this, &dlgProfilePreferences::slot_setTreeWidgetIconSize);
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
+
+    generateDicordTooltips();
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -2859,6 +2848,33 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     pTableWidget->resizeRowsToContents();
     mpDialogMapGlyphUsage->show();
     mpDialogMapGlyphUsage->raise();
+}
+
+void dlgProfilePreferences::generateDicordTooltips()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    auto* mudlet = mudlet::self();
+
+    QString tooltip = QStringLiteral(R"(
+<p style="background-color: #2F3135">
+    <img src=":/icons/discord-rich-presence.png"/>
+    <p style="color: #C79698; background-color: #66373A">%1 (detail)</p>
+    <p style="color: #CBB38B; background-color: #69522E">%2 (state)</p>
+    <p style="color: #80B5CC; background-color: #24556B">Party size</p>
+    <p style="color: #94B7AA; background-color: #35564A">Party max</p>
+    <p style="color: #AB93B7; background-color: #4D3659">Time</p>
+</p>
+    )")
+                              .arg(mudlet->mDiscord.getDetailText(mpHost), mudlet->mDiscord.getStateText(mpHost));
+    checkBox_discordServerAccessToDetail->setToolTip(tooltip);
+    checkBox_discordServerAccessToState->setToolTip(tooltip);
+    checkBox_discordServerAccessToPartyInfo->setToolTip(tooltip);
+    checkBox_discordServerAccessToTimerInfo->setToolTip(tooltip);
+    comboBox_discordLargeIconPrivacy->setToolTip(tooltip);
+    comboBox_discordSmallIconPrivacy->setToolTip(tooltip);
 }
 
 void dlgProfilePreferences::slot_showMapGlyphUsage()
