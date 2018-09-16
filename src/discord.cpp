@@ -125,7 +125,12 @@ Discord::~Discord()
 // permission to do the operation
 void Discord::setDetailText(Host* pHost, const QString& text)
 {
-    mDetailTexts[pHost] = text;
+    if (!text.isEmpty()) {
+        mDetailTexts[pHost] = text;
+    } else {
+        mDetailTexts[pHost] = tr("via Mudlet");
+    }
+
     if (mLoaded) {
         UpdatePresence();
     }

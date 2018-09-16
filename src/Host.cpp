@@ -1358,13 +1358,13 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
             pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
             pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
-            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(richPresenceSupported.second, getUrl(), QString::number(getPort())));
+            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(richPresenceSupported.second, getUrl(), QString::number(getPort())));
         } else {
             // We are using a custom application id, so the top line is
             // likely to be saying "Playing MudName"
             if (richPresenceSupported.first) {
-                pMudlet->mDiscord.setDetailText(this, tr("Using Mudlet"));
-                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(richPresenceSupported.second, getUrl(), QString::number(getPort())));
+                pMudlet->mDiscord.setDetailText(this, QString());
+                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(richPresenceSupported.second, getUrl(), QString::number(getPort())));
                 pMudlet->mDiscord.setLargeImage(this, QStringLiteral("server-icon"));
             }
         }
