@@ -250,8 +250,8 @@ void Discord::handleDiscordReady(const DiscordUser* request)
     Discord::smAvatar = QString::fromUtf8(request->avatar);
     Discord::smReadWriteLock.unlock();
 
-    // Must use indirection via mudlet pointer because UpdatePresence is not a static method:
-    mudlet::self()->mDiscord.UpdatePresence();
+    // don't call UpdatePresence from here - freezes Mudlet deep in the Discord API
+    // when profile autostart is enabled
 }
 
 QStringList Discord::getDiscordUserDetails() const
