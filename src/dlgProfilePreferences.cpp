@@ -2859,14 +2859,39 @@ void dlgProfilePreferences::generateDicordTooltips()
     auto* mudlet = mudlet::self();
 
     QString tooltip = QStringLiteral(R"(
-<p style="background-color: #2F3135">
-    <img src=":/icons/discord-rich-presence.png"/>
-    <p style="color: #C79698; background-color: #66373A">%1 (detail)</p>
-    <p style="color: #CBB38B; background-color: #69522E">%2 (state)</p>
-    <p style="color: #80B5CC; background-color: #24556B">Party size</p>
-    <p style="color: #94B7AA; background-color: #35564A">Party max</p>
-    <p style="color: #AB93B7; background-color: #4D3659">Time</p>
-</p>
+                                     <style type="text/css">
+                                     .tg  {border-collapse:collapse;border-spacing:0;}
+                                     .tg td{font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
+                                     .tg th{font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
+                                     .tg .tg-jn9l{background-color:#2f3135;border-color:#2f3135;text-align:left;vertical-align:top}
+                                     </style>
+                                     <table class="tg">
+                                     <tr>
+                                       <td class="tg-0lax" colspan="2">
+                                     <img src=":/icons/discord-rich-presence.png"/></td>
+                                     </tr>
+                                       <tr>
+                                         <td class="tg-jn9l">
+                                            <img src=":/icons/discord-rich-presence-large-icon.png"/>
+                                            <p style="color: #989A9F;">Large icon</p>
+                                        </td>
+                                        <td class="tg-jn9l"><p style="color: #C79698; background-color: #66373A">%1 (detail)</p></td>
+                                       </tr>
+                                       <tr>
+                                         <td class="tg-jn9l">
+                                            <img src=":/icons/discord-rich-presence-small-icon.png"/>
+                                            <p style="color: #989A9F;">Small icon</p>
+                                         </td>
+                                        <td class="tg-jn9l"><p style="color: #CBB38B; background-color: #69522E">%2 (state)</p></td>
+                                       </tr>
+                                       <tr>
+                                         <td class="tg-jn9l"><p style="color: #80B5CC; background-color: #24556B">Party size</p></td>
+                                         <td class="tg-jn9l"><p style="color: #94B7AA; background-color: #35564A">Party max</p>
+                                       </tr>
+                                       <tr>
+                                         <td class="tg-jn9l" colspan="2"><p style="color: #AB93B7; background-color: #4D3659">Time</p></td>
+                                       </tr>
+                                     </table>
     )")
                               .arg(mudlet->mDiscord.getDetailText(mpHost), mudlet->mDiscord.getStateText(mpHost));
     checkBox_discordServerAccessToDetail->setToolTip(tooltip);

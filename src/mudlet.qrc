@@ -166,5 +166,7 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>icons/discord-rich-presence-small-icon.png</file>
+        <file>icons/discord-rich-presence-large-icon.png</file>
     </qresource>
 </RCC>
