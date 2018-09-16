@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="nl" sourcelanguage="en">
+<TS version="2.1" language="en-US" sourcelanguage="en">
   <context>
     <name>Host</name>
     <message>
@@ -8,23 +8,19 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation>Uitpakken module:
-&quot;%1&quot;
-wacht aub...</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="822"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation>Uitpakken van pakket:
-&quot;%1&quot;
-wacht aub...</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="826"/>
       <source>Unpacking</source>
-      <translation>Uitpakken</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -32,27 +28,27 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation>! %1</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation>! %1 is weg (%2)</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation>! %1 is terug</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation>! %1 uitgenodigd naar %2</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation>! %2 uitgenodigd naar %3</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
@@ -67,7 +63,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation>! %1 heeft %2 eruit gezet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
@@ -102,7 +98,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation>! %1 antwoordde in %2</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
@@ -285,22 +281,22 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation>%1 dagen</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation>%1 uren</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation>%1 minuten</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation>%1 sec</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -330,8 +326,7 @@ wacht aub...</translation>
       <location filename="../src/T2DMap.cpp" line="2021"/>
       <source>Room Name: %1
 </source>
-      <translation>Kamernaam: %1
-</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2035"/>
@@ -917,7 +912,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
       <source>Save profile?</source>
-      <translation>Profiel opslaan?</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
@@ -1800,12 +1795,12 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="37"/>
       <source>Unnamed Area</source>
-      <translation>Naamloze Gebied</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation>Standaard Gebied</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="505"/>
@@ -1899,7 +1894,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <location filename="../src/TRoomDB.cpp" line="828"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ] - Area-id nummering is bevredigend.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="836"/>
@@ -1932,7 +1927,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <location filename="../src/TRoomDB.cpp" line="904"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[ INFO ] - Kamer id nummering is bevredigend.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
@@ -2155,7 +2150,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/updater.cpp" line="153"/>
       <location filename="../src/updater.cpp" line="215"/>
       <source>Update</source>
-      <translation>Updaten</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="307"/>
@@ -2204,17 +2199,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation>Over Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation>Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
       <source>License</source>
-      <translation>Licentie</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
@@ -2227,7 +2222,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
@@ -2335,7 +2330,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -2442,7 +2437,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="29"/>
       <source>cancel</source>
-      <translation>annuleren</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
@@ -2540,7 +2535,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -2876,7 +2871,7 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -2901,7 +2896,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -4319,7 +4314,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2225"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2299"/>
       <source>Name</source>
-      <translation>Naam</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1186"/>
@@ -4810,7 +4805,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
@@ -5263,7 +5258,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
       <source>About Mudlet</source>
-      <translation>Over Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
@@ -5764,7 +5759,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>About Mudlet</source>
-      <translation>Over Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
@@ -7359,7 +7354,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation>&amp;Annuleren</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -7430,7 +7425,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -7502,7 +7497,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="63"/>
@@ -7641,7 +7636,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="138"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="164"/>
@@ -7785,7 +7780,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="41"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
