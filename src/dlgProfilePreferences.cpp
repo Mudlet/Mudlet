@@ -2858,6 +2858,16 @@ void dlgProfilePreferences::generateDicordTooltips()
 
     auto* mudlet = mudlet::self();
 
+    auto detail = mudlet->mDiscord.getDetailText(mpHost);
+    if (!detail.isEmpty()) {
+        detail = QStringLiteral("(\"%1\")").arg(detail);
+    }
+
+    auto state = mudlet->mDiscord.getStateText(mpHost);
+    if (!state.isEmpty()) {
+        state = QStringLiteral("(\"%1\")").arg(state);
+    }
+
     QString tooltip = QStringLiteral(R"(
                                      <style type="text/css">
                                      .tg  {border-collapse:collapse;border-spacing:0;}
@@ -2875,14 +2885,14 @@ void dlgProfilePreferences::generateDicordTooltips()
                                             <img src=":/icons/discord-rich-presence-large-icon.png"/>
                                             <p style="color: #989A9F;">Large icon</p>
                                         </td>
-                                        <td class="tg-jn9l"><p style="color: #C79698; background-color: #66373A">%1 (detail)</p></td>
+                                        <td class="tg-jn9l"><p style="color: #C79698; background-color: #66373A">Detail %1</p></td>
                                        </tr>
                                        <tr>
                                          <td class="tg-jn9l">
                                             <img src=":/icons/discord-rich-presence-small-icon.png"/>
                                             <p style="color: #989A9F;">Small icon</p>
                                          </td>
-                                        <td class="tg-jn9l"><p style="color: #CBB38B; background-color: #69522E">%2 (state)</p></td>
+                                        <td class="tg-jn9l"><p style="color: #CBB38B; background-color: #69522E">State %2</p></td>
                                        </tr>
                                        <tr>
                                          <td class="tg-jn9l"><p style="color: #80B5CC; background-color: #24556B">Party size</p></td>
@@ -2893,7 +2903,7 @@ void dlgProfilePreferences::generateDicordTooltips()
                                        </tr>
                                      </table>
     )")
-                              .arg(mudlet->mDiscord.getDetailText(mpHost), mudlet->mDiscord.getStateText(mpHost));
+                              .arg(detail, state);
     checkBox_discordServerAccessToDetail->setToolTip(tooltip);
     checkBox_discordServerAccessToState->setToolTip(tooltip);
     checkBox_discordServerAccessToPartyInfo->setToolTip(tooltip);
