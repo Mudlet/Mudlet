@@ -10755,6 +10755,31 @@ int TLuaInterpreter::getDiscordDetail(lua_State* L)
     return 1;
 }
 
+// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGame
+int TLuaInterpreter::setDiscordGame(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        auto gamename = QString::fromUtf8(lua_tostring(L, 1));
+        pMudlet->mDiscord.setDetailText(&host, tr("Playing %1").arg(gamename));
+        pMudlet->mDiscord.setLargeImage(&host, gamename.toLower());
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordGame: bad argument #%d type (game name as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
 // TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordState
 int TLuaInterpreter::setDiscordState(lua_State* L)
 {
@@ -13370,6 +13395,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setDiscordApplicationID", TLuaInterpreter::setDiscordApplicationID);
     lua_register(pGlobalLua, "usingMudletsDiscordID", TLuaInterpreter::usingMudletsDiscordID);
     lua_register(pGlobalLua, "setDiscordState", TLuaInterpreter::setDiscordState);
+    lua_register(pGlobalLua, "setDiscordGame", TLuaInterpreter::setDiscordGame);
     lua_register(pGlobalLua, "setDiscordDetail", TLuaInterpreter::setDiscordDetail);
     lua_register(pGlobalLua, "setDiscordLargeIcon", TLuaInterpreter::setDiscordLargeIcon);
     lua_register(pGlobalLua, "setDiscordLargeIconText", TLuaInterpreter::setDiscordLargeIconText);
