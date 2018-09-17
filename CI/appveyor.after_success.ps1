@@ -6,10 +6,6 @@ cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
 windeployqt.exe --release mudlet.exe
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
-Write-Output "=== Generating binary translations ==="
-lrelease.exe ..\..\src\mudlet.pro
-XCOPY /S /I /Q /Y ..\..\translations\translated\*.qm .
-
 Remove-Item * -include *.cpp, *.o
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
