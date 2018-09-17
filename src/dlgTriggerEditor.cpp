@@ -5724,6 +5724,10 @@ void dlgTriggerEditor::fillout_form()
 //    mpScriptsBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpScriptsBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/accessories-text-editor.png")));
     treeWidget_scripts->insertTopLevelItem(0, mpScriptsBaseItem);
+//    treeWidget_scripts->setStyleSheet(QStringLiteral(R"(
+//                                                         alternate-background-color: yellow;
+
+//                                                     )"));
     mpScriptsBaseItem->setExpanded(true);
     std::list<TScript*> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : baseNodeList_scripts) {
