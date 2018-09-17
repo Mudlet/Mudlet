@@ -56,7 +56,8 @@ Discord::Discord(QObject* parent)
               {"aetolia", {"aetolia.com", "iron-aet.ironrealms.com"}},
               {"imperian", {"imperian.com", " iron-imp.ironrealms.com"}},
               {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
-              {"starmourn", {"starmourn.com"}}}
+              {"starmourn", {"starmourn.com"}},
+              {"stickmud", {"stickmud.com"}}}
 {
     mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc")));
 
