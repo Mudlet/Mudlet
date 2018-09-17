@@ -2492,30 +2492,31 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="949"/>
       <location filename="../src/ctelnet.cpp" line="1169"/>
       <source>&lt;The server wants to upgrade the GUI to new version &apos;%1&apos;. Uninstalling old version &apos;%2&apos;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;Der Server möchte die GUI auf die neue Version &apos;%1&apos; aktualisieren. Deinstalliere die alte Version &apos;%2&apos;&gt;</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1555"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1573"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1584"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Kann Datei &quot;%1&quot; nicht lesen,
+Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Wiederholung beendet.</translation>
     </message>
   </context>
   <context>
@@ -2626,7 +2627,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt; Speichern (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -5966,12 +5967,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2690"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte geladen wird(3)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2700"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(3) bei %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2772"/>
@@ -5981,29 +5982,29 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2822"/>
       <source>Select Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung auswählen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2824"/>
       <source>*.dat</source>
-      <translation type="unfinished"/>
+      <translation>*.dat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3048"/>
       <location filename="../src/mudlet.cpp" line="3067"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Kompakte Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3052"/>
       <location filename="../src/mudlet.cpp" line="3070"/>
       <source>Standard input line</source>
-      <translation type="unfinished"/>
+      <translation>Normale Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3110"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3127"/>
@@ -6013,7 +6014,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="3130"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3134"/>
@@ -6023,7 +6024,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="3137"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeden Schritt mit längerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3147"/>
@@ -6036,13 +6037,13 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="3154"/>
       <location filename="../src/mudlet.cpp" line="3171"/>
       <source>Time: %1</source>
-      <translation type="unfinished"/>
+      <translation>Zeit: %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3745"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
   </context>
   <context>
