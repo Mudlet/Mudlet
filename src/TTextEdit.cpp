@@ -1457,8 +1457,11 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         }
     }
 
-    auto width = (mPB.x() - mPA.x())*mFontWidth;
-    auto height = (mPB.y() - mPA.y())*mFontHeight;
+    auto height = (mPB.y() - mPA.y()+1)*mFontHeight;
+
+    // find the biggest width of text we need to work with
+
+    auto width = (mPB.x() - mPA.x()+1)*mFontWidth;
     qDebug() << "widthxheight" << width << height;
 
     auto rect = QRect(mPA.x(), mPA.y(), width, height);
