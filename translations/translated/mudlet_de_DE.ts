@@ -5715,111 +5715,111 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="248"/>
       <source>Show and edit easy buttons</source>
-      <translation>Buttons anzeigen und bearbeiten</translation>
+      <translation>Einfache Buttons anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="253"/>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="254"/>
       <source>Show and edit scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="259"/>
       <location filename="../src/mudlet.cpp" line="411"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="260"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variablen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Lua Variablen anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="271"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="272"/>
       <source>Open the Mudlet IRC client</source>
-      <translation type="unfinished"/>
+      <translation>Öffne den Mudlet IRC Client</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="277"/>
       <location filename="../src/mudlet.cpp" line="412"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Karte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="278"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Zeige/Verberge die Karte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Handbuch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Durchsuche Referenzmaterial und Dokumentation</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="289"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Zeige und bearbeite Profileinstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="298"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Texteditor</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="299"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen Texteditor, um deine Notizen zu speichern</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="304"/>
       <location filename="../src/mudlet.cpp" line="819"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung - ermöglicht die Installation von xmls, .mpackages</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="310"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="311"/>
       <source>Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung - ermöglicht die Installation von xmls, .mpackages, die über mehrere Profile hinweg synchronisiert werden (gut für Skripte, die du in mehreren Profilen benutzt)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
@@ -5829,34 +5829,34 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Wiederverbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation type="unfinished"/>
+      <translation>Trennt dich vom Spiel und verbindet wieder</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
       <location filename="../src/mudlet.cpp" line="415"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Mehrfachansicht</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
-      <translation type="unfinished"/>
+      <translation>Wenn du mehrere Profile geöffnet hast, teilt Mudlet die Anzeige, um sie alle gleichzeitig darzustellen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <location filename="../src/mudlet.cpp" line="416"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>Über</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Über Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
@@ -5867,7 +5867,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="366"/>
       <location filename="../src/mudlet.cpp" line="367"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Vollbildanzeige umschalten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
