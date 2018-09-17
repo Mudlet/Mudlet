@@ -50,6 +50,8 @@ macx {
     include(../3rdparty/luazip/luazip.pri)
 }
 
+include(../translations/translated/updateqm.pri)
+
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
@@ -627,7 +629,9 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-RESOURCES = mudlet.qrc
+RESOURCES = mudlet.qrc \
+            ../translations/translated/qm.qrc
+
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += mudlet_fonts.qrc
     !build_pass{
