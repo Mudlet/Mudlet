@@ -2958,7 +2958,7 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
   </context>
   <context>
@@ -2978,12 +2978,12 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
   </context>
   <context>
@@ -2991,7 +2991,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Status</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -3186,7 +3186,9 @@ Count</source>
       <source>Please enter the URL or IP address of the game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Bitte nenne die URL oder IP-Adresse des Spielservers.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="299"/>
@@ -3215,12 +3217,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="418"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte deine Profil-Daten auf dem Computer nicht umbenennen.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="426"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte den neuen Profil-Ordner auf dem Computer nicht erstellen.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="522"/>
@@ -3236,12 +3238,12 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1026"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1040"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Dieses Profil ist momentan geladen - Du müsstest es zuerst trennen, bevor die Verbindungsparameter geändert werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1657"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.</translation>
     </message>
   </context>
   <context>
