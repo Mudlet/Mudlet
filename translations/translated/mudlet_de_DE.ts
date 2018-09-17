@@ -2178,7 +2178,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1271"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Verwende dieses, um das Hauptmenü wiederherzustellen und Zugriff auf die Steuerelemente zu erhalten.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1273"/>
@@ -2188,22 +2188,22 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1276"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Verwende dies, um die Hauptsymbolleiste wiederherzustellen und Zugriff auf die Steuerelemente zu erhalten.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1334"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der Debug-Konsole</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1339"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der %1 Minikonsole des %2 Profils</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1345"/>
       <source>Mudlet, %1 console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der %1 Konsole des %2 Profils</translation>
     </message>
   </context>
   <context>
@@ -5656,66 +5656,66 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="160"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="183"/>
       <source>Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Hauptsymbolleiste</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="220"/>
       <location filename="../src/mudlet.cpp" line="405"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
       <source>Connect to a game</source>
-      <translation type="unfinished"/>
+      <translation>Mit einem Spiel verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="229"/>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="230"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
       <location filename="../src/mudlet.cpp" line="407"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="236"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="241"/>
       <location filename="../src/mudlet.cpp" line="408"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="242"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Buttons</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="248"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>Buttons anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="253"/>
@@ -5861,7 +5861,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Zentrale Debug-Konsole</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="366"/>
