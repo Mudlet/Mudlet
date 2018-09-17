@@ -1241,6 +1241,10 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         QAction* action2 = new QAction(tr("Copy HTML"), this);
         action2->setToolTip(QString());
         connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
+
+        auto* actionCopyImage = new QAction(tr("Copy as image"), this);
+        connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
+
         QAction* action3 = new QAction(tr("Select All"), this);
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
@@ -1259,6 +1263,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addAction(actionCopyImage);
         popup->addSeparator();
         popup->addAction(action3);
         popup->addSeparator();
@@ -1419,6 +1424,62 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
     return;
+}
+
+void TTextEdit::slot_copySelectionToClipboardImage()
+{
+    //this->grab().save(QStringLiteral("/tmp/image.png"));
+
+    //    const QRect& rect = e->rect();
+
+    // mPA QPoint where selection started
+    // mPB QPoint where selection ended
+
+    // if selection was made backwards swap
+    // right to left
+    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
+        swap(mPA, mPB);
+    }
+    // down to up
+    if (mPA.y() > mPB.y()) {
+        swap(mPA, mPB);
+    }
+
+    if (mFontWidth <= 0 || mFontHeight <= 0) {
+        return;
+    }
+
+    if (mScreenHeight <= 0 || mScreenWidth <= 0) {
+        mScreenHeight = height() / mFontHeight;
+        mScreenWidth = 100;
+        if (mScreenHeight <= 0 || mScreenWidth <= 0) {
+            return;
+        }
+    }
+
+    auto width = (mPB.x() - mPA.x())*mFontWidth;
+    auto height = (mPB.y() - mPA.y())*mFontHeight;
+    qDebug() << "widthxheight" << width << height;
+
+    auto rect = QRect(mPA.x(), mPA.y(), width, height);
+    qDebug() << "rect" << rect;
+    qDebug() << "paint" << mPA.x() << mPA.y() << mPB.x() << mPB.y();
+
+    auto pix = QPixmap(width, height); // FIXME: width and height of image
+
+    QPainter painter(&pix);
+    if (!painter.isActive()) {
+        return;
+    }
+
+
+    QRect borderRect = QRect(0, mScreenHeight * mFontHeight, rect.width(), rect.height());
+    drawBackground(painter, borderRect, mBgColor);
+    QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
+    drawBackground(painter, borderRect2, mBgColor);
+    drawForeground(painter, rect);
+
+    pix.save(QStringLiteral("/tmp/image.png"));
 }
 
 void TTextEdit::searchSelectionOnline()

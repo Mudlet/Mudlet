@@ -118,6 +118,9 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
 
+private slots:
+    void slot_copySelectionToClipboardImage();
+
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
