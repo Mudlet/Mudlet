@@ -5824,7 +5824,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
@@ -5877,90 +5877,91 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="413"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="417"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Schließen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Modulname</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Priorität</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Synchronisieren</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Ort des Moduls</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="585"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Wenn diese Box aktiviert ist, wird das Modul gespeichert und über alle Sitzungen hinweg &lt;i&gt;neu synchronisiert&lt;/i&gt;, die es teilen, sobald die &lt;i&gt;Profil speichern&lt;/i&gt; Taste im Editor angeklickt wird, oder wenn es am Ende der Sitzung gespeichert wird.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="645"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="754"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Lade Mudlet Modul</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="761"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Lade Mudlet Modul:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="761"/>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Kann Datei %1 nicht lesen:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Mudlet Paket</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Mudlet Paket:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1211"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Deaktiviert, bis ein Profil geladen ist.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1245"/>
       <location filename="../src/mudlet.cpp" line="3208"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2682"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Karte - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2690"/>
@@ -5975,7 +5976,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2772"/>
       <source>%1 - notes</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Notizen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2822"/>
@@ -6007,7 +6008,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="3127"/>
       <source>Faster</source>
-      <translation type="unfinished"/>
+      <translation>Schneller</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3130"/>
@@ -6017,7 +6018,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="3134"/>
       <source>Slower</source>
-      <translation type="unfinished"/>
+      <translation>Langsamer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3137"/>
