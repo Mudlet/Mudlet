@@ -5721,7 +5721,7 @@ void dlgTriggerEditor::fillout_form()
     mpTimerBaseItem->setExpanded(true);
 
     mpScriptsBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Scripts")));
-    mpScriptsBaseItem->setBackground(0, QColor(255, 254, 215, 255));
+//    mpScriptsBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpScriptsBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/accessories-text-editor.png")));
     treeWidget_scripts->insertTopLevelItem(0, mpScriptsBaseItem);
     mpScriptsBaseItem->setExpanded(true);
