@@ -225,9 +225,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     label_languageChangeWarning->hide();
 
     for (auto& code : mudlet::self()->getAvailableTranslationCodes()) {
-        comboBox_guiLanguage->addItem(code);
+        comboBox_guiLanguage->addItem(mudlet::self()->mLanguageCodeMap.value(code, code), code);
     }
-    comboBox_guiLanguage->setCurrentText(mudlet::self()->mInterfaceLanguage);
+    auto current = mudlet::self()->mInterfaceLanguage;
+    comboBox_guiLanguage->setCurrentText(mudlet::self()->mLanguageCodeMap.value(current, current));
     connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
 }
 
@@ -3000,8 +3001,11 @@ void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsV
     }
 }
 
-void dlgProfilePreferences::slot_changeGuiLanguage(const QString &languageCode)
+void dlgProfilePreferences::slot_changeGuiLanguage(const QString &language)
 {
+    Q_UNUSED(language);
+
+    auto languageCode = comboBox_guiLanguage->currentData().toString();
     // WIP remove hardcoding when PR is done and languages have names in Preferences
     if (languageCode == QStringLiteral("English")) {
         mudlet::self()->setInterfaceLanguage(QStringLiteral("en_US"));

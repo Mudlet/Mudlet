@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
-    <height>748</height>
+    <width>755</width>
+    <height>768</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -258,7 +258,7 @@
            <widget class="QComboBox" name="comboBox_guiLanguage">
             <item>
              <property name="text">
-              <string>en_US</string>
+              <string>English</string>
              </property>
             </item>
            </widget>

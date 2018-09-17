@@ -128,6 +128,24 @@ mudlet* mudlet::self()
     return _self;
 }
 
+void mudlet::setupLanguagesMap()
+{
+    mLanguageCodeMap = {
+        {"en_US", tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"en_GB", tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"zh_CN", tr("Chinese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"zh_TW", tr("Chinese (Traditional)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"nl_NL", tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"fr_FR", tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"de_DE", tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"el_GR", tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"it_IT", tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"pl_PL", tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"ru_RU", tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+        {"es_ES", tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
+    };
+}
+
 mudlet::mudlet()
 : QMainWindow()
 , mFontManager()
@@ -489,6 +507,7 @@ mudlet::mudlet()
 
     // load bundled fonts
     mFontManager.addFonts();
+    setupLanguagesMap();
 }
 
 QSettings* mudlet::getQSettings()

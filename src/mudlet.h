@@ -364,6 +364,8 @@ public:
     // file for GUI translation
     QString mInterfaceLanguage;
 
+    QHash<QString, QString> mLanguageCodeMap;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -535,6 +537,7 @@ private:
     QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
+    void setupLanguagesMap();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
