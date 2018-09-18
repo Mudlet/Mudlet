@@ -1,5 +1,5 @@
-local lunajson = require 'lunajson'
-assert(lunajson, "lunajson is not available (luarocks install lunajson)")
+local yajl = require 'yajl'
+assert(yajl, "yajl is not available (luarocks install lua-yajl)")
 
 -- see if the file exists
 function file_exists(file)
@@ -47,8 +47,9 @@ while line <= #lines do
   end
 end
 
+print("lang", "trnsl", "utrnsl", "total", "percentage")
 for _, stat in ipairs(stats) do
-  print(stat.lang, stat.translated, stat.untranslated, stat.total, stat.percentage)
+  print(stat.lang, stat.translated, stat.untranslated, stat.total, stat.translatedpc)
 end
 
 serialise_stats = {}
@@ -57,4 +58,4 @@ for _, stat in ipairs(stats) do
 end
 
 io.output("translation-stats.json")
-io.write(lunajson.encode(serialise_stats))
+io.write(yajl.to_string(serialise_stats))
