@@ -165,7 +165,7 @@ void mudlet::loadLanguagesMap()
         }
 
         mLanguageCodeMap.insert(languageKey,
-                                tr("%1 (%2% translated)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet")
+                                tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet")
                                 .arg(languageName).arg(translatedpc.toInt()));
     }
 }
