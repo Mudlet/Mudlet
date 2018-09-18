@@ -2570,16 +2570,16 @@ void TConsole::printSystemMessage(const QString& msg)
         bgColor = mpHost->mBgColor;
     }
 
-    QString txt = QString("System Message: ") + msg;
+    QString txt = tr("System message: %1").arg(msg);
     buffer.append(txt,
                   0,
                   txt.size(),
                   mSystemMessageFgColor.red(),
                   mSystemMessageFgColor.green(),
                   mSystemMessageFgColor.blue(),
-                  mSystemMessageBgColor.red(),
-                  mSystemMessageBgColor.green(),
-                  mSystemMessageBgColor.blue(),
+                  bgColor.red(),
+                  bgColor.green(),
+                  bgColor.blue(),
                   false,
                   false,
                   false,
