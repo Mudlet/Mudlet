@@ -6,7 +6,7 @@ ln -s /usr/bin/gcc-5 "${HOME}/latest-gcc-symlinks/gcc"
 
 # lua-utf8 is not in the repositories...
 luarocks install --local luautf8
-YAJL_PATH="$pkg-config --variable=libdir yajl)"
+YAJL_PATH="$(pkg-config --variable=libdir yajl)"
 echo "Setting search path to $YAJL_PATH"
 luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
 
