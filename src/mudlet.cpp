@@ -128,8 +128,16 @@ mudlet* mudlet::self()
     return _self;
 }
 
-void mudlet::setupLanguagesMap()
+void mudlet::loadLanguagesMap()
 {
+    QFile file(QStringLiteral(":/translation-stats.json"));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return;
+
+    QByteArray saveData = file.readAll();
+    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+    QJsonObject translationStats = loadDoc.object();
+
     mLanguageCodeMap = {
         {"en_US", tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
         {"en_GB", tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
@@ -144,6 +152,22 @@ void mudlet::setupLanguagesMap()
         {"ru_RU", tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
         {"es_ES", tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
     };
+
+    for (auto& languageKey : translationStats.keys()) {
+        auto languageName = mLanguageCodeMap.value(languageKey);
+        if (languageName.isEmpty()) {
+            continue;
+        }
+
+        auto translatedpc = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
+        if (translatedpc == QJsonValue::Undefined) {
+            continue;
+        }
+
+        mLanguageCodeMap.insert(languageKey,
+                                tr("%1 (%2% translated)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet")
+                                .arg(languageName).arg(translatedpc.toInt()));
+    }
 }
 
 mudlet::mudlet()
@@ -507,7 +531,7 @@ mudlet::mudlet()
 
     // load bundled fonts
     mFontManager.addFonts();
-    setupLanguagesMap();
+    loadLanguagesMap();
 }
 
 QSettings* mudlet::getQSettings()

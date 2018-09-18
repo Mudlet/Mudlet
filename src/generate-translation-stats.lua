@@ -51,6 +51,10 @@ for _, stat in ipairs(stats) do
   print(stat.lang, stat.translated, stat.untranslated, stat.total, stat.percentage)
 end
 
-io.output("translation-stats.json")
+serialise_stats = {}
+for _, stat in ipairs(stats) do
+  serialise_stats[stat.lang] = {translated = stat.translated, untranslated = stat.untranslated, total = stat.total, translatedpc = stat.translatedpc}
+end
 
-io.write(lunajson.encode(stats))
+io.output("translation-stats.json")
+io.write(lunajson.encode(serialise_stats))

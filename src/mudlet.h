@@ -537,7 +537,7 @@ private:
     QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
-    void setupLanguagesMap();
+    void loadLanguagesMap();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
