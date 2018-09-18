@@ -12834,10 +12834,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
-
-    luaopen_yajl(pGlobalLua);
-    lua_setglobal(pGlobalLua, "yajl");
-
     // prepend profile path to package.path and package.cpath
     // with a singleShot Timer to avoid crash on startup.
     // crash caused by calling Host::getName() too early.
@@ -12957,6 +12953,23 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(msg);
     }
 
+
+    error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
+    if (error != 0) {
+        string e = "no error message available from Lua";
+        if (lua_isstring(pGlobalLua, -1)) {
+            e = "Lua error:";
+            e += lua_tostring(pGlobalLua, -1);
+        }
+        QString msg = "[ ERROR ] - Cannot find Lua module yajl.\n"
+                      "yajl.* Lua functions won't be available.\n";
+        msg.append(e.c_str());
+        mpHost->postMessage(msg);
+    } else {
+        QString msg = "[  OK  ]  - Lua module yajl loaded.";
+        mpHost->postMessage(msg);
+    }
+
     QString tn = "atcp";
     QStringList args;
     set_lua_table(tn, args);
@@ -12996,9 +13009,6 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_register(pIndenterState, "send", TLuaInterpreter::sendRaw);
     lua_register(pIndenterState, "debugc", TLuaInterpreter::debug);
     // PLACEMARKER: End of indenter Lua interpreter functions registration
-
-    luaopen_yajl(pIndenterState);
-    lua_setglobal(pIndenterState, "yajl");
 
 
 

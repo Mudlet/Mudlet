@@ -360,6 +360,8 @@ function InstallLuaModules(){
   exec ".\luarocks" @("install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
   Step "installing lua-utf8"
   exec ".\luarocks" @("install", "luautf8")
+  Step "installing lua-yajl"
+  exec ".\luarocks" @("install", "lua-yajl")
 
   Step "installing luazip"
   Set-Location "$workingBaseDir"

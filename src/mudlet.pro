@@ -41,9 +41,6 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 # Including IRC Library
 include(../3rdparty/communi/communi.pri)
 
-# Include lua_yajl (run time lua module needed)
-include(../3rdparty/lua_yajl/lua_yajl.pri)
-
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
 macx {
@@ -177,8 +174,8 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 # To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
 # set the environment WITH_FONTS variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
-# 
-# Note for Mudlet developers: as WITH_FONTS could be a number, a string, 
+#
+# Note for Mudlet developers: as WITH_FONTS could be a number, a string,
 # something else (or not even # exist) we need to be careful in checking it
 # exists before doing much else with it. Also as an environmental variable it
 # is tricky to handle unless we read it into a qmake variable first:
@@ -198,7 +195,7 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
 ######################### Auto Updater setting detection #########,#############
 # To remove the built-in updater, set the environment WITH_UPDATER variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
-# 
+#
 # Note for Mudlet developers: as WITH_UPDATER could be a number, a string,
 # something else (or not even exist) we need to be careful in checking it exists
 # before doing much else with it. Also as an environmental variable it is tricky
