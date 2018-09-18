@@ -6,7 +6,8 @@ ln -s /usr/bin/gcc-5 "${HOME}/latest-gcc-symlinks/gcc"
 
 # lua-utf8 is not in the repositories...
 luarocks install --local luautf8
-luarocks install --local lua-yajl YAJL_LIBDIR="$(pkg-config --libs-only-L yajl)"
+echo "$(pkg-config --libs-only-L yajl)"
+luarocks install --local lua-yajl YAJL_DIR="$(pkg-config --libs-only-L yajl)"
 
 if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   # download coverity tool only for cron jobs
