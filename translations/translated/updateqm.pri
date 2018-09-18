@@ -23,5 +23,7 @@ isEmpty(QMAKE_LRELEASE) {
 message("Building translations")
 TS_FILES_NOEXT = $$replace(TS_FILES, ".ts", "")
 for(file, TS_FILES_NOEXT) {
-    system("$$QMAKE_LRELEASE -silent $${file}.ts -qm $${file}.qm")
+    system("$$QMAKE_LRELEASE $${file}.ts -qm $${file}.qm >> lrelease_output.txt")
 }
+STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
+system("lua $$STATS_GENERATOR")

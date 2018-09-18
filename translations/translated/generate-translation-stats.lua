@@ -20,7 +20,7 @@ function lines_from(file)
 end
 
 -- tests the functions above
-local file = 'test.txt'
+local file = 'lrelease_output.txt'
 local lines = lines_from(file)
 
 local line = 1
@@ -32,10 +32,10 @@ while line <= #lines do
   line = line + 1
   if lang then
     currentLine = lines[line]
-    local translated = tonumber(currentLine:match("Generated (%d+) translation"))
+    local translated = tonumber(currentLine:match("(%d+)"))
     line = line + 1
     currentLine = lines[line]
-    local untranslated = tonumber(currentLine:match("Ignored (%d+) untranslated"))
+    local untranslated = tonumber(currentLine:match("(%d+)"))
     line = line + 1
     stats[#stats + 1] = {
       lang = lang,
