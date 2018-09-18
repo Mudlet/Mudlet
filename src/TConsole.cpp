@@ -1354,13 +1354,13 @@ void TConsole::hideEvent(QHideEvent* event)
 
 void TConsole::reset()
 {
-    deselect();
-    mFormatCurrent.bgR = mStandardFormat.bgR;
-    mFormatCurrent.bgG = mStandardFormat.bgG;
-    mFormatCurrent.bgB = mStandardFormat.bgB;
-    mFormatCurrent.fgR = mStandardFormat.fgR;
-    mFormatCurrent.fgG = mStandardFormat.fgG;
-    mFormatCurrent.fgB = mStandardFormat.fgB;
+    deselect();    
+    mStandardFormat.bgR = mBgColor.red();
+    mStandardFormat.bgG = mBgColor.green();
+    mStandardFormat.bgB = mBgColor.blue();
+    mStandardFormat.fgR = mFgColor.red();
+    mStandardFormat.fgG = mFgColor.green();
+    mStandardFormat.fgB = mFgColor.blue();
     mFormatCurrent.flags &= ~(TCHAR_BOLD);
     mFormatCurrent.flags &= ~(TCHAR_ITALICS);
     mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
