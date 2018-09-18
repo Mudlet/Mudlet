@@ -1,3 +1,6 @@
+local lunajson = require 'lunajson'
+assert(lunajson, "lunajson is not available (luarocks install lunajson)")
+
 -- see if the file exists
 function file_exists(file)
   local f = io.open(file, "rb")
@@ -39,7 +42,7 @@ while line <= #lines do
       translated = translated,
       untranslated = untranslated,
       total = translated + untranslated,
-      percentage = translated / (translated + untranslated)
+      translatedpc = math.floor((100/(translated + untranslated)) * translated)
     }
   end
 end
@@ -47,3 +50,7 @@ end
 for _, stat in ipairs(stats) do
   print(stat.lang, stat.translated, stat.untranslated, stat.total, stat.percentage)
 end
+
+io.output("translation-stats.json")
+
+io.write(lunajson.encode(stats))
