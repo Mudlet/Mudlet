@@ -361,6 +361,7 @@ function InstallLuaModules(){
   Step "installing lua-utf8"
   exec ".\luarocks" @("install", "luautf8")
   Step "installing lua-yajl"
+  $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
   exec ".\luarocks" @("install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
 
   Step "installing luazip"
