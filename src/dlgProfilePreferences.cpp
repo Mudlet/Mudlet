@@ -225,10 +225,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     label_languageChangeWarning->hide();
 
     for (auto& code : mudlet::self()->getAvailableTranslationCodes()) {
-        comboBox_guiLanguage->addItem(mudlet::self()->mLanguageCodeMap.value(code, code), code);
+        auto translatedName = mudlet::self()->mLanguageCodeMap.value(code).first;
+        int translatedPc = mudlet::self()->mLanguageCodeMap.value(code).second;
+        comboBox_guiLanguage->addItem(translatedName, code);
+        if (translatedPc >= 95) {
+            comboBox_guiLanguage->setItemIcon(comboBox_guiLanguage->count()-1, QIcon(":/icons/rating.png"));
+        }
     }
     auto current = mudlet::self()->mInterfaceLanguage;
-    comboBox_guiLanguage->setCurrentText(mudlet::self()->mLanguageCodeMap.value(current, current));
+    comboBox_guiLanguage->setCurrentText(mudlet::self()->mLanguageCodeMap.value(current).first);
     connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
 }
 

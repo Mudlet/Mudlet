@@ -164,5 +164,6 @@
         <file>send-text-to-all-games.xml</file>
         <file>lua-function-list.json</file>
         <file>../translations/translated/translation-stats.json</file>
+        <file>translation-stats.json</file>
     </qresource>
 </RCC>

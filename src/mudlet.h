@@ -364,7 +364,9 @@ public:
     // file for GUI translation
     QString mInterfaceLanguage;
 
-    QHash<QString, QString> mLanguageCodeMap;
+    // ISO language code, translated human-readable name w/ English, and percent translated
+    // ie: ru_RU, Русский (Russian), 75
+    QHash<QString, std::pair<QString, int>> mLanguageCodeMap;
 
 public slots:
     void processEventLoopHack_timerRun();

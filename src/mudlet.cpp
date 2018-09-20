@@ -130,43 +130,47 @@ mudlet* mudlet::self()
 
 void mudlet::loadLanguagesMap()
 {
+    mLanguageCodeMap = {
+            {"en_US", make_pair(tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"en_GB", make_pair(tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_CN", make_pair(tr("Chinese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_TW", make_pair(tr("Chinese (Traditional)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"nl_NL", make_pair(tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"fr_FR", make_pair(tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"de_DE", make_pair(tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"el_GR", make_pair(tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"it_IT", make_pair(tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+    };
+
     QFile file(QStringLiteral(":/translation-stats.json"));
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "translation statistics aren't available";
         return;
+    }
 
     QByteArray saveData = file.readAll();
     QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
     QJsonObject translationStats = loadDoc.object();
 
-    mLanguageCodeMap = {
-        {"en_US", tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"en_GB", tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"zh_CN", tr("Chinese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"zh_TW", tr("Chinese (Traditional)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"nl_NL", tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"fr_FR", tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"de_DE", tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"el_GR", tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"it_IT", tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"pl_PL", tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"ru_RU", tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-        {"es_ES", tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)")},
-    };
-
     for (auto& languageKey : translationStats.keys()) {
-        auto languageName = mLanguageCodeMap.value(languageKey);
-        if (languageName.isEmpty()) {
-            continue;
-        }
+        auto languageData = mLanguageCodeMap.value(languageKey);
 
         auto translatedpc = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
         if (translatedpc == QJsonValue::Undefined) {
             continue;
         }
 
-        mLanguageCodeMap.insert(languageKey,
-                                tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet")
-                                .arg(languageName).arg(translatedpc.toInt()));
+        // show translation % for languages with less than 95%
+        // for languages above 95%, show a gold star
+        if (translatedpc < 95) {
+            mLanguageCodeMap.insert(
+                    languageKey,
+                    make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc.toInt()),
+                              translatedpc.toInt()));
+        }
     }
 }
 
