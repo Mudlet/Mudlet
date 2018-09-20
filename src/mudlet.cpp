@@ -630,7 +630,6 @@ void mudlet::loadTranslators()
 
     // Qt translations are not loaded properly at the moment
     loadTranslations(getMudletPath(qtTranslationsPath));
-    loadTranslations(getMudletPath(mudletTranslationsPath));
     loadTranslations(QStringLiteral(":/lang"));
 
 
@@ -3787,12 +3786,6 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
-    case mudletTranslationsPath:
-#if defined(Q_OS_MAC)
-        return QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-#else
-        return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
-#endif
     case qtTranslationsPath:
         return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
     }

@@ -334,8 +334,6 @@ public:
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath,
-        // Returns path to mudlet_xx(_YY).qm translations
-        mudletTranslationsPath,
         // Returns path to Qt's own translation files
         qtTranslationsPath
     };
