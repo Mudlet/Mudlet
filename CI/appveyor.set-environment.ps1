@@ -31,6 +31,6 @@ function SetMingwBaseDir([string] $logFile) {
 }
 
 function SetLuarocksPath([string] $logFile) {
-  $Env:LUA_CPATH = "$Env:MINGW_BASE_DIR\lib\lua\5.1;$Env:LUA_CPATH"
+  $Env:LUA_CPATH = "$Env:MINGW_BASE_DIR\lib\lua\5.1\?.lua;$Env:LUA_CPATH"
   Write-Output "Using $Env:LUA_CPATH as LuaRocks path." | Tee-Object -File "$logFile" -Append
 }
