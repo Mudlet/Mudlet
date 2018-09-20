@@ -367,6 +367,8 @@ public:
     // ISO language code, translated human-readable name w/ English, and percent translated
     // ie: ru_RU, Русский (Russian), 75
     QHash<QString, std::pair<QString, int>> mLanguageCodeMap;
+    // translations with 95%+ will get a gold star
+    const int mTranslationStar = 30;
 
 public slots:
     void processEventLoopHack_timerRun();

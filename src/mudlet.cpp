@@ -131,7 +131,7 @@ mudlet* mudlet::self()
 void mudlet::loadLanguagesMap()
 {
     mLanguageCodeMap = {
-            {"en_US", make_pair(tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"en_US", make_pair(tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
             {"en_GB", make_pair(tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"zh_CN", make_pair(tr("Chinese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"zh_TW", make_pair(tr("Chinese (Traditional)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
@@ -147,7 +147,7 @@ void mudlet::loadLanguagesMap()
 
     QFile file(QStringLiteral(":/translation-stats.json"));
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "translation statistics aren't available";
+        qWarning() << "translation statistics file isn't available, won't show stats in preferences";
         return;
     }
 
@@ -158,21 +158,25 @@ void mudlet::loadLanguagesMap()
     for (auto& languageKey : translationStats.keys()) {
         auto languageData = mLanguageCodeMap.value(languageKey);
 
-        auto translatedpc = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
-        if (translatedpc == QJsonValue::Undefined) {
+        auto value = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
+        if (value == QJsonValue::Undefined) {
             continue;
         }
+        auto translatedpc = value.toInt();
 
         // show translation % for languages with less than 95%
         // for languages above 95%, show a gold star
-        if (translatedpc < 95) {
+        if (translatedpc < mTranslationStar) {
             mLanguageCodeMap.insert(
                     languageKey,
-                    make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc.toInt()),
-                              translatedpc.toInt()));
+                    make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc),
+                              translatedpc));
+        } else {
+            mLanguageCodeMap.insert(languageKey, make_pair(languageData.first, translatedpc));
         }
     }
-}
+    qDebug() << "mLanguageCodeMap" << mLanguageCodeMap;
+ }
 
 mudlet::mudlet()
 : QMainWindow()
@@ -619,12 +623,17 @@ void mudlet::loadTranslators()
                 }
             };
 
+    QPointer<QTranslator> pMudletTranslator = new QTranslator();
+    auto translatorList = mTranslatorsMap.value(QStringLiteral("en_US"));
+    translatorList.append(pMudletTranslator);
+    mTranslatorsMap.insert(QStringLiteral("en_US"), translatorList);
 
     // Qt translations are not loaded properly at the moment
     loadTranslations(getMudletPath(qtTranslationsPath));
     loadTranslations(getMudletPath(mudletTranslationsPath));
-
     loadTranslations(QStringLiteral(":/lang"));
+
+
 }
 
 bool mudlet::moduleTableVisible()

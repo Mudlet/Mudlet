@@ -37,6 +37,12 @@ while line <= #lines do
     currentLine = lines[line]
     local untranslated = tonumber(currentLine:match("(%d+)"))
     line = line + 1
+
+    -- US English is always at 100% translation
+    if lang == "en_US" then
+      translated, untranslated = untranslated, 0
+    end
+
     stats[#stats + 1] = {
       lang = lang,
       translated = translated,

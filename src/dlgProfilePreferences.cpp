@@ -224,16 +224,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     label_languageChangeWarning->hide();
 
-    for (auto& code : mudlet::self()->getAvailableTranslationCodes()) {
-        auto translatedName = mudlet::self()->mLanguageCodeMap.value(code).first;
-        int translatedPc = mudlet::self()->mLanguageCodeMap.value(code).second;
+    comboBox_guiLanguage->clear();
+    for (auto& code : pMudlet->getAvailableTranslationCodes()) {
+        auto& translatedName = pMudlet->mLanguageCodeMap.value(code).first;
+        int translatedPc = pMudlet->mLanguageCodeMap.value(code).second;
         comboBox_guiLanguage->addItem(translatedName, code);
-        if (translatedPc >= 95) {
+        if (translatedPc >= pMudlet->mTranslationStar) {
             comboBox_guiLanguage->setItemIcon(comboBox_guiLanguage->count()-1, QIcon(":/icons/rating.png"));
         }
     }
-    auto current = mudlet::self()->mInterfaceLanguage;
-    comboBox_guiLanguage->setCurrentText(mudlet::self()->mLanguageCodeMap.value(current).first);
+    comboBox_guiLanguage->model()->sort(0);
+    auto current = pMudlet->mInterfaceLanguage;
+    comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
     connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
 }
 

@@ -163,7 +163,6 @@
         <file>ui/set_room_area.ui</file>
         <file>send-text-to-all-games.xml</file>
         <file>lua-function-list.json</file>
-        <file>../translations/translated/translation-stats.json</file>
-        <file>translation-stats.json</file>
+        <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
     </qresource>
 </RCC>
