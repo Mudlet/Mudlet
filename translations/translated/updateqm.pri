@@ -27,3 +27,4 @@ for(file, TS_FILES_NOEXT) {
 }
 STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
 system("lua5.1 $$STATS_GENERATOR")
+system("lua $$STATS_GENERATOR")
