@@ -1,3 +1,4 @@
+require "luarocks.loader"
 local yajl = require 'yajl'
 assert(yajl, "yajl is not available (luarocks install lua-yajl)")
 
