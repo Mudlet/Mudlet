@@ -7748,7 +7748,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
       <source>Keep firing the script for x more lines, after the trigger or chain has matched.</source>
-      <translation>Lass das Skript noch bei x weitere Zeilen feuern, nachdem der Trigger oder die Kette übergestimmt hat.</translation>
+      <translation>Löse das Skript noch bei x weitere Zeilen aus, nachdem der Trigger oder die Kette übergestimmt hat.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
