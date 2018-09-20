@@ -26,5 +26,7 @@ for(file, TS_FILES_NOEXT) {
     system("$$QMAKE_LRELEASE $${file}.ts -qm $${file}.qm >> lrelease_output.txt")
 }
 STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
+system("which lua")
+system("otool -L /Users/travis/.luarocks/lib/lua/5.1/yajl.so")
 system("lua5.1 $$STATS_GENERATOR")
 system("lua $$STATS_GENERATOR")
