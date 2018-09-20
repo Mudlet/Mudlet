@@ -2124,7 +2124,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1214"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Ein unbenannter Bereich wurde in der Kartendatei festgestellt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1217"/>
@@ -2178,7 +2178,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1271"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Verwende dieses, um das Hauptmenü wiederherzustellen und Zugriff auf die Steuerelemente zu erhalten.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1273"/>
@@ -2188,22 +2188,22 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1276"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Verwende dies, um die Hauptsymbolleiste wiederherzustellen und Zugriff auf die Steuerelemente zu erhalten.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1334"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der Debug-Konsole</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1339"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der %1 Minikonsole des %2 Profils</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1345"/>
       <source>Mudlet, %1 console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der %1 Konsole des %2 Profils</translation>
     </message>
   </context>
   <context>
@@ -2492,30 +2492,31 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="949"/>
       <location filename="../src/ctelnet.cpp" line="1169"/>
       <source>&lt;The server wants to upgrade the GUI to new version &apos;%1&apos;. Uninstalling old version &apos;%2&apos;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;Der Server möchte die GUI auf die neue Version &apos;%1&apos; aktualisieren. Deinstalliere die alte Version &apos;%2&apos;&gt;</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1555"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1573"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1584"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Kann Datei &quot;%1&quot; nicht lesen,
+Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Wiederholung beendet.</translation>
     </message>
   </context>
   <context>
@@ -2626,7 +2627,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt; Speichern (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -2957,7 +2958,7 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
   </context>
   <context>
@@ -2977,12 +2978,12 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
   </context>
   <context>
@@ -2990,7 +2991,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Status</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -3185,7 +3186,9 @@ Count</source>
       <source>Please enter the URL or IP address of the game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Bitte nenne die URL oder IP-Adresse des Spielservers.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="299"/>
@@ -3214,12 +3217,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="418"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte deine Profil-Daten auf dem Computer nicht umbenennen.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="426"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte den neuen Profil-Ordner auf dem Computer nicht erstellen.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="522"/>
@@ -3235,12 +3238,12 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1026"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1040"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Dieses Profil ist momentan geladen - Du müsstest es zuerst trennen, bevor die Verbindungsparameter geändert werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1657"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.</translation>
     </message>
   </context>
   <context>
@@ -5656,218 +5659,218 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="160"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="183"/>
       <source>Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Hauptsymbolleiste</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="220"/>
       <location filename="../src/mudlet.cpp" line="405"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
       <source>Connect to a game</source>
-      <translation type="unfinished"/>
+      <translation>Mit einem Spiel verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="229"/>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="230"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
       <location filename="../src/mudlet.cpp" line="407"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="236"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="241"/>
       <location filename="../src/mudlet.cpp" line="408"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="242"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Buttons</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="248"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>Einfache Buttons anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="253"/>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="254"/>
       <source>Show and edit scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="259"/>
       <location filename="../src/mudlet.cpp" line="411"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="260"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variablen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Lua Variablen anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="271"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="272"/>
       <source>Open the Mudlet IRC client</source>
-      <translation type="unfinished"/>
+      <translation>Öffne den Mudlet IRC Client</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="277"/>
       <location filename="../src/mudlet.cpp" line="412"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Karte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="278"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Zeige/Verberge die Karte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Handbuch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Durchsuche Referenzmaterial und Dokumentation</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="289"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Zeige und bearbeite Profileinstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="298"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Texteditor</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="299"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen Texteditor, um deine Notizen zu speichern</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="304"/>
       <location filename="../src/mudlet.cpp" line="819"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung - ermöglicht die Installation von xmls, .mpackages</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="310"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="311"/>
       <source>Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung - ermöglicht die Installation von xmls, .mpackages, die über mehrere Profile hinweg synchronisiert werden (gut für Skripte, die du in mehreren Profilen benutzt)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Wiederverbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation type="unfinished"/>
+      <translation>Trennt dich vom Spiel und verbindet wieder</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
       <location filename="../src/mudlet.cpp" line="415"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Mehrfachansicht</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
-      <translation type="unfinished"/>
+      <translation>Wenn du mehrere Profile geöffnet hast, teilt Mudlet die Anzeige, um sie alle gleichzeitig darzustellen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <location filename="../src/mudlet.cpp" line="416"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>Über</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Über Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Zentrale Debug-Konsole</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="366"/>
       <location filename="../src/mudlet.cpp" line="367"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Vollbildanzeige umschalten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
@@ -5877,152 +5880,153 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="413"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="417"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Schließen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Modulname</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Priorität</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Synchronisieren</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Ort des Moduls</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="585"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Wenn diese Box aktiviert ist, wird das Modul gespeichert und über alle Sitzungen hinweg &lt;i&gt;neu synchronisiert&lt;/i&gt;, die es teilen, sobald die &lt;i&gt;Profil speichern&lt;/i&gt; Taste im Editor angeklickt wird, oder wenn es am Ende der Sitzung gespeichert wird.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="645"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="754"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Lade Mudlet Modul</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="761"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Lade Mudlet Modul:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="761"/>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Kann Datei %1 nicht lesen:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Mudlet Paket</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Mudlet Paket:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1211"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Deaktiviert, bis ein Profil geladen ist.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1245"/>
       <location filename="../src/mudlet.cpp" line="3208"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2682"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Karte - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2690"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte geladen wird(3)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2700"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(3) bei %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2772"/>
       <source>%1 - notes</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Notizen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2822"/>
       <source>Select Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung auswählen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2824"/>
       <source>*.dat</source>
-      <translation type="unfinished"/>
+      <translation>*.dat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3048"/>
       <location filename="../src/mudlet.cpp" line="3067"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Kompakte Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3052"/>
       <location filename="../src/mudlet.cpp" line="3070"/>
       <source>Standard input line</source>
-      <translation type="unfinished"/>
+      <translation>Normale Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3110"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3127"/>
       <source>Faster</source>
-      <translation type="unfinished"/>
+      <translation>Schneller</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3130"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3134"/>
       <source>Slower</source>
-      <translation type="unfinished"/>
+      <translation>Langsamer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3137"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeden Schritt mit längerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3147"/>
@@ -6035,13 +6039,13 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="3154"/>
       <location filename="../src/mudlet.cpp" line="3171"/>
       <source>Time: %1</source>
-      <translation type="unfinished"/>
+      <translation>Zeit: %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3745"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
   </context>
   <context>
