@@ -1309,6 +1309,28 @@ int TLuaInterpreter::centerview(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPlayerRoom
+int TLuaInterpreter::getPlayerRoom(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+        lua_pushnil(L);
+        lua_pushstring(L, "you haven't opened a map yet");
+        return 2;
+    }
+
+    auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
+    if (roomID == -1) {
+        lua_pushnil(L);
+        lua_pushstring(L, "the player does not have a valid room id set");
+        return 2;
+    } else {
+        lua_pushnumber(L, roomID);
+        return 1;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
@@ -13412,6 +13434,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDiscordTimeStamps", TLuaInterpreter::getDiscordTimeStamps);
     lua_register(pGlobalLua, "setDiscordParty", TLuaInterpreter::setDiscordParty);
     lua_register(pGlobalLua, "getDiscordParty", TLuaInterpreter::getDiscordParty);
+    lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 
