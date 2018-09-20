@@ -381,7 +381,7 @@ END : {
         for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
             int begin = *iti;
             std::string& s = *its;
-            int length = s.size();
+            int length = QString::fromStdString(s).size();
             if (total > 1) {
                 // skip complete match in Perl /g option type of triggers
                 // to enable people to highlight capture groups if there are any
