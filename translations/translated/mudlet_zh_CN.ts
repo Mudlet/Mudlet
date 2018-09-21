@@ -318,7 +318,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>无地图或无有效位置。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
@@ -363,7 +363,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2165"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>标签类型？</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2166"/>
@@ -378,12 +378,13 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="107"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection. Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>点击行已选择或反选此房号 (若已命名则选择名称) 以从选择项中添加或删除房间。
+点击相关页眉以使用此方法排序。请注意名称列仅会在至少一个房间拥有名称时呈现。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2184"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>选择图像</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
