@@ -158,6 +158,14 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
 
 int main(int argc, char* argv[])
 {
+    // print stdout to console if Mudlet is started in a console in Windows
+    // credit to https://stackoverflow.com/a/41701133 for the workaround
+#ifdef Q_OS_WIN32
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        freopen("CONOUT$", "w", stdout);
+        freopen("CONOUT$", "w", stderr);
+    }
+#endif
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Enable leak detection for MSVC debug builds.
     {
