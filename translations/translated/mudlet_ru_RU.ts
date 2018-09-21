@@ -3386,7 +3386,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="476"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (например, 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="477"/>
@@ -3560,7 +3560,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2375"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Обновление тем от colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2492"/>
@@ -4074,7 +4074,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="317"/>
       <source>Show Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Показать триггеры</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="320"/>
