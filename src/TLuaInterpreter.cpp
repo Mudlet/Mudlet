@@ -11155,7 +11155,7 @@ int TLuaInterpreter::startInspectingMudlet(lua_State* L)
         connect(timer.data(), &QTimer::timeout, mudlet::self(), &mudlet::inspectWidget);
     }
 
-    timer->start(250);
+    timer->start(1000);
     lua_pushboolean(L, true);
     return 1;
 }
