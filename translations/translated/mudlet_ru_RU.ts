@@ -4740,13 +4740,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7952"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Сохранение…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8090"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8096"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Вырезать</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8094"/>
@@ -4766,7 +4766,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgVarsMainArea.cpp" line="51"/>
       <location filename="../src/dlgVarsMainArea.cpp" line="78"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Авто-Тип</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
@@ -4827,12 +4827,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Команда:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -4876,7 +4876,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="97"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Закрыть</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="104"/>
@@ -5147,7 +5147,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>Набор инструментов</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="122"/>
@@ -6806,7 +6806,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1751"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1773"/>
@@ -6881,7 +6881,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2237"/>
       <source>Special Options</source>
-      <translation type="unfinished"/>
+      <translation>Специальные параметры</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2249"/>
@@ -7697,7 +7697,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="535"/>
       <source>play sound</source>
-      <translation type="unfinished"/>
+      <translation>проиграть звук</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="574"/>
@@ -7805,7 +7805,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="41"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
