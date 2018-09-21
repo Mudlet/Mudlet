@@ -4562,7 +4562,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5773"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Алиасы</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5903"/>
@@ -4621,7 +4621,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7068"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7093"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>Пакет %1 сохранён</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7108"/>
@@ -4647,12 +4647,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7209"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7233"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>%1 скопирован в буфер обмена</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7239"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт Триггеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7239"/>
@@ -4914,18 +4914,20 @@ p, li { white-space: pre-wrap; }
       <location filename="../src/main.cpp" line="215"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Лицензия GPLv2 +: GNU GPL версии 2 или более поздней версии &lt;http://gnu.org/licenses/gpl.html&gt;.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="217"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>Это свободное программное обеспечение: вы свободны изменять и распространять его.
+Нет никаких гарантий в степени разрешенной законом.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="222"/>
       <source>Mudlet - Version Information</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - информация о версии</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="242"/>
@@ -5060,12 +5062,12 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>Report bugs to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Доклад ошибок: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="297"/>
       <source>Project home page: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Главная страница проекта: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="300"/>
@@ -5150,7 +5152,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="122"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Настройки</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="129"/>
@@ -5170,7 +5172,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="160"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Играть</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
@@ -5180,7 +5182,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="171"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Отключиться</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="177"/>
@@ -5190,7 +5192,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Переподключиться</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="163"/>
@@ -5235,7 +5237,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="207"/>
       <source>Open script editor</source>
-      <translation type="unfinished"/>
+      <translation>Открыть редактор скриптов</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
@@ -5332,7 +5334,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
       <source>Check for updates...</source>
-      <translation type="unfinished"/>
+      <translation>Проверить обновления...</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="287"/>
@@ -5387,7 +5389,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Управление модулями</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="338"/>
@@ -5407,7 +5409,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Мульти-обзор</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="354"/>
