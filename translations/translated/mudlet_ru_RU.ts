@@ -4117,7 +4117,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="335"/>
       <source>Show Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Показать скрипты</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="338"/>
@@ -4179,7 +4179,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="370"/>
       <source>Add new Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую группу</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="373"/>
@@ -4215,7 +4215,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="385"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>Скопировать триггер/скрипт/алиас/т. д</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="395"/>
@@ -4297,7 +4297,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="547"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="550"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Параметры запроса</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="554"/>
@@ -4336,7 +4336,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2225"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2299"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>Имя</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1186"/>
@@ -4360,7 +4360,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2311"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2316"/>
       <source>Command</source>
-      <translation type="unfinished"/>
+      <translation>Команда</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1214"/>
@@ -4368,7 +4368,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1859"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1864"/>
       <source>Pattern {%1}</source>
-      <translation type="unfinished"/>
+      <translation>Шаблон {%1}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1246"/>
@@ -4396,7 +4396,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2341"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2346"/>
       <source>Lua code (%1:%2)</source>
-      <translation type="unfinished"/>
+      <translation>Код Lua (%1:%2)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1275"/>
@@ -4416,7 +4416,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1953"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1958"/>
       <source>Pattern</source>
-      <translation type="unfinished"/>
+      <translation>Шаблон</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1361"/>
@@ -4426,7 +4426,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2037"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2069"/>
       <source>Script</source>
-      <translation type="unfinished"/>
+      <translation>Скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1383"/>
@@ -4468,7 +4468,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1504"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2161"/>
       <source>Action</source>
-      <translation type="unfinished"/>
+      <translation>Кнопка</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1504"/>
@@ -4496,7 +4496,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2311"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2341"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>Ключ</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1759"/>
@@ -4508,12 +4508,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1773"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1779"/>
       <source>Value</source>
-      <translation type="unfinished"/>
+      <translation>Значение</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3322"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Имя таблицы...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3329"/>
@@ -4557,7 +4557,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5427"/>
       <source>Command (down);</source>
-      <translation type="unfinished"/>
+      <translation>Команда (вниз);</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5773"/>
