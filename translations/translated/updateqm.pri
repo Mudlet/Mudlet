@@ -20,13 +20,31 @@ isEmpty(QMAKE_LRELEASE) {
     }
 }
 
+write_file(lrelease_output.txt)
 message("Building translations")
 TS_FILES_NOEXT = $$replace(TS_FILES, ".ts", "")
 for(file, TS_FILES_NOEXT) {
     system("$$QMAKE_LRELEASE $${file}.ts -qm $${file}.qm >> lrelease_output.txt")
 }
 STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
-system("which lua")
-system("otool -L /Users/travis/.luarocks/lib/lua/5.1/yajl.so")
-system("lua5.1 $$STATS_GENERATOR")
-system("lua $$STATS_GENERATOR")
+
+win32 {
+    CMD = "where"
+}
+unix|max {
+    CMD = "which"
+}
+
+LUA_SEARCH_OUT = $$system("$$CMD lua5.1")
+isEmpty(LUA_SEARCH_OUT){
+    LUA_SEARCH_OUT = $$system("$$CMD lua")
+    isEmpty(LUA_SEARCH_OUT){
+        error("no lua found in PATH")
+    }else {
+        LUA_COMMAND = "lua"
+    }
+}else {
+    LUA_COMMAND = "lua5.1"
+}
+
+system("$$LUA_COMMAND $$STATS_GENERATOR")
