@@ -353,6 +353,10 @@ public:
     // compatibility...
     bool mEnableFullScreenMode;
 
+    QPointer<QTimer> mInspectingTimer;
+
+    void inspectWidget();
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -514,6 +518,7 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

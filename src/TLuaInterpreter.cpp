@@ -11145,6 +11145,38 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncodingsList
+int TLuaInterpreter::startInspectingMudlet(lua_State* L)
+{
+    auto& timer = mudlet::self()->mInspectingTimer;
+
+    if (!timer) {
+        timer = new QTimer();
+        connect(timer.data(), &QTimer::timeout, mudlet::self(), &mudlet::inspectWidget);
+    }
+
+    timer->start(250);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncodingsList
+int TLuaInterpreter::stopInspectingMudlet(lua_State* L)
+{
+    auto& timer = mudlet::self()->mInspectingTimer;
+
+    if (!timer) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "not inspecting Mudlet already");
+        return 2;
+    }
+
+    timer->stop();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: ?
 int TLuaInterpreter::getOS(lua_State* L)
 {
@@ -12855,6 +12887,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
+    lua_register(pGlobalLua, "startInspectingMudlet", TLuaInterpreter::startInspectingMudlet);
+    lua_register(pGlobalLua, "stopInspectingMudlet", TLuaInterpreter::stopInspectingMudlet);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
 

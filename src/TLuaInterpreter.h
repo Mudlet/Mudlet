@@ -440,6 +440,8 @@ public:
     static int getOS(lua_State*);
     static int getAvailableFonts(lua_State* L);
     static int getPlayerRoom(lua_State* L);
+    static int startInspectingMudlet(lua_State *L);
+    static int stopInspectingMudlet(lua_State *L);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);

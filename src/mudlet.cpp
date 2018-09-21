@@ -3829,3 +3829,10 @@ void mudlet::setShowMapAuditErrors(const bool state)
     }
 
 }
+
+
+void mudlet::inspectWidget()
+{
+    auto* widget = qApp->widgetAt(QCursor::pos());
+    qDebug() << widget;
+}
