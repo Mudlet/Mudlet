@@ -3140,12 +3140,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="418"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>Не смог переименовать профиль на диске.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="426"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Не смог создать новую папку профиля на компьютере.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="522"/>
@@ -3161,12 +3161,12 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1026"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1040"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Этот профиль уже в пользовании - вам будет необходимо отключиться перед изменением параметров подключения.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1657"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Укажите имя профиля, адреса игровых серверов и игровой порт перед подключением.</translation>
     </message>
   </context>
   <context>
@@ -3174,12 +3174,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="102"/>
       <source>%1 closed their client.</source>
-      <translation type="unfinished"/>
+      <translation>%1 закрыл их клиент.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="114"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet IRC-клиент - %1 - %2 на %3</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="128"/>
@@ -3282,12 +3282,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="14"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="21"/>
       <source>Check items to export</source>
-      <translation type="unfinished"/>
+      <translation>Выберите элементы для экспорта</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
@@ -3322,7 +3322,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="62"/>
       <source>Do you want to add additional files to the package e. g. images, sounds etc. ? The add files button will bring up the file explorer. Copy all files and folders that you want to add to the package in the temporary package directory that is shown in the file explorer. When you are done click on the export button below to start package creation.</source>
-      <translation type="unfinished"/>
+      <translation>Вы хотите, чтобы добавить дополнительные файлы в пакет е. г. изображения, звуки и т. д. ? Кнопка добавления файлов выведит проводник. Скопировайте все файлы и папки, которые вы хотите добавить в пакет во временную директорию пакета, которая отображается в проводнике. Когда вы закончите, нажмите на кнопку ниже, чтобы начать создание пакета.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="75"/>
@@ -3332,7 +3332,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>Место экспорта:</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="95"/>
@@ -3381,7 +3381,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="474"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (например, 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="476"/>
