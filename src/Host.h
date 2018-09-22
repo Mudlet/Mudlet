@@ -142,7 +142,7 @@ public:
     int createStopWatch();
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
-    void reloadModule(const QString& moduleName);
+    void reloadModule(const QString& reloadModuleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -353,7 +353,14 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
 
+private slots:
+    void slot_reloadModules();
+
 private:
+    void installPackageFonts(const QString &packageName);
+
+    QStringList mModulesToSync;
+
     QScopedPointer<LuaInterface> mLuaInterface;
 
     TriggerUnit mTriggerUnit;
@@ -418,7 +425,7 @@ private:
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
 
-    void installPackageFonts(const QString &packageName);
+    void updateModuleZips() const;
 };
 
 #endif // MUDLET_HOST_H

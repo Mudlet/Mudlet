@@ -8,6 +8,9 @@
 -- @class table
 -- @name Geyser.Gauge
 -- @field value Percentage value of how "full" the gauge is.
+-- @field strict If true, will cap the value of the gauge at 100, preventing
+--               it from overflowing the edge. Defaults to false to maintain
+--               old behaviours from before this was added.
 -- @field orientation "horizontal" is the default and creates a horizontal
 --                    gauge that fills from left to right. "vertical" creates
 --                    a gauge that fills from bottom to top. "goofy" is
@@ -18,6 +21,7 @@ Geyser.Gauge = Geyser.Container:new({
   name = "GaugeClass",
   value = 100, -- ranges from 0 to 100
   color = "#808080",
+  strict = false,
   orientation = "horizontal" })
 
 --- Sets the gauge amount.
@@ -36,7 +40,8 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   else
     self.value = currentValue
   end
-
+-- prevent the gauge from overflowing its borders if currentValue > maxValue if gauge is set to be strict
+  if self.strict and self.value > 100 then self.value = 100 end
   -- Update gauge in the requested orientation
   local shift = tostring(self.value) .. "%"
   if self.orientation == "horizontal" then
@@ -136,6 +141,9 @@ function Geyser.Gauge:new (cons, container)
   me.back = Geyser.Label:new(back, me)
   me.front = Geyser.Label:new(front, me)
   me.text = Geyser.Label:new(text, me)
+
+  -- Set whether this gauge is strict about its max value being 100 or not
+  if cons.strict then me.strict = true else me.strict = false end
 
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

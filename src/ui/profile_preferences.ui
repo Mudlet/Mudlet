@@ -186,7 +186,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If you are playing a non-English MUD and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your MUD.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
@@ -232,7 +232,7 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="mEnableGMCP">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Enable GMCP</string>
@@ -242,7 +242,7 @@
           <item row="1" column="0">
            <widget class="QCheckBox" name="mEnableMSDP">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Enable MSDP</string>
@@ -285,7 +285,7 @@
           <item row="0" column="0" colspan="4">
            <widget class="QCheckBox" name="mIsToLogInHtml">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Save log files in HTML format instead of plain text</string>
@@ -428,7 +428,7 @@
           <item row="1" column="2" colspan="2">
            <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>React to all keybindings on the same key</string>
@@ -618,7 +618,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Top border height:</string>
@@ -634,7 +634,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -662,7 +662,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Left border width:</string>
@@ -678,7 +678,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -706,7 +706,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Bottom border height:</string>
@@ -722,7 +722,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -750,7 +750,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Right border width:</string>
@@ -766,7 +766,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -912,7 +912,7 @@
           <item>
            <widget class="QLineEdit" name="doubleclick_ignore_lineedit">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the characters you'd like double-clicking to stop selecting text on here. If you don't enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Enter the characters you'd like double-clicking to stop selecting text on here. If you don't enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>'&quot;</string>
@@ -934,7 +934,7 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some MUDs (notably all IRE ones) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Fix unnecessary linebreaks on GA servers</string>
@@ -944,7 +944,7 @@
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Show Spaces/Tabs</string>
@@ -954,7 +954,7 @@
           <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Use Mudlet on a netbook with a small screen</string>
@@ -964,7 +964,7 @@
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Show Line/Paragraphs</string>
@@ -974,7 +974,7 @@
           <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_echoLuaErrors">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Echo Lua errors to the main console</string>
@@ -1127,7 +1127,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_foreground_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1150,7 +1150,7 @@
           <item row="0" column="3">
            <widget class="QPushButton" name="pushButton_background_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the MUD Server).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1170,7 +1170,7 @@
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_command_line_foreground_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string/>
@@ -1187,7 +1187,7 @@
           <item row="1" column="3">
            <widget class="QPushButton" name="pushButton_command_line_background_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for the main input area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string/>
@@ -1204,7 +1204,7 @@
           <item row="2" column="1">
            <widget class="QPushButton" name="pushButton_command_foreground_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1224,7 +1224,7 @@
           <item row="2" column="3">
            <widget class="QPushButton" name="pushButton_command_background_color">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</string>
             </property>
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1643,7 +1643,7 @@
           <item row="1" column="2">
            <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Report map issues on screen</string>
@@ -1673,7 +1673,7 @@
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Press to pick destination(s)</string>
@@ -1686,7 +1686,7 @@
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to make the copy of the current map in &lt;b&gt;this profile&lt;/b&gt; to each of the &lt;i&gt;profiles&lt;/i&gt; selected via the control to the left. Those profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently located is noted. All of the room numbers for those locations are then included in the saved data of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then they should replace the player in the location noted automatically - if it still exists; (this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!)&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Use this button to make the copy of the current map in &lt;b&gt;this profile&lt;/b&gt; to each of the &lt;i&gt;profiles&lt;/i&gt; selected via the control to the left. Those profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently located is noted. All of the room numbers for those locations are then included in the saved data of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then they should replace the player in the location noted automatically - if it still exists; (this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!)&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Copy to destination(s)</string>
@@ -1727,7 +1727,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</string>
             </property>
             <property name="editable">
              <bool>false</bool>
@@ -1754,10 +1754,10 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_11">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Download latest map provided by your MUD:</string>
+             <string>Download latest map provided by your game:</string>
             </property>
             <property name="buddy">
              <cstring>buttonDownloadMap</cstring>
@@ -1767,7 +1767,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="buttonDownloadMap">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Download</string>
@@ -1832,7 +1832,7 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="mMapperUseAntiAlias">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Use high quality graphics in 2D view</string>
@@ -1845,7 +1845,7 @@
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Show the default area in map area selection</string>
@@ -2240,7 +2240,7 @@
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_specialOptions">
          <property name="title">
-          <string>Special options needed for some older MUD drivers (needs client restart to take effect)</string>
+          <string>Special options needed for some older game drivers (needs client restart to take effect)</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>

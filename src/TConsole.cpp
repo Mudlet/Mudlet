@@ -373,7 +373,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     timeStampButton->setMaximumSize(QSize(30, 30));
     timeStampButton->setSizePolicy(sizePolicy5);
     timeStampButton->setFocusPolicy(Qt::NoFocus);
-    timeStampButton->setToolTip(tr("<html><head/><body><p>Show Time Stamps.</p></body></html>"));
+    timeStampButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
     connect(timeStampButton, &QAbstractButton::pressed, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
 
@@ -383,7 +384,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setToolTip(tr("<html><head/><body><p>Record a replay.</p></body></html>"));
+    replayButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("Record a replay.")));
     replayButton->setIcon(QIcon(QStringLiteral(":/icons/media-tape.png")));
     connect(replayButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleReplayRecording);
 
@@ -393,7 +395,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>"));
+    logButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("Start logging game output to log file.")));
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
@@ -403,9 +406,9 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     networkLatency->setReadOnly(true);
     networkLatency->setSizePolicy(sizePolicy4);
     networkLatency->setFocusPolicy(Qt::NoFocus);
-    networkLatency->setToolTip(
-            tr("<html><head/><body><p><i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your "
-               "triggers took to process the last line(s).</p></body></html>"));
+    networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds), <br>"
+           "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
     networkLatency->setMaximumSize(120, 30);
     networkLatency->setMinimumSize(120, 30);
     networkLatency->setAutoFillBackground(true);
@@ -441,7 +444,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
-    emergencyStop->setToolTip(tr("<html><head/><body><p>Emergency Stop. Stops all timers and triggers.</p></body></html>"));
+    emergencyStop->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("Emergency Stop. Stops all timers and triggers.")));
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stop_all_triggers);
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
@@ -457,14 +461,16 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     __pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette(__pal);
-    mpBufferSearchBox->setToolTip(tr("<html><head/><body><p>Search buffer.</p></body></html>"));
+    mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("Search buffer.")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
 
 
     mpBufferSearchUp->setMinimumSize(QSize(30, 30));
     mpBufferSearchUp->setMaximumSize(QSize(30, 30));
     mpBufferSearchUp->setSizePolicy(sizePolicy5);
-    mpBufferSearchUp->setToolTip(tr("<html><head/><body><p>Earlier search result.</p></body></html>"));
+    mpBufferSearchUp->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("Earlier search result.")));
     mpBufferSearchUp->setFocusPolicy(Qt::NoFocus);
     mpBufferSearchUp->setIcon(QIcon(QStringLiteral(":/icons/export.png")));
     connect(mpBufferSearchUp, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferUp);
@@ -474,7 +480,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     mpBufferSearchDown->setMaximumSize(QSize(30, 30));
     mpBufferSearchDown->setSizePolicy(sizePolicy5);
     mpBufferSearchDown->setFocusPolicy(Qt::NoFocus);
-    mpBufferSearchDown->setToolTip(tr("<html><head/><body><p>Later search result.</p></body></html>"));
+    mpBufferSearchDown->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+        tr("Later search result.")));
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
@@ -939,7 +946,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                       << mpHost->mFgColor.red() << "," << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue()
                       << "); background-color:rgb("
                       << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
-            logStream << "        span { white-space: pre; } -->\n";
+            logStream << "        span { white-space: pre-wrap; } -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
             bool isAtBody = false;
@@ -994,7 +1001,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         }
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Stop logging MUD output to log file.</p>")));
+                              .arg(tr("<p>Stop logging game output to log file.</p>")));
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
@@ -1012,7 +1019,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         mLogFile.flush();
         mLogFile.close();
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Start logging MUD output to log file.</p>")));
+                              .arg(tr("<p>Start logging game output to log file.</p>")));
     }
 }
 

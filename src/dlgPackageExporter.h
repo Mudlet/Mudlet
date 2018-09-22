@@ -85,6 +85,7 @@ private:
     QString tempDir;
     QString packageName;
     QString zipFile;
+    void showUploadNudge();
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

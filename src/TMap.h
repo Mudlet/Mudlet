@@ -57,7 +57,7 @@ class TMapLabel
 public:
     TMapLabel()
     {
-        hilite = false;
+        highlight = false;
         showOnTop = false;
         noScaling = false;
     }
@@ -70,7 +70,7 @@ public:
     QColor fgColor;
     QColor bgColor;
     QPixmap pix;
-    bool hilite;
+    bool highlight;
     bool showOnTop;
     bool noScaling;
 };
@@ -130,7 +130,7 @@ public:
     void pushErrorMessagesToFile(QString, bool isACleanup = false);
 
     // Moved and revised from dlgMapper:
-    void downloadMap(const QString* remoteUrl = Q_NULLPTR, const QString* localFileName = Q_NULLPTR);
+    void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
     // Also uses readXmlMapFile(...) but for local files:
     bool importMap(QFile&, QString* errMsg = Q_NULLPTR);

@@ -182,6 +182,7 @@ public:
     static int getRoomAreaName(lua_State*);
     static int addAreaName(lua_State* L);
     static int getRoomIDbyHash(lua_State* L);
+    static int getRoomHashByID(lua_State* L);
     static int setRoomIDbyHash(lua_State* L);
     static int sendSocket(lua_State* L);
     static int openUrl(lua_State*);
@@ -438,6 +439,7 @@ public:
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
     static int getAvailableFonts(lua_State* L);
+    static int getPlayerRoom(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
@@ -460,6 +462,10 @@ private:
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
+    void logError(std::string& e, const QString&, const QString& function);
+    static int setLabelCallback(lua_State*, const QString& funcName);
+    bool validLuaCode(const QString &code);
+    void setMatches(lua_State* L);
 
     QMap<QNetworkReply*, QString> downloadMap;
 
