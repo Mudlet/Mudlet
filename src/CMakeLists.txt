@@ -442,11 +442,10 @@ include_directories( ${ZLIB_INCLUDE_DIR} )
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 if(USE_FONTS)
-    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS} "${_lang_qrc_dst}")
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
 else()
-    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} "${_lang_qrc_dst}")
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 endif()
-
 
 if(WIN32)
     add_executable(mudlet WIN32
