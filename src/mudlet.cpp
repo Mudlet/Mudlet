@@ -3830,9 +3830,22 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
 }
 
-
 void mudlet::inspectWidget()
 {
+    QVector<QPointer<QWidget>> widgets;
+
     auto* widget = qApp->widgetAt(QCursor::pos());
-    qDebug() << widget;
+
+    // credit: https://stackoverflow.com/a/27417852/72944
+    while(widget) {
+        widgets.append(widget);
+        widget->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        widget = qApp->widgetAt(QCursor::pos());
+    }
+
+    for (auto widget : widgets) {
+        widget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+    }
+
+    qDebug() << widgets;
 }
