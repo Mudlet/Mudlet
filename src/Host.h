@@ -162,7 +162,7 @@ public:
     int createStopWatch();
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
-    void reloadModule(const QString& moduleName);
+    void reloadModule(const QString& reloadModuleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -385,7 +385,14 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
 
+private slots:
+    void slot_reloadModules();
+
 private:
+    void installPackageFonts(const QString &packageName);
+
+    QStringList mModulesToSync;
+
     QScopedPointer<LuaInterface> mLuaInterface;
 
     TriggerUnit mTriggerUnit;
@@ -464,6 +471,7 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void installPackageFonts(const QString &packageName);
+    void updateModuleZips() const;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
