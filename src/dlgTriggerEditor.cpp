@@ -4459,32 +4459,32 @@ void dlgTriggerEditor::saveVar()
     if (!pItem->parent()) {
         return;
     }
-    LuaInterface* lI = mpHost->getLuaInterface();
-    VarUnit* vu = lI->getVarUnit();
-    TVar* var = vu->getWVar(pItem);
+    auto* luaInterface = mpHost->getLuaInterface();
+    auto* varUnit = luaInterface->getVarUnit();
+    TVar* variable = varUnit->getWVar(pItem);
     bool newVar = false;
-    if (!var) {
+    if (!variable) {
         newVar = true;
-        var = vu->getTVar(pItem);
+        variable = varUnit->getTVar(pItem);
     }
-    if (!var) {
+    if (!variable) {
         return;
     }
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorEdbeeDocument->text();
-    if (newName == "") {
+    if (newName.isEmpty()) {
         slot_var_selected(pItem);
         return;
     }
     mChangingVar = true;
     int uiNameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
     int uiValueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
-    if ((uiNameType == 3 || uiNameType == 4) && newVar) {
-        uiNameType = -1;
+    if ((uiNameType == LUA_TNUMBER || uiNameType == LUA_TSTRING) && newVar) {
+        uiNameType = LUA_TNONE;
     }
     //check variable recasting
     int varRecast = canRecast(pItem, uiNameType, uiValueType);
-    if ((uiNameType == -1) || (var && uiNameType != var->getKeyType())) {
+    if ((uiNameType == -1) || (variable && uiNameType != variable->getKeyType())) {
         if (QString(newName).toInt()) {
             uiNameType = LUA_TNUMBER;
         } else {
@@ -4504,37 +4504,37 @@ void dlgTriggerEditor::saveVar()
         //we sometimes get in here from new variables
         if (newVar) {
             //we're making this var
-            var = vu->getTVar(pItem);
-            if (!var) {
-                var = new TVar();
+            variable = varUnit->getTVar(pItem);
+            if (!variable) {
+                variable = new TVar();
             }
-            var->setName(newName, uiNameType);
-            var->setValue(newValue, uiValueType);
-            lI->createVar(var);
-            vu->addVariable(var);
-            vu->addTreeItem(pItem, var);
-            vu->removeTempVar(pItem);
+            variable->setName(newName, uiNameType);
+            variable->setValue(newValue, uiValueType);
+            luaInterface->createVar(variable);
+            varUnit->addVariable(variable);
+            varUnit->addTreeItem(pItem, variable);
+            varUnit->removeTempVar(pItem);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
-        } else if (var) {
-            if (newName == var->getName() && (var->getValueType() == LUA_TTABLE && newValue == var->getValue())) {
+        } else if (variable) {
+            if (newName == variable->getName() && (variable->getValueType() == LUA_TTABLE && newValue == variable->getValue())) {
                 //no change made
             } else {
                 //we're trying to rename it/recast it
                 int change = 0;
-                if (newName != var->getName() || uiNameType != var->getKeyType()) {
+                if (newName != variable->getName() || uiNameType != variable->getKeyType()) {
                     //lets make sure the nametype works
-                    if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
+                    if (variable->getKeyType() == LUA_TNUMBER && newName.toInt()) {
                         uiNameType = LUA_TNUMBER;
                     } else {
                         uiNameType = LUA_TSTRING;
                     }
                     change = change | 0x1;
                 }
-                var->setNewName(newName, uiNameType);
-                if (var->getValueType() != LUA_TTABLE && (newValue != var->getValue() || uiValueType != var->getValueType())) {
+                variable->setNewName(newName, uiNameType);
+                if (variable->getValueType() != LUA_TTABLE && (newValue != variable->getValue() || uiValueType != variable->getValueType())) {
                     //lets check again
-                    if (var->getValueType() == LUA_TTABLE) {
+                    if (variable->getValueType() == LUA_TTABLE) {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
                         uiValueType = LUA_TTABLE;
                     } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
@@ -4544,33 +4544,33 @@ void dlgTriggerEditor::saveVar()
                     } else {
                         uiValueType = LUA_TSTRING; //nope, you don't agree, you lose your value
                     }
-                    var->setValue(newValue, uiValueType);
+                    variable->setValue(newValue, uiValueType);
                     change = change | 0x2;
                 }
                 if (change) {
                     if (change & 0x1 || newVar) {
-                        lI->renameVar(var);
+                        luaInterface->renameVar(variable);
                     }
-                    if ((var->getValueType() != LUA_TTABLE && change & 0x2) || newVar) {
-                        lI->setValue(var);
+                    if ((variable->getValueType() != LUA_TTABLE && change & 0x2) || newVar) {
+                        luaInterface->setValue(variable);
                     }
                     pItem->setText(0, newName);
                     mpCurrentVarItem = nullptr;
                 } else {
-                    var->clearNewName();
+                    variable->clearNewName();
                 }
             }
         }
     } else if (varRecast == 1) { //recast it
-        TVar* var = vu->getWVar(pItem);
+        TVar* var = varUnit->getWVar(pItem);
         if (newVar) {
             //we're making this var
-            var = vu->getTVar(pItem);
+            var = varUnit->getTVar(pItem);
             var->setName(newName, uiNameType);
             var->setValue(newValue, uiValueType);
-            lI->createVar(var);
-            vu->addVariable(var);
-            vu->addTreeItem(pItem, var);
+            luaInterface->createVar(var);
+            varUnit->addVariable(var);
+            varUnit->addTreeItem(pItem, var);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
         } else if (var) {
@@ -4604,10 +4604,10 @@ void dlgTriggerEditor::saveVar()
             }
             if (change) {
                 if (change & 0x1 || newVar) {
-                    lI->renameVar(var);
+                    luaInterface->renameVar(var);
                 }
                 if (change & 0x2 || newVar) {
-                    lI->setValue(var);
+                    luaInterface->setValue(var);
                 }
                 pItem->setText(0, newName);
                 mpCurrentVarItem = nullptr;
@@ -4617,17 +4617,17 @@ void dlgTriggerEditor::saveVar()
     //redo this here in case we changed type
     pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-    if (!vu->shouldSave(var)) {
+    if (!varUnit->shouldSave(variable)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));
         pItem->setToolTip(0, "");
         pItem->setCheckState(0, Qt::Unchecked);
-    } else if (vu->isSaved(var)) {
+    } else if (varUnit->isSaved(variable)) {
         pItem->setCheckState(0, Qt::Checked);
     }
-    pItem->setData(0, Qt::UserRole, var->getValueType());
+    pItem->setData(0, Qt::UserRole, variable->getValueType());
     QIcon icon;
-    switch (var->getValueType()) {
+    switch (variable->getValueType()) {
     case 5:
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
         break;
