@@ -272,3 +272,4 @@ endif(CCACHE_FOUND)
 
 add_subdirectory(src)
 add_subdirectory(3rdparty/communi)
+add_subdirectory(translations/translated)
