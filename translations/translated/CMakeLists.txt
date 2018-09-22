@@ -21,13 +21,6 @@
 
 message(STATUS "Building translations")
 
-
-find_program(LUA_51_FOUND lua5.1)
-if(LUA_51_FOUND)
-#  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-#  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-endif(LUA_51_FOUND)
-
 find_package(Qt5LinguistTools REQUIRED)
 get_target_property(LRELEASE_LOCATION Qt5::lrelease LOCATION)
 
@@ -43,6 +36,15 @@ foreach(ts_file ${TS_FILES_NOEXT})
           OUTPUT_VARIABLE "lrelease_output")
   file(APPEND "${CMAKE_CURRENT_BINARY_DIR}/lrelease_output.txt" ${lrelease_output})
 endforeach()
+
+find_program(LUA_LOCATION lua5.1)
+if(NOT LUA_LOCATION)
+  find_program(LUA_LOCATION lua)
+endif()
+
+execute_process(
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        COMMAND ${LUA_LOCATION} ${CMAKE_CURRENT_SOURCE_DIR}/generate-translation-stats.lua)
 
 #
 
