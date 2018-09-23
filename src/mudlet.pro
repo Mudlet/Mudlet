@@ -47,7 +47,9 @@ macx {
     include(../3rdparty/luazip/luazip.pri)
 }
 
-include(../translations/translated/updateqm.pri)
+!build_pass{
+    include(../translations/translated/updateqm.pri)
+}
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
