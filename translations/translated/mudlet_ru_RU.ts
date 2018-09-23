@@ -7697,7 +7697,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="535"/>
       <source>play sound</source>
-      <translation>проиграть звук</translation>
+      <translation>играть звук</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="574"/>
