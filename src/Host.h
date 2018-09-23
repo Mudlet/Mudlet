@@ -470,7 +470,6 @@ private:
 
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void installPackageFonts(const QString &packageName);
     void updateModuleZips() const;
 };
 
