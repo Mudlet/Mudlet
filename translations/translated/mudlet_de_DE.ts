@@ -7617,93 +7617,93 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Timer, Offset-Timer oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="73"/>
       <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Timer direkt an das Spiel senden soll, wenn die Zeit abgelaufen ist. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="85"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Stunden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="100"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Minuten&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="115"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Sekunden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="130"/>
       <source>&lt;p&gt;miliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Millisekunden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="235"/>
       <source>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Stunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="266"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="299"/>
       <location filename="../src/ui/timers_main_area.ui" line="420"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="366"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Minuten&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="487"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Sekunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="490"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; interval that the timer will go off at&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Das &lt;b&gt;Sekunden&lt;/b&gt;-Intervall, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="611"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Millisekunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="614"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Das &lt;b&gt;Millisekunden&lt;/b&gt;-Intervall, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="387"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="511"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="544"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="635"/>
       <source>zzz</source>
-      <translation type="unfinished"/>
+      <translation>zzz</translation>
     </message>
   </context>
   <context>
@@ -7891,12 +7891,12 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Name der Variable...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="137"/>
       <source>⏴ Key type:</source>
-      <translation type="unfinished"/>
+      <translation>⏴ Art des Schlüsselwertes:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
@@ -7933,14 +7933,16 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
       <location filename="../src/ui/vars_main_area.ui" line="392"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>Tabelle</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="174"/>
       <source>function
 (cannot create
 from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>Funktion
+(nicht in GUI
+erstellbar)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="263"/>
@@ -7960,32 +7962,32 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="275"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>Verborgene Variable</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="361"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷ Art des Wertes:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="377"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>String</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="382"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>Zahl</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="387"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>Boolean</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="397"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>Funktion</translation>
     </message>
   </context>
 </TS>
