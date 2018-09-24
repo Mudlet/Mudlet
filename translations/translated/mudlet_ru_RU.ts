@@ -1200,12 +1200,12 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - Аудит карты завершён (%1s). Наслаждайтесь игрой...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - карте загружена успешно (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -2102,7 +2102,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1249"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Поиск по %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1268"/>
@@ -2127,7 +2127,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1334"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, экстракт консоля отладки</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1339"/>
@@ -6589,7 +6589,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1383"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1396"/>
@@ -6600,7 +6600,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1403"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1416"/>
@@ -6611,7 +6611,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1423"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1436"/>
@@ -6622,7 +6622,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1443"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1456"/>
@@ -6633,7 +6633,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1463"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1476"/>
@@ -6644,7 +6644,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1483"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1496"/>
@@ -6655,7 +6655,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1503"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1516"/>
@@ -6666,7 +6666,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1523"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1536"/>
@@ -6677,7 +6677,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1543"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1556"/>
@@ -6688,7 +6688,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1563"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1576"/>
@@ -6714,7 +6714,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1622"/>
       <source>Press to choose location and save</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите, чтобы выбрать местоположение и сохранить</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1629"/>
@@ -6724,7 +6724,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1639"/>
       <source>Press to choose file and load</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите, чтобы выбрать файл и загрузить</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1646"/>
@@ -6780,7 +6780,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1663"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>Скопировать карту на другой профиль(я):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1679"/>
@@ -6826,7 +6826,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1792"/>
       <source>Delete map backups older than:</source>
-      <translation type="unfinished"/>
+      <translation>Удалить резервные копии карт старше чем:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1809"/>
@@ -6846,7 +6846,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1838"/>
       <source>Use high quality graphics in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Использовать высокое качество графики в 2D виде</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1851"/>
@@ -6957,7 +6957,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2369"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2379"/>
@@ -7025,7 +7025,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
@@ -7587,7 +7587,7 @@ or LUA script</source>
       <location filename="../src/ui/timers_main_area.ui" line="299"/>
       <location filename="../src/ui/timers_main_area.ui" line="420"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="366"/>
@@ -7647,7 +7647,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="724"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
@@ -7711,7 +7711,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="574"/>
       <source>choose file:</source>
-      <translation type="unfinished"/>
+      <translation>выбрать файл:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="922"/>
@@ -7845,7 +7845,7 @@ otherwise highlight the entire match</source>
       <location filename="../src/ui/vars_main_area.ui" line="154"/>
       <location filename="../src/ui/vars_main_area.ui" line="372"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Авто-Тип</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="159"/>
