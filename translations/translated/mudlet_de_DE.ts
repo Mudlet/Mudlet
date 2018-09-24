@@ -3636,7 +3636,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2375"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2492"/>
@@ -6321,118 +6321,118 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="603"/>
       <source>Display Border</source>
-      <translation type="unfinished"/>
+      <translation>Rand der Anzeige</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="624"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>Höhe des Randes oben:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="668"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>Breite des Randes links:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="712"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>Höhe des Randes unten:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="756"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>Breite des Randes rechts:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="797"/>
       <source>Word wrapping</source>
-      <translation type="unfinished"/>
+      <translation>Zeilenumbruch</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="821"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Zeilenumbruch bei:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="841"/>
       <location filename="../src/ui/profile_preferences.ui" line="889"/>
       <source>characters</source>
-      <translation type="unfinished"/>
+      <translation>Zeichen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="869"/>
       <source>Indent wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Einzug bei umgebruchenen Zeilen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="902"/>
       <source>Double-click</source>
-      <translation type="unfinished"/>
+      <translation>Doppelklick</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="908"/>
       <source>Stop selecting a word on these characters:</source>
-      <translation type="unfinished"/>
+      <translation>Stoppe die Auswahl eines Wortes bei diesen Zeichen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="918"/>
       <source>&apos;&quot;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;&quot;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="921"/>
       <source>&lt;characters to ignore in selection, for example &apos; or &quot;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>(Zeichen, die in der Auswahl ignoriert werden, bspw. &apos; oder &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="931"/>
       <source>Display options</source>
-      <translation type="unfinished"/>
+      <translation>Darstellungsoptionen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="940"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation type="unfinished"/>
+      <translation>Behebe unnötige Zeilenbrüche auf GA-Servern</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="950"/>
       <source>Show Spaces/Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Zeige Leerzeichen/Tabs</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="960"/>
       <source>Use Mudlet on a netbook with a small screen</source>
-      <translation type="unfinished"/>
+      <translation>Benutze Mudlet auf einem Netbook mit kleinem Bildschirm</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="970"/>
       <source>Show Line/Paragraphs</source>
-      <translation type="unfinished"/>
+      <translation>Zeige Zeilen/Absätze</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="980"/>
       <source>Echo Lua errors to the main console</source>
-      <translation type="unfinished"/>
+      <translation>Zeige Lua Fehler in der Hauptanzeige</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="987"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation type="unfinished"/>
+      <translation>Verbreitere &apos;mehrdeutige&apos; ostasiatische Zeichen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1014"/>
       <source>Editor</source>
-      <translation type="unfinished"/>
+      <translation>Editor</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1020"/>
       <source>Theme</source>
-      <translation type="unfinished"/>
+      <translation>Design</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1087"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1111"/>
