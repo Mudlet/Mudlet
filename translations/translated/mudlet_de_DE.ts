@@ -6311,12 +6311,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="584"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>Glätte Kanten der Schriften. Ergibt glattere Schriften, wenn du eine hohe Bildschirmauflösung und größere Schriften benutzt. Beachte, dass die Schrift bei kleinen Auflösungen verschwommen wird. </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="587"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>Kantenglättung aktivieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="603"/>
