@@ -4915,12 +4915,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deine Taste oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die die Taste direkt an das Spiel senden soll, wenn sie gedrückt wird. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
@@ -7540,12 +7540,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function withn the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für dein Skript oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;&lt;p&gt;Falls eine Funktion innerhalb des Skriptes zur Behandlung von Ereignissen aus der Liste unten vorgesehen ist, dann &lt;b&gt;&lt;u&gt;muss sie den gleichen Namen haben, der hier eigegeben wird.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Entferne (ausgewählte) Ereignisbehandler aus der Liste.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
@@ -7555,12 +7555,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
       <source>Add User Event Handler:</source>
-      <translation type="unfinished"/>
+      <translation>Ergänze Ereignisbehandler:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ergänze den eingegebenen Namen des Ereignisbehandler auf der Liste.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
@@ -7901,7 +7901,7 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Setze hier den Namen der &lt;i&gt;globalen Variable&lt;/i&gt; oder des &lt;i&gt;Tabelleneintrags&lt;/i&gt;. Der Name muss mit einem Buchstaben beginnen, aber kann Buchstaben und Zahlen enthalten.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
@@ -7917,17 +7917,17 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
       <location filename="../src/ui/vars_main_area.ui" line="154"/>
       <location filename="../src/ui/vars_main_area.ui" line="372"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Automatisch</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="159"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>Schlüsselwert (String)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="164"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>Index (Zahl)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
