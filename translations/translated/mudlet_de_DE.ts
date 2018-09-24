@@ -4986,19 +4986,21 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/main.cpp" line="213"/>
       <source>Licence: GPLv2+ - GNU General Public License version 2.0 (or at your option, any later version).</source>
-      <translation type="unfinished"/>
+      <translation>Lizenz: GPLv2+ - GNU General Public License Version 2.0 (oder auf Wunsch jede spätere Version).</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="215"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Lizenz GPLv2+: GNU GPL Version 2 oder höher &lt;http://gnu.org/licenses/gpl.html&gt;.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="217"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>Dies ist freie Software: Du darfst sie verändern und weiterverbreiten.
+Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="222"/>
