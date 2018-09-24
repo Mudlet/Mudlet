@@ -5506,27 +5506,27 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
       <source>Room IDs</source>
-      <translation type="unfinished"/>
+      <translation>Номера комнат</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="816"/>
       <source>top + 1</source>
-      <translation type="unfinished"/>
+      <translation>топ + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="829"/>
       <source>bottom + 1</source>
-      <translation type="unfinished"/>
+      <translation>низ + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="842"/>
       <source>bottom -1</source>
-      <translation type="unfinished"/>
+      <translation>низ - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="855"/>
       <source>top - 1</source>
-      <translation type="unfinished"/>
+      <translation>топ - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="868"/>
@@ -5536,17 +5536,17 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="887"/>
       <source>default</source>
-      <translation type="unfinished"/>
+      <translation>по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="900"/>
       <source>top view</source>
-      <translation type="unfinished"/>
+      <translation>вид сверху</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="913"/>
       <source>side view</source>
-      <translation type="unfinished"/>
+      <translation>вид сбоку</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="926"/>
@@ -5579,7 +5579,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/module_manager.ui" line="148"/>
       <source>Module Help</source>
-      <translation type="unfinished"/>
+      <translation>Управление модулями</translation>
     </message>
   </context>
   <context>
@@ -5658,7 +5658,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="254"/>
       <source>Show and edit scripts</source>
-      <translation type="unfinished"/>
+      <translation>Показать и редактировать скрипты</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="259"/>
@@ -5700,7 +5700,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="278"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Показать/скрыть карту</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
@@ -5720,7 +5720,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Редактировать параметры профиля</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="298"/>
@@ -5866,7 +5866,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Файл не может бытс прочитан %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
@@ -6017,17 +6018,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="73"/>
       <source>Icon size toolbars:</source>
-      <translation type="unfinished"/>
+      <translation>Размер значков на панели инструментов:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="96"/>
       <source>Icon size in tree views:</source>
-      <translation type="unfinished"/>
+      <translation>Размер значков в списках:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="116"/>
       <source>Show menu bar:</source>
-      <translation type="unfinished"/>
+      <translation>Показывать меню:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="127"/>
@@ -6050,12 +6051,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="145"/>
       <source>Show main toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Показать панель инструментов</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="180"/>
       <source>Server data encoding</source>
-      <translation type="unfinished"/>
+      <translation>Кодировка сервера</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
@@ -6070,12 +6071,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="212"/>
       <source>Force auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Автоматическое сохранение при выходе</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="219"/>
       <source>Allow server to install script packages</source>
-      <translation type="unfinished"/>
+      <translation>Разрешить серверу автоматическую установку пакетов скриптов</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
@@ -6096,22 +6097,22 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
       <location filename="../src/ui/profile_preferences.ui" line="2292"/>
       <source>Please reconnect to your game for the change to take effect</source>
-      <translation type="unfinished"/>
+      <translation>Пожалуйста, переподключитесь к вашей игре, чтобы изменения вступили в силу</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
       <source>Log options</source>
-      <translation type="unfinished"/>
+      <translation>Параметры файла журнала</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="291"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить лог-файлы в формате HTML вместо обычного текста</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="298"/>
       <source>Add timestamps at the beginning of log lines</source>
-      <translation type="unfinished"/>
+      <translation>Добавить метки в начале строк журнала</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
@@ -6287,7 +6288,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="869"/>
       <source>Indent wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Отступ завернутых строк:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="902"/>
@@ -6297,7 +6298,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="908"/>
       <source>Stop selecting a word on these characters:</source>
-      <translation type="unfinished"/>
+      <translation>Остановить выбор слова на этих буквах:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="918"/>
@@ -6317,12 +6318,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="940"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation type="unfinished"/>
+      <translation>Исправить ненужные переносы строк на серверах с GA</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="950"/>
       <source>Show Spaces/Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Показывать пробелы/табы</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="960"/>
