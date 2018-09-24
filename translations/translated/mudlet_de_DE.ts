@@ -4859,7 +4859,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
       <source>table (use &quot;Add Group&quot; to create)</source>
-      <translation type="unfinished"/>
+      <translation>Tabelle (benutze &quot;Gruppe hinzufügen&quot; zum Erstellen)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="55"/>
@@ -4897,7 +4897,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="25"/>
       <source>Mudlet IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet IRC-Client</translation>
     </message>
   </context>
   <context>
@@ -4938,7 +4938,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="23"/>
       <source>No mapping script found</source>
-      <translation type="unfinished"/>
+      <translation>Kein Skript zum Kartieren gefunden</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="38"/>
@@ -4954,12 +4954,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="97"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Schließen</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="104"/>
       <source>Find some scripts</source>
-      <translation type="unfinished"/>
+      <translation>Finde einige Skripte</translation>
     </message>
   </context>
   <context>
@@ -5010,51 +5010,51 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/main.cpp" line="242"/>
       <source>Usage: %1 [OPTION...]</source>
-      <translation type="unfinished"/>
+      <translation>Benutzung: %1 [OPTION...]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="243"/>
       <source>&amp;#8209;h, &amp;#8209;&amp;#8209;help</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;h, &amp;#8209;&amp;#8209;help</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="244"/>
       <source>displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>zeigt diese Nachricht.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="245"/>
       <source>&amp;#8209;v, &amp;#8209;&amp;#8209;version</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;v, &amp;#8209;&amp;#8209;version</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="246"/>
       <source>displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>zeigt Versionsinformationen an.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="247"/>
       <source>&amp;#8209;q, &amp;#8209;&amp;#8209;quiet</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;q, &amp;#8209;&amp;#8209;quiet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="248"/>
       <source>no splash screen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>kein Begrüßungsbildschirm.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="249"/>
       <source>There are other inherited options that arise from the Qt Libraries which are not likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Es wurden andere Optionen aus den Qt-Bibliotheken übernommen, die wahrscheinlich nicht nützlich sind für den normalen Gebrauch dieser Anwendung:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="256"/>
       <source>&amp;#8209;&amp;#8209;dograb</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;dograb</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="257"/>
