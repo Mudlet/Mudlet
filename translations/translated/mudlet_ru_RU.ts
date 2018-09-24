@@ -6328,17 +6328,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="960"/>
       <source>Use Mudlet on a netbook with a small screen</source>
-      <translation type="unfinished"/>
+      <translation>Использовать Mudlet на нетбуке с маленьким экраном</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="970"/>
       <source>Show Line/Paragraphs</source>
-      <translation type="unfinished"/>
+      <translation>Показывать строки/абзацы</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="980"/>
       <source>Echo Lua errors to the main console</source>
-      <translation type="unfinished"/>
+      <translation>Показывать ошибки Луа на главном консоле</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="987"/>
@@ -6358,7 +6358,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1087"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Обновление тем от colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1111"/>
@@ -6368,7 +6368,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1117"/>
       <source>Select your color preferences</source>
-      <translation type="unfinished"/>
+      <translation>Выберите свои цветовые предпочтения</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1123"/>
@@ -6393,12 +6393,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
       <source>Command foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Передний план команд:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1220"/>
       <source>Command background:</source>
-      <translation type="unfinished"/>
+      <translation>Задний план команд:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="189"/>
@@ -6755,7 +6755,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1760"/>
       <source>Download latest map provided by your game:</source>
-      <translation type="unfinished"/>
+      <translation>Скачать новейшую карту, предоставленную игрой:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1835"/>
@@ -6775,7 +6775,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1649"/>
       <source>Report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>Сообщить об проблем с картой на екране</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1663"/>
@@ -6785,12 +6785,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1679"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите, чтобы выбрать место назначения(ий)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1692"/>
       <source>Copy to destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Копировать в пункт назначения(ий)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1704"/>
@@ -6800,7 +6800,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1711"/>
       <source>Map format version:</source>
-      <translation type="unfinished"/>
+      <translation>Версия карты:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1736"/>
@@ -6836,7 +6836,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1822"/>
       <source>Map view</source>
-      <translation type="unfinished"/>
+      <translation>Вид карты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1828"/>
@@ -6876,7 +6876,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1904"/>
       <source>Link color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ссылок</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1924"/>
@@ -6907,7 +6907,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2267"/>
       <source>Force new line on empty commands</source>
-      <translation type="unfinished"/>
+      <translation>Добавлять новые линии на пустые команды</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2274"/>
@@ -6922,7 +6922,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2317"/>
       <source>irc.example.net</source>
-      <translation type="unfinished"/>
+      <translation>irc.example.net</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2324"/>
@@ -7309,12 +7309,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>Закрытая дверь</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>Запертая дверь</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
@@ -7401,7 +7401,7 @@ Room ID</source>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
       <source>No
 Route</source>
-      <translation type="unfinished"/>
+      <translation>Нет маршрута</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
@@ -7413,25 +7413,29 @@ Weight</source>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
       <source>Door
 None</source>
-      <translation type="unfinished"/>
+      <translation>Дверь
+Нет</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
       <source>Door
 Open</source>
-      <translation type="unfinished"/>
+      <translation>Дверь
+Открыта</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2089"/>
       <source>Door
 Closed</source>
-      <translation type="unfinished"/>
+      <translation>Дверь
+Закрыта</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2098"/>
       <source>Door
 Locked</source>
-      <translation type="unfinished"/>
+      <translation>Дверь
+Заперта</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
@@ -7511,7 +7515,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="20"/>
       <source>Form</source>
-      <translation type="unfinished"/>
+      <translation>Форма</translation>
     </message>
   </context>
   <context>
