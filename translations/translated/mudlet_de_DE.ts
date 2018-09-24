@@ -5347,69 +5347,69 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="232"/>
       <source>opens the (on-line) Mudlet Wiki, at the API front page, in your system web-browser</source>
-      <translation type="unfinished"/>
+      <translation>Öffne das Mudlet Wiki online auf der API-Startseite mit dem Webbrowser deines Systems</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="237"/>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Online-Forum</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Über Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</source>
-      <translation type="unfinished"/>
+      <translation>Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
       <source>IRC help channel</source>
-      <translation type="unfinished"/>
+      <translation>IRC Hilfe-Kanal</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <location filename="../src/ui/main_window.ui" line="298"/>
       <source>opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen eingebauten IRC-Client auf dem #mudlet Kanal der Freenode IRC-Server</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
       <source>Video tutorials</source>
-      <translation type="unfinished"/>
+      <translation>Videoanleitungen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="261"/>
       <source>opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser</source>
-      <translation type="unfinished"/>
+      <translation>Öffne eine Online-Sammlung von &quot;Mudlet Lernvideos&quot; mit dem Webbrowser deines Systems</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
       <source>Load replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung laden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="269"/>
       <source>load a previous saved game session that can be used to test Mudlet lua systems (off-line!)</source>
-      <translation type="unfinished"/>
+      <translation>Lade eine zuvor gespeicherte Spielsitzung, mit der Mudlets Lua Systeme (offline!) getestet werden können</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
       <source>show or hide the game map</source>
-      <translation type="unfinished"/>
+      <translation>Karte des Spiels anzeigen oder verbergen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="277"/>
       <source>opens the (on-line) Mudlet Forum in your system web-browser</source>
-      <translation type="unfinished"/>
+      <translation>Öffne das Mudlet Online-Forum mit dem Webbrowser deines Systems</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
       <source>Check for updates...</source>
-      <translation type="unfinished"/>
+      <translation>Nach Updates suchen...</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="287"/>
