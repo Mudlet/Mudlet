@@ -4980,7 +4980,8 @@ p, li { white-space: pre-wrap; }
       <location filename="../src/main.cpp" line="210"/>
       <source>Copyright © 2008-%1  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008 -%1  Mudlet Entwickler
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="213"/>
@@ -5002,7 +5003,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/main.cpp" line="222"/>
       <source>Mudlet - Version Information</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - Versionsinformationen</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="242"/>
@@ -5414,97 +5415,97 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="287"/>
       <source>Help chat</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe-Chat</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="290"/>
       <source>Get live help on IRC. If nobody answers right away, give it time</source>
-      <translation type="unfinished"/>
+      <translation>Hol dir sofort Hilfe im IRC. Wenn niemand sofort antwortet, bitte warten</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="295"/>
       <source>Live help chat</source>
-      <translation type="unfinished"/>
+      <translation>Sofortiger Hilfe-Chat</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="303"/>
       <source>Show map</source>
-      <translation type="unfinished"/>
+      <translation>Karte anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="309"/>
       <source>Alt+M</source>
-      <translation type="unfinished"/>
+      <translation>Alt+M</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>install and remove collections of Mudlet lua items (packages)</source>
-      <translation type="unfinished"/>
+      <translation>Installiere und entferne Sammlungen von Mudlet Lua-Elementen (Pakete)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="320"/>
       <source>Alt+O</source>
-      <translation type="unfinished"/>
+      <translation>Alt+O</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
       <source>test1</source>
-      <translation type="unfinished"/>
+      <translation>test2</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
       <source>asdf</source>
-      <translation type="unfinished"/>
+      <translation>zuiop</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="338"/>
       <source>install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules)</source>
-      <translation type="unfinished"/>
+      <translation>Installiere und entferne (gemeinsam nutzbare und synchronisierbare) Sammlungen von Mudlet Lua-Elementen (Module)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="343"/>
       <source>Package exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren (experimentell)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="346"/>
       <source>gather and bundle up collections of Mudlet Lua items and other reasources into a module</source>
-      <translation type="unfinished"/>
+      <translation>Sammle und bündle einige Mudlet Lua-Elemente und anderen Ressourcen in ein Modul</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Mehrfachansicht</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="354"/>
       <source>share the screen area between multiple open profiles</source>
-      <translation type="unfinished"/>
+      <translation>Teile den Bildschirm zwischen mehreren offenen Profilen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="357"/>
       <source>Alt+V</source>
-      <translation type="unfinished"/>
+      <translation>Alt+V</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="362"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Kompakte Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
       <source>Alt+L</source>
-      <translation type="unfinished"/>
+      <translation>Alt+L</translation>
     </message>
   </context>
   <context>
