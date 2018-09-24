@@ -3550,7 +3550,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2136"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите, чтобы выбрать место назначения(ий)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2372"/>
@@ -4595,7 +4595,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7223"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7228"/>
       <source>Export Package:</source>
-      <translation type="unfinished"/>
+      <translation>Экспортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6963"/>
@@ -4662,7 +4662,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7253"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>экспортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7253"/>
@@ -4695,7 +4695,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7634"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось сохранить профиль</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7634"/>
@@ -4715,7 +4715,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать значок</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
@@ -4730,7 +4730,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7816"/>
       <source>choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>звуковой файл</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7816"/>
@@ -4881,7 +4881,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="104"/>
       <source>Find some scripts</source>
-      <translation type="unfinished"/>
+      <translation>Найти скрипты</translation>
     </message>
   </context>
   <context>
@@ -6523,7 +6523,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1263"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1276"/>
@@ -6534,7 +6534,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1283"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1296"/>
@@ -6545,7 +6545,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1303"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
@@ -6556,7 +6556,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1323"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1336"/>
@@ -6567,7 +6567,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1343"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1356"/>
@@ -6578,7 +6578,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1363"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>Цвет ANSI номер 10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1376"/>
@@ -6995,7 +6995,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>Обычные выходы:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
@@ -7030,7 +7030,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Вес:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -7075,7 +7075,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>Нет маршрута</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
@@ -7861,14 +7861,16 @@ otherwise highlight the entire match</source>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
       <location filename="../src/ui/vars_main_area.ui" line="392"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>таблица</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="174"/>
       <source>function
 (cannot create
 from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>функция
+(невозможно создать
+из GUI)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="263"/>
@@ -7893,7 +7895,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="361"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷ Значение:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="377"/>
