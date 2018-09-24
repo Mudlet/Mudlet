@@ -5060,35 +5060,35 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/main.cpp" line="257"/>
       <source>ignore any implicit or explicit &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt;. &lt;kdb&gt;&amp;#8209;&amp;#8209;dograb&lt;/kdb&gt; wins over &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt; even when &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt; is last on the command line.</source>
       <comment>Please leave the &lt;kdb&gt;...&lt;/kdb&gt; delimited parts untranslated!</comment>
-      <translation type="unfinished"/>
+      <translation>ignoriere alle impliziten oder expliziten &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt;. &lt;kdb&gt;&amp;#8209;&amp;#8209;dograb&lt;/kdb&gt; gewinnt gegen &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt;, sogar wenn &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt; zuletzt in der Befehlszeile steht.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="261"/>
       <source>&amp;#8209;&amp;#8209;nograb</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;nograb</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="262"/>
       <source>the application should never grab the mouse or the keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>die Anwendung sollte sich niemals die Maus oder die Tastatur schnappen.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="267"/>
       <source>&amp;#8209;&amp;#8209;reverse</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;reverse</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="268"/>
       <source>sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>setzt das Layout der Anwendung in Richtung von rechts nach links.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="269"/>
       <source>&amp;#8209;&amp;#8209;style= style</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;style= style</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="270"/>
@@ -5100,19 +5100,19 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/main.cpp" line="276"/>
       <source>&amp;#8209;&amp;#8209;style style</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;style style</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="277"/>
       <location filename="../src/main.cpp" line="287"/>
       <source>is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>ist das gleiche wie oben genannt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="281"/>
       <source>&amp;#8209;&amp;#8209;stylesheet= stylesheet</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;stylesheet= stylesheet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="282"/>
@@ -5124,13 +5124,13 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
       <location filename="../src/main.cpp" line="286"/>
       <source>&amp;#8209;&amp;#8209;stylesheet stylesheet</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;stylesheet stylesheet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="292"/>
       <source>&amp;#8209;&amp;#8209;qmljsdebugger=1234[,block]</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;qmljsdebugger=1234[,block]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="293"/>
@@ -5140,12 +5140,12 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>Report bugs to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Berichte Fehler an: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="297"/>
       <source>Project home page: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Webseite des Projekts: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="300"/>
@@ -7070,7 +7070,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>Allgemeine Ausgänge:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
@@ -7100,12 +7100,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Gewicht:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -7150,7 +7150,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>Keine Route</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
@@ -7374,17 +7374,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>No door</source>
-      <translation type="unfinished"/>
+      <translation>Keine Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>Offene Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>Geschlossene Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
