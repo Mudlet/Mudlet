@@ -1754,7 +1754,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1162"/>
       <source>%1 (locked)</source>
-      <translation>%1 (gesperrt)</translation>
+      <translation>%1 (versperrt)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
@@ -7389,7 +7389,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>Verschlossene Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
@@ -7454,65 +7454,73 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Speichern</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Abbrechen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Spezielle Ausgänge:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang
+Raum-ID</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
       <source>No
 Route</source>
-      <translation type="unfinished"/>
+      <translation>Keine
+Route</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
       <source>Exit
 Weight</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang
+Gewicht</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
       <source>Door
 None</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Keine</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
       <source>Door
 Open</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Offen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2089"/>
       <source>Door
 Closed</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Geschlossen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2098"/>
       <source>Door
 Locked</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Verschlossen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>Befehl oder 
+LUA Skript</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
@@ -7573,7 +7581,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>Räume in ein anderes Gebiet verschieben</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
@@ -7586,7 +7594,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="20"/>
       <source>Form</source>
-      <translation type="unfinished"/>
+      <translation>Form</translation>
     </message>
   </context>
   <context>
@@ -7594,7 +7602,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/system_message_area.ui" line="2401"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
   </context>
   <context>
@@ -7718,12 +7726,12 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="724"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Zeige normalerweise verborgene Variablen</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="600"/>
@@ -7733,7 +7741,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="650"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Steuert die Anzeige des Bereichs für Suchergebnisse.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -7878,7 +7886,7 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>Promptzeile erkennen</translation>
     </message>
   </context>
   <context>
