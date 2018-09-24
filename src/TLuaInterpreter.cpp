@@ -10950,7 +10950,7 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
             return 2;
         }
     } else {
-        lua_pushfstring(L, "setDiscordParty: bad argument #%d type (current party size as number expect, got %s!)", 1, luaL_typename(L, 1));
+        lua_pushfstring(L, "setDiscordParty: bad argument #%d type (current party size as number expected, got %s!)", 1, luaL_typename(L, 1));
         return lua_error(L);
     }
 
