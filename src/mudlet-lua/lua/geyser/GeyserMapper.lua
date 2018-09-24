@@ -19,7 +19,7 @@ Geyser.Mapper.parent = Geyser.Window
 
 -- Overridden reposition function - mapper does it differently right now
 function Geyser.Mapper:reposition()
-  if self.hidden then
+  if self.hidden or self.auto_hidden then
     return
   end
   createMapper(self:get_x(), self:get_y(), self:get_width(), self:get_height())

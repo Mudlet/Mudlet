@@ -2419,7 +2419,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle einen eindeutigen Namen für dein Alias. Er wird in der Liste angezeigt und für Skripte benötigt.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
@@ -2429,7 +2429,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>Trage ein Perl Regex Muster für dein Alias ein. Aliase reagieren auf deine Eingaben.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
@@ -2454,7 +2454,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Kommandos, die das Alias direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Kommandos zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -7748,7 +7748,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
       <source>Keep firing the script for x more lines, after the trigger or chain has matched.</source>
-      <translation type="unfinished"/>
+      <translation>Löse das Skript noch bei x weitere Zeilen aus, nachdem der Trigger oder die Kette übergestimmt hat.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
@@ -7799,22 +7799,22 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Trigger oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
       <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Kommandos, die der Trigger direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Kommandos zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="916"/>
       <source>&lt;p&gt;The trigger will only fire if all conditions on the list have been met within the specified line delta, and captures will be saved in &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; instead of &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. If this option is not set the trigger will fire if any conditon on the list has been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der Trigger wird nur ausgelöst, wenn alle Bedingungen der Liste innerhalb des angegebenen Zeilenabstands erfüllt sind. Erfasstes wird als &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; gespeichert werden, anstelle von &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. Wenn diese Option nicht gesetzt ist, wird der Trigger ausgelöst, sobald irgendeine Bedingung der Liste erfüllt worden ist.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1120"/>
       <source>&lt;p&gt;Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nur gefilterter Inhalt (=erfasste Gruppen, capture groups) wird an die untergeordneten Trigger weitergeleitet, nicht die ursprüngliche Zeile (siehe Anleitung zu Filtern)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1165"/>
