@@ -508,7 +508,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Установить текущее местоположение игрока здесь</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2719"/>
@@ -3451,7 +3451,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1538"/>
       <source>Loading map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты - пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1543"/>
@@ -4547,7 +4547,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5409"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>Свойства</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5419"/>
