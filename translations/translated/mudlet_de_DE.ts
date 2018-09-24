@@ -4910,7 +4910,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Befehl:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -4925,12 +4925,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
       <source>Key Binding:</source>
-      <translation type="unfinished"/>
+      <translation>Tastenkürzel:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="111"/>
       <source>Grab New Key</source>
-      <translation type="unfinished"/>
+      <translation>Taste erkennen</translation>
     </message>
   </context>
   <context>
@@ -5150,7 +5150,7 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
     <message>
       <location filename="../src/main.cpp" line="300"/>
       <source>Mudlet - Command Line Help</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - Hilfe Für Die Befehlszeile</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="308"/>
@@ -6261,17 +6261,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="444"/>
       <source>Command separator:</source>
-      <translation type="unfinished"/>
+      <translation>Trennzeichen zwischen Befehlen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="454"/>
       <source>Enter text to separate commands with or leave blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Text eingeben, an dem Befehle getrennt werden, oder leer lassen zum deaktivieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="461"/>
       <source>Command line minimum height in pixels:</source>
-      <translation type="unfinished"/>
+      <translation>Mindesthöhe der Befehlszeile in Pixel:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="484"/>
@@ -7535,7 +7535,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
       <source>Registered Event Handlers:</source>
-      <translation type="unfinished"/>
+      <translation>Registrierte Ereignisbehandler:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
@@ -7550,7 +7550,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
@@ -7565,7 +7565,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -7807,7 +7807,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
       <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tippe ein oder mehrere Kommandos, die der Trigger direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Kommandos zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Trigger direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="916"/>
