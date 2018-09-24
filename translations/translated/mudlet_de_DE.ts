@@ -6171,7 +6171,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
       <location filename="../src/ui/profile_preferences.ui" line="2292"/>
       <source>Please reconnect to your game for the change to take effect</source>
-      <translation type="unfinished"/>
+      <translation>Bitte neu mit dem Spiel verbinden, damit die Änderungen aktiv werden.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
@@ -6226,7 +6226,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="398"/>
       <source>Input</source>
-      <translation type="unfinished"/>
+      <translation>Eingabe</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="404"/>
