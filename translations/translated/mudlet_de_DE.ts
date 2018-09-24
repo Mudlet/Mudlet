@@ -6231,32 +6231,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="404"/>
       <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation type="unfinished"/>
+      <translation>Benutze strenge UNIX-Zeilenenden bei Befehlen für alte UNIX-Server, die mit Windows-Zeilenenden nicht korrekt umgehen können</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="407"/>
       <source>Strict UNIX line endings</source>
-      <translation type="unfinished"/>
+      <translation>Strenge UNIX-Zeilenenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="421"/>
       <source>Echo the text you send in the display box</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholt den von dir gesendeten Text in der Anzeigebox.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="424"/>
       <source>Show the text you sent</source>
-      <translation type="unfinished"/>
+      <translation>Zeige von dir gesendeten Text</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="414"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation type="unfinished"/>
+      <translation>Leere die Eingabezeile nachdem du Text gesendet hast</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="434"/>
       <source>React to all keybindings on the same key</source>
-      <translation type="unfinished"/>
+      <translation>Reagiere auf alle Tasenkürzel derselben Taste</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="444"/>
@@ -6276,17 +6276,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="484"/>
       <source>Spell check</source>
-      <translation type="unfinished"/>
+      <translation>Rechtsschreibprüfung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="490"/>
       <source>Choose spell check dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Wähle das Wörterbuch für die Rechtschreibprüfung:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="500"/>
       <source>Enable spell check</source>
-      <translation type="unfinished"/>
+      <translation>Aktiviere Rechtschreibprüfung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="533"/>
@@ -6296,17 +6296,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="545"/>
       <source>Font</source>
-      <translation type="unfinished"/>
+      <translation>Schriftart</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Schriftart:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="574"/>
       <source>Size:</source>
-      <translation type="unfinished"/>
+      <translation>Größe:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="584"/>
