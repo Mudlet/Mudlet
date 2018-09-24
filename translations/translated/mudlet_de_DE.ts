@@ -3631,7 +3631,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2372"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>Designs konnten nicht aktualisiert werden: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2375"/>
@@ -6586,189 +6586,189 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1246"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation type="unfinished"/>
+      <translation>Diese Einstellungen legen fest, wie bestimmte Farben in der Hauptanzeige visuell dargestellt werden sollen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1256"/>
       <location filename="../src/ui/profile_preferences.ui" line="1941"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Schwarz:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1263"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1276"/>
       <location filename="../src/ui/profile_preferences.ui" line="1958"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Schwarz:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1283"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1296"/>
       <location filename="../src/ui/profile_preferences.ui" line="1975"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rot:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1303"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
       <location filename="../src/ui/profile_preferences.ui" line="1992"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Rot:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1323"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1336"/>
       <location filename="../src/ui/profile_preferences.ui" line="2009"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Grün:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1343"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1356"/>
       <location filename="../src/ui/profile_preferences.ui" line="2026"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Grün:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1363"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1376"/>
       <location filename="../src/ui/profile_preferences.ui" line="2043"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Gelb:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1383"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1396"/>
       <location filename="../src/ui/profile_preferences.ui" line="2060"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Gelb:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1403"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1416"/>
       <location filename="../src/ui/profile_preferences.ui" line="2077"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blau:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1423"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1436"/>
       <location filename="../src/ui/profile_preferences.ui" line="2094"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Blau:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1443"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1456"/>
       <location filename="../src/ui/profile_preferences.ui" line="2111"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1463"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1476"/>
       <location filename="../src/ui/profile_preferences.ui" line="2128"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1483"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1496"/>
       <location filename="../src/ui/profile_preferences.ui" line="2145"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Türkis:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1503"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1516"/>
       <location filename="../src/ui/profile_preferences.ui" line="2162"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Türkis:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1523"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1536"/>
       <location filename="../src/ui/profile_preferences.ui" line="2179"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Weiß:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1543"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1556"/>
       <location filename="../src/ui/profile_preferences.ui" line="2196"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Weiß:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1563"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1576"/>
       <location filename="../src/ui/profile_preferences.ui" line="2213"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Alle Farben auf den Standard zurücksetzen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1600"/>
@@ -6824,47 +6824,47 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1757"/>
       <location filename="../src/ui/profile_preferences.ui" line="1770"/>
       <source>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;In Spielen, die Karten zum Download anpieten (derzeit nur IRE-Spiele), kannst du diese Taste drücken, um die neueste Karte zu erhalten. Beachte, dass dies deine bisherigen Änderungen &lt;span style=&quot; font-weight:600;&quot;&gt;überschreiben&lt;/span&gt; wird, und nur noch die neue Karte verwendet&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1760"/>
       <source>Download latest map provided by your game:</source>
-      <translation type="unfinished"/>
+      <translation>Lade die neueste Karte herunter, die dein Spiel bereitstellt:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1835"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dies ermöglicht Kantenglättung (Anti-Aliasing) der 2D-Kartenansicht, die so glatter und schöner aussieht. Deaktiviere dies auf sehr langsamen Computern.&lt;/p&gt;&lt;p&gt;Die 3D-Kartenansicht hat immer Kantenglättung aktiviert.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1848"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der Standard-Bereich (Bereich-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese in den richtigen Bereich platziert werden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2243"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>Spezielle Optionen für einige ältere Spiel-Treiber (Aktivierung benötigt Neustart des Client)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1649"/>
       <source>Report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>Berichte Kartenprobleme auf dem Bildschirm</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1663"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere Karte an andere(s) Profil(e):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1679"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Ziel(e)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1692"/>
       <source>Copy to destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere an Ziel(e)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1704"/>
