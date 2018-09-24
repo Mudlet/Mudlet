@@ -7906,12 +7906,12 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>&lt;p&gt;If this variable is a key of a table, then you can select it to either be an &lt;i&gt;indexed key&lt;/i&gt; (unique positive integer with no gaps between it and the first item which has a key of 1) or an &lt;i&gt;associative key&lt;/i&gt; (a string or any other number or combination) type.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Falls diese Variable der Schlüsselwert einer Tabelle ist, dann kannst du wählen, ob seine Art entweder ein &lt;i&gt;Indexschlüssel&lt;/i&gt; (einzigartige positive Ganzzahl ohne Lücken seit dem Element mit der Nummer 1) oder ein &lt;i&gt;assoziativer Schlüsselwert&lt;/i&gt; (ein String oder jede andere Zahl oder Kombination) sein soll.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="147"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tabellen können Werte entweder als Liste und/oder als Hashtabelle speichern.&lt;/p&gt;&lt;p&gt;In einer &lt;b&gt;Liste&lt;/b&gt;, repräsentieren &lt;i&gt;einzigartige nummerierte Schlüssel&lt;/i&gt; die Werte - also kannst du Werte haben bei &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In einer &lt;b&gt;Hashtabelle&lt;/b&gt; {bzw. einem &lt;i&gt;assoziativen Datenfeld&lt;/i&gt;} repräsentieren &lt;i&gt;einzigartige Schlüssel&lt;/i&gt; die Werte - du kannst also jeden Wert unter jeder gewünschten Bezeichnung eintragen (theoretisch sogar einer Funktion oder anderen Lua Objekten, aber diese GUI unterstützt nur Strings).&lt;/p&gt;&lt;p&gt;Hier wählst du für neu erstellte Tabellen(-gruppen), ob es eine nummerierte oder assoziative Tabelle sein soll.&lt;/p&gt;&lt;p&gt;Andernfalls werden andere Objekte (&lt;span style=&quot; font-style:italic;&quot;&gt;Funktionen&lt;/span&gt;) angezeigt, die von hier nicht verändert werden können.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="154"/>
@@ -7947,12 +7947,12 @@ erstellbar)</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="263"/>
       <source>&lt;p&gt;Hides this variable (and its children if it is a table) from the Variables view, if the &lt;i&gt;Display All Variables&lt;/i&gt; control is off.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You might want to use this to hide variables that are not related to your scipts, so you can focus only on your own system and not be distrated by some of the Mudlet defaults - or, alternatively, to use this to not mess them by up accident!&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Verberge diese Variable (samt Kindern, falls es eine Tabelle ist) aus der Anzeige der Variablen, falls &lt;i&gt;Alle Variablen anzeigen&lt;/i&gt; deaktiviert ist.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Dies empfiehlt sich, um Variablen zu verbergen, die nicht mit deinen Skripten zusammenhängen, damit du dich auf dein eigenes System konzentrieren kannst, und nicht von einigen Voreinstellungen von Mudlet abgelenkt wirst - oder alternativ, damit du sie nicht versehentlich durcheinander bringst!&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="272"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Falls gewählt, wird dieses Objekt (und wo möglich seine Kinder) nicht in dem Bereich links angezeigt, außer &lt;b&gt;Zeige normalerweise verborgene Variablen&lt;/b&gt; ist ausgewählt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="352"/>
