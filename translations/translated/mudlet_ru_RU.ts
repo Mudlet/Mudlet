@@ -4890,13 +4890,15 @@ p, li { white-space: pre-wrap; }
       <location filename="../src/main.cpp" line="204"/>
       <source>%1 %2%3 (debug symbols, no optimisations)
 </source>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (символы отладки, без оптимизаций)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="209"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)
 </source>
-      <translation type="unfinished"/>
+      <translation>Qt библиотеки %1 (компиляция) %2 (среда выполнения)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="210"/>
@@ -4908,7 +4910,7 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/main.cpp" line="213"/>
       <source>Licence: GPLv2+ - GNU General Public License version 2.0 (or at your option, any later version).</source>
-      <translation type="unfinished"/>
+      <translation>Лицензия: GPLv2 + - GNU General Public License версии 2.0 (или по вашему выбору, любая более позднея версия).</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="215"/>
@@ -4932,7 +4934,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/main.cpp" line="242"/>
       <source>Usage: %1 [OPTION...]</source>
-      <translation type="unfinished"/>
+      <translation>Использование: %1 [OPTION...]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="243"/>
@@ -4943,7 +4945,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/main.cpp" line="244"/>
       <source>displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>выводит это сообщение.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="245"/>
@@ -4954,7 +4956,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/main.cpp" line="246"/>
       <source>displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>выводит информацию о версии.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="247"/>
@@ -4965,7 +4967,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/main.cpp" line="248"/>
       <source>no splash screen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>нет заставки при запуске.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="249"/>
@@ -4993,7 +4995,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/main.cpp" line="262"/>
       <source>the application should never grab the mouse or the keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>приложение никогда не должно захватить мышь или клавиатуру.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="267"/>
@@ -5028,7 +5030,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/main.cpp" line="277"/>
       <location filename="../src/main.cpp" line="287"/>
       <source>is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>такой же, как и перечисленные выше.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="281"/>
@@ -5072,7 +5074,7 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
     <message>
       <location filename="../src/main.cpp" line="300"/>
       <source>Mudlet - Command Line Help</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - справка по командной строке</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="308"/>
@@ -5128,13 +5130,15 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="355"/>
       <source>Report bugs to: &lt;https://github.com/Mudlet/Mudlet/issues&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Об ошибках сообщайте: &lt;https://github.com/Mudlet/Mudlet/issues&gt;.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="356"/>
       <source>Project home page: &lt;http://www.mudlet.org/&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Домашняя страница проекта: &lt;http://www.mudlet.org/&gt;.
+</translation>
     </message>
   </context>
   <context>
