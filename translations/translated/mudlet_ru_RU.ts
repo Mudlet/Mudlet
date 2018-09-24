@@ -5206,7 +5206,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>disconnect from the current game server</source>
-      <translation type="unfinished"/>
+      <translation>отключиться от текущего сервера</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="185"/>
@@ -5282,7 +5282,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/ui/main_window.ui" line="237"/>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Форум</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
@@ -5308,7 +5308,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
       <source>Video tutorials</source>
-      <translation type="unfinished"/>
+      <translation>Видеоучебники</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="261"/>
@@ -5428,7 +5428,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="362"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Компактная строка ввода</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
@@ -5923,13 +5923,13 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="3048"/>
       <location filename="../src/mudlet.cpp" line="3067"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Компактная строка ввода</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3052"/>
       <location filename="../src/mudlet.cpp" line="3070"/>
       <source>Standard input line</source>
-      <translation type="unfinished"/>
+      <translation>Стандартная строка ввода</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3110"/>
@@ -6176,7 +6176,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="414"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation type="unfinished"/>
+      <translation>Очищать поле ввода после отправки текста</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="434"/>
