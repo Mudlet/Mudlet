@@ -5222,127 +5222,127 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>Werkzeuge</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="122"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Optionen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="129"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="138"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>Über</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="145"/>
       <source>Games</source>
-      <translation type="unfinished"/>
+      <translation>Spiele</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="160"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Spielen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
       <source>Alt+C</source>
-      <translation type="unfinished"/>
+      <translation>Alt+C</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="171"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Trennen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="177"/>
       <source>Alt+D</source>
-      <translation type="unfinished"/>
+      <translation>Alt+D</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Neu verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="163"/>
       <source>configure connection details of, and make a connection to, game servers</source>
-      <translation type="unfinished"/>
+      <translation>Konfiguriere die Details der Verbindungen und verbinde zu Spielservern</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>disconnect from the current game server</source>
-      <translation type="unfinished"/>
+      <translation>Trenne die Verbindung zum aktuellen Spielserver</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="185"/>
       <source>disconnect and then reconnect to the current game server</source>
-      <translation type="unfinished"/>
+      <translation>Trenne und verbinde dann wieder zum aktuellen Spielserver</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
       <source>Alt+R</source>
-      <translation type="unfinished"/>
+      <translation>Alt+R</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="196"/>
       <source>configure setting for the Mudlet application globally and for the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Konfiguriere Einstellungen für die Mudlet Anwendung insgesamt und für das aktuelle Profil</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="199"/>
       <source>Alt+P</source>
-      <translation type="unfinished"/>
+      <translation>Alt+P</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="204"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Skript-Editor</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="207"/>
       <source>Open script editor</source>
-      <translation type="unfinished"/>
+      <translation>Skript-Editor öffnen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
       <source>opens the Editor for the different types of things that can be scripted by the user</source>
-      <translation type="unfinished"/>
+      <translation>Öffne den Editor für die verschiedenen Arten von Dingen, für die ein Benutzer ein Skript erstellen kann</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="213"/>
       <source>Alt+E</source>
-      <translation type="unfinished"/>
+      <translation>Alt+E</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="218"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Notizblock</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
       <source>opens a free form text editor window for the active profile that is saved between sessions</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen formlosen Texteditor, das im aktiven Profil zwischen den Sitzungen gespeichert wird</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="224"/>
       <source>Alt+N</source>
-      <translation type="unfinished"/>
+      <translation>Alt+N</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>API-Referenz</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="232"/>
