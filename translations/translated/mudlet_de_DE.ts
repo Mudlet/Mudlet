@@ -3507,37 +3507,37 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1514"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte laden</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1529"/>
       <source>Importing map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wird importiert, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1533"/>
       <source>Imported map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte importiert von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1535"/>
       <source>Could not import map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte konnte nicht importiert werden von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1538"/>
       <source>Loading map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wird geladen, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1543"/>
       <source>Loaded map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte geladen von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1545"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte konnte nicht geladen werden von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
@@ -3548,12 +3548,12 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1572"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wird gespeichert, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1586"/>
@@ -3576,17 +3576,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1633"/>
       <source>Creating a destination directory failed...</source>
-      <translation type="unfinished"/>
+      <translation>Erstellen eines Ziel-Verzeichnisses ist fehlgeschlagen...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1720"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Sichern der aktuellen Karte - bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1730"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>Karte konnte nicht gesichert werden - Speichern schlug fehl.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1755"/>
@@ -3596,22 +3596,22 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1767"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere Karte herüber nach %1 - bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1773"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte Karte nicht kopieren nach %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1777"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte erfolgreich in das andere Profil %1 kopiert.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1789"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>Karte kopiert. Signalisiere den anderen Profilen, sie neu zu laden.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1825"/>
@@ -3621,12 +3621,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2133"/>
       <source>%1 selected - press to change</source>
-      <translation type="unfinished"/>
+      <translation>%1 gewählt - drücken zum ändern</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2136"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Drücken, um Ziel(e) zu wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2372"/>
@@ -3702,7 +3702,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1516"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte (*.dat);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2633"/>
@@ -3757,42 +3757,42 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2855"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2856"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2857"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2858"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2861"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2862"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2863"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2864"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.txt)</translation>
     </message>
   </context>
   <context>
@@ -3802,7 +3802,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>&lt;room ID&gt;</source>
       <comment>This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;room ID&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="141"/>
@@ -4643,7 +4643,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5903"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Tastenkürzel</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6963"/>
@@ -4713,7 +4713,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7223"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7228"/>
       <source>You have to chose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Sie müssen zuerst ein Element für den Export wählen. Bitte wählen Sie ein Element aus dem Baum und klicken Sie dann erneut auf Exportieren.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7117"/>
@@ -4783,7 +4783,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil sichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
@@ -4793,7 +4793,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Bild wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
@@ -4844,17 +4844,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgVarsMainArea.cpp" line="51"/>
       <location filename="../src/dlgVarsMainArea.cpp" line="78"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Automatisch</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>Schlüsselwert (String)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
       <source>index (integer number)</source>
-      <translation type="unfinished"/>
+      <translation>Index (Zahl)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
@@ -4864,32 +4864,32 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="55"/>
       <source>function (cannot create from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>Funktion (nicht in GUI erstellbar)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>String</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>Zahl</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>Boolean</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>Tabelle</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>Funktion</translation>
     </message>
   </context>
   <context>
@@ -6477,17 +6477,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="189"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won&apos;t work yet.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wenn du ein nicht-englisches Spiel spielst und � siehst anstelle von Text oder spezielle Buchstaben wie das &lt;span style=&quot; font-weight:600;&quot;&gt;ä&lt;/span&gt; nicht richtig angezeigt werden - versuche, die Kodierung auf UTF-8 umzustellen, oder einen Vorschlag von deinem Spiel.&lt;/p&gt;&lt;p&gt;Hinweis: Während dies Mudlet die Anzeige von Text in anderen Sprachen ermöglicht, ist die Internationalisierung noch in Entwicklung, daher werden Trigger oder Lua-code noch nicht funktionieren.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviere GMCP - Hinweis: Wenn auch MSDP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="245"/>
       <source>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviere MSDP - Hinweis: Wenn auch GMCP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="288"/>
@@ -6556,32 +6556,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1130"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1153"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1173"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1190"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1207"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Vordergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1227"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Hintergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1246"/>
@@ -6778,27 +6778,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1606"/>
       <source>Map files</source>
-      <translation type="unfinished"/>
+      <translation>Kartendateien</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1612"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>Speichere deine aktuelle Karte:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1622"/>
       <source>Press to choose location and save</source>
-      <translation type="unfinished"/>
+      <translation>Wähle das Ziel und speichere</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1629"/>
       <source>Load another map file in:</source>
-      <translation type="unfinished"/>
+      <translation>Lade eine andere Kartendatei:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1639"/>
       <source>Press to choose file and load</source>
-      <translation type="unfinished"/>
+      <translation>Wähle eine Datei und lade</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1646"/>
@@ -6874,13 +6874,13 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1711"/>
       <source>Map format version:</source>
-      <translation type="unfinished"/>
+      <translation>Version des Kartenformats:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1736"/>
       <location filename="../src/ui/profile_preferences.ui" line="1740"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {Standard-Version}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1751"/>
