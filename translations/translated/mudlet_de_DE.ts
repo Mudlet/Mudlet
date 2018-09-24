@@ -5515,42 +5515,42 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="143"/>
       <source>^</source>
-      <translation type="unfinished"/>
+      <translation>^</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
       <source>◀</source>
-      <translation type="unfinished"/>
+      <translation>◀</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="298"/>
       <source>▼</source>
-      <translation type="unfinished"/>
+      <translation>▼</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="338"/>
       <source>▲</source>
-      <translation type="unfinished"/>
+      <translation>▲</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="378"/>
       <source>►</source>
-      <translation type="unfinished"/>
+      <translation>►</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="424"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="461"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
       <source>2D/3D</source>
-      <translation type="unfinished"/>
+      <translation>2D/3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
@@ -7957,7 +7957,7 @@ erstellbar)</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="352"/>
       <source>&lt;p&gt;Value type the variable data (in the editor box below) should be&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:6px; margin-bottom:6px; margin-left:6px; margin-right:6px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;2&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;string&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is text (can contain numbers)&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;number&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is numbers only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;boolean&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is a true or false value only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;table&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;this is a table (group), and can have other values in it&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Art des Wertes der Daten (unten in der Editorbox)&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:6px; margin-bottom:6px; margin-left:6px; margin-right:6px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;2&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;String&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es ist Text (vielleicht mit Zahlen).&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;Zahl&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es sind nur Zahlen.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;Boolean&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es ist nur wahr oder falsch.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;Tabelle&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es ist eine Tabelle (Gruppe) und kann weitere Werte enthalten.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="275"/>
