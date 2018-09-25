@@ -389,7 +389,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
       <source>Draw label as background or on top of everything?</source>
-      <translation type="unfinished"/>
+      <translation>是否作为背景或在所有内容顶部绘制标签？</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2192"/>
@@ -529,22 +529,22 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>通过在中途添加新点以划分线段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2776"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>先选择点，再在线段中间添加新点朝向房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2786"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>通过移除此点合并线段对</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2788"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>通过移除此点移除上个线段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
@@ -554,12 +554,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>更改此段自定义线的属性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>删除所有此自定义线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3236"/>
