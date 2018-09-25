@@ -1329,8 +1329,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation>[ ACHTUNG ] - Speichere Karte in einem Format {%1}, somit anders als das, in dem sie
-geladen wurde {%2}. Dies kann ein Problem sein, wenn sie mit Anderen geteilt werden soll, die sich auf das ursprüngliche Format verlassen.</translation>
+      <translation>[ ACHTUNG ] - Speichere Karte in einem anderem Format {%1} als dem, in dem sie geladen wurde {%2}. Dies kann ein Problem sein, wenn sie mit Anderen geteilt werden soll, die das ursprüngliche Format benötigen.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1040"/>
