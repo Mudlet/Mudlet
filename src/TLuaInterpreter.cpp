@@ -10477,7 +10477,7 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
@@ -10557,7 +10557,7 @@ int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L);
+    auto result = discordApiEnabled(L, true);
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
@@ -10569,7 +10569,7 @@ int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     } else {
-        lua_pushfstring(L, "setDiscordLargeIcon: bad argument #%d type (key as string expected, got %s!)", 1, luaL_typename(L, 1));
+        lua_pushfstring(L, "setDiscordLargeIcon: bad argument #1 type (key as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 }
@@ -10580,14 +10580,10 @@ int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    auto result = discordApiEnabled(L, true);
+    auto result = discordApiEnabled(L);
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
-    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
         return 2;
     }
 
@@ -11895,7 +11891,7 @@ bool TLuaInterpreter::validLuaCode(const QString &code)
     return error == 0;
 }
 
-std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool writeAcces)
+std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool writeAccess)
 {
     mudlet* pMudlet = mudlet::self();
 
@@ -11908,8 +11904,8 @@ std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool w
         return make_pair(false, QStringLiteral("Discord API is disabled in settings for privacy"));
     }
 
-    if (writeAcces && !pMudlet->mDiscord.discordUserIdMatch(&host)) {
-        return make_pair(false, "Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile");
+    if (writeAccess && !pMudlet->mDiscord.discordUserIdMatch(&host)) {
+        return make_pair(false, QStringLiteral("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile"));
     }
 
     return make_pair(true, QString());
