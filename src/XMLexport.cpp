@@ -316,14 +316,18 @@ bool XMLexport::saveXml(const QString& fileName)
 
     sanitizeForQxml(output);
 
-    // only open the output file stream once we're ready to save
-    // this avoids a blank file in case serialisation crashed
-    std::ofstream saveFileStream(fileName.toUtf8().constData());
-    saveFileStream << output;
-
-    if (saveFileStream.bad()) {
+    QFile file(fileName);
+    bool opened = file.open(QIODevice::WriteOnly);
+    if (!opened) {
+        qWarning() << "Couldn't open" << fileName << "for writing.";
         return false;
     }
+
+    QDataStream ifs(&file);
+    // go through Qt and not native std::ofstream since that doesn't save
+    // files if the Windows username contains non-ASCII letters
+    ifs << QString::fromStdString(output);
+    file.close();
     return true;
 }
 
