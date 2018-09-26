@@ -1460,25 +1460,35 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto height = (mPB.y() - mPA.y()+1)*mFontHeight;
 
     // find the biggest width of text we need to work with
+    int characterWidth = 0;
+    for (int y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
+        auto lineWidth = static_cast<int>(mpBuffer->buffer[y].size());
+        characterWidth = lineWidth > characterWidth ? lineWidth : characterWidth;
+    }
 
-    auto width = (mPB.x() - mPA.x()+1)*mFontWidth;
-    qDebug() << "widthxheight" << width << height;
+
+    auto width = characterWidth*mFontWidth;
 
     auto rect = QRect(mPA.x(), mPA.y(), width, height);
     qDebug() << "rect" << rect;
-    qDebug() << "paint" << mPA.x() << mPA.y() << mPB.x() << mPB.y();
 
-    auto pix = QPixmap(width, height); // FIXME: width and height of image
+    auto pix = QPixmap(width, height);
 
     QPainter painter(&pix);
     if (!painter.isActive()) {
         return;
     }
 
+    // deselect to prevent inverted colours in image
+    unHighlight();
+    mSelectedRegion = QRegion(0, 0, 0, 0);
+
 
     QRect borderRect = QRect(0, mScreenHeight * mFontHeight, rect.width(), rect.height());
+    qDebug() << "borderRect" << borderRect;
     drawBackground(painter, borderRect, mBgColor);
     QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
+    qDebug() << "borderRect2" << borderRect2;
     drawBackground(painter, borderRect2, mBgColor);
     drawForeground(painter, rect);
 
