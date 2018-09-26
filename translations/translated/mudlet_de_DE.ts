@@ -1754,7 +1754,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1162"/>
       <source>%1 (locked)</source>
-      <translation>%1 (gesperrt)</translation>
+      <translation>%1 (versperrt)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
@@ -2124,7 +2124,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1214"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Ein unbenannter Bereich wurde in der Kartendatei festgestellt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1217"/>
@@ -2178,7 +2178,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1271"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Verwende dieses, um das Hauptmenü wiederherzustellen und Zugriff auf die Steuerelemente zu erhalten.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1273"/>
@@ -2188,22 +2188,22 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1276"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Verwende dies, um die Hauptsymbolleiste wiederherzustellen und Zugriff auf die Steuerelemente zu erhalten.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1334"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der Debug-Konsole</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1339"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der %1 Minikonsole des %2 Profils</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1345"/>
       <source>Mudlet, %1 console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Auszug der %1 Konsole des %2 Profils</translation>
     </message>
   </context>
   <context>
@@ -2311,7 +2311,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Button, das Menu oder die Werkzeugleiste. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
@@ -2391,12 +2391,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn er gedrückt wird. (Optional)&lt;/p&gt;&lt;p&gt;Falls dies ein &lt;i&gt;einrastender&lt;/i&gt; Button ist, dann wird dies nur gesendet, sobald der Button den Status von &lt;i&gt;oben&lt;/i&gt; nach &lt;i&gt;unten&lt;/i&gt; wechselt.&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="283"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn der Button vom &lt;i&gt;unten&lt;/i&gt; in den &lt;i&gt;oben&lt;/i&gt; Status wechselt.&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="273"/>
@@ -2419,7 +2419,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle einen eindeutigen Namen für dein Alias. Er wird in der Liste angezeigt und für Skripte benötigt.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
@@ -2429,7 +2429,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>Trage ein Perl Regex Muster für dein Alias ein. Aliase reagieren auf deine Eingaben.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
@@ -2454,7 +2454,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die das Alias direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -2492,30 +2492,31 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="949"/>
       <location filename="../src/ctelnet.cpp" line="1169"/>
       <source>&lt;The server wants to upgrade the GUI to new version &apos;%1&apos;. Uninstalling old version &apos;%2&apos;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;Der Server möchte die GUI auf die neue Version &apos;%1&apos; aktualisieren. Deinstalliere die alte Version &apos;%2&apos;&gt;</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1555"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1573"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1584"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Kann Datei &quot;%1&quot; nicht lesen,
+Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Wiederholung beendet.</translation>
     </message>
   </context>
   <context>
@@ -2626,7 +2627,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt; Speichern (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -2957,7 +2958,7 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
   </context>
   <context>
@@ -2977,12 +2978,12 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
   </context>
   <context>
@@ -2990,7 +2991,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Status</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -3185,7 +3186,9 @@ Count</source>
       <source>Please enter the URL or IP address of the game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Bitte nenne die URL oder IP-Adresse des Spielservers.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="299"/>
@@ -3214,12 +3217,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="418"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte deine Profil-Daten auf dem Computer nicht umbenennen.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="426"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte den neuen Profil-Ordner auf dem Computer nicht erstellen.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="522"/>
@@ -3235,12 +3238,12 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1026"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1040"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Dieses Profil ist momentan geladen - Du müsstest es zuerst trennen, bevor die Verbindungsparameter geändert werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1657"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.</translation>
     </message>
   </context>
   <context>
@@ -3283,7 +3286,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="133"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation>$ Tippe &lt;b&gt;/help&lt;/b&gt; für alle Kommandos oder &lt;b&gt;/help [Kommando]&lt;/b&gt; für die Syntax eines Kommandos.</translation>
+      <translation>$ Tippe &lt;b&gt;/help&lt;/b&gt; für alle Befehle oder &lt;b&gt;/help [Befehl]&lt;/b&gt; für die Syntax eines Befehls.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="192"/>
@@ -3293,7 +3296,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="361"/>
       <source>[HELP] Available Commands: %1</source>
-      <translation>[HILFE] Verfügbare Kommandos: %1</translation>
+      <translation>[HILFE] Verfügbare Befehle: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="363"/>
@@ -3328,7 +3331,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="446"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation>[FEHLER] Unbekanntes Kommando: %1</translation>
+      <translation>[FEHLER] Unbekannter Befehl: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="590"/>
@@ -3504,37 +3507,37 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1514"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte laden</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1529"/>
       <source>Importing map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wird importiert, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1533"/>
       <source>Imported map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte importiert von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1535"/>
       <source>Could not import map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte konnte nicht importiert werden von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1538"/>
       <source>Loading map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wird geladen, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1543"/>
       <source>Loaded map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte geladen von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1545"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte konnte nicht geladen werden von %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
@@ -3545,12 +3548,12 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1572"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wird gespeichert, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1586"/>
@@ -3573,17 +3576,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1633"/>
       <source>Creating a destination directory failed...</source>
-      <translation type="unfinished"/>
+      <translation>Erstellen eines Ziel-Verzeichnisses ist fehlgeschlagen...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1720"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Sichern der aktuellen Karte - bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1730"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>Karte konnte nicht gesichert werden - Speichern schlug fehl.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1755"/>
@@ -3593,22 +3596,22 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1767"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere Karte herüber nach %1 - bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1773"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>Konnte Karte nicht kopieren nach %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1777"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>Karte erfolgreich in das andere Profil %1 kopiert.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1789"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>Karte kopiert. Signalisiere den anderen Profilen, sie neu zu laden.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1825"/>
@@ -3618,22 +3621,22 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2133"/>
       <source>%1 selected - press to change</source>
-      <translation type="unfinished"/>
+      <translation>%1 gewählt - drücken zum ändern</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2136"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Drücken, um Ziel(e) zu wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2372"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>Designs konnten nicht aktualisiert werden: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2375"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2492"/>
@@ -3699,7 +3702,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1516"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte (*.dat);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2633"/>
@@ -3754,42 +3757,42 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2855"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2856"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2857"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2858"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2861"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2862"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2863"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2864"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.txt)</translation>
     </message>
   </context>
   <context>
@@ -3799,7 +3802,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>&lt;room ID&gt;</source>
       <comment>This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;room ID&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="141"/>
@@ -4640,7 +4643,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5903"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Tastenkürzel</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6963"/>
@@ -4710,7 +4713,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7223"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7228"/>
       <source>You have to chose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Sie müssen zuerst ein Element für den Export wählen. Bitte wählen Sie ein Element aus dem Baum und klicken Sie dann erneut auf Exportieren.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7117"/>
@@ -4780,7 +4783,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil sichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
@@ -4790,7 +4793,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Bild wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
@@ -4841,52 +4844,52 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgVarsMainArea.cpp" line="51"/>
       <location filename="../src/dlgVarsMainArea.cpp" line="78"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Automatisch</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>Schlüsselwert (String)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
       <source>index (integer number)</source>
-      <translation type="unfinished"/>
+      <translation>Index (Zahl)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
       <source>table (use &quot;Add Group&quot; to create)</source>
-      <translation type="unfinished"/>
+      <translation>Tabelle (benutze &quot;Gruppe hinzufügen&quot; zum Erstellen)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="55"/>
       <source>function (cannot create from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>Funktion (nicht in GUI erstellbar)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>String</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>Zahl</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>Boolean</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>Tabelle</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>Funktion</translation>
     </message>
   </context>
   <context>
@@ -4894,7 +4897,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="25"/>
       <source>Mudlet IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet IRC-Client</translation>
     </message>
   </context>
   <context>
@@ -4902,32 +4905,32 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Befehl:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deine Taste oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die die Taste direkt an das Spiel senden soll, wenn sie gedrückt wird. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
       <source>Key Binding:</source>
-      <translation type="unfinished"/>
+      <translation>Tastenkürzel:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="111"/>
       <source>Grab New Key</source>
-      <translation type="unfinished"/>
+      <translation>Taste erkennen</translation>
     </message>
   </context>
   <context>
@@ -4935,7 +4938,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="23"/>
       <source>No mapping script found</source>
-      <translation type="unfinished"/>
+      <translation>Kein Skript zum Kartieren gefunden</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="38"/>
@@ -4951,12 +4954,12 @@ p, li { white-space: pre-wrap; }
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="97"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Schließen</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="104"/>
       <source>Find some scripts</source>
-      <translation type="unfinished"/>
+      <translation>Finde einige Skripte</translation>
     </message>
   </context>
   <context>
@@ -4977,112 +4980,115 @@ p, li { white-space: pre-wrap; }
       <location filename="../src/main.cpp" line="210"/>
       <source>Copyright © 2008-%1  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008 -%1  Mudlet Entwickler
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="213"/>
       <source>Licence: GPLv2+ - GNU General Public License version 2.0 (or at your option, any later version).</source>
-      <translation type="unfinished"/>
+      <translation>Lizenz: GPLv2+ - GNU General Public License Version 2.0 (oder auf Wunsch jede spätere Version).</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="215"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Lizenz GPLv2+: GNU GPL Version 2 oder höher &lt;http://gnu.org/licenses/gpl.html&gt;.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="217"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>Dies ist freie Software: Du darfst sie verändern und weiterverbreiten.
+Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="222"/>
       <source>Mudlet - Version Information</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - Versionsinformationen</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="242"/>
       <source>Usage: %1 [OPTION...]</source>
-      <translation type="unfinished"/>
+      <translation>Benutzung: %1 [OPTION...]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="243"/>
       <source>&amp;#8209;h, &amp;#8209;&amp;#8209;help</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;h, &amp;#8209;&amp;#8209;help</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="244"/>
       <source>displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>zeigt diese Nachricht.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="245"/>
       <source>&amp;#8209;v, &amp;#8209;&amp;#8209;version</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;v, &amp;#8209;&amp;#8209;version</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="246"/>
       <source>displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>zeigt Versionsinformationen an.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="247"/>
       <source>&amp;#8209;q, &amp;#8209;&amp;#8209;quiet</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;q, &amp;#8209;&amp;#8209;quiet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="248"/>
       <source>no splash screen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>kein Begrüßungsbildschirm.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="249"/>
       <source>There are other inherited options that arise from the Qt Libraries which are not likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Es wurden andere Optionen aus den Qt-Bibliotheken übernommen, die wahrscheinlich nicht nützlich sind für den normalen Gebrauch dieser Anwendung:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="256"/>
       <source>&amp;#8209;&amp;#8209;dograb</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;dograb</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="257"/>
       <source>ignore any implicit or explicit &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt;. &lt;kdb&gt;&amp;#8209;&amp;#8209;dograb&lt;/kdb&gt; wins over &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt; even when &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt; is last on the command line.</source>
       <comment>Please leave the &lt;kdb&gt;...&lt;/kdb&gt; delimited parts untranslated!</comment>
-      <translation type="unfinished"/>
+      <translation>ignoriere alle impliziten oder expliziten &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt;. &lt;kdb&gt;&amp;#8209;&amp;#8209;dograb&lt;/kdb&gt; gewinnt gegen &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt;, sogar wenn &lt;kdb&gt;&amp;#8209;&amp;#8209;nograb&lt;/kdb&gt; zuletzt in der Befehlszeile steht.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="261"/>
       <source>&amp;#8209;&amp;#8209;nograb</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;nograb</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="262"/>
       <source>the application should never grab the mouse or the keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>die Anwendung sollte sich niemals die Maus oder die Tastatur schnappen.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="267"/>
       <source>&amp;#8209;&amp;#8209;reverse</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;reverse</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="268"/>
       <source>sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>setzt das Layout der Anwendung in Richtung von rechts nach links.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="269"/>
       <source>&amp;#8209;&amp;#8209;style= style</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;style= style</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="270"/>
@@ -5094,19 +5100,19 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/main.cpp" line="276"/>
       <source>&amp;#8209;&amp;#8209;style style</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;style style</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="277"/>
       <location filename="../src/main.cpp" line="287"/>
       <source>is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>ist das gleiche wie oben genannt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="281"/>
       <source>&amp;#8209;&amp;#8209;stylesheet= stylesheet</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;stylesheet= stylesheet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="282"/>
@@ -5118,13 +5124,13 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
       <location filename="../src/main.cpp" line="286"/>
       <source>&amp;#8209;&amp;#8209;stylesheet stylesheet</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;stylesheet stylesheet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="292"/>
       <source>&amp;#8209;&amp;#8209;qmljsdebugger=1234[,block]</source>
       <comment>This may not be translatable</comment>
-      <translation type="unfinished"/>
+      <translation>&amp;#8209;&amp;#8209;qmljsdebugger=1234[,block]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="293"/>
@@ -5134,17 +5140,17 @@ The value must be a path to a file that contains the Style Sheet. Note: Relative
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>Report bugs to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Berichte Fehler an: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="297"/>
       <source>Project home page: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Webseite des Projekts: %1.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="300"/>
       <source>Mudlet - Command Line Help</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet - Hilfe Für Die Befehlszeile</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="308"/>
@@ -5219,289 +5225,289 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>Werkzeuge</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="122"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Optionen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="129"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="138"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>Über</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="145"/>
       <source>Games</source>
-      <translation type="unfinished"/>
+      <translation>Spiele</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="160"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Spielen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
       <source>Alt+C</source>
-      <translation type="unfinished"/>
+      <translation>Alt+C</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="171"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Trennen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="177"/>
       <source>Alt+D</source>
-      <translation type="unfinished"/>
+      <translation>Alt+D</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Neu verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="163"/>
       <source>configure connection details of, and make a connection to, game servers</source>
-      <translation type="unfinished"/>
+      <translation>Konfiguriere die Details der Verbindungen und verbinde zu Spielservern</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>disconnect from the current game server</source>
-      <translation type="unfinished"/>
+      <translation>Trenne die Verbindung zum aktuellen Spielserver</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="185"/>
       <source>disconnect and then reconnect to the current game server</source>
-      <translation type="unfinished"/>
+      <translation>Trenne und verbinde dann wieder zum aktuellen Spielserver</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
       <source>Alt+R</source>
-      <translation type="unfinished"/>
+      <translation>Alt+R</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="196"/>
       <source>configure setting for the Mudlet application globally and for the current profile</source>
-      <translation type="unfinished"/>
+      <translation>Konfiguriere Einstellungen für die Mudlet Anwendung insgesamt und für das aktuelle Profil</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="199"/>
       <source>Alt+P</source>
-      <translation type="unfinished"/>
+      <translation>Alt+P</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="204"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Skript-Editor</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="207"/>
       <source>Open script editor</source>
-      <translation type="unfinished"/>
+      <translation>Skript-Editor öffnen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="210"/>
       <source>opens the Editor for the different types of things that can be scripted by the user</source>
-      <translation type="unfinished"/>
+      <translation>Öffne den Editor für die verschiedenen Arten von Dingen, für die ein Benutzer ein Skript erstellen kann</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="213"/>
       <source>Alt+E</source>
-      <translation type="unfinished"/>
+      <translation>Alt+E</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="218"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Notizblock</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
       <source>opens a free form text editor window for the active profile that is saved between sessions</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen formlosen Texteditor, das im aktiven Profil zwischen den Sitzungen gespeichert wird</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="224"/>
       <source>Alt+N</source>
-      <translation type="unfinished"/>
+      <translation>Alt+N</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>API-Referenz</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="232"/>
       <source>opens the (on-line) Mudlet Wiki, at the API front page, in your system web-browser</source>
-      <translation type="unfinished"/>
+      <translation>Öffne das Mudlet Wiki online auf der API-Startseite mit dem Webbrowser deines Systems</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="237"/>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Online-Forum</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="242"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Über Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</source>
-      <translation type="unfinished"/>
+      <translation>Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
       <source>IRC help channel</source>
-      <translation type="unfinished"/>
+      <translation>IRC Hilfe-Kanal</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <location filename="../src/ui/main_window.ui" line="298"/>
       <source>opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen eingebauten IRC-Client auf dem #mudlet Kanal der Freenode IRC-Server</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
       <source>Video tutorials</source>
-      <translation type="unfinished"/>
+      <translation>Videoanleitungen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="261"/>
       <source>opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser</source>
-      <translation type="unfinished"/>
+      <translation>Öffne eine Online-Sammlung von &quot;Mudlet Lernvideos&quot; mit dem Webbrowser deines Systems</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
       <source>Load replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung laden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="269"/>
       <source>load a previous saved game session that can be used to test Mudlet lua systems (off-line!)</source>
-      <translation type="unfinished"/>
+      <translation>Lade eine zuvor gespeicherte Spielsitzung, mit der Mudlets Lua Systeme (offline!) getestet werden können</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
       <source>show or hide the game map</source>
-      <translation type="unfinished"/>
+      <translation>Karte des Spiels anzeigen oder verbergen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="277"/>
       <source>opens the (on-line) Mudlet Forum in your system web-browser</source>
-      <translation type="unfinished"/>
+      <translation>Öffne das Mudlet Online-Forum mit dem Webbrowser deines Systems</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
       <source>Check for updates...</source>
-      <translation type="unfinished"/>
+      <translation>Nach Updates suchen...</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="287"/>
       <source>Help chat</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe-Chat</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="290"/>
       <source>Get live help on IRC. If nobody answers right away, give it time</source>
-      <translation type="unfinished"/>
+      <translation>Hol dir sofort Hilfe im IRC. Wenn niemand sofort antwortet, bitte warten</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="295"/>
       <source>Live help chat</source>
-      <translation type="unfinished"/>
+      <translation>Sofortiger Hilfe-Chat</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="303"/>
       <source>Show map</source>
-      <translation type="unfinished"/>
+      <translation>Karte anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="309"/>
       <source>Alt+M</source>
-      <translation type="unfinished"/>
+      <translation>Alt+M</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>install and remove collections of Mudlet lua items (packages)</source>
-      <translation type="unfinished"/>
+      <translation>Installiere und entferne Sammlungen von Mudlet Lua-Elementen (Pakete)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="320"/>
       <source>Alt+O</source>
-      <translation type="unfinished"/>
+      <translation>Alt+O</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
       <source>test1</source>
-      <translation type="unfinished"/>
+      <translation>test2</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
       <source>asdf</source>
-      <translation type="unfinished"/>
+      <translation>zuiop</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="338"/>
       <source>install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules)</source>
-      <translation type="unfinished"/>
+      <translation>Installiere und entferne (gemeinsam nutzbare und synchronisierbare) Sammlungen von Mudlet Lua-Elementen (Module)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="343"/>
       <source>Package exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren (experimentell)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="346"/>
       <source>gather and bundle up collections of Mudlet Lua items and other reasources into a module</source>
-      <translation type="unfinished"/>
+      <translation>Sammle und bündle einige Mudlet Lua-Elemente und anderen Ressourcen in ein Modul</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Mehrfachansicht</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="354"/>
       <source>share the screen area between multiple open profiles</source>
-      <translation type="unfinished"/>
+      <translation>Teile den Bildschirm zwischen mehreren offenen Profilen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="357"/>
       <source>Alt+V</source>
-      <translation type="unfinished"/>
+      <translation>Alt+V</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="362"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Kompakte Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="365"/>
       <source>Alt+L</source>
-      <translation type="unfinished"/>
+      <translation>Alt+L</translation>
     </message>
   </context>
   <context>
@@ -5509,42 +5515,42 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="143"/>
       <source>^</source>
-      <translation type="unfinished"/>
+      <translation>^</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
       <source>◀</source>
-      <translation type="unfinished"/>
+      <translation>◀</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="298"/>
       <source>▼</source>
-      <translation type="unfinished"/>
+      <translation>▼</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="338"/>
       <source>▲</source>
-      <translation type="unfinished"/>
+      <translation>▲</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="378"/>
       <source>►</source>
-      <translation type="unfinished"/>
+      <translation>►</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="424"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="461"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
       <source>2D/3D</source>
-      <translation type="unfinished"/>
+      <translation>2D/3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
@@ -5656,218 +5662,218 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="160"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="183"/>
       <source>Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Hauptsymbolleiste</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="220"/>
       <location filename="../src/mudlet.cpp" line="405"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
       <source>Connect to a game</source>
-      <translation type="unfinished"/>
+      <translation>Mit einem Spiel verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="229"/>
       <location filename="../src/mudlet.cpp" line="406"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="230"/>
       <source>Show and edit triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
       <location filename="../src/mudlet.cpp" line="407"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="236"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliase anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="241"/>
       <location filename="../src/mudlet.cpp" line="408"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="242"/>
       <source>Show and edit timers</source>
-      <translation type="unfinished"/>
+      <translation>Timer anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Buttons</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="248"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>Einfache Buttons anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="253"/>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="254"/>
       <source>Show and edit scripts</source>
-      <translation type="unfinished"/>
+      <translation>Skripte anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="259"/>
       <location filename="../src/mudlet.cpp" line="411"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="260"/>
       <source>Show and edit keys</source>
-      <translation type="unfinished"/>
+      <translation>Tasten anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Variablen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Show and edit Lua variables</source>
-      <translation type="unfinished"/>
+      <translation>Lua Variablen anzeigen und bearbeiten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="271"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="272"/>
       <source>Open the Mudlet IRC client</source>
-      <translation type="unfinished"/>
+      <translation>Öffne den Mudlet IRC Client</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="277"/>
       <location filename="../src/mudlet.cpp" line="412"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>Karte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="278"/>
       <source>Show/hide the map</source>
-      <translation type="unfinished"/>
+      <translation>Zeige/Verberge die Karte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Handbuch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Durchsuche Referenzmaterial und Dokumentation</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="289"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Zeige und bearbeite Profileinstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="298"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Texteditor</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="299"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen Texteditor, um deine Notizen zu speichern</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="304"/>
       <location filename="../src/mudlet.cpp" line="819"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation type="unfinished"/>
+      <translation>Paketverwaltung - ermöglicht die Installation von xmls, .mpackages</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="310"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="311"/>
       <source>Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung - ermöglicht die Installation von xmls, .mpackages, die über mehrere Profile hinweg synchronisiert werden (gut für Skripte, die du in mehreren Profilen benutzt)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Wiederverbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation type="unfinished"/>
+      <translation>Trennt dich vom Spiel und verbindet wieder</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
       <location filename="../src/mudlet.cpp" line="415"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Mehrfachansicht</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
-      <translation type="unfinished"/>
+      <translation>Wenn du mehrere Profile geöffnet hast, teilt Mudlet die Anzeige, um sie alle gleichzeitig darzustellen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <location filename="../src/mudlet.cpp" line="416"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>Über</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Über Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Zentrale Debug-Konsole</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="366"/>
       <location filename="../src/mudlet.cpp" line="367"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Vollbildanzeige umschalten</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
@@ -5877,152 +5883,153 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="413"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="417"/>
       <source>Close</source>
-      <translation type="unfinished"/>
+      <translation>Schließen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Modulname</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Priorität</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Synchronisieren</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Ort des Moduls</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="585"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Wenn diese Box aktiviert ist, wird das Modul gespeichert und über alle Sitzungen hinweg &lt;i&gt;neu synchronisiert&lt;/i&gt;, die es teilen, sobald die &lt;i&gt;Profil speichern&lt;/i&gt; Taste im Editor angeklickt wird, oder wenn es am Ende der Sitzung gespeichert wird.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="645"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Modulverwaltung - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="754"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Lade Mudlet Modul</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="761"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Lade Mudlet Modul:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="761"/>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Kann Datei %1 nicht lesen:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Mudlet Paket</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Mudlet Paket:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1211"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Deaktiviert, bis ein Profil geladen ist.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1245"/>
       <location filename="../src/mudlet.cpp" line="3208"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2682"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Karte - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2690"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte geladen wird(3)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2700"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(3) bei %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2772"/>
       <source>%1 - notes</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Notizen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2822"/>
       <source>Select Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung auswählen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2824"/>
       <source>*.dat</source>
-      <translation type="unfinished"/>
+      <translation>*.dat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3048"/>
       <location filename="../src/mudlet.cpp" line="3067"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Kompakte Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3052"/>
       <location filename="../src/mudlet.cpp" line="3070"/>
       <source>Standard input line</source>
-      <translation type="unfinished"/>
+      <translation>Normale Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3110"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3127"/>
       <source>Faster</source>
-      <translation type="unfinished"/>
+      <translation>Schneller</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3130"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3134"/>
       <source>Slower</source>
-      <translation type="unfinished"/>
+      <translation>Langsamer</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3137"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeden Schritt mit längerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3147"/>
@@ -6035,13 +6042,13 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="3154"/>
       <location filename="../src/mudlet.cpp" line="3171"/>
       <source>Time: %1</source>
-      <translation type="unfinished"/>
+      <translation>Zeit: %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3745"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
   </context>
   <context>
@@ -6164,7 +6171,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
       <location filename="../src/ui/profile_preferences.ui" line="2292"/>
       <source>Please reconnect to your game for the change to take effect</source>
-      <translation type="unfinished"/>
+      <translation>Bitte neu mit dem Spiel verbinden, damit die Änderungen aktiv werden.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
@@ -6219,67 +6226,67 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="398"/>
       <source>Input</source>
-      <translation type="unfinished"/>
+      <translation>Eingabe</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="404"/>
       <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation type="unfinished"/>
+      <translation>Benutze strenge UNIX-Zeilenenden bei Befehlen für alte UNIX-Server, die mit Windows-Zeilenenden nicht korrekt umgehen können</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="407"/>
       <source>Strict UNIX line endings</source>
-      <translation type="unfinished"/>
+      <translation>Strenge UNIX-Zeilenenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="421"/>
       <source>Echo the text you send in the display box</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholt den von dir gesendeten Text in der Anzeigebox.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="424"/>
       <source>Show the text you sent</source>
-      <translation type="unfinished"/>
+      <translation>Zeige von dir gesendeten Text</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="414"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation type="unfinished"/>
+      <translation>Leere die Eingabezeile nachdem du Text gesendet hast</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="434"/>
       <source>React to all keybindings on the same key</source>
-      <translation type="unfinished"/>
+      <translation>Reagiere auf alle Tasenkürzel derselben Taste</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="444"/>
       <source>Command separator:</source>
-      <translation type="unfinished"/>
+      <translation>Trennzeichen zwischen Befehlen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="454"/>
       <source>Enter text to separate commands with or leave blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Text eingeben, an dem Befehle getrennt werden, oder leer lassen zum deaktivieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="461"/>
       <source>Command line minimum height in pixels:</source>
-      <translation type="unfinished"/>
+      <translation>Mindesthöhe der Befehlszeile in Pixel:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="484"/>
       <source>Spell check</source>
-      <translation type="unfinished"/>
+      <translation>Rechtsschreibprüfung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="490"/>
       <source>Choose spell check dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Wähle das Wörterbuch für die Rechtschreibprüfung:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="500"/>
       <source>Enable spell check</source>
-      <translation type="unfinished"/>
+      <translation>Aktiviere Rechtschreibprüfung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="533"/>
@@ -6289,143 +6296,143 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="545"/>
       <source>Font</source>
-      <translation type="unfinished"/>
+      <translation>Schriftart</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Schriftart:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="574"/>
       <source>Size:</source>
-      <translation type="unfinished"/>
+      <translation>Größe:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="584"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>Glätte Kanten der Schriften. Ergibt glattere Schriften, wenn du eine hohe Bildschirmauflösung und größere Schriften benutzt. Beachte, dass die Schrift bei kleinen Auflösungen verschwommen wird. </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="587"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>Kantenglättung aktivieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="603"/>
       <source>Display Border</source>
-      <translation type="unfinished"/>
+      <translation>Rand der Anzeige</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="624"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>Höhe des Randes oben:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="668"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>Breite des Randes links:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="712"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>Höhe des Randes unten:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="756"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>Breite des Randes rechts:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="797"/>
       <source>Word wrapping</source>
-      <translation type="unfinished"/>
+      <translation>Zeilenumbruch</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="821"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Zeilenumbruch bei:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="841"/>
       <location filename="../src/ui/profile_preferences.ui" line="889"/>
       <source>characters</source>
-      <translation type="unfinished"/>
+      <translation>Zeichen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="869"/>
       <source>Indent wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Einzug bei umgebruchenen Zeilen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="902"/>
       <source>Double-click</source>
-      <translation type="unfinished"/>
+      <translation>Doppelklick</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="908"/>
       <source>Stop selecting a word on these characters:</source>
-      <translation type="unfinished"/>
+      <translation>Stoppe die Auswahl eines Wortes bei diesen Zeichen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="918"/>
       <source>&apos;&quot;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;&quot;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="921"/>
       <source>&lt;characters to ignore in selection, for example &apos; or &quot;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>(Zeichen, die in der Auswahl ignoriert werden, bspw. &apos; oder &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="931"/>
       <source>Display options</source>
-      <translation type="unfinished"/>
+      <translation>Darstellungsoptionen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="940"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation type="unfinished"/>
+      <translation>Behebe unnötige Zeilenbrüche auf GA-Servern</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="950"/>
       <source>Show Spaces/Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Zeige Leerzeichen/Tabs</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="960"/>
       <source>Use Mudlet on a netbook with a small screen</source>
-      <translation type="unfinished"/>
+      <translation>Benutze Mudlet auf einem Netbook mit kleinem Bildschirm</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="970"/>
       <source>Show Line/Paragraphs</source>
-      <translation type="unfinished"/>
+      <translation>Zeige Zeilen/Absätze</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="980"/>
       <source>Echo Lua errors to the main console</source>
-      <translation type="unfinished"/>
+      <translation>Zeige Lua Fehler in der Hauptanzeige</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="987"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation type="unfinished"/>
+      <translation>Verbreitere &apos;mehrdeutige&apos; ostasiatische Zeichen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1014"/>
       <source>Editor</source>
-      <translation type="unfinished"/>
+      <translation>Editor</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1020"/>
       <source>Theme</source>
-      <translation type="unfinished"/>
+      <translation>Design</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1087"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1111"/>
@@ -6470,17 +6477,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="189"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won&apos;t work yet.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wenn du ein nicht-englisches Spiel spielst und � siehst anstelle von Text oder spezielle Buchstaben wie das &lt;span style=&quot; font-weight:600;&quot;&gt;ä&lt;/span&gt; nicht richtig angezeigt werden - versuche, die Kodierung auf UTF-8 umzustellen, oder einen Vorschlag von deinem Spiel.&lt;/p&gt;&lt;p&gt;Hinweis: Während dies Mudlet die Anzeige von Text in anderen Sprachen ermöglicht, ist die Internationalisierung noch in Entwicklung, daher werden Trigger oder Lua-code noch nicht funktionieren.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviere GMCP - Hinweis: Wenn auch MSDP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="245"/>
       <source>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviere MSDP - Hinweis: Wenn auch GMCP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="288"/>
@@ -6549,219 +6556,219 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1130"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1153"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1173"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1190"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1207"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Vordergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1227"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Die Hintergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1246"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation type="unfinished"/>
+      <translation>Diese Einstellungen legen fest, wie bestimmte Farben in der Hauptanzeige visuell dargestellt werden sollen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1256"/>
       <location filename="../src/ui/profile_preferences.ui" line="1941"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Schwarz:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1263"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1276"/>
       <location filename="../src/ui/profile_preferences.ui" line="1958"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Schwarz:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1283"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1296"/>
       <location filename="../src/ui/profile_preferences.ui" line="1975"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rot:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1303"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
       <location filename="../src/ui/profile_preferences.ui" line="1992"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Rot:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1323"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1336"/>
       <location filename="../src/ui/profile_preferences.ui" line="2009"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Grün:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1343"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1356"/>
       <location filename="../src/ui/profile_preferences.ui" line="2026"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Grün:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1363"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1376"/>
       <location filename="../src/ui/profile_preferences.ui" line="2043"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Gelb:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1383"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1396"/>
       <location filename="../src/ui/profile_preferences.ui" line="2060"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Gelb:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1403"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1416"/>
       <location filename="../src/ui/profile_preferences.ui" line="2077"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blau:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1423"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1436"/>
       <location filename="../src/ui/profile_preferences.ui" line="2094"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Blau:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1443"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1456"/>
       <location filename="../src/ui/profile_preferences.ui" line="2111"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1463"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1476"/>
       <location filename="../src/ui/profile_preferences.ui" line="2128"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1483"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1496"/>
       <location filename="../src/ui/profile_preferences.ui" line="2145"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Türkis:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1503"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1516"/>
       <location filename="../src/ui/profile_preferences.ui" line="2162"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Türkis:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1523"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1536"/>
       <location filename="../src/ui/profile_preferences.ui" line="2179"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Weiß:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1543"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1556"/>
       <location filename="../src/ui/profile_preferences.ui" line="2196"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Helles Weiß:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1563"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-Farbe Nummer 15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1576"/>
       <location filename="../src/ui/profile_preferences.ui" line="2213"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Alle Farben auf den Standard zurücksetzen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1600"/>
@@ -6771,27 +6778,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1606"/>
       <source>Map files</source>
-      <translation type="unfinished"/>
+      <translation>Kartendateien</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1612"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>Speichere deine aktuelle Karte:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1622"/>
       <source>Press to choose location and save</source>
-      <translation type="unfinished"/>
+      <translation>Wähle das Ziel und speichere</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1629"/>
       <source>Load another map file in:</source>
-      <translation type="unfinished"/>
+      <translation>Lade eine andere Kartendatei:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1639"/>
       <source>Press to choose file and load</source>
-      <translation type="unfinished"/>
+      <translation>Wähle eine Datei und lade</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1646"/>
@@ -6817,47 +6824,47 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1757"/>
       <location filename="../src/ui/profile_preferences.ui" line="1770"/>
       <source>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;In Spielen, die Karten zum Download anpieten (derzeit nur IRE-Spiele), kannst du diese Taste drücken, um die neueste Karte zu erhalten. Beachte, dass dies deine bisherigen Änderungen &lt;span style=&quot; font-weight:600;&quot;&gt;überschreiben&lt;/span&gt; wird, und nur noch die neue Karte verwendet&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1760"/>
       <source>Download latest map provided by your game:</source>
-      <translation type="unfinished"/>
+      <translation>Lade die neueste Karte herunter, die dein Spiel bereitstellt:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1835"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dies ermöglicht Kantenglättung (Anti-Aliasing) der 2D-Kartenansicht, die so glatter und schöner aussieht. Deaktiviere dies auf sehr langsamen Computern.&lt;/p&gt;&lt;p&gt;Die 3D-Kartenansicht hat immer Kantenglättung aktiviert.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1848"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der Standard-Bereich (Bereich-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese in den richtigen Bereich platziert werden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2243"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>Spezielle Optionen für einige ältere Spiel-Treiber (Aktivierung benötigt Neustart des Client)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1649"/>
       <source>Report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>Berichte Kartenprobleme auf dem Bildschirm</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1663"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere Karte an andere(s) Profil(e):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1679"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Ziel(e)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1692"/>
       <source>Copy to destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere an Ziel(e)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1704"/>
@@ -6867,13 +6874,13 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1711"/>
       <source>Map format version:</source>
-      <translation type="unfinished"/>
+      <translation>Version des Kartenformats:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1736"/>
       <location filename="../src/ui/profile_preferences.ui" line="1740"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {Standard-Version}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1751"/>
@@ -7063,7 +7070,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>Allgemeine Ausgänge:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
@@ -7093,12 +7100,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Gewicht:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -7143,7 +7150,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>Keine Route</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
@@ -7367,22 +7374,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>No door</source>
-      <translation type="unfinished"/>
+      <translation>Keine Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>Offene Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>Geschlossene Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>Verschlossene Tür</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
@@ -7447,65 +7454,73 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Speichern</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Abbrechen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Spezielle Ausgänge:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang
+Raum-ID</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
       <source>No
 Route</source>
-      <translation type="unfinished"/>
+      <translation>Keine
+Route</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
       <source>Exit
 Weight</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang
+Gewicht</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
       <source>Door
 None</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Keine</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
       <source>Door
 Open</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Offen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2089"/>
       <source>Door
 Closed</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Geschlossen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2098"/>
       <source>Door
 Locked</source>
-      <translation type="unfinished"/>
+      <translation>Tür
+Verschlossen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>Befehl oder 
+LUA Skript</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
@@ -7528,37 +7543,37 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
       <source>Registered Event Handlers:</source>
-      <translation type="unfinished"/>
+      <translation>Registrierte Ereignisbehandler:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function withn the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für dein Skript oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;&lt;p&gt;Falls eine Funktion innerhalb des Skriptes zur Behandlung von Ereignissen aus der Liste unten vorgesehen ist, dann &lt;b&gt;&lt;u&gt;muss sie den gleichen Namen haben, der hier eigegeben wird.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Entferne (ausgewählte) Ereignisbehandler aus der Liste.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
       <source>Add User Event Handler:</source>
-      <translation type="unfinished"/>
+      <translation>Ergänze Ereignisbehandler:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ergänze den eingegebenen Namen des Ereignisbehandler auf der Liste.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -7566,7 +7581,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>Räume in ein anderes Gebiet verschieben</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
@@ -7579,7 +7594,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="20"/>
       <source>Form</source>
-      <translation type="unfinished"/>
+      <translation>Form</translation>
     </message>
   </context>
   <context>
@@ -7587,7 +7602,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/system_message_area.ui" line="2401"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
   </context>
   <context>
@@ -7610,93 +7625,93 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Timer, Offset-Timer oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="73"/>
       <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Timer direkt an das Spiel senden soll, wenn die Zeit abgelaufen ist. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="85"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Stunden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="100"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Minuten&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="115"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Sekunden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="130"/>
       <source>&lt;p&gt;miliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Millisekunden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="235"/>
       <source>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Stunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="266"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="299"/>
       <location filename="../src/ui/timers_main_area.ui" line="420"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="366"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Minuten&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="487"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Sekunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="490"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; interval that the timer will go off at&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Das &lt;b&gt;Sekunden&lt;/b&gt;-Intervall, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="611"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der &lt;b&gt;Millisekunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="614"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Das &lt;b&gt;Millisekunden&lt;/b&gt;-Intervall, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="387"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="511"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="544"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="635"/>
       <source>zzz</source>
-      <translation type="unfinished"/>
+      <translation>zzz</translation>
     </message>
   </context>
   <context>
@@ -7711,12 +7726,12 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="724"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Zeige normalerweise verborgene Variablen</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="600"/>
@@ -7726,7 +7741,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="650"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Steuert die Anzeige des Bereichs für Suchergebnisse.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -7744,7 +7759,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
       <source>Keep firing the script for x more lines, after the trigger or chain has matched.</source>
-      <translation type="unfinished"/>
+      <translation>Löse das Skript noch bei x weitere Zeilen aus, nachdem der Trigger oder die Kette übergestimmt hat.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
@@ -7795,22 +7810,22 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Trigger oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
       <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Trigger direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="916"/>
       <source>&lt;p&gt;The trigger will only fire if all conditions on the list have been met within the specified line delta, and captures will be saved in &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; instead of &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. If this option is not set the trigger will fire if any conditon on the list has been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der Trigger wird nur ausgelöst, wenn alle Bedingungen der Liste innerhalb des angegebenen Zeilenabstands erfüllt sind. Erfasstes wird als &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; gespeichert werden, anstelle von &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. Wenn diese Option nicht gesetzt ist, wird der Trigger ausgelöst, sobald irgendeine Bedingung der Liste erfüllt worden ist.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1120"/>
       <source>&lt;p&gt;Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nur gefilterter Inhalt (=erfasste Gruppen, capture groups) wird an die untergeordneten Trigger weitergeleitet, nicht die ursprüngliche Zeile (siehe Anleitung zu Filtern)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1165"/>
@@ -7871,7 +7886,7 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>Promptzeile erkennen</translation>
     </message>
   </context>
   <context>
@@ -7884,101 +7899,103 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Name der Variable...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="137"/>
       <source>⏴ Key type:</source>
-      <translation type="unfinished"/>
+      <translation>⏴ Art des Schlüsselwertes:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Setze hier den Namen der &lt;i&gt;globalen Variable&lt;/i&gt; oder des &lt;i&gt;Tabelleneintrags&lt;/i&gt;. Der Name muss mit einem Buchstaben beginnen, aber kann Buchstaben und Zahlen enthalten.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>&lt;p&gt;If this variable is a key of a table, then you can select it to either be an &lt;i&gt;indexed key&lt;/i&gt; (unique positive integer with no gaps between it and the first item which has a key of 1) or an &lt;i&gt;associative key&lt;/i&gt; (a string or any other number or combination) type.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Falls diese Variable der Schlüsselwert einer Tabelle ist, dann kannst du wählen, ob seine Art entweder ein &lt;i&gt;Indexschlüssel&lt;/i&gt; (einzigartige positive Ganzzahl ohne Lücken seit dem Element mit der Nummer 1) oder ein &lt;i&gt;assoziativer Schlüsselwert&lt;/i&gt; (ein String oder jede andere Zahl oder Kombination) sein soll.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="147"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tabellen können Werte entweder als Liste und/oder als Hashtabelle speichern.&lt;/p&gt;&lt;p&gt;In einer &lt;b&gt;Liste&lt;/b&gt;, repräsentieren &lt;i&gt;einzigartige nummerierte Schlüssel&lt;/i&gt; die Werte - also kannst du Werte haben bei &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In einer &lt;b&gt;Hashtabelle&lt;/b&gt; {bzw. einem &lt;i&gt;assoziativen Datenfeld&lt;/i&gt;} repräsentieren &lt;i&gt;einzigartige Schlüssel&lt;/i&gt; die Werte - du kannst also jeden Wert unter jeder gewünschten Bezeichnung eintragen (theoretisch sogar einer Funktion oder anderen Lua Objekten, aber diese GUI unterstützt nur Strings).&lt;/p&gt;&lt;p&gt;Hier wählst du für neu erstellte Tabellen(-gruppen), ob es eine nummerierte oder assoziative Tabelle sein soll.&lt;/p&gt;&lt;p&gt;Andernfalls werden andere Objekte (&lt;span style=&quot; font-style:italic;&quot;&gt;Funktionen&lt;/span&gt;) angezeigt, die von hier nicht verändert werden können.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="154"/>
       <location filename="../src/ui/vars_main_area.ui" line="372"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Automatisch</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="159"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>Schlüsselwert (String)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="164"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>Index (Zahl)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
       <location filename="../src/ui/vars_main_area.ui" line="392"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>Tabelle</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="174"/>
       <source>function
 (cannot create
 from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>Funktion
+(nicht in GUI
+erstellbar)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="263"/>
       <source>&lt;p&gt;Hides this variable (and its children if it is a table) from the Variables view, if the &lt;i&gt;Display All Variables&lt;/i&gt; control is off.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You might want to use this to hide variables that are not related to your scipts, so you can focus only on your own system and not be distrated by some of the Mudlet defaults - or, alternatively, to use this to not mess them by up accident!&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Verberge diese Variable (samt Kindern, falls es eine Tabelle ist) aus der Anzeige der Variablen, falls &lt;i&gt;Alle Variablen anzeigen&lt;/i&gt; deaktiviert ist.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Dies empfiehlt sich, um Variablen zu verbergen, die nicht mit deinen Skripten zusammenhängen, damit du dich auf dein eigenes System konzentrieren kannst, und nicht von einigen Voreinstellungen von Mudlet abgelenkt wirst - oder alternativ, damit du sie nicht versehentlich durcheinander bringst!&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="272"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Falls gewählt, wird dieses Objekt (und wo möglich seine Kinder) nicht in dem Bereich links angezeigt, außer &lt;b&gt;Zeige normalerweise verborgene Variablen&lt;/b&gt; ist ausgewählt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="352"/>
       <source>&lt;p&gt;Value type the variable data (in the editor box below) should be&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:6px; margin-bottom:6px; margin-left:6px; margin-right:6px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;2&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;string&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is text (can contain numbers)&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;number&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is numbers only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;boolean&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is a true or false value only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;table&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;this is a table (group), and can have other values in it&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Art des Wertes der Daten (unten in der Editorbox)&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:6px; margin-bottom:6px; margin-left:6px; margin-right:6px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;2&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;String&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es ist Text (vielleicht mit Zahlen).&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;Zahl&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es sind nur Zahlen.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;Boolean&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es ist nur wahr oder falsch.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;Tabelle&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;Es ist eine Tabelle (Gruppe) und kann weitere Werte enthalten.&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="275"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>Verborgene Variable</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="361"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷ Art des Wertes:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="377"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>String</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="382"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>Zahl</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="387"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>Boolean</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="397"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>Funktion</translation>
     </message>
   </context>
 </TS>
