@@ -1586,48 +1586,45 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectSection
 int TLuaInterpreter::selectSection(lua_State* L)
 {
+    int from;
+    int to;
     int s = 1;
-    int n = lua_gettop(L);
-    string a1;
-    if (n > 2) {
+    int argumentsCount = lua_gettop(L);
+    QString windowName;
+
+    if (argumentsCount > 2) {
         if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "selectSection: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "selectSection: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         } else {
-            a1 = lua_tostring(L, s);
+            windowName = QString::fromUtf8(lua_tostring(L, s));
             s++;
         }
     }
-    int luaFrom;
     if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "selectSection: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "selectSection: bad argument #%d type (from position as number expected, got %s!)", s, luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaFrom = lua_tointeger(L, s);
+        from = lua_tointeger(L, s);
         s++;
     }
 
-    int luaTo;
     if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "selectSection: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "selectSection: bad argument #%d type (length as number expected, got %s!)", s, luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaTo = lua_tointeger(L, s);
+        to = lua_tointeger(L, s);
     }
 
     Host& host = getHostFromLua(L);
 
-    bool ret;
-    if (n > 2) {
-        QString _name = a1.c_str();
-        ret = mudlet::self()->selectSection(&host, _name, luaFrom, luaTo);
+    int ret;
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        ret = host.mpConsole->selectSection(from, to);
     } else {
-        ret = host.mpConsole->selectSection(luaFrom, luaTo);
+        ret = mudlet::self()->selectSection(&host, windowName, from, to);
     }
-    lua_pushboolean(L, ret);
+    lua_pushboolean(L, ret == -1 ? false : true);
     return 1;
 }
 
