@@ -1469,6 +1469,13 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     auto width = characterWidth*mFontWidth;
 
+    if (width >= 1'000'000) {
+        width = 1'000'000;
+    }
+    if (height >= 1'000'000) {
+        height = 1'000'000;
+    }
+
     auto rect = QRect(mPA.x(), mPA.y(), width, height);
     qDebug() << "rect" << rect;
 
@@ -1493,6 +1500,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     drawForeground(painter, rect);
 
     pix.save(QStringLiteral("/tmp/image.png"));
+    QApplication::clipboard()->setImage(pix.toImage(), QClipboard::Clipboard);
 }
 
 void TTextEdit::searchSelectionOnline()
