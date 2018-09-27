@@ -2898,7 +2898,8 @@ custom line?</source>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>To remove a custom line, cancel this dialog,
 select the line and right-click to obtain a &quot;delete&quot; option.</source>
-      <translation type="unfinished"/>
+      <translation>To remove a custom line, cancel this dialogue,
+select the line and right-click to obtain a &quot;delete&quot; option.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
@@ -3442,7 +3443,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="602"/>
@@ -3601,7 +3602,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2411"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Updating themes from colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2528"/>
@@ -3707,7 +3708,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2757"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2767"/>
@@ -5200,7 +5201,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="138"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>About</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="145"/>
@@ -5326,7 +5327,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</source>
-      <translation type="unfinished"/>
+      <translation>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
@@ -5895,7 +5896,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="385"/>
       <location filename="../src/mudlet.cpp" line="466"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>About</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="386"/>
@@ -6464,7 +6465,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1132"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Updating themes from colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1156"/>
@@ -6654,7 +6655,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1301"/>
       <location filename="../src/ui/profile_preferences.ui" line="1986"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Black:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1308"/>
@@ -6665,7 +6666,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1321"/>
       <location filename="../src/ui/profile_preferences.ui" line="2003"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Light black:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1328"/>
@@ -6676,7 +6677,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1341"/>
       <location filename="../src/ui/profile_preferences.ui" line="2020"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Red:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1348"/>
@@ -6687,7 +6688,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1361"/>
       <location filename="../src/ui/profile_preferences.ui" line="2037"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Light red:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1368"/>
@@ -6698,7 +6699,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1381"/>
       <location filename="../src/ui/profile_preferences.ui" line="2054"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Green:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1388"/>
@@ -6709,7 +6710,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1401"/>
       <location filename="../src/ui/profile_preferences.ui" line="2071"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Light green:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1408"/>
@@ -6720,7 +6721,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1421"/>
       <location filename="../src/ui/profile_preferences.ui" line="2088"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Yellow:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1428"/>
@@ -6731,7 +6732,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1441"/>
       <location filename="../src/ui/profile_preferences.ui" line="2105"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Light yellow:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1448"/>
@@ -6742,7 +6743,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1461"/>
       <location filename="../src/ui/profile_preferences.ui" line="2122"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blue:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1468"/>
@@ -6753,7 +6754,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1481"/>
       <location filename="../src/ui/profile_preferences.ui" line="2139"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Light blue:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1488"/>
@@ -6764,7 +6765,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1501"/>
       <location filename="../src/ui/profile_preferences.ui" line="2156"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1508"/>
@@ -6775,7 +6776,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1521"/>
       <location filename="../src/ui/profile_preferences.ui" line="2173"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Light magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1528"/>
@@ -6786,7 +6787,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1541"/>
       <location filename="../src/ui/profile_preferences.ui" line="2190"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Cyan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1548"/>
@@ -6797,7 +6798,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1561"/>
       <location filename="../src/ui/profile_preferences.ui" line="2207"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Light cyan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1568"/>
@@ -6808,7 +6809,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1581"/>
       <location filename="../src/ui/profile_preferences.ui" line="2224"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>White:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1588"/>
@@ -6819,7 +6820,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1601"/>
       <location filename="../src/ui/profile_preferences.ui" line="2241"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Light white:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1608"/>
