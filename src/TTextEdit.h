@@ -88,6 +88,7 @@ public:
     int getRowCount();
 
     QColor mBgColor;
+    // position of cursor, in characters, across the entire buffer
     int mCursorY;
     QFont mDisplayFont;
     QColor mFgColor;
@@ -124,6 +125,7 @@ private slots:
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
+    void drawForegroundClipboard(QPainter &painter, const QRect &r);
 
     int mFontHeight;
     int mFontWidth;
@@ -140,6 +142,7 @@ private:
     // or reset on creation and is used to adjust the behaviour depending on
     // which one this instance is:
     const bool mIsLowerPane;
+    // last line offset rendered
     int mLastRenderBottom;
     int mLeftMargin;
     bool mMouseTracking;
@@ -152,7 +155,9 @@ private:
     TConsole* mpConsole;
     QPointer<Host> mpHost;
     QScrollBar* mpScrollBar;
+    // screen height in characters
     int mScreenHeight;
+    // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
