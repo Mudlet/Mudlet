@@ -1215,73 +1215,73 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>arriba</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>abajo</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1010"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>adentro</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1011"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>afuera</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1030"/>
@@ -2092,7 +2092,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copiar</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1241"/>
@@ -2102,7 +2102,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar todo</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1249"/>
@@ -3412,7 +3412,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="602"/>
@@ -4051,12 +4051,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>adentro</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1730"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>afuera</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1808"/>
@@ -4133,7 +4133,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Teclas</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
@@ -4737,7 +4737,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7776"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Comando (abajo):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
@@ -5421,7 +5421,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Vista Múltiple</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="354"/>
@@ -5750,7 +5750,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="311"/>
       <location filename="../src/mudlet.cpp" line="461"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Teclas</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="312"/>
@@ -6454,12 +6454,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1168"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Primer plano:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1191"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Fondo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1211"/>
@@ -6922,7 +6922,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1796"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>Descarga de mapa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1818"/>
@@ -7038,7 +7038,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2369"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Puerto:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2376"/>
@@ -7181,7 +7181,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
       <source>Key:</source>
-      <translation type="unfinished"/>
+      <translation>Tecla:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
@@ -7643,7 +7643,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="63"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="165"/>
@@ -7926,7 +7926,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Nombre de la variable...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="137"/>
@@ -7957,7 +7957,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="159"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>clave (string)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="164"/>
@@ -7968,7 +7968,7 @@ otherwise highlight the entire match</source>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
       <location filename="../src/ui/vars_main_area.ui" line="392"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>tabla</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="174"/>
@@ -8005,7 +8005,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="377"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>cadena de texto</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="382"/>
@@ -8015,7 +8015,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="387"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>booleano</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="397"/>
