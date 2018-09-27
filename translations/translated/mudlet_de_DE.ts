@@ -4363,7 +4363,8 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgTriggerEditor.cpp" line="377"/>
       <source>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
 It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</source>
-      <translation type="unfinished"/>
+      <translation>Speichert das gewählte Element. (Strg+S)&lt;/p&gt; Speichern bewirkt, dass alle Änderungen des Elements wirksam werden.
+Es speichert nicht auf die Festplatte, also können Änderungen bei einem Absturz des Computers/Programms verloren gehen (&apos;Profil speichern&apos; rechts ist sicher.)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="379"/>
@@ -4432,7 +4433,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Generates a statics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Erstellt eine zusammenfassende Statistik im Hauptfenster.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
@@ -4728,7 +4729,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5783"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Aliase</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5913"/>
@@ -5058,13 +5059,15 @@ p, li { white-space: pre-wrap; }
       <location filename="../src/main.cpp" line="204"/>
       <source>%1 %2%3 (debug symbols, no optimisations)
 </source>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (Debug-Symbole, keine Optimierungen)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="209"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)
 </source>
-      <translation type="unfinished"/>
+      <translation>Qt-Bibliotheken %1 (Kompilierung) %2 (Laufzeit)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="210"/>
@@ -5296,13 +5299,15 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="355"/>
       <source>Report bugs to: &lt;https://github.com/Mudlet/Mudlet/issues&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Berichte Fehler an: &lt;https://github.com/Mudlet/Mudlet/issues&gt;.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="356"/>
       <source>Project home page: &lt;http://www.mudlet.org/&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Projekt-Homepage: &lt;http://www.mudlet.org/&gt;.
+</translation>
     </message>
   </context>
   <context>
@@ -5310,7 +5315,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="17"/>
       <source>Mudlet 1.0 - alpha 1</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 1.0 - alpha 1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
@@ -5645,72 +5650,72 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>Bereich:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="571"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Räume</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Ausgänge</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
       <source>Round</source>
-      <translation type="unfinished"/>
+      <translation>Rund</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="648"/>
       <source>Info</source>
-      <translation type="unfinished"/>
+      <translation>Info</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
       <source>Room IDs</source>
-      <translation type="unfinished"/>
+      <translation>Raum-IDs</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="816"/>
       <source>top + 1</source>
-      <translation type="unfinished"/>
+      <translation>oben + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="829"/>
       <source>bottom + 1</source>
-      <translation type="unfinished"/>
+      <translation>unten + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="842"/>
       <source>bottom -1</source>
-      <translation type="unfinished"/>
+      <translation>unten - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="855"/>
       <source>top - 1</source>
-      <translation type="unfinished"/>
+      <translation>oben - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="868"/>
       <source>1 level</source>
-      <translation type="unfinished"/>
+      <translation>1 Ebene</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="887"/>
       <source>default</source>
-      <translation type="unfinished"/>
+      <translation>Standard</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="900"/>
       <source>top view</source>
-      <translation type="unfinished"/>
+      <translation>von oben</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="913"/>
       <source>side view</source>
-      <translation type="unfinished"/>
+      <translation>von Seite</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="926"/>
