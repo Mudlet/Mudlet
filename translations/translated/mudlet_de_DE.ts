@@ -1392,7 +1392,7 @@ older format.</source>
       <source>[ ALERT ] - Map file is really old, it&apos;s file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation>[ ACHTUNG ] - Kartendatei ist wirklich alt, ihr Dateiformat (%1) ist so alt, dass
+      <translation>[ ACHTUNG ]  - Kartendatei ist wirklich alt, ihr Dateiformat (%1) ist so alt, dass
 diese Version von Mudlet vielleicht nicht genügend Informationen daraus sammeln kann,
 aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
     </message>
@@ -1401,14 +1401,14 @@ aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[INFO] - Vielleicht sollte man DIESE Kartendatei dem Mudlet Museum spenden! Es gibt so viele Daten, die sie NICHT BESITZT, dass man vielleicht besser wieder von vorne beginnen könnte...</translation>
+      <translation>[INFO]  - Vielleicht sollte man DIESE Kartendatei dem Mudlet Museum spenden! Es gibt so viele Daten, die sie NICHT BESITZT, dass man vielleicht besser wieder von vorne beginnen könnte...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1329"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ INFO ] - Lesen der Karte (Format-Version:%1) Datei:
+      <translation>[ INFO ]  - Lesen der Karte (Format-Version:%1) Datei:
 &quot;%2&quot;,
 bitte warten...</translation>
     </message>
@@ -1416,13 +1416,13 @@ bitte warten...</translation>
       <location filename="../src/TMap.cpp" line="1437"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[INFO] - Standardregion (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden, reservierte ID -1 ergänzt.</translation>
+      <translation>[INFO]  - Standardregion (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden, reservierte ID -1 ergänzt.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1521"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[ INFO ] - Kartendatei (%1s) erfolgreich gelesen, prüfe einige Details der Konsistenz...</translation>
+      <translation>[ INFO ]  - Kartendatei (%1s) erfolgreich gelesen, prüfe einige Details der Konsistenz...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1539"/>
@@ -1492,7 +1492,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[ INFO ] - Äquivalente Informationen wie oben zur letzten Kartenbearbeitung wurden zur Überprüfung als jüngster Bericht in folgender Datei gespeichert:
+      <translation>[ INFO ]  - Äquivalente Informationen wie oben zur letzten Kartenbearbeitung wurden zur Überprüfung als jüngster Bericht in folgender Datei gespeichert:
 &quot;%1&quot;
 - dabei den (letzten) Bericht mit folgendem Titel suchen:
 &quot;%2&quot;.</translation>
@@ -1500,7 +1500,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[INFO] - Karte wird heruntergeladen, bitte warten...</translation>
+      <translation>[INFO]  - Karte wird heruntergeladen, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2157"/>
@@ -1571,7 +1571,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2333"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[ INFO ] - ... Karte heruntergeladen und gespeichert, wird jetzt verarbeitet...</translation>
+      <translation>[ INFO ]  - ... Karte heruntergeladen und gespeichert, wird jetzt verarbeitet...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2359"/>
@@ -1710,14 +1710,14 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation>[ INFO ] - Behebe im Raum ID:%1 den (besonderen) Ausgang zu %2 {interne Korrektur}, von: &quot;%3&quot; zu: &quot;%4&quot;.</translation>
+      <translation>[ INFO ]  - Behebe im Raum ID:%1 den (besonderen) Ausgang zu %2 {interne Korrektur}, von: &quot;%3&quot; zu: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1014"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation>[ INFO ] - Korrigiere im Raum mit ID: %1 den besonderen Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
+      <translation>[ INFO ]  - Korrigiere im Raum mit ID: %1 den besonderen Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1055"/>
@@ -1810,7 +1810,7 @@ were removed: %2.</source>
       <location filename="../src/TRoom.cpp" line="1331"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation>[ INFO ] - Korrigiere im Raum mit ID: %1 den Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
+      <translation>[ INFO ]  - Korrigiere im Raum mit ID: %1 den Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1351"/>
@@ -1935,7 +1935,7 @@ Mudlet - is your system running out of memory?</source>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ INFO ] - Der fehlende Bereich heißt nun:
+        <numerusform>[ INFO ]  - Der fehlende Bereich heißt nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
         <numerusform>[ INFO ] - Die fehlenden Bereiche heißen nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
@@ -1956,7 +1956,7 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ INFO ] - Die neuen Bereichs-ID lauten:
+      <translation>[ INFO ]  - Die neuen Bereichs-ID lauten:
 Alt ==&gt; Neu</translation>
     </message>
     <message>
@@ -2464,14 +2464,14 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="351"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation>[ INFO ] - Die IP-Adresse von %1 wurde gefunden. Es ist: %2
+      <translation>[ INFO ]  - Die IP-Adresse von %1 wurde gefunden. Es ist: %2
 </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="352"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation>[ INFO ] - Versuche, eine Verbindung zu %1 aufzubauen: %2 ...
+      <translation>[ INFO ]  - Versuche, eine Verbindung zu %1 aufzubauen: %2 ...
 </translation>
     </message>
     <message>
@@ -2499,7 +2499,7 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1555"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[ INFO ] - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
+      <translation>[ INFO ]  - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1573"/>
