@@ -1673,7 +1673,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1153"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {none}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1156"/>
@@ -2453,22 +2453,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Czarny:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="57"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Czerwony:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="64"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Zielony:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="71"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Niebieski:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
@@ -2488,7 +2488,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Żółty:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
@@ -2498,22 +2498,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnoczerwony:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnozielony:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnożółty:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>Jasnoniebieski:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
@@ -2569,7 +2569,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2088"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopiuj</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2113"/>
@@ -2594,7 +2594,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2248"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Port:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2289"/>
