@@ -3439,7 +3439,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="21"/>
       <source>Check items to export</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Elemente für den Export</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
