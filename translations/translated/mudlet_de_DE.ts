@@ -1866,25 +1866,31 @@ und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
       <source>
 It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+Er war gesperrt. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1513"/>
       <source>
 It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+Er hatte ein Gewicht. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1528"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Mit dem ungültigen Ausgang war eine benutzerdefinierte 
+Linie verbunden, die nicht wiederhergestellt werden konnte und verloren ist!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1533"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Mit dem ungültigen Ausgang war eine benutzerdefinierte 
+Linie verbunden, die nicht wiederhergestellt werden konnte und verloren ist!</translation>
     </message>
   </context>
   <context>
@@ -1920,12 +1926,16 @@ it has not been possible to salvage this, it has been lost!</source>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Problematische Daten-Struktur bei Raum-ID: %1 - 
+Die Daten dieses Raums sind verloren gegangen, also wird die ID 
+nun gelöscht. Vermutlich gibt es ernsthafte Probleme mit der aktuell 
+laufenden Mudlet Version - Hat dein System nicht mehr genügend 
+Arbeitsspeicher frei?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="621"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Problematische Daten-Struktur bei diesem Raum. Die Daten dieses Raums sind verloren gegangen, also wird die ID nun gelöscht. Vermutlich gibt es ernsthafte Probleme mit der aktuell laufenden Mudlet Version - Hat dein System nicht mehr genügend Arbeitsspeicher frei?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="668"/>
