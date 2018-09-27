@@ -3435,7 +3435,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="906"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Настройки профиля</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
@@ -6526,7 +6526,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="272"/>
       <source>Server data encoding:</source>
-      <translation type="unfinished"/>
+      <translation>Кодировка сервера:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
