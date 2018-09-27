@@ -3437,7 +3437,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="906"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferencias de perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
