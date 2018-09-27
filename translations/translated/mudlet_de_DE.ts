@@ -6696,25 +6696,25 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="666"/>
       <location filename="../src/ui/profile_preferences.ui" line="682"/>
       <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mehr Platz vor dem Text oben - kann negativ gesetzt werden, um Text oben vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="710"/>
       <location filename="../src/ui/profile_preferences.ui" line="726"/>
       <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mehr Platz vor dem Text links - kann negativ gesetzt werden, um Text links vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="754"/>
       <location filename="../src/ui/profile_preferences.ui" line="770"/>
       <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mehr Platz vor dem Text unten - kann negativ gesetzt werden, um Text unten vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="798"/>
       <location filename="../src/ui/profile_preferences.ui" line="814"/>
       <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mehr Platz vor dem Text rechts - kann negativ gesetzt werden, um Text rechts vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="960"/>
@@ -6729,22 +6729,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="992"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Tabulatoren und Leerzeichen sichtbar markiert.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1002"/>
       <source>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle diese Option für bessere Kompatibilität für Netbooks oder andere Computermodelle mit kleinem Bildschirm.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1012"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Enden von Zeilen und Absätzen sichtbar markiert.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1022"/>
       <source>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeigt Lua-Fehler auch im Hauptfenster, nicht nur im Fehlerregister des Editors.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1175"/>
