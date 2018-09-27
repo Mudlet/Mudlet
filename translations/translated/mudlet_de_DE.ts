@@ -1125,7 +1125,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1709"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>[ INFO ] - Kartendatei gefunden und geöffnet, wird jetzt verarbeitet...</translation>
+      <translation>[ INFO ]  - Kartendatei gefunden und geöffnet, wird jetzt verarbeitet...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
@@ -1201,7 +1201,7 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation>[ INFO ] - Um voll funktionsfähig zu sein, benötigt der obige Befehl eine Überarbeitung des Formats der Kartendatei und obwohl das codiert wurde ist es NICHT aktiviert, so dass die Effekte dieser Funktion NICHT zwischen Sitzungen beibehalten werden, da die relevanten Daten NICHT GESPEICHERT werden.
+      <translation>[ INFO ]  - Um voll funktionsfähig zu sein, benötigt der obige Befehl eine Überarbeitung des Formats der Kartendatei und obwohl das codiert wurde ist es NICHT aktiviert, so dass die Effekte dieser Funktion NICHT zwischen Sitzungen beibehalten werden, da die relevanten Daten NICHT GESPEICHERT werden.
 
 Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies deine einzige Warnung über diesen Befehl...!</translation>
     </message>
@@ -1226,7 +1226,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation>[ INFO ] - Auditierung einer geladenen/importierten/heruntergeladenen Karte startet...</translation>
+      <translation>[ INFO ]  - Auditierung einer geladenen/importierten/heruntergeladenen Karte startet...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
@@ -1236,7 +1236,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[ INFO ] - Wandle herkömmliche Markierung ID: %1.</translation>
+      <translation>[ INFO ]  - Wandle herkömmliche Markierung ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
@@ -1335,8 +1335,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation>[ ACHTUNG ] - Speichere Karte in einem Format {%1}, somit anders als das, in dem sie
-geladen wurde {%2}. Dies kann ein Problem sein, wenn sie mit Anderen geteilt werden soll, die sich auf das ursprüngliche Format verlassen.</translation>
+      <translation>[ ACHTUNG ] - Speichere Karte in einem anderem Format {%1} als dem, in dem sie geladen wurde {%2}. Dies kann ein Problem sein, wenn sie mit Anderen geteilt werden soll, die das ursprüngliche Format benötigen.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1040"/>
@@ -2948,7 +2947,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
       <source> Command</source>
-      <translation type="unfinished"/>
+      <translation> Befehl</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -3368,7 +3367,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="26"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Trigger</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="31"/>
@@ -3922,7 +3921,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="2300"/>
       <source>&lt;command or Lua script&gt;</source>
       <comment>This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;command or Lua script&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="732"/>
@@ -4126,12 +4125,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>rein</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1730"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>raus</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1808"/>
@@ -7258,7 +7257,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
       <source>Key:</source>
-      <translation type="unfinished"/>
+      <translation>Taste:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
