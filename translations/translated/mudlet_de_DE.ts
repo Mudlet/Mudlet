@@ -2878,47 +2878,47 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Farbe und Format der Linie, die Pfeilspitze und dann den Ausgang, um mit dem Zeichnen zu beginnen.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.</source>
-      <translation type="unfinished"/>
+      <translation>Einen Ausgang auswählen führt unmittelbar dazu, dass das erste Liniensegment ab der Mitte des Raums gezeichnet wird.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...</source>
-      <translation type="unfinished"/>
+      <translation>Wähle ZUERST Design und Farbe der Linie, und ob das Ende eine Pfeilspitze haben soll, dann wähle den Ausgang zu dem du die Linie zeichnen willst...</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Einstellungen der Linie:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>Endet mit einem Pfeil:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Design:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Farbe:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
       <source>Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle einen normalen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die Buttons sehen gedrückt aus, wenn es sie schon so eine benutzerdefinierte Linie haben, und sind deaktiviert, wenn es keinen Ausgang in die Richtung gibt.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Normale Ausgänge:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
