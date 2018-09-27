@@ -6579,7 +6579,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="247"/>
       <source>Language &amp;&amp; data encoding</source>
-      <translation type="unfinished"/>
+      <translation>Sprache &amp;&amp; Datenkodierung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
