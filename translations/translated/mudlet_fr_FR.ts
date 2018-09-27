@@ -3388,7 +3388,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="602"/>
@@ -6425,12 +6425,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1168"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Premier plan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1191"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Arrière-plan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1211"/>
