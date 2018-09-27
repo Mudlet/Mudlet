@@ -129,7 +129,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation>[INFO] %1</translation>
+      <translation>[INFO]  %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
@@ -1124,7 +1124,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1706"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>[ INFO ] - Kartendatei gefunden und geöffnet, wird jetzt verarbeitet...</translation>
+      <translation>[ INFO ]  - Kartendatei gefunden und geöffnet, wird jetzt verarbeitet...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1719"/>
@@ -1146,7 +1146,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2796"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[ INFO ] - Anforderung vom System empfangen, die Karte neu zu laden...</translation>
+      <translation>[ INFO ]  - Anforderung vom System empfangen, die Karte neu zu laden...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2801"/>
@@ -1195,7 +1195,7 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation>[ INFO ] - Um voll funktionsfähig zu sein, benötigt der obige Befehl eine Überarbeitung des Formats der Kartendatei und obwohl das codiert wurde ist es NICHT aktiviert, so dass die Effekte dieser Funktion NICHT zwischen Sitzungen beibehalten werden, da die relevanten Daten NICHT GESPEICHERT werden.
+      <translation>[ INFO ]  - Um voll funktionsfähig zu sein, benötigt der obige Befehl eine Überarbeitung des Formats der Kartendatei und obwohl das codiert wurde ist es NICHT aktiviert, so dass die Effekte dieser Funktion NICHT zwischen Sitzungen beibehalten werden, da die relevanten Daten NICHT GESPEICHERT werden.
 
 Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies deine einzige Warnung über diesen Befehl...!</translation>
     </message>
@@ -1220,17 +1220,17 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation>[ INFO ] - Auditierung einer geladenen/importierten/heruntergeladenen Karte startet...</translation>
+      <translation>[ INFO ]  - Auditierung einer geladenen/importierten/heruntergeladenen Karte startet...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>[ INFO ] - UMWANDLUNG: herkömmliche Markierung, areaID:%1 labelID:%2.</translation>
+      <translation>[ INFO ]  - UMWANDLUNG: herkömmliche Markierung, Bereichskennung:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[ INFO ] - Wandle herkömmliche Markierung ID: %1.</translation>
+      <translation>[ INFO ]  - Wandle herkömmliche Markierung ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
@@ -1383,14 +1383,14 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1306"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[INFO] - Bitte Mudlet aktualisieren oder eine in einem älteren Format gespeicherte Kartendatei finden.</translation>
+      <translation>[INFO]  - Bitte Mudlet aktualisieren oder eine in einem älteren Format gespeicherte Kartendatei finden.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1313"/>
       <source>[ ALERT ] - Map file is really old, it&apos;s file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation>[ ACHTUNG ] - Kartendatei ist wirklich alt, ihr Dateiformat (%1) ist so alt, dass
+      <translation>[ ACHTUNG ]  - Kartendatei ist wirklich alt, ihr Dateiformat (%1) ist so alt, dass
 diese Version von Mudlet vielleicht nicht genügend Informationen daraus sammeln kann,
 aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
     </message>
@@ -1399,14 +1399,14 @@ aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[INFO] - Vielleicht sollte man DIESE Kartendatei dem Mudlet Museum spenden! Es gibt so viele Daten, die sie NICHT BESITZT, dass man vielleicht besser wieder von vorne beginnen könnte...</translation>
+      <translation>[INFO]  - Vielleicht sollte man DIESE Kartendatei dem Mudlet Museum spenden! Es gibt so viele Daten, die sie NICHT BESITZT, dass man vielleicht besser wieder von vorne beginnen könnte...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1329"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ INFO ] - Lesen der Karte (Format-Version:%1) Datei:
+      <translation>[ INFO ]  - Lesen der Karte (Format-Version:%1) Datei:
 &quot;%2&quot;,
 bitte warten...</translation>
     </message>
@@ -1414,13 +1414,13 @@ bitte warten...</translation>
       <location filename="../src/TMap.cpp" line="1437"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[INFO] - Standardregion (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden, reservierte ID -1 ergänzt.</translation>
+      <translation>[INFO]  - Standardregion (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden, reservierte ID -1 ergänzt.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1521"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[ INFO ] - Kartendatei (%1s) erfolgreich gelesen, prüfe einige Details der Konsistenz...</translation>
+      <translation>[ INFO ]  - Kartendatei (%1s) erfolgreich gelesen, prüfe einige Details der Konsistenz...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1539"/>
@@ -1490,7 +1490,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[ INFO ] - Äquivalente Informationen wie oben zur letzten Kartenbearbeitung wurden zur Überprüfung als jüngster Bericht in folgender Datei gespeichert:
+      <translation>[ INFO ]  - Äquivalente Informationen wie oben zur letzten Kartenbearbeitung wurden zur Überprüfung als jüngster Bericht in folgender Datei gespeichert:
 &quot;%1&quot;
 - dabei den (letzten) Bericht mit folgendem Titel suchen:
 &quot;%2&quot;.</translation>
@@ -1498,7 +1498,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[INFO] - Karte wird heruntergeladen, bitte warten...</translation>
+      <translation>[INFO]  - Karte wird heruntergeladen, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2157"/>
@@ -1569,7 +1569,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2333"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[ INFO ] - ... Karte heruntergeladen und gespeichert, wird jetzt verarbeitet...</translation>
+      <translation>[ INFO ]  - ... Karte heruntergeladen und gespeichert, wird jetzt verarbeitet...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2359"/>
@@ -1708,14 +1708,14 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation>[ INFO ] - Behebe im Raum ID:%1 den (besonderen) Ausgang zu %2 {interne Korrektur}, von: &quot;%3&quot; zu: &quot;%4&quot;.</translation>
+      <translation>[ INFO ]  - Behebe im Raum ID:%1 den (besonderen) Ausgang zu %2 {interne Korrektur}, von: &quot;%3&quot; zu: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1014"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation>[ INFO ] - Korrigiere im Raum mit ID: %1 den besonderen Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
+      <translation>[ INFO ]  - Korrigiere im Raum mit ID: %1 den besonderen Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1055"/>
@@ -1808,7 +1808,7 @@ were removed: %2.</source>
       <location filename="../src/TRoom.cpp" line="1331"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation>[ INFO ] - Korrigiere im Raum mit ID: %1 den Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
+      <translation>[ INFO ]  - Korrigiere im Raum mit ID: %1 den Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1351"/>
@@ -1933,7 +1933,7 @@ Mudlet - is your system running out of memory?</source>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ INFO ] - Der fehlende Bereich heißt nun:
+        <numerusform>[ INFO ]  - Der fehlende Bereich heißt nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
         <numerusform>[ INFO ] - Die fehlenden Bereiche heißen nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
@@ -1954,7 +1954,7 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ INFO ] - Die neuen Bereichs-ID lauten:
+      <translation>[ INFO ]  - Die neuen Bereichs-ID lauten:
 Alt ==&gt; Neu</translation>
     </message>
     <message>
