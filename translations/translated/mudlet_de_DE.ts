@@ -1730,7 +1730,10 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Der Raum mit der ID: %1 hat einen besonderen Ausgang &quot;%2&quot; in
+Richtung: %3 aber dieser Raum existiert nicht. Der Ausgang wird
+entfernt (aber die ID des Ziel-Raumes wird gespeichert in den 
+Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1107"/>
