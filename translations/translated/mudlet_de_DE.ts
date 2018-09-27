@@ -5671,79 +5671,79 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="134"/>
       <source>English</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="135"/>
       <source>English (British)</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch (Britisch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="136"/>
       <source>Chinese</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Chinesisch (Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>
       <source>Chinese (Traditional)</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Chinesisch (traditionell) (Chinese (Traditional))</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="138"/>
       <source>Dutch</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Niederländisch (Dutch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="139"/>
       <source>French</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Französisch (French)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="140"/>
       <source>German</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Deutsch (German)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="141"/>
       <source>Greek</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Griechisch (Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="142"/>
       <source>Italian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Italienisch (Italian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="143"/>
       <source>Polish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Polnisch (Polish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="144"/>
       <source>Russian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Russisch (Russian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="145"/>
       <source>Spanish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Spanisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="172"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% fertig)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="209"/>
