@@ -2319,7 +2319,10 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Entschuldigung, aber die gelesene Datei: 
+&quot;%1&quot;
+berichtet ihre Version als %2. Sie muss aus einer späteren Mudlet Version stammen,
+diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="352"/>
