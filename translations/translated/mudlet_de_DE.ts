@@ -5700,7 +5700,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="868"/>
       <source>1 level</source>
-      <translation>1 Ebene</translation>
+      <translation>Ebene 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="887"/>
@@ -5720,7 +5720,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="926"/>
       <source>all levels</source>
-      <translation type="unfinished"/>
+      <translation>alle Ebenen</translation>
     </message>
   </context>
   <context>
@@ -5738,17 +5738,17 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Deinstallieren</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="141"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Installieren</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="148"/>
       <source>Module Help</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe zum Modul</translation>
     </message>
   </context>
   <context>
@@ -6051,7 +6051,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="459"/>
       <source>Actions</source>
-      <translation type="unfinished"/>
+      <translation>Aktionen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="463"/>
@@ -6229,12 +6229,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="44"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Installieren</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="57"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Deinstallieren</translation>
     </message>
   </context>
   <context>
@@ -6675,7 +6675,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="260"/>
       <source>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kannst du helfen, Mudlet zu übersetzen? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/übersetzen-mudlet&lt;/span&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="264"/>
@@ -7420,7 +7420,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1604"/>
       <location filename="../src/ui/room_exits.ui" line="1744"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="138"/>
@@ -7432,7 +7432,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1343"/>
       <location filename="../src/ui/room_exits.ui" line="1483"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ein grünes Symbol für die (offene) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="154"/>
@@ -7562,12 +7562,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
       <source>Exit RoomID number</source>
-      <translation type="unfinished"/>
+      <translation>Ausgangs RaumID Nummer</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No overide)</source>
-      <translation type="unfinished"/>
+      <translation>Gewichtung des Ausgangs (0=Nicht überschreiben)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
@@ -7617,7 +7617,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2075"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet (derzeit einzige funktionale Auswahl).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2084"/>
