@@ -966,7 +966,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
       <source>Do you want to save the profile %1?</source>
-      <translation>Möchten Sie das Profil %1 speichern?</translation>
+      <translation>Möchtest du das Profil %1 speichern?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="777"/>
