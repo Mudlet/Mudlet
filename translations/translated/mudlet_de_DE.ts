@@ -1800,13 +1800,13 @@ Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;).</translation>
       <location filename="../src/TRoom.cpp" line="1215"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation>[ INFO ] - Im Raum mit der ID: %1 wurden ein oder mehrere überzählige "exit lock items" gefunden und entfernt:
+      <translation>[ INFO ] - Im Raum mit der ID: %1 wurden ein oder mehrere überzählige Sperren gefunden und entfernt:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1222"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation>[ INFO ] - Im Raum wurden ein oder mehrere überzählige "exit lock items" gefunden und entfernt:
+      <translation>[ INFO ] - Im Raum wurden ein oder mehrere überzählige Sperren gefunden und entfernt:
 %1.</translation>
     </message>
     <message>
@@ -2025,7 +2025,7 @@ Alt ==&gt; Neu</translation>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <location filename="../src/TRoomDB.cpp" line="828"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ]  - Nummerierung der Bereichs-ID ist zufriedenstellend.</translation>
+      <translation>[ INFO ]  - Nummerierung der Bereichs ist zufriedenstellend.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="836"/>
@@ -2038,56 +2038,62 @@ Bestimme neue IDs, die statt dessen genutzt werden können.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="841"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Defekte Raum-IDs in der Karte gefunden (Anzahl: %1) 
+(Defekte IDs sind kleiner als +1)
+Achte auf weitere Nachrichten zu jedem betroffenen Raum...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="848"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Die neu nummerierten Räume sind:
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="864"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Dieser Raum mit der defekten ID trägt nun: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="865"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Dieser Raum mit der defekten ID: %1 wurde neu nummeriert.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <location filename="../src/TRoomDB.cpp" line="904"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nummerierung der Raums ist zufriedenstellend.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Doppelte Abzweigungen im Raum ID: %1 gefunden. 
+Dies ist eine Anomalie, aber wurde problemlos aufgeräumt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="926"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Doppelte Abzweigungen im Raum gefunden. 
+Dies ist eine Anomalie, aber wurde problemlos aufgeräumt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="935"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Doppelte Sperren im Raum ID: %1 gefunden. 
+Dies ist eine Anomalie, aber wurde problemlos aufgeräumt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="940"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Doppelte Sperren im Raum gefunden. Dies ist eine Anomalie, aber wurde problemlos aufgeräumt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1011"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Dieser Raum behauptet, zu Bereich ID: %1 zu gehören, aber dort war er unbekannt. Der Bereich wird ihn zukünftig berücksichtigen.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1017"/>
@@ -2095,12 +2101,15 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Im Bereich ID: %1 fehlten %2 Räume, 
+die eigentlich anwesend sein sollten, nämlich:
+%3
+Sie wurden dem Bereich hinzugefügt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In diesem Bereich fehlten %1 Räume, die eigentlich anwesend sein sollten, nämlich: %2. Sie wurden hinzugefügt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1046"/>
