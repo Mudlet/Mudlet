@@ -5757,13 +5757,13 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="134"/>
       <source>English</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Englisch (English)</translation>
+      <translation>Englisch (American English)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="135"/>
       <source>English (British)</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Englisch (Britisch)</translation>
+      <translation>Englisch (British English)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="136"/>
@@ -5775,7 +5775,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="137"/>
       <source>Chinese (Traditional)</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Chinesisch (traditionell) (Chinese (Traditional))</translation>
+      <translation>Chinesisch (Chinese Traditional)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="138"/>
