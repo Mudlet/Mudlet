@@ -613,7 +613,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3385"/>
       <location filename="../src/T2DMap.cpp" line="3789"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {всего: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3393"/>
@@ -1216,73 +1216,73 @@ this command...!</source>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>sw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>w</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>up</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>down</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1010"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>in</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1011"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>out</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1030"/>
@@ -1536,33 +1536,33 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="81"/>
       <location filename="../src/TRoom.cpp" line="771"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Север</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="82"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Северо-восток</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="83"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Северо-запад</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="84"/>
       <location filename="../src/TRoom.cpp" line="816"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Юг</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="85"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Юго-восток</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="86"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Юго-запад</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="87"/>
@@ -1689,17 +1689,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1156"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (открыта)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1159"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (закрыта)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1162"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (заблокирована)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
@@ -1822,7 +1822,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="505"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Oбласть с id %1 уже существует!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="524"/>
@@ -2270,17 +2270,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation>Док Топ</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="175"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>Док Слева</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
       <source>Dock Area Right</source>
-      <translation type="unfinished"/>
+      <translation>Док Справа</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
@@ -2462,7 +2462,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
       <source>choose color to trigger on</source>
-      <translation type="unfinished"/>
+      <translation>выберите цвет для триггера</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
@@ -2550,7 +2550,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation type="unfinished"/>
+      <translation>Компоновщик сообщений</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
@@ -2784,42 +2784,42 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
       <source>NW</source>
-      <translation type="unfinished"/>
+      <translation>NW</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="235"/>
       <source>N</source>
-      <translation type="unfinished"/>
+      <translation>N</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="258"/>
       <source>NE</source>
-      <translation type="unfinished"/>
+      <translation>NE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="297"/>
       <source>UP</source>
-      <translation type="unfinished"/>
+      <translation>UP</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="336"/>
       <source>W</source>
-      <translation type="unfinished"/>
+      <translation>W</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="346"/>
       <source>E</source>
-      <translation type="unfinished"/>
+      <translation>E</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="356"/>
       <source>IN</source>
-      <translation type="unfinished"/>
+      <translation>IN</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="382"/>
       <source>OUT</source>
-      <translation type="unfinished"/>
+      <translation>OUT</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="392"/>
@@ -3223,7 +3223,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="363"/>
       <source>[HELP] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>Синтаксис [HELP]: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="371"/>
@@ -3248,7 +3248,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="444"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ОШИБКА] %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="446"/>
@@ -3660,7 +3660,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2731"/>
       <source>more - not shown...</source>
-      <translation type="unfinished"/>
+      <translation>больше - не показали...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2738"/>
@@ -3999,62 +3999,62 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1719"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>северо-запад</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1720"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>север</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1721"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>северо-восток</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>вверх</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>запад</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1724"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>восток</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>вниз</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>юго-запад</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1727"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>юг</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1728"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>юго-восток</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>в</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1730"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>из</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1808"/>
@@ -4260,7 +4260,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7699"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7718"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
@@ -4801,17 +4801,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>string</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>number</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>boolean</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
@@ -4821,7 +4821,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>function</translation>
     </message>
   </context>
   <context>
@@ -5226,7 +5226,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
       <source>Alt+R</source>
-      <translation type="unfinished"/>
+      <translation>Alt+R</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
@@ -5927,7 +5927,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="654"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Расположение модуля</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="696"/>
@@ -5942,12 +5942,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="865"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить Mudlet Модуль</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="872"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить Mudlet Модуль:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="872"/>
@@ -5960,12 +5960,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="940"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="947"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1322"/>
@@ -5986,7 +5986,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2822"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Предварительная загрузка карты(3) отчет</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2832"/>
@@ -6511,7 +6511,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
       <source>Interface language:</source>
-      <translation type="unfinished"/>
+      <translation>Язык интерфейса:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="260"/>
@@ -6521,7 +6521,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="264"/>
       <source>English</source>
-      <translation type="unfinished"/>
+      <translation>Английский</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="272"/>
@@ -6531,7 +6531,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
       <source>Please restart Mudlet to apply the new language</source>
-      <translation type="unfinished"/>
+      <translation>Для изменения языка, пожалуйста, перезапустите приложение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="476"/>
@@ -6934,7 +6934,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1831"/>
       <source>Map backups</source>
-      <translation type="unfinished"/>
+      <translation>Резервные копии карты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1837"/>
@@ -7030,7 +7030,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2353"/>
       <source>IRC client options</source>
-      <translation type="unfinished"/>
+      <translation>Параметры IRC-клиента</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2362"/>
@@ -7050,7 +7050,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2383"/>
       <source>MudletUser123</source>
-      <translation type="unfinished"/>
+      <translation>MudletUser123</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2390"/>
@@ -7060,7 +7060,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2397"/>
       <source>Auto-join channels: </source>
-      <translation type="unfinished"/>
+      <translation>Авто-присоединяться к каналам: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2404"/>
@@ -7090,12 +7090,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2452"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>Другие специальные параметры</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2458"/>
       <source>Show icons on menus</source>
-      <translation type="unfinished"/>
+      <translation>Отображать значки в меню</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2522"/>
@@ -7502,7 +7502,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Специальные выходы:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
@@ -7559,7 +7559,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
       <source>&amp;Add special exit</source>
-      <translation type="unfinished"/>
+      <translation>Добавить специальный выход</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2150"/>
@@ -7615,7 +7615,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>Переместить комнаты в другую область</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
@@ -7669,22 +7669,22 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="85"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;часов&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="100"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;минут&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="115"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;секунд&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="130"/>
       <source>&lt;p&gt;miliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;милисекундах&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="235"/>
@@ -7745,7 +7745,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="635"/>
       <source>zzz</source>
-      <translation type="unfinished"/>
+      <translation>zzz</translation>
     </message>
   </context>
   <context>
@@ -7814,7 +7814,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="532"/>
       <source>play a wave sound file if the trigger fires</source>
-      <translation type="unfinished"/>
+      <translation>играть звуковой файл при срабатывании триггера</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="535"/>
@@ -7896,12 +7896,12 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1534"/>
       <source>fg color</source>
-      <translation type="unfinished"/>
+      <translation>цвет переднего плана</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1580"/>
       <source>bg color</source>
-      <translation type="unfinished"/>
+      <translation>цвет заднего плана</translation>
     </message>
   </context>
   <context>
@@ -8013,22 +8013,22 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="377"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>string</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="382"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>number</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="387"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>boolean</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="397"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>function</translation>
     </message>
   </context>
 </TS>
