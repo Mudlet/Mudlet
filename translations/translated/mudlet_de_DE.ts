@@ -595,7 +595,8 @@ den markierten Raum (%1), verschieben nach:</translation>
 for this/these room(s):</source>
       <translation>
         <numerusform>Wähle das Symbol, das für diesen Raum zu verwenden ist:</numerusform>
-        <numerusform>Wähle das Symbol, das für diese Räume zu verwenden ist:</numerusform>
+        <numerusform>Wähle das Symbol, das für 
+diese Räume zu verwenden ist:</numerusform>
       </translation>
     </message>
     <message>
@@ -1384,7 +1385,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1306"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[INFO] - Bitte Mudlet aktualisieren oder eine in einem älteren Format gespeicherte Kartendatei finden.</translation>
+      <translation>[INFO]  - Bitte Mudlet aktualisieren oder eine in einem älteren Format gespeicherte Kartendatei finden.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1313"/>
