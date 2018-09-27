@@ -5353,7 +5353,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="287"/>
       <source>Help chat</source>
-      <translation type="unfinished"/>
+      <translation>Чат с Поддержкой</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="290"/>
@@ -5363,7 +5363,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="295"/>
       <source>Live help chat</source>
-      <translation type="unfinished"/>
+      <translation>Чат с Поддержкой</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="303"/>
@@ -5541,7 +5541,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="868"/>
       <source>1 level</source>
-      <translation type="unfinished"/>
+      <translation>1 уровень</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="887"/>
@@ -5598,79 +5598,79 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="134"/>
       <source>English</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Английский (English)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="135"/>
       <source>English (British)</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Английский, Британский (British English)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="136"/>
       <source>Chinese</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Китайский (Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>
       <source>Chinese (Traditional)</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Китайский традиционный (Chinese Traditional)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="138"/>
       <source>Dutch</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Голландский (Dutch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="139"/>
       <source>French</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Французский (French)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="140"/>
       <source>German</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Немецкий (German)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="141"/>
       <source>Greek</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Греческий (Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="142"/>
       <source>Italian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Итальянский (Italian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="143"/>
       <source>Polish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Польский (Polish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="144"/>
       <source>Russian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Русский (Russian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="145"/>
       <source>Spanish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Испанский (Spanish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="172"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% готово)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="209"/>
@@ -5777,7 +5777,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="324"/>
       <source>Open the Mudlet IRC client</source>
-      <translation type="unfinished"/>
+      <translation>Открыть Mudlet IRC-клиент</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
@@ -5798,7 +5798,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Просмотреть справочные материалы и документацию</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="341"/>
@@ -5881,13 +5881,13 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="403"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Консоль отладки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="416"/>
       <location filename="../src/mudlet.cpp" line="417"/>
       <source>Toggle Full Screen View</source>
-      <translation type="unfinished"/>
+      <translation>Переключить в полноэкранный режим</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="459"/>
