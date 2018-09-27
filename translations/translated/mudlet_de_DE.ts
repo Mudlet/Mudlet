@@ -1742,7 +1742,10 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Der Raum mit der ID: %1 hat einen besonderen Ausgang &quot;%2&quot; in
+Richtung: %3 aber dieser Raum existiert nicht. Der Ausgang wird
+entfernt (aber die ID des Ziel-Raumes wird gespeichert in den 
+Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1153"/>
@@ -1773,34 +1776,38 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1169"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum mit der ID: %1 wurden ein oder mehrere überzählige Tür-Elemente gefunden und entfernt:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1176"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum wurden ein oder mehrere überzählige Tür-Elemente gefunden und entfernt:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1192"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum mit der ID: %1 wurden ein oder mehrere überzählige Gewicht-Elemente gefunden und entfernt:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1199"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum wurden ein oder mehrere überzählige Gewicht-Elemente gefunden und entfernt:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1215"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum mit der ID: %1 wurden ein oder mehrere überzählige "exit lock items" gefunden und entfernt:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1222"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum wurden ein oder mehrere überzählige "exit lock items" gefunden und entfernt:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1301"/>
