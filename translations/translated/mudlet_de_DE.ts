@@ -3558,7 +3558,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="553"/>
       <source>Other profiles to Map to:</source>
-      <translation type="unfinished"/>
+      <translation>Andere Profile für die Karte:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
@@ -3578,12 +3578,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="613"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation type="unfinished"/>
+      <translation>Skalierungsfaktor des Symbols für Räume der 2D Karte:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="669"/>
       <source>Profile preferences - %1</source>
-      <translation type="unfinished"/>
+      <translation>Profil-Einstellungen - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="906"/>
@@ -3657,7 +3657,11 @@ Nutzungen</translation>
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Kann das Verzeichnis nicht nutzen oder erstellen, um für das andere Profil
+&quot;%1&quot; die Karte zu speichern.
+Prüfe bitte, dass du die Berechtigungen und Zugriff hast auf:
+&quot;%2&quot;
+und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1681"/>
@@ -7638,7 +7642,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2147"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke diese Schaltfläche um die Auswahl des besonderen Ausgangs zu deaktivieren.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
