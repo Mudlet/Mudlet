@@ -2462,14 +2462,14 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="351"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation>[ INFO ] - Die IP-Adresse von %1 wurde gefunden. Es ist: %2
+      <translation>[ INFO ]  - Die IP-Adresse von %1 wurde gefunden. Es ist: %2
 </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="352"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation>[ INFO ] - Versuche, eine Verbindung zu %1 aufzubauen: %2 ...
+      <translation>[ INFO ]  - Versuche, eine Verbindung zu %1 aufzubauen: %2 ...
 </translation>
     </message>
     <message>
@@ -2478,7 +2478,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Nachschlagen des Servernamens fehlgeschlagen! Verbindung kann nicht hergestellt werden. Der Name des Servers ist nicht korrekt, funktioniert nicht richtig, oder die Nameserver arbeiten nicht richtig.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="376"/>
@@ -2497,7 +2497,7 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1555"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[ INFO ] - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
+      <translation>[ INFO ]  - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1573"/>
