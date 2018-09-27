@@ -3761,7 +3761,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="164"/>
       <source>&lt;p&gt;Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mit einer einzigen Schriftart ist es wahrscheinlicher, einen einheitlicheren Stil zu erzeugen, aber das &lt;i&gt;Ersetzungszeichen&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; könnte gezeigt werden, falls die Schriftart ein benötigte Glyphe nicht hat (ein einzelnes Zeichen oder Symbol der Schriftart), um das gewünschte Graphem darzustellen. Diese Markierung zu löschen führt dazu, dass die beste alternative Glyphe einer anderen Schriftart benutzt wird, um das Graphem zu zeichnen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="110"/>
@@ -3776,12 +3776,12 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="113"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Diese Option bestimmt das Format des Namens der Protokolldatei.&lt;/p&gt;&lt;p&gt;Wenn &lt;i&gt;Benannte Datei&lt;/i&gt; ausgewählt wird, kannst du einen eigenen Namen definieren. (Die Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="115"/>
       <source>&lt;p&gt;Set a custom name for your log. (New logs are appended if a log file of the same name already exists).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Bestimme einen eigenen Namens für deine Protokolldatei. (Neue Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="170"/>
@@ -3951,12 +3951,12 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
       <source>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums, zu dem dieser besondere Ausgang hinführt. Gültigen Zahlen werden blau. Falls sie bleibt wie jetzt, wird dieser Ausgang gelöscht, sobald &apos;Speichern&apos; angeklickt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="220"/>
       <source>Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die ID des Raums, zu dem dieser besondere Ausgang hinführt. Gültigen Zahlen werden blau. Falls sie bleibt wie jetzt, wird dieser Ausgang gelöscht, sobald &apos;Speichern&apos; angeklickt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
