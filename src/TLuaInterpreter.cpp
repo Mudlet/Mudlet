@@ -11116,7 +11116,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
-    float rate;
+    double rate;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "ttsSetRate: bad argument #1 type (rate as number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
@@ -11153,7 +11153,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
-    float pitch;
+    double pitch;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "ttsSetPitch: bad argument #1 type (pitch as number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
@@ -11190,7 +11190,7 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
-    float volume;
+    double volume;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "ttsSetVolume: bad argument #1 type (volume as number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
