@@ -1025,7 +1025,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Прошлый результат поиска.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
@@ -3410,7 +3410,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="602"/>
@@ -3635,7 +3635,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1564"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet карта (*.dat); Карта Xml-данные (*.xml); Любой файл (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2671"/>
@@ -3845,7 +3845,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="2300"/>
       <source>&lt;command or Lua script&gt;</source>
       <comment>This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;command or Lua script&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="732"/>
@@ -4694,7 +4694,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7504"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Файл не может бытс прочитан %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7518"/>
@@ -4815,7 +4816,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>таблица</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
@@ -6918,7 +6919,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1781"/>
       <location filename="../src/ui/profile_preferences.ui" line="1785"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {default version}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1796"/>
@@ -7182,7 +7183,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
       <source>Key:</source>
-      <translation type="unfinished"/>
+      <translation>Ключ:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
