@@ -4123,7 +4123,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1264"/>
       <location filename="../src/dlgRoomExits.cpp" line="1661"/>
       <source>Set the number of the room in from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die ID des Raums in Richtung Innen von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1306"/>
@@ -4134,7 +4134,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1316"/>
       <location filename="../src/dlgRoomExits.cpp" line="1692"/>
       <source>Set the number of the room out from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die ID des Raums in Richtung Außen von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
@@ -4151,7 +4151,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1684"/>
       <location filename="../src/dlgRoomExits.cpp" line="1799"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation type="unfinished"/>
+      <translation>Lösche die Abzweigung, damit dieser Ausgang mit ID eingeben werden kann.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1719"/>
@@ -4216,12 +4216,12 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1808"/>
       <source>Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die ID des Raums in Richtung %1 von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1833"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation type="unfinished"/>
+      <translation>Ausgänge für Raum ID: %1 [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1903"/>
@@ -7386,7 +7386,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
       <source>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Nordwesten von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="106"/>
@@ -7456,7 +7456,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
       <source>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Norden von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="246"/>
@@ -7468,12 +7468,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="373"/>
       <source>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Nordosten von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="513"/>
       <source>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Oben von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="558"/>
@@ -7502,7 +7502,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
       <source>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Westen von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
@@ -7517,37 +7517,37 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="863"/>
       <source>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Osten von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1000"/>
       <source>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Unten von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1152"/>
       <source>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Südwesten von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1298"/>
       <source>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Süden von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1438"/>
       <source>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Südosten von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
       <source>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Innen von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1718"/>
       <source>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Außen von hier aus. Gültigen Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1871"/>
