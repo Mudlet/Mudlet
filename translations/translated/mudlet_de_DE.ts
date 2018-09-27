@@ -1953,7 +1953,14 @@ Arbeitsspeicher frei?</translation>
  Look for further messsages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALARM ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+ sein sollten...</numerusform>
+        <numerusform>[ ALARM ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
+ sein sollten...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="707"/>
@@ -1961,7 +1968,14 @@ Arbeitsspeicher frei?</translation>
  Look for further messsages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALARM ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+ sein sollten...</numerusform>
+        <numerusform>[ ALARM ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
+ sein sollten...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="716"/>
@@ -1979,12 +1993,16 @@ Arbeitsspeicher frei?</translation>
       <location filename="../src/TRoomDB.cpp" line="751"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
+(Defekte IDs sind kleiner als +1 und auch nicht die reservierte ID -1)
+Bestimme neue IDs, die statt dessen genutzt werden können...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="756"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
+(Defekte IDs sind kleiner als +1 und auch nicht die reservierte ID -1)
+Achte auf weitere Nachrichten zu jedem betroffenen Bereich...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="763"/>
@@ -1996,24 +2014,26 @@ Alt ==&gt; Neu</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="781"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Der Bereich mit dieser defekten ID trägt nun: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="782"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Der Bereich mit der defekten ID: %1 wurde neu nummeriert.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <location filename="../src/TRoomDB.cpp" line="828"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nummerierung der Bereichs-ID ist zufriedenstellend.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="836"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Defekte Raum-IDs in der Karte gefunden (Anzahl: %1) 
+(Defekte IDs sind kleiner als +1)
+Bestimme neue IDs, die statt dessen genutzt werden können.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="841"/>
