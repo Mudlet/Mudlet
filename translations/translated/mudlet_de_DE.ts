@@ -5671,7 +5671,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="134"/>
       <source>English</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Englisch</translation>
+      <translation>Englisch (English)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="135"/>
@@ -5737,7 +5737,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="145"/>
       <source>Spanish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Spanisch</translation>
+      <translation>Spanisch (Spanish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="172"/>
@@ -6584,7 +6584,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
       <source>Interface language:</source>
-      <translation type="unfinished"/>
+      <translation>Sprache der Benutzeroberfläche:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="260"/>
@@ -6604,7 +6604,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
       <source>Please restart Mudlet to apply the new language</source>
-      <translation type="unfinished"/>
+      <translation>Bitte Mudlet neu starten, um die neue Sprache anzuwenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="476"/>
