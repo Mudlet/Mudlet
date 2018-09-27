@@ -4368,7 +4368,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="379"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert die ausgewählten Trigger, Skripte, Aliase, usw, wodurch die neuen Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
@@ -7062,7 +7062,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1749"/>
       <source>An action above happened</source>
-      <translation type="unfinished"/>
+      <translation>Eine Aktion geschah oben.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1756"/>
@@ -7268,27 +7268,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
       <source>NW exit...</source>
-      <translation type="unfinished"/>
+      <translation>NW-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
       <source>N exit...</source>
-      <translation type="unfinished"/>
+      <translation>N-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="376"/>
       <source>NE exit...</source>
-      <translation type="unfinished"/>
+      <translation>NO-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="516"/>
       <source>Up exit...</source>
-      <translation type="unfinished"/>
+      <translation>Oben-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="659"/>
       <source>W exit...</source>
-      <translation type="unfinished"/>
+      <translation>W-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
@@ -7303,37 +7303,37 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
       <source>E exit...</source>
-      <translation type="unfinished"/>
+      <translation>O-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1003"/>
       <source>Down exit...</source>
-      <translation type="unfinished"/>
+      <translation>Unten-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1155"/>
       <source>SW exit...</source>
-      <translation type="unfinished"/>
+      <translation>SW-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1301"/>
       <source>S exit...</source>
-      <translation type="unfinished"/>
+      <translation>S-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1441"/>
       <source>SE exit...</source>
-      <translation type="unfinished"/>
+      <translation>SO-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1581"/>
       <source>In exit...</source>
-      <translation type="unfinished"/>
+      <translation>Rein-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1721"/>
       <source>Out exit...</source>
-      <translation type="unfinished"/>
+      <translation>Raus-Ausgang...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
@@ -7348,7 +7348,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
       <source>Stub Exit</source>
-      <translation type="unfinished"/>
+      <translation>Platzhalter</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="67"/>
@@ -7365,7 +7365,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1692"/>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Verhindere die Erstellung von Routen durch diesen Ausgang. Das entspricht einem unendlichen Gewicht des Ausgangs.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="83"/>
@@ -7399,7 +7399,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="119"/>
@@ -7463,7 +7463,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="386"/>
       <location filename="../src/ui/room_exits.ui" line="526"/>
       <source>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="373"/>
@@ -7607,7 +7607,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
       <source>&lt;p&gt;Set to a positive integer value to overide the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2075"/>
