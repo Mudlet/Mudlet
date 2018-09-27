@@ -1147,7 +1147,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
       <source>System message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Systemnachricht: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
