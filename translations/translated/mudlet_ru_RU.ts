@@ -5393,12 +5393,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="325"/>
       <source>test1</source>
-      <translation type="unfinished"/>
+      <translation>тест1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="330"/>
       <source>asdf</source>
-      <translation type="unfinished"/>
+      <translation>asdf</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
@@ -6360,7 +6360,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="866"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Перенос:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="886"/>
@@ -6506,7 +6506,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="247"/>
       <source>Language &amp;&amp; data encoding</source>
-      <translation type="unfinished"/>
+      <translation>Язык &amp;&amp; кодирование данных</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
@@ -6516,7 +6516,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="260"/>
       <source>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Вы можете помочь перевести Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="264"/>
@@ -7554,7 +7554,7 @@ Locked</source>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>Команда или скрипт Луа</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
