@@ -2114,7 +2114,7 @@ Sie wurden dem Bereich hinzugefügt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1046"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Dieser Raum wurde von Bereich ID: %1 reklamiert, aber gehört nicht dorthin. Der Bereich wird ihn zukünftig nicht mehr berücksichtigen.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1052"/>
@@ -2122,19 +2122,24 @@ Sie wurden dem Bereich hinzugefügt.</translation>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Im Bereich ID: %1 gab es %2 Räume 
+mehr als eigentlich anwesend sein sollten, nämlich:
+%3
+Sie wurden aus dem Bereich entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1060"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In diesem Bereich gab es %1 Räume mehr als eigentlich anwesend sein sollten, nämlich: %2. Sie wurden entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1162"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
 </source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Die durchgeführten Änderungen sind:
+(ID) &quot;alter Name&quot; ==&gt; &quot;neuer Name&quot;
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1169"/>
@@ -2144,7 +2149,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1181"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Leere und doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1182"/>
@@ -2167,7 +2172,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1198"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1199"/>
@@ -2209,7 +2214,7 @@ set one area&apos;s name to that of another that exists at the time.</source>
       <location filename="../src/TRoomDB.cpp" line="1241"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Standardregionsname (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden. Ergänze &quot;%1&quot; gegen die reservierte ID -1.</translation>
     </message>
   </context>
   <context>
