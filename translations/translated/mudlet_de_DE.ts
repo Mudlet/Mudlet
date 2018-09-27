@@ -1813,12 +1813,12 @@ Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;).</translation>
       <location filename="../src/TRoom.cpp" line="1301"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum mit der ID: %1 wurden ein oder mehrere überzählige benutzerdefinierte Linienelemente gefunden und entfernt: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1307"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Im Raum wurden ein oder mehrere überzählige benutzerdefinierte Linienelemente gefunden und entfernt: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
@@ -1833,14 +1833,20 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Der Raum mit der ID: %1 hat einen Ausgang &quot;%2&quot; in
+Richtung: %3 aber dieser Raum existiert nicht. Der Ausgang wird
+entfernt (aber die ID des Ziel-Raumes wird gespeichert in den 
+Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;) 
+und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1408"/>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ]  - Der Raum mit der ID: %1 hat einen Ausgang &quot;%2&quot; in
+Richtung: %3 aber außerdem eine Abzweigung. Ein richtiger Ausgang geht vor,
+also wird die Abzweigung entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1474"/>
@@ -1849,7 +1855,11 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Der Raum mit der ID: %1 hat einen Ausgang &quot;%2&quot; in
+Richtung: %3 aber dieser Raum existiert nicht. Der Ausgang wird
+entfernt (aber die ID des Ziel-Raumes wird gespeichert in den 
+Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;) 
+und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1501"/>
