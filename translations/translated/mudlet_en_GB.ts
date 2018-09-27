@@ -587,7 +587,9 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3345"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>Enter the symbol to use
+for these %n rooms:</numerusform>
         <numerusform>Enter the symbol to use
 for these %n rooms:</numerusform>
       </translation>
@@ -1861,7 +1863,10 @@ Mudlet - is your system running out of memory?</source>
  Look for further messsages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>[ ALERT ] - %n areas detected as missing in the map: adding them in.
+Look for further messages related to the rooms that are supposed to
+be in these areas...</numerusform>
         <numerusform>[ ALERT ] - %n areas detected as missing in the map: adding them in.
 Look for further messages related to the rooms that are supposed to
 be in these areas...</numerusform>
@@ -1872,7 +1877,9 @@ be in these areas...</numerusform>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>[ INFO ]  - The %n missing areas are now called:
+(ID) ==&gt; &quot;name&quot;</numerusform>
         <numerusform>[ INFO ]  - The %n missing areas are now called:
 (ID) ==&gt; &quot;name&quot;</numerusform>
       </translation>

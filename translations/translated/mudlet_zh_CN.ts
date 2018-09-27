@@ -565,7 +565,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3236"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>移动选择，将中心从高亮房间 (%1) 移至:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3238"/>
@@ -587,13 +587,15 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3353"/>
       <location filename="../src/T2DMap.cpp" line="3392"/>
       <source>Enter room symbol</source>
-      <translation type="unfinished"/>
+      <translation>输入房间符号</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3345"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>输入用于此/这些房间的符号:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3355"/>
@@ -601,20 +603,20 @@ for this/these room(s):</source>
 more of the selected rooms, delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
-      <translation type="unfinished"/>
+      <translation>在一个或多个选择的房间中仅使用的符号为 &quot;%1&quot;，删除此符号以从所有选择的房间中清除或替换用于所有房间的新符号:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3360"/>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
-      <translation type="unfinished"/>
+      <translation>选择的房间符号为 &quot;%1&quot;，点击此处以清除符号或使用新符号替换此房间符号:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3385"/>
       <location filename="../src/T2DMap.cpp" line="3789"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {计数: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3393"/>
@@ -625,12 +627,12 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>从列表中选择已有符号 (根据常用等级分类) 或输入一个或多个字形 (即可见字符) 已设置;或输入空格以清除;所有被选择的房间:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3547"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>分散房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3548"/>
