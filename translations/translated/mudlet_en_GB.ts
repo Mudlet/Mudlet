@@ -1878,9 +1878,9 @@ be in these areas...</numerusform>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ INFO ]  - The %n missing areas are now called:
+        <numerusform>[ INFO ]  - The missing area is now called:
 (ID) ==&gt; &quot;name&quot;</numerusform>
-        <numerusform>[ INFO ]  - The %n missing areas are now called:
+        <numerusform>[ INFO ]  - The missing areas are now called:
 (ID) ==&gt; &quot;name&quot;</numerusform>
       </translation>
     </message>
