@@ -2983,33 +2983,34 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle einen besonderen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die erste Spalte ist markiert, wenn der Ausgang schon so eine benutzerdefinierte Linie hat.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
       <source>Special Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Besonderer Ausgang:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
       <source>Has
 custom line?</source>
-      <translation type="unfinished"/>
+      <translation>Hat benutzer-
+definierte Linie?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Gibt an, ob es schon eine benutzerdefinierte für diesen besonderen Ausgang gibt. Dieser wird ersetzt, wenn der Ausgang gewählt wird.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
       <source> Destination </source>
-      <translation type="unfinished"/>
+      <translation> Ziel </translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>The room this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Der Raum zu dem dieser besondere Ausgang hinführt.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
@@ -3019,13 +3020,14 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>The command or LUA script that goes to the given room.</source>
-      <translation type="unfinished"/>
+      <translation>Der Befehl oder das LUA Skript, das in den gegebenen Raum führt.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>To remove a custom line, cancel this dialog,
 select the line and right-click to obtain a &quot;delete&quot; option.</source>
-      <translation type="unfinished"/>
+      <translation>Um eine benutzerdefinierte Linie zu entfernen, breche diesen Dialog ab,
+wähle die Linie und rechtsklicke für die Möglichkeit zu &quot;löschen&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
@@ -3038,14 +3040,16 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="14"/>
       <source>Confirm permanent profile deletion</source>
-      <translation type="unfinished"/>
+      <translation>Bestätige die permanente Löschung des Profils</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="26"/>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>Bist du sicher, dass du dieses Profil löschen willst? Alles (Aliase, Trigger, Sicherungen, usw) wird verschwinden.
+
+Falls du dir sicher bist, schreibe den Profilnamen als Bestätigung:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
@@ -3069,29 +3073,34 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
       <source>Symbol
 (Set Font)</source>
-      <translation type="unfinished"/>
+      <translation>Symbol (in
+ausgewählter
+Schriftart)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
       <source>Symbol
 (All Fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Symbol (in
+jeder
+Schriftart)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
       <source>Codepoints</source>
-      <translation type="unfinished"/>
+      <translation>Codepoints</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
       <source>Usage
 Count</source>
-      <translation type="unfinished"/>
+      <translation>Anzahl der
+Nutzungen</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Räume</translation>
     </message>
   </context>
   <context>
@@ -3416,7 +3425,8 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="229"/>
       <source>Cannot find a path to this room.
 </source>
-      <translation type="unfinished"/>
+      <translation>Finde keinen Weg zu diesem Raum.
+</translation>
     </message>
   </context>
   <context>
@@ -3424,7 +3434,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="14"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="21"/>
