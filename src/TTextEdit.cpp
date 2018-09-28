@@ -1513,11 +1513,18 @@ void TTextEdit::drawForegroundClipboard(QPainter& painter, QRect r, int lineOffs
 
     qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep before lines";
     int toLine = r.height() / mFontHeight;
+    qDebug() << "drawing" << (toLine+lineOffset) - (lineOffset) <<"lines";
+    auto timeout = mudlet::self()->mCopyAsImageMaxDuration;
     for (int i = 0; i <= toLine; i++) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
         drawLine(p, i + lineOffset, i);
+
+        if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - t1 ).count() >= timeout) {
+            qDebug().nospace() << "timeout (" << timeout << "s) reached, managed to draw " << i << " lines";
+            break;
+        }
     }
     p.end();
 

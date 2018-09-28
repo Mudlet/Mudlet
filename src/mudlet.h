@@ -353,6 +353,9 @@ public:
     // compatibility...
     bool mEnableFullScreenMode;
 
+    // approximate max duration that 'Copy as image' is allowed to take (seconds)
+    int mCopyAsImageMaxDuration;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();

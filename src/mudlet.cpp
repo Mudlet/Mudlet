@@ -159,6 +159,7 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mShowIconsOnDialogs(true)
+, mCopyAsImageMaxDuration{3}
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -2389,6 +2390,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     if (settings.value("maximized", false).toBool()) {
         showMaximized();
     }
+    mCopyAsImageMaxDuration = settings.value(QStringLiteral("copyAsImageMaxDuration"), mCopyAsImageMaxDuration).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2511,6 +2513,7 @@ void mudlet::writeSettings()
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
+    settings.setValue("copyAsImageMaxDuration", mCopyAsImageMaxDuration);
 }
 
 void mudlet::slot_show_connection_dialog()
