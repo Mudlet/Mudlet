@@ -57,7 +57,7 @@ public:
     void drawBackground(QPainter&, const QRect&, const QColor&) const;
     void updateLastLine();
     uint getGraphemeBaseCharacter(const QString& str) const;
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, bool debug) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
     void showNewLines();

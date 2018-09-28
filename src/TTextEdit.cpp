@@ -549,14 +549,11 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
     }
 }
 
-void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, bool debug) const
+void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
 {
 
     QPoint cursor(0, lineOfScreen);
     QString lineText = mpBuffer->lineBuffer.at(lineNumber);
-    if (debug) {
-        qDebug() << "lineNumber" << lineNumber <<"lineOfScreen"<< lineOfScreen << lineText;
-    }
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
 
     if (mShowTimeStamps) {
@@ -732,7 +729,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         mpBuffer->dirty[lineOffset + i] = false;
-        drawLine(p, i + lineOffset, i, false);
+        drawLine(p, i + lineOffset, i);
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -1517,68 +1514,12 @@ void TTextEdit::drawForegroundClipboard(QPainter& painter, const QRect& r, int l
         p.setRenderHint(QPainter::TextAntialiasing, false);
     }
 
-    QPoint P_topLeft = r.topLeft();
-    QPoint P_bottomRight = r.bottomRight();
-    int x_topLeft = 0;
-    int y_topLeft = P_topLeft.y();
-    int x_bottomRight = P_bottomRight.x();
-    int y_bottomRight = P_bottomRight.y();
-
-    if (x_bottomRight > mScreenWidth * mFontWidth) {
-        x_bottomRight = mScreenWidth * mFontWidth;
-    }
-
-    int x1 = x_topLeft / mFontWidth;
-    int y1 = y_topLeft / mFontHeight;
-    int x2 = x_bottomRight / mFontWidth;
     int y2 = r.height() / mFontHeight;
-
-    int from = 0;
-
-    bool noScroll = false;
-    bool noCopy = false;
-
-    if (abs(mScrollVector) > mScreenHeight || mForceUpdate || lineOffset < 10) {
-        noScroll = true;
-    }
-    if ((r.height() < rect().height()) && (lineOffset > 0)) {
-        p.drawPixmap(0, 0, mScreenMap);
-        if (!mForceUpdate && !mMouseTracking) {
-            from = y1;
-            noScroll = true;
-            noCopy = true;
-        } else {
-            from = y1;
-            y2 = mScreenHeight;
-            noScroll = true;
-        }
-    }
-    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
-        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
-            && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
-            p.drawPixmap(0, 0, screenPixmap);
-            from = mScreenHeight - mScrollVector - 1;
-        }
-    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
-        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
-            && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
-            p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
-            from = 0;
-            y2 = abs(mScrollVector);
-        }
-    }
-//    QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
-//    drawBackground(p, deleteRect, mBgColor);
-    if (mIsTailMode)
-        qDebug() <<"from" << from+lineOffset <<"y2" << y2+lineOffset;
-    for (int i = from; i <= y2; i++) {
+    for (int i = 0; i <= y2; i++) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
-            qDebug() << "hit da break";
             break;
         }
-        drawLine(p, i + lineOffset, i, true);
+        drawLine(p, i + lineOffset, i);
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
