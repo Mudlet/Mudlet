@@ -37,6 +37,7 @@
 #include <QScrollBar>
 #include <QToolTip>
 #include <QTextBoundaryFinder>
+#include <chrono>
 #include "post_guard.h"
 
 
@@ -1426,9 +1427,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
 void TTextEdit::slot_copySelectionToClipboardImage()
 {
-    //this->grab().save(QStringLiteral("/tmp/image.png"));
-
-    //    const QRect& rect = e->rect();
+    t1 = std::chrono::high_resolution_clock::now();
 
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
@@ -1447,6 +1446,11 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
+    // no selection is made
+    if ((mPB.y() - mPA.y() == 0)) {
+        return;
+    }
+
     if (mScreenHeight <= 0 || mScreenWidth <= 0) {
         mScreenHeight = height() / mFontHeight;
         mScreenWidth = 100;
@@ -1460,9 +1464,9 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     // find the biggest width of text we need to work with
     int characterWidth = 0;
-    for (int y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
-        auto lineWidth = static_cast<int>(mpBuffer->buffer[y].size());
-        characterWidth = lineWidth > characterWidth ? lineWidth : characterWidth;
+    for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
+        auto lineWidth = static_cast<int>(mpBuffer->buffer.at(y).size());
+        characterWidth = qMax(lineWidth, characterWidth);
     }
 
     auto widthpx = qMin(100'000, characterWidth*mFontWidth);
@@ -1480,27 +1484,27 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     // deselect to prevent inverted colours in image
     unHighlight();
     mSelectedRegion = QRegion(0, 0, 0, 0);
-
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep done";
 
     QRect borderRect = QRect(0, mScreenHeight * mFontHeight, rect.width(), rect.height());
-    qDebug() << "borderRect" << borderRect;
     drawBackground(painter, borderRect, mBgColor);
+        qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms borderRect done";
     QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
-    qDebug() << "borderRect2" << borderRect2;
     drawBackground(painter, borderRect2, mBgColor);
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms borderRect2 done";
+
     drawForegroundClipboard(painter, rect, lineOffset);
 
-#if defined(Q_OS_LINUX)
-    pix.save(QStringLiteral("/tmp/image.png"));
-#endif
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms finished painting all";
     QApplication::clipboard()->setImage(pix.toImage(), QClipboard::Clipboard);
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms end";
+
 }
 
 // a stateless version of drawForeground that doesn't do any caching
 // (and thus doesn't mess up any of the caches)
-void TTextEdit::drawForegroundClipboard(QPainter& painter, const QRect& r, int lineOffset) const
+void TTextEdit::drawForegroundClipboard(QPainter& painter, QRect r, int lineOffset) const
 {
-    QPixmap screenPixmap;
     QPixmap pixmap = QPixmap(r.width(), r.height());
     pixmap.fill(palette().base().color());
 
@@ -1514,16 +1518,20 @@ void TTextEdit::drawForegroundClipboard(QPainter& painter, const QRect& r, int l
         p.setRenderHint(QPainter::TextAntialiasing, false);
     }
 
-    int y2 = r.height() / mFontHeight;
-    for (int i = 0; i <= y2; i++) {
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep before lines";
+    int toLine = r.height() / mFontHeight;
+    for (int i = 0; i <= toLine; i++) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
         drawLine(p, i + lineOffset, i);
     }
     p.end();
+
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms p.end";
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     painter.drawPixmap(0, 0, pixmap);
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms copied into painter";
 }
 
 void TTextEdit::searchSelectionOnline()
