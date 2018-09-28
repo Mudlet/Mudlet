@@ -392,7 +392,7 @@ void TTextEdit::scrollDown(int lines)
     }
 }
 
-inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, const QColor& bgColor)
+inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, const QColor& bgColor) const
 {
     QRect bR = rect;
     painter.fillRect(bR.x(), bR.y(), bR.width(), bR.height(), bgColor);
@@ -523,13 +523,12 @@ void TTextEdit::drawFrame(QPainter& p, const QRect& rect)
 
 void TTextEdit::updateLastLine()
 {
-    qDebug() << "--->ACHTUNG: error: updateLastLine() called";
     QRect r(0, (mScreenHeight - 1) * mFontHeight, mScreenWidth * mFontWidth, mScreenHeight * mFontHeight);
     mForceUpdate = true;
     update(r);
 }
 
-inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
+inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
 {
     if (str.isEmpty()) {
         return 0;
@@ -550,10 +549,14 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
     }
 }
 
-void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
+void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, bool debug) const
 {
+
     QPoint cursor(0, lineOfScreen);
-    QString lineText = mpBuffer->lineBuffer[lineNumber];
+    QString lineText = mpBuffer->lineBuffer.at(lineNumber);
+    if (debug) {
+        qDebug() << "lineNumber" << lineNumber <<"lineOfScreen"<< lineOfScreen << lineText;
+    }
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
 
     if (mShowTimeStamps) {
@@ -591,7 +594,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
  * @param charStyle
  * @return Return the display width of the grapheme
  */
-int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle)
+int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle) const
 {
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
@@ -729,7 +732,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         mpBuffer->dirty[lineOffset + i] = false;
-        drawLine(p, i + lineOffset, i);
+        drawLine(p, i + lineOffset, i, false);
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -738,11 +741,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScreenMap = pixmap.copy();
     }
     mScrollVector = 0;
-    // Only place this value is changed (apart from initialisation to 0):
     mLastRenderBottom = lineOffset;
     mForceUpdate = false;
 }
-
 
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
@@ -1457,7 +1458,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         }
     }
 
-    auto height = (mPB.y() - mPA.y()+1)*mFontHeight;
+    auto heightpx = qMin(1'000'000, (mPB.y() - mPA.y()+1)*mFontHeight);
+    auto lineOffset = mPA.y();
 
     // find the biggest width of text we need to work with
     int characterWidth = 0;
@@ -1466,20 +1468,12 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         characterWidth = lineWidth > characterWidth ? lineWidth : characterWidth;
     }
 
+    auto widthpx = qMin(100'000, characterWidth*mFontWidth);
 
-    auto width = characterWidth*mFontWidth;
-
-    if (width >= 1'000'000) {
-        width = 1'000'000;
-    }
-    if (height >= 1'000'000) {
-        height = 1'000'000;
-    }
-
-    auto rect = QRect(mPA.x(), mPA.y(), width, height);
+    auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
     qDebug() << "rect" << rect;
 
-    auto pix = QPixmap(width, height);
+    auto pix = QPixmap(widthpx, heightpx);
 
     QPainter painter(&pix);
     if (!painter.isActive()) {
@@ -1497,10 +1491,98 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
     qDebug() << "borderRect2" << borderRect2;
     drawBackground(painter, borderRect2, mBgColor);
-    drawForeground(painter, rect);
+    drawForegroundClipboard(painter, rect, lineOffset);
 
+#if defined(Q_OS_LINUX)
     pix.save(QStringLiteral("/tmp/image.png"));
+#endif
     QApplication::clipboard()->setImage(pix.toImage(), QClipboard::Clipboard);
+}
+
+// a stateless version of drawForeground that doesn't do any caching
+// (and thus doesn't mess up any of the caches)
+void TTextEdit::drawForegroundClipboard(QPainter& painter, const QRect& r, int lineOffset) const
+{
+    QPixmap screenPixmap;
+    QPixmap pixmap = QPixmap(r.width(), r.height());
+    pixmap.fill(palette().base().color());
+
+    QPainter p(&pixmap);
+    p.setCompositionMode(QPainter::CompositionMode_Source);
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        p.setFont(mpHost->mDisplayFont);
+        p.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
+    } else {
+        p.setFont(mDisplayFont);
+        p.setRenderHint(QPainter::TextAntialiasing, false);
+    }
+
+    QPoint P_topLeft = r.topLeft();
+    QPoint P_bottomRight = r.bottomRight();
+    int x_topLeft = 0;
+    int y_topLeft = P_topLeft.y();
+    int x_bottomRight = P_bottomRight.x();
+    int y_bottomRight = P_bottomRight.y();
+
+    if (x_bottomRight > mScreenWidth * mFontWidth) {
+        x_bottomRight = mScreenWidth * mFontWidth;
+    }
+
+    int x1 = x_topLeft / mFontWidth;
+    int y1 = y_topLeft / mFontHeight;
+    int x2 = x_bottomRight / mFontWidth;
+    int y2 = r.height() / mFontHeight;
+
+    int from = 0;
+
+    bool noScroll = false;
+    bool noCopy = false;
+
+    if (abs(mScrollVector) > mScreenHeight || mForceUpdate || lineOffset < 10) {
+        noScroll = true;
+    }
+    if ((r.height() < rect().height()) && (lineOffset > 0)) {
+        p.drawPixmap(0, 0, mScreenMap);
+        if (!mForceUpdate && !mMouseTracking) {
+            from = y1;
+            noScroll = true;
+            noCopy = true;
+        } else {
+            from = y1;
+            y2 = mScreenHeight;
+            noScroll = true;
+        }
+    }
+    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
+        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
+            && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
+            p.drawPixmap(0, 0, screenPixmap);
+            from = mScreenHeight - mScrollVector - 1;
+        }
+    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
+        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
+            && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
+            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
+            p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
+            from = 0;
+            y2 = abs(mScrollVector);
+        }
+    }
+//    QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
+//    drawBackground(p, deleteRect, mBgColor);
+    if (mIsTailMode)
+        qDebug() <<"from" << from+lineOffset <<"y2" << y2+lineOffset;
+    for (int i = from; i <= y2; i++) {
+        if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
+            qDebug() << "hit da break";
+            break;
+        }
+        drawLine(p, i + lineOffset, i, true);
+    }
+    p.end();
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.drawPixmap(0, 0, pixmap);
 }
 
 void TTextEdit::searchSelectionOnline()
@@ -1648,7 +1730,7 @@ int TTextEdit::imageTopLine()
     }
 
     if (mCursorY > mScreenHeight) {
-        // mIsTailMode is alway true for lower pane and true for upper one when
+        // mIsTailMode is always true for lower pane and true for upper one when
         // it is scrolled to the bottom and new text is to be appended and the
         // older text is to scroll up:
         if (mIsTailMode && (mpBuffer->lineBuffer.at(mpBuffer->getLastLineNumber()).isEmpty())) {

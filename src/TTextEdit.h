@@ -54,11 +54,11 @@ public:
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
     void drawFrame(QPainter&, const QRect&);
-    void drawBackground(QPainter&, const QRect&, const QColor&);
+    void drawBackground(QPainter&, const QRect&, const QColor&) const;
     void updateLastLine();
-    uint getGraphemeBaseCharacter(const QString& str);
-    void drawLine(QPainter &painter, int lineNumber, int rowOfScreen);
-    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style);
+    uint getGraphemeBaseCharacter(const QString& str) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, bool debug) const;
+    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
     void showNewLines();
     void forceUpdate();
@@ -125,7 +125,7 @@ private slots:
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
-    void drawForegroundClipboard(QPainter &painter, const QRect &r);
+    void drawForegroundClipboard(QPainter& painter, const QRect& r, int lineOffset) const;
 
     int mFontHeight;
     int mFontWidth;
