@@ -1465,7 +1465,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     // find the biggest width of text we need to work with
     int characterWidth = 0;
     for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
-        auto lineWidth = static_cast<int>(mpBuffer->buffer.at(y).size());
+        const auto lineWidth = static_cast<int>(mpBuffer->buffer.at(y).size());
         characterWidth = qMax(lineWidth, characterWidth);
     }
 
@@ -1485,13 +1485,6 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     unHighlight();
     mSelectedRegion = QRegion(0, 0, 0, 0);
     qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep done";
-
-    QRect borderRect = QRect(0, mScreenHeight * mFontHeight, rect.width(), rect.height());
-    drawBackground(painter, borderRect, mBgColor);
-        qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms borderRect done";
-    QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
-    drawBackground(painter, borderRect2, mBgColor);
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms borderRect2 done";
 
     drawForegroundClipboard(painter, rect, lineOffset);
 
