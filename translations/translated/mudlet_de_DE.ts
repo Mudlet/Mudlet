@@ -7728,7 +7728,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2150"/>
       <source>&amp;End S. Exits editing</source>
-      <translation type="unfinished"/>
+      <translation>Besonderen Auswahl abwählen</translation>
     </message>
   </context>
   <context>
