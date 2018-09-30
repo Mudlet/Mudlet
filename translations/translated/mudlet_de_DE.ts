@@ -5562,7 +5562,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="335"/>
       <source>Module manager</source>
-      <translation>Modulverwaltung</translation>
+      <translation>Module</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="338"/>
@@ -5972,7 +5972,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="350"/>
       <source>Notepad</source>
-      <translation>Texteditor</translation>
+      <translation>Notiz</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
@@ -5983,7 +5983,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="356"/>
       <location filename="../src/mudlet.cpp" line="930"/>
       <source>Package Manager</source>
-      <translation>Paketverwaltung</translation>
+      <translation>Pakete</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="357"/>
@@ -5993,7 +5993,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="362"/>
       <source>Module Manager</source>
-      <translation>Modulverwaltung</translation>
+      <translation>Module</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
@@ -6096,7 +6096,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="756"/>
       <source>Module Manager - %1</source>
-      <translation>Modulverwaltung - %1</translation>
+      <translation>Module - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="865"/>
