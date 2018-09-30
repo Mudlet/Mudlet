@@ -455,6 +455,7 @@ private:
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
     QByteArray encodeBytes(const char*);
+    void setMatches(lua_State* L);
 
     QNetworkAccessManager* mpFileDownloader;
 
@@ -462,10 +463,6 @@ private:
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
-    void logError(std::string& e, const QString&, const QString& function);
-    static int setLabelCallback(lua_State*, const QString& funcName);
-    bool validLuaCode(const QString &code);
-    void setMatches(lua_State* L);
 
     QMap<QNetworkReply*, QString> downloadMap;
 
