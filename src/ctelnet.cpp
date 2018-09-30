@@ -436,7 +436,7 @@ bool cTelnet::sendData(QString& data)
 bool cTelnet::socketOutRaw(string& data)
 {
     // We were using socket.iswritable() but it was not clear that that was a
-    // suitable to check for an open, usable connection - whereas isvalid()
+    // suitable way to check for an open, usable connection - whereas isvalid()
     // is true if the socket is valid and ready for use:
     if (!socket.isValid()) {
         return false;
@@ -445,9 +445,16 @@ bool cTelnet::socketOutRaw(string& data)
     std::size_t written = 0;
 
     do {
-        qint64 chunkWritten = socket.write(data.substr(written).data());
+        // Must use the two-argument QAbstractSocket::write(...) because there
+        // may be ASCII NUL characters in data and the first of those will
+        // terminate the writing of the bytes following it in the single
+        // argument method call:
+        qint64 chunkWritten = socket.write(data.substr(written).data(), (dataLength - written));
 
-        if (chunkWritten == -1) {
+        if (chunkWritten < 0) {
+            // -1 is the sentinal (error) value but any other negative value
+            // would not make sense and it would break the cast to the
+            // (unsigned) std::size_t type in the next code fragement!
             return false;
         }
 
