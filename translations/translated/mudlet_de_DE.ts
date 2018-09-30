@@ -5537,7 +5537,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Package manager</source>
-      <translation>Paketverwaltung</translation>
+      <translation>Pakete</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
