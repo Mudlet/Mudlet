@@ -1844,7 +1844,7 @@ und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation>[ ALARM ]  - Der Raum mit der ID: %1 hat einen Ausgang &quot;%2&quot; in
+      <translation>[ ACHTUNG ]  - Der Raum mit der ID: %1 hat einen Ausgang &quot;%2&quot; in
 Richtung: %3 aber außerdem eine Abzweigung. Ein richtiger Ausgang geht vor,
 also wird die Abzweigung entfernt.</translation>
     </message>
@@ -1940,12 +1940,12 @@ Arbeitsspeicher frei?</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="668"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation>[ ALARM ] - Bereich mit ID: %1 erwartet, aber nicht gefunden, wird erstellt.</translation>
+      <translation>[ ACHTUNG ] - Bereich mit ID: %1 erwartet, aber nicht gefunden, wird erstellt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="671"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation>[ ALARM ] - Bereich mit dieser ID erwartet, aber nicht gefunden, wird erstellt.</translation>
+      <translation>[ ACHTUNG ] - Bereich mit dieser ID erwartet, aber nicht gefunden, wird erstellt.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="700"/>
@@ -1954,10 +1954,10 @@ Arbeitsspeicher frei?</translation>
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALARM ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
+        <numerusform>[ ACHTUNG ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
  Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
  sein sollten...</numerusform>
-        <numerusform>[ ALARM ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
+        <numerusform>[ ACHTUNG ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
  Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
  sein sollten...</numerusform>
       </translation>
@@ -1969,11 +1969,11 @@ Arbeitsspeicher frei?</translation>
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALARM ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
+        <numerusform>[ ACHTUNG ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
  Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
  sein sollten...</numerusform>
-        <numerusform>[ ALARM ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
- Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
+        <numerusform>[ ACHTUNG ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
  sein sollten...</numerusform>
       </translation>
     </message>
@@ -1993,14 +1993,14 @@ Arbeitsspeicher frei?</translation>
       <location filename="../src/TRoomDB.cpp" line="751"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation>[ ALARM ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
+      <translation>[ ACHTUNG ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
 (Defekte IDs sind kleiner als +1 und auch nicht die reservierte ID -1)
 Bestimme neue IDs, die statt dessen genutzt werden können...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="756"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation>[ ALARM ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
+      <translation>[ ACHTUNG ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
 (Defekte IDs sind kleiner als +1 und auch nicht die reservierte ID -1)
 Achte auf weitere Nachrichten zu jedem betroffenen Bereich...</translation>
     </message>
@@ -2031,14 +2031,14 @@ Alt ==&gt; Neu</translation>
       <location filename="../src/TRoomDB.cpp" line="836"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation>[ ALARM ] - Defekte Raum-IDs in der Karte gefunden (Anzahl: %1) 
+      <translation>[ ACHTUNG ] - Defekte Raum-IDs in der Karte gefunden (Anzahl: %1) 
 (Defekte IDs sind kleiner als +1)
 Bestimme neue IDs, die statt dessen genutzt werden können.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="841"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation>[ ALARM ] - Defekte Raum-IDs in der Karte gefunden (Anzahl: %1) 
+      <translation>[ ACHTUNG ] - Defekte Raum-IDs in der Karte gefunden (Anzahl: %1) 
 (Defekte IDs sind kleiner als +1)
 Achte auf weitere Nachrichten zu jedem betroffenen Raum...</translation>
     </message>
@@ -2149,7 +2149,7 @@ Sie wurden aus dem Bereich entfernt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1181"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation>[ ALARM ] - Leere und doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
+      <translation>[ ACHTUNG ] - Leere und doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1182"/>
@@ -2172,7 +2172,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1198"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation>[ ALARM ] - Doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
+      <translation>[ ACHTUNG ] - Doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1199"/>
@@ -2193,7 +2193,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1214"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation>[ ALARM ] - Ein unbenannter Bereich wurde in der Kartendatei festgestellt!</translation>
+      <translation>[ ACHTUNG ] - Ein unbenannter Bereich wurde in der Kartendatei festgestellt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1217"/>
@@ -2319,7 +2319,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation>[ ALARM ] - Entschuldigung, aber die gelesene Datei: 
+      <translation>[ ACHTUNG ] - Entschuldigung, aber die gelesene Datei: 
 &quot;%1&quot;
 berichtet ihre Version als %2. Sie muss aus einer späteren Mudlet Version stammen,
 diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet!</translation>
