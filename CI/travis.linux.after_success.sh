@@ -52,7 +52,8 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
 
     DEPLOY_URL=$(wget --method PUT --body-file="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" \
                    "https://transfer.sh/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
-    dblsqd --help
+
+    dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
   else
 
     # add ssh-key to ssh-agent for deployment
@@ -71,12 +72,12 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
 
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
-    
+
     # generate and deploy source tarball
     cd "${HOME}"
     # get the archive script
     wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
-    
+
     cd "${TRAVIS_BUILD_DIR}"
     # generate and upload the tarball
     bash "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
