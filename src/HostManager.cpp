@@ -127,13 +127,10 @@ void HostManager::postIrcMessage(QString a, QString b, QString c)
 // The slightly convoluted way we step through the list of hosts is so that we
 // send out the events to the other hosts in a predictable and consistent order
 // and so that no one host gets an unfair advantage when emitting events. The
-// sending profile host does NOT get the event!
+// sending profile host does NOT get the event - if the pointer to it is a
+// non-null value!
 void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
 {
-    if (!pHost) {
-        return;
-    }
-
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     const QList<QSharedPointer<Host>> hostList = mHostPool.values();
     mPoolReadWriteLock.unlock();
@@ -145,14 +142,18 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
     while (i < hostList.size()) {
         if (hostList.at(i) && hostList.at(i) != pHost) {
             beforeSendingHost.append(i++);
-        } else if (hostList.at(i) && hostList.at(i) == pHost) {
+        } else if (pHost && hostList.at(i) && hostList.at(i) == pHost) {
+            // By testing for a non-null pHost we can also use this to post to
+            // ALL hosts - which can be useful for some mudlet class actions
+            // that are not Host specific:
             sendingHost = i++;
             break;
         } else {
             i++;
         }
     }
-    while (i < hostList.size()) {
+    // Now skip the following should there be a null pHost value:
+    while (pHost && i < hostList.size()) {
         if (hostList.at(i) && hostList.at(i) != pHost) {
             afterSendingHost.append(i);
         }

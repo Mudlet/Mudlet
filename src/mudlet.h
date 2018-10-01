@@ -353,7 +353,9 @@ public:
     // compatibility...
     bool mEnableFullScreenMode;
 
-    QPointer<QTimer> mInspectingTimer;
+    QPointer<QTimer> mpInspectingTimer;
+    QCursor mInspectorCursorPassive;
+    QCursor mInspectorCursorActive;
 
     void inspectWidget();
 

@@ -11145,34 +11145,70 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncodingsList
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startInspectingMudlet
 int TLuaInterpreter::startInspectingMudlet(lua_State* L)
 {
-    auto& timer = mudlet::self()->mInspectingTimer;
+    mudlet* pMudlet = mudlet::self();
+    auto& timer = pMudlet->mpInspectingTimer;
 
     if (!timer) {
         timer = new QTimer();
-        connect(timer.data(), &QTimer::timeout, mudlet::self(), &mudlet::inspectWidget);
-    }
+        qint64 interval = 0;
+        if (lua_gettop(L)) {
+            if (!lua_isnumber(L, 1)) {
+                lua_pushfstring(L, "startInspectingMudlet: bad argument #1 type (inspection interval, in milliseconds, is an optional number, got %s!)", luaL_typename(L, 1));
+                return lua_error(L);
+            }
+            interval = lua_tonumber(L, 1);
+            if (interval < 0) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "inspection interval %d must be zero (for a single one) or a positive number of milliseconds", interval);
+                return 2;
+            }
+        }
 
-    timer->start(1000);
-    lua_pushboolean(L, true);
-    return 1;
+        timer->setInterval(interval);
+        // If it is a zero interval make it a single shot that goes off ASAP
+        timer->setSingleShot(!interval);
+
+        connect(timer.data(), &QTimer::timeout, mudlet::self(), &mudlet::inspectWidget);
+        timer->start();
+        qApp->setOverrideCursor(pMudlet->mInspectorCursorPassive);
+        qApp->processEvents();
+        lua_pushboolean(L, true);
+        return 1;
+    } else if (timer->isActive()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Inspector has already been activated by this or another profile");
+        return 2;
+    } else {
+        // Should be unreachable now...
+        timer->start();
+        qApp->setOverrideCursor(pMudlet->mInspectorCursorPassive);
+        qApp->processEvents();
+        lua_pushboolean(L, true);
+        return 1;
+    }
 }
 
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncodingsList
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopInspectingMudlet
 int TLuaInterpreter::stopInspectingMudlet(lua_State* L)
 {
-    auto& timer = mudlet::self()->mInspectingTimer;
+    auto& timer = mudlet::self()->mpInspectingTimer;
 
-    if (!timer) {
-        lua_pushboolean(L, false);
-        lua_pushstring(L, "not inspecting Mudlet already");
+    // The ordering of the following tests is important!
+    if (!timer || !timer->isActive()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "have not started inspecting Mudlet");
         return 2;
     }
 
     timer->stop();
+    timer->deleteLater();
+    timer = nullptr;
+    qApp->restoreOverrideCursor();
+    qApp->processEvents();
     lua_pushboolean(L, true);
     return 1;
 }

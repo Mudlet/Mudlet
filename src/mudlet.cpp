@@ -155,6 +155,7 @@ mudlet::mudlet()
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
+, mpInspectingTimer(nullptr)
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
@@ -488,6 +489,13 @@ mudlet::mudlet()
 
     // load bundled fonts
     mFontManager.addFonts();
+
+    // Set up custom cursors:
+    // Thanks to: https://stackoverflow.com/a/36263674/4805858
+    auto pixmap_inspectorCursorPassive = QPixmap(":/cursors/inspector_passive.png");
+    mInspectorCursorPassive = QCursor(pixmap_inspectorCursorPassive, 15, 15);
+    auto pixmap_inspectorCursorActive = QPixmap(":/cursors/inspector_active.png");
+    mInspectorCursorActive = QCursor(pixmap_inspectorCursorActive, 15, 15);
 }
 
 QSettings* mudlet::getQSettings()
@@ -3832,6 +3840,8 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
 void mudlet::inspectWidget()
 {
+    qApp->changeOverrideCursor(mInspectorCursorActive);
+    qApp->processEvents();
     QVector<QPointer<QWidget>> widgets;
 
     auto* widget = qApp->widgetAt(QCursor::pos());
@@ -3848,4 +3858,70 @@ void mudlet::inspectWidget()
     }
 
     qDebug() << widgets;
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysInspectionEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // As this is a literal series of strings include a version code so that if
+    // we (have to) change the details user code can adapt itself to match - and
+    // we must increment this number each time we change what is reported in
+    // the loop:
+    event.mArgumentList.append(QString::number(1));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+
+    // Number of data items per widget in following loop
+    event.mArgumentList.append(QString::number(7));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+
+    unsigned int index = 0;
+    for (QWidget* pwidget : widgets) {
+        // 1: index
+        event.mArgumentList.append(QString::number(++index));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+
+        // 2: item class:
+        event.mArgumentList.append(pwidget->metaObject()->className());
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        // 3: item address:
+        // This is a horrible way to convert an address value to a QString but
+        // I haven't found a better way yet - also note the passing of the value
+        // as a STRING - it doesn't feel right but seems to be needed to pass
+        // a (long) HEX value - maybe we need an additional
+        // ARGUMENT_TYPE_ADDRESS ?
+        char addressBuffer[128];
+        void* address = static_cast<void*>(pwidget);
+        snprintf(addressBuffer, 127, "%p", address);
+        event.mArgumentList.append(QString(addressBuffer));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        // 4: item name:
+        event.mArgumentList.append(pwidget->objectName());
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        // 5: item visible:
+        event.mArgumentList.append(QString::number(pwidget->isVisible()));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+
+        // 6: item enabled:
+        event.mArgumentList.append(QString::number(pwidget->isEnabled()));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+
+        // 7: item's parent:
+        void* parentAddress = static_cast<void*>(pwidget->parent());
+        snprintf(addressBuffer, 127, "%p", parentAddress);
+        event.mArgumentList.append(QString(addressBuffer));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    }
+
+    getHostManager().postInterHostEvent(nullptr, event);
+
+    if (mpInspectingTimer->isSingleShot()) {
+        mpInspectingTimer->deleteLater();
+        mpInspectingTimer = nullptr;
+        qApp->restoreOverrideCursor();
+    } else {
+        qApp->changeOverrideCursor(mInspectorCursorPassive);
+    }
+    qApp->processEvents();
 }
