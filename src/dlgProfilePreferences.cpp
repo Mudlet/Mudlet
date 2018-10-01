@@ -2894,7 +2894,7 @@ void dlgProfilePreferences::generateDicordTooltips()
         <img src=":/icons/discord-rich-presence-large-icon.png"/>
         <p style="color: #989A9F;" id="large-icon">%2</p>
       </td>
-    <td class="tg-jn9l"><p class="detail" id="detail">%3 %4</p></td>
+      <td class="tg-jn9l"><p class="detail" id="detail">%3 %4</p></td>
     </tr>
     <tr>
       <td class="tg-jn9l">
