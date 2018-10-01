@@ -1446,8 +1446,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
-    // no selection is made
-    if ((mPB.y() - mPA.y() == 0)) {
+    if (mSelectedRegion == QRegion(0, 0, 0, 0)) {
         return;
     }
 
