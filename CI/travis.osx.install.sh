@@ -6,7 +6,7 @@ fi
 
 set +e
 shopt -s expand_aliases
-BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks npm"
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo "Upgrading ${i}"
