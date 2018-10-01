@@ -1474,9 +1474,10 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
     qDebug() << "rect" << rect;
 
-    auto pix = QPixmap(widthpx, heightpx);
+    auto pixmap = QPixmap(widthpx, heightpx);
+    pixmap.fill(palette().base().color());
 
-    QPainter painter(&pix);
+    QPainter painter(&pixmap);
     if (!painter.isActive()) {
         return;
     }
@@ -1489,49 +1490,40 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     drawTextForClipboard(painter, rect, lineOffset);
 
     qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms finished painting all";
-    QApplication::clipboard()->setImage(pix.toImage(), QClipboard::Clipboard);
+    QApplication::clipboard()->setImage(pixmap.toImage(), QClipboard::Clipboard);
     qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms end";
 
 }
 
 // a stateless version of drawForeground that doesn't do any caching
 // (and thus doesn't mess up any of the caches)
-void TTextEdit::drawTextForClipboard(QPainter& painter, QRect r, int lineOffset) const
+void TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
 {
-    QPixmap pixmap = QPixmap(r.width(), r.height());
-    pixmap.fill(palette().base().color());
-
-    QPainter p(&pixmap);
-    p.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
     if (!mIsDebugConsole && !mIsMiniConsole) {
-        p.setFont(mpHost->mDisplayFont);
-        p.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
+        painter.setFont(mpHost->mDisplayFont);
+        painter.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
     } else {
-        p.setFont(mDisplayFont);
-        p.setRenderHint(QPainter::TextAntialiasing, false);
+        painter.setFont(mDisplayFont);
+        painter.setRenderHint(QPainter::TextAntialiasing, false);
     }
 
     qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep before lines";
-    int toLine = r.height() / mFontHeight;
+    int toLine = rectangle.height() / mFontHeight;
     qDebug() << "drawing" << (toLine+lineOffset) - (lineOffset) <<"lines";
     auto timeout = mudlet::self()->mCopyAsImageMaxDuration;
     for (int i = 0; i <= toLine; i++) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
-        drawLine(p, i + lineOffset, i);
+        drawLine(painter, i + lineOffset, i);
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - t1 ).count() >= timeout) {
             qDebug().nospace() << "timeout (" << timeout << "s) reached, managed to draw " << i << " lines";
             break;
         }
     }
-    p.end();
-
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms p.end";
-    painter.setCompositionMode(QPainter::CompositionMode_Source);
-    painter.drawPixmap(0, 0, pixmap);
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms copied into painter";
+    painter.end();
 }
 
 void TTextEdit::searchSelectionOnline()
