@@ -1030,7 +1030,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Позжий результат поиска.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1004"/>
@@ -1103,7 +1103,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
       <source>System message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Системное сообщение: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
@@ -1129,19 +1129,19 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="197"/>
       <source>failureToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>failureToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="159"/>
       <source>unableToOpenLocalFileForWriting</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToOpenLocalFileForWriting</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="176"/>
       <source>unableToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9113"/>
@@ -1568,42 +1568,42 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="87"/>
       <location filename="../src/TRoom.cpp" line="861"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Восток</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="88"/>
       <location filename="../src/TRoom.cpp" line="876"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Запад</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="89"/>
       <location filename="../src/TRoom.cpp" line="891"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Вверх</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="90"/>
       <location filename="../src/TRoom.cpp" line="906"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Вниз</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="91"/>
       <location filename="../src/TRoom.cpp" line="921"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>В</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="92"/>
       <location filename="../src/TRoom.cpp" line="936"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Из</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="93"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Другой</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="95"/>
@@ -1623,22 +1623,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="786"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Северо-восток</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="801"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Северо-запад</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="831"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Юго-восток</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="846"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Юго-запад</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="958"/>
@@ -2824,12 +2824,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="392"/>
       <source>SW</source>
-      <translation type="unfinished"/>
+      <translation>SW</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="402"/>
       <source>S</source>
-      <translation type="unfinished"/>
+      <translation>S</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="412"/>
@@ -7775,7 +7775,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="650"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;переключает отображения результатов поиска.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
