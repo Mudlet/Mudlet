@@ -125,7 +125,7 @@ private slots:
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
-    void drawForegroundClipboard(QPainter& painter, QRect r, int lineOffset) const;
+    void drawTextForClipboard(QPainter& painter, QRect r, int lineOffset) const;
 
     int mFontHeight;
     int mFontWidth;

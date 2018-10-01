@@ -1486,7 +1486,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep done";
 
-    drawForegroundClipboard(painter, rect, lineOffset);
+    drawTextForClipboard(painter, rect, lineOffset);
 
     qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms finished painting all";
     QApplication::clipboard()->setImage(pix.toImage(), QClipboard::Clipboard);
@@ -1496,7 +1496,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
 // a stateless version of drawForeground that doesn't do any caching
 // (and thus doesn't mess up any of the caches)
-void TTextEdit::drawForegroundClipboard(QPainter& painter, QRect r, int lineOffset) const
+void TTextEdit::drawTextForClipboard(QPainter& painter, QRect r, int lineOffset) const
 {
     QPixmap pixmap = QPixmap(r.width(), r.height());
     pixmap.fill(palette().base().color());
