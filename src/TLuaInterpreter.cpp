@@ -10453,22 +10453,7 @@ int TLuaInterpreter::openWebPage(lua_State* L)
     }
 }
 
-/*
- * Overrides the Discord application id used for this profile
- * By definition this stops the ability to use the Icon resources that have been
- * set up for the Mudlet client - so that ones specific to, say, a MUD Server
- * can be used INSTEAD.
- *
- * The Application ID seems to be an 18 digit number at the moment.
- * Specifying an empty string or no argument resets to using the default Mudlet
- * one...
- *
- * There is no lua getter for this value, if it is supplied via a GMCP or other
- * OOB from a Server they may not want to advertise it - though currently it
- * should be readable from the "Special options" tab of the
- * "Profile preferences".
- */
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordApplicationID
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordApplicationID
 int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10526,12 +10511,7 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
     }
 }
 
-// Could be used to check for Discord availability in Lua, will return nil if
-// it is not available or true/false depending on whether it is using Mudlets
-// own Discord Server and can safely use icon resources that we know
-// about - can also be used as a quick status check as it will return a nil if
-// Discord is NOT currently available with a reason:
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
 int TLuaInterpreter::usingMudletsDiscordID(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10548,7 +10528,7 @@ int TLuaInterpreter::usingMudletsDiscordID(lua_State* L)
     return 1;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIcon
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIcon
 int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10571,7 +10551,7 @@ int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIcon
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIcon
 int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10588,9 +10568,7 @@ int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
     return 1;
 }
 
-// Discord calls the two pictures "LargeImage" and "SmallImage" but their
-// purpose are explained by being called "LargeIcon" and "SmallIcon"
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIconText
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIconText
 int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10613,7 +10591,7 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIconText
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIconText
 int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10634,7 +10612,7 @@ int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
     return 1;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIcon
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIcon
 int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10657,7 +10635,7 @@ int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIcon
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIcon
 int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10678,7 +10656,7 @@ int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
     return 1;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIconText
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIconText
 int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10701,7 +10679,7 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIconText
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIconText
 int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10723,7 +10701,7 @@ int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
     return 1;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordDetail
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordDetail
 int TLuaInterpreter::setDiscordDetail(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10746,7 +10724,7 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordDetail
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordDetail
 int TLuaInterpreter::getDiscordDetail(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10770,7 +10748,7 @@ int TLuaInterpreter::getDiscordDetail(lua_State* L)
     return 1;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGame
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGame
 int TLuaInterpreter::setDiscordGame(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10795,7 +10773,7 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordState
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordState
 int TLuaInterpreter::setDiscordState(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10818,7 +10796,7 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordState
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordState
 int TLuaInterpreter::getDiscordState(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10841,7 +10819,7 @@ int TLuaInterpreter::getDiscordState(lua_State* L)
     return 1;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordElapsedStartTime
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordElapsedStartTime
 int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10871,7 +10849,7 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordRemainingEndTime
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordRemainingEndTime
 int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10901,7 +10879,7 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
     }
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordTimeStamps
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordTimeStamps
 int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10920,7 +10898,7 @@ int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
     return 2;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordParty
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordParty
 int TLuaInterpreter::setDiscordParty(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
@@ -10964,7 +10942,7 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
     return 1;
 }
 
-// TODO: Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordParty
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordParty
 int TLuaInterpreter::getDiscordParty(lua_State* L)
 {
     mudlet* pMudlet = mudlet::self();
