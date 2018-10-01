@@ -163,7 +163,7 @@ private:
     int mScreenWidth;
     QTime mLastClickTimer;
     bool mWideAmbigousWidthGlyphs;
-    std::chrono::system_clock::time_point mCopyImageStartTime;
+    std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
 };
 
 #endif // MUDLET_TTEXTEDIT_H
