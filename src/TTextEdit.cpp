@@ -1523,7 +1523,6 @@ void TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lin
             break;
         }
     }
-    painter.end();
 }
 
 void TTextEdit::searchSelectionOnline()
