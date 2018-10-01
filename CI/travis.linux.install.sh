@@ -28,6 +28,4 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
 fi
 
 # Install dblsqd in know place
-pushd "${HOME}"
-npm install dblsqd
-popd
+npm install -g dblsqd
