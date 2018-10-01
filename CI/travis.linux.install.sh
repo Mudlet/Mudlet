@@ -26,3 +26,8 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   cd ..
 # Coverity scan tool installed
 fi
+
+# Install dblsqd in know place
+pushd "${HOME}"
+npm install dblsqd
+popd
