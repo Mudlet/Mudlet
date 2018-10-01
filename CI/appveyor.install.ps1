@@ -203,6 +203,19 @@ function InstallPython() {
   }
 }
 
+function InstallNodejs() {
+  if($64Bit){
+    $downloadUrl = "https://nodejs.org/dist/v8.12.0/node-v8.12.0-x64.msi"
+  } else {
+    $downloadUrl = "https://nodejs.org/dist/v8.12.0/node-v8.12.0-x86.msi"
+  }
+  DownloadFile "$downloadUrl" "nodejs-installer.msi"
+  exec "msiexec.exe" @("/qn", "/li", "$workingBaseDir\nodejs-installer.log", "/i", "nodejs-installer.msi")
+  if(Test-Path -Path "$workingBaseDir\nodejs-installer.log" -PathType Leaf){
+    Get-Content "$workingBaseDir\nodejs-installer.log" | Out-File $logFile -Append
+  }
+}
+
 function InstallOpenssl() {
   DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2o-win32.zip" "openssl-1.0.2o-i386-win32.zip"
   ExtractZip "openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o"
@@ -385,6 +398,7 @@ CheckAndInstall "MSYS and autotools" "C:\MinGW\bin\autoconf" { InstallMsys }
 CheckAndInstall "Boost" "C:\Libraries\boost_1_67_0\bootstrap.bat" { InstallBoost }
 CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
 CheckAndInstall "Python" "C:\Python27\python.exe" { InstallPython }
+CheckAndInstall "node.js" "C:\Program Files\nodejs\npm.exe" { InstallNodejs }
 
 # Adapt the PATH variable again as we may have installed some dependencies just now and can determine their location.
 SetMingwBaseDir "$logFile"
