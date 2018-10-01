@@ -5582,7 +5582,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="351"/>
       <source>MultiView</source>
-      <translation>Mehrfachansicht</translation>
+      <translation>Multi-Sicht</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="354"/>
@@ -6008,7 +6008,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="373"/>
       <source>Reconnect</source>
-      <translation>Wiederverbinden</translation>
+      <translation>Neu verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="374"/>
@@ -6019,7 +6019,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="379"/>
       <location filename="../src/mudlet.cpp" line="465"/>
       <source>MultiView</source>
-      <translation>Mehrfachansicht</translation>
+      <translation>Multi-Sicht</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="380"/>
