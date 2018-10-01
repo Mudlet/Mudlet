@@ -30,6 +30,7 @@
 #include <QPointer>
 #include <QTime>
 #include <QWidget>
+#include <chrono>
 #include "post_guard.h"
 
 #include <string>
