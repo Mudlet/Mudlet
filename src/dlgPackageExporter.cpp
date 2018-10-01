@@ -302,7 +302,16 @@ void dlgPackageExporter::slot_export_package()
         return;
     }
 
-    close();
+    showUploadNudge();
+
+}
+
+void dlgPackageExporter::showUploadNudge()
+{
+   ui->infoLabel->setText(R"(<a href="https://forums.mudlet.org/posting.php?mode=post&f=6">Upload package to Mudlet</a>)");
+   ui->infoLabel->setTextFormat(Qt::RichText);
+   ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+   ui->infoLabel->setOpenExternalLinks(true);
 }
 
 void dlgPackageExporter::slot_addFiles()

@@ -997,18 +997,18 @@ bool TMap::findPath(int from, int to)
             // happens - Slysven
             mWeightList.prepend( r.cost );
             switch( r.direction ) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
-            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!" ) );      break;
-            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!" ) );       break;
-            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!" ) );      break;
-            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!" ) );       break;
-            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!" ) );        break;
-            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!" ) );    break;
-            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!" ) );        break;
-            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!" ) );      break;
+            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
+            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
+            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!" ) );      break;
+            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!" ) );       break;
+            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!" ) );        break;
+            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!" ) );    break;
+            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!" ) );        break;
+            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!" ) );      break;
             case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
             default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from id:" << previousRoomId << ", to id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
             }
@@ -1100,7 +1100,7 @@ bool TMap::serialize(QDataStream& ofs)
             QList<int> _oldList = pA->rooms.toList();
             ofs << _oldList;
         }
-        ofs << pA->ebenen;
+        ofs << pA->zLevels;
         ofs << pA->exits;
         ofs << pA->gridMode;
         ofs << pA->max_x;
@@ -1117,7 +1117,7 @@ bool TMap::serialize(QDataStream& ofs)
             ofs << pA->yminEbene;
         } else { // Recreate the pointless z{min|max}Ebene items
             QMap<int, int> dummyMinMaxEbene;
-            QListIterator<int> itZ(pA->ebenen);
+            QListIterator<int> itZ(pA->zLevels);
             while (itZ.hasNext()) {
                 int dummyEbenValue = itZ.next();
                 dummyMinMaxEbene.insert(dummyEbenValue, dummyEbenValue);
@@ -1397,7 +1397,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
-                ifs >> pA->ebenen;
+                ifs >> pA->zLevels;
                 ifs >> pA->exits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
@@ -1534,13 +1534,19 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
             || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
+            || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
             msgBox.exec();
             if (msgBox.clickedButton() == yesButton) {
-                downloadMap();
+                // no https support
+                if (mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
+                    downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
+                } else {
+                    downloadMap();
+                }
             } else if (msgBox.clickedButton() == noButton) {
                 ; //No-op to avoid unused "noButton"
             }
@@ -1667,7 +1673,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
-            ifs >> pA.ebenen;
+            ifs >> pA.zLevels;
             ifs >> pA.exits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
@@ -2069,7 +2075,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     mIsFileViewingRecommended = false;
 }
 
-void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
+void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2088,11 +2094,11 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     // We have the mutex locked - MUST unlock it when done under ALL circumstances
     QUrl url;
 
-    if (!remoteUrl || remoteUrl->isEmpty()) {
+    if (remoteUrl.isEmpty()) {
         // TODO: Provide a per profile means to specify a "user settable" default Url...
         url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
     } else {
-        url = QUrl::fromUserInput(*remoteUrl);
+        url = QUrl::fromUserInput(remoteUrl);
     }
 
     if (!url.isValid()) {
@@ -2106,10 +2112,10 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
         return;
     }
 
-    if (!localFileName || localFileName->isEmpty()) {
+    if (localFileName.isEmpty()) {
         mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, pHost->getName());
     } else {
-        mLocalMapFileName = *localFileName;
+        mLocalMapFileName = localFileName;
     }
 
     QNetworkRequest request = QNetworkRequest(url);

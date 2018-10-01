@@ -61,6 +61,17 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     // settings suggest it:
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
+    auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
+                                    "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
+                                    "<p>To play a game not in the list, click on %1 "
+                                    "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
+                                    "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
+                                    "<p>After that, click %2 <span style=\" color:#555753;\">Connect</span> "
+                                    "to play.</p>"
+                                    "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
+                                    "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
+                                    "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
+
     auto pWelcome_document = new QTextDocument(this);
     if (mudlet::self()->mShowIconsOnDialogs) {
         // Since I've switched to allowing the possibility of theme replacement
@@ -73,18 +84,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         // particular sequence of characters with an image generated from the
         // actual icon in use.
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
-                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
-                                           "<p>To play a game not in the list, click on NEW_PROFILE_ICON "
-                                           "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
-                                           "<i>Server address</i>, and <i>Port</i> fields in the <i>Required </i> area.</p>"
-                                           "<p>After that, click CONNECT_PROFILE_ICON <span style=\" color:#555753;\">Connect</span> "
-                                           "to play.</p>"
-                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
-                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
-                                           "Welcome message when icons for control buttons are shown, please leave the XXXX_ICON marker words as "
-                                           "they are - they will be replaced by icons (images) when this text is used; otherwise the text should "
-                                           "be identical to the one without icons.")));
+                                   .arg(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"), 
+                                                                  QStringLiteral("CONNECT_PROFILE_ICON"))));
 
         // As we are repurposing the cancel to be a close button we do want to
         // change it anyhow:
@@ -118,17 +119,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         cursor.clearSelection();
     } else {
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
-                                           "<p><center><b>Click on one of the MUDs on the list to play.</b></center></p>"
-                                           "<p>To play a game not in the list, click on <span style=\" color:#555753;\">New</span>, fill in the "
-                                           "<i>Profile Name</i>, <i>Server address</i>, and <i>Port</i> fields in the "
-                                           "<i>Required </i> area.</p>"
-                                           "<p>After that, click <span style=\" color:#555753;\">Connect</span> to play.</p>"
-                                           "<p>Have fun!</p><p align=\"right\"><span style=\" font-family:'Sans';\">The Mudlet Team </span>"
-                                           "<img src=\":/icons/mudlet_main_16px.png\"/></p>",
-                                           "Welcome message when icons for control buttons are NOT shown the text should "
-                                           "be identical to the one with icons except for a pair of XXXX_ICON markers not "
-                                           "in this version.")));
+                                   .arg(Welcome_text_template.arg(QString(), QString())));
     }
     welcome_message->setDocument(pWelcome_document);
 
@@ -653,7 +644,7 @@ bool dlgConnectionProfiles::validateProfile()
         check.setHost(url);
         if (!check.isValid()) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the MUD server.\n\n%1").arg(check.errorString())));
+            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server.\n\n%1").arg(check.errorString())));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
@@ -662,7 +653,7 @@ bool dlgConnectionProfiles::validateProfile()
         if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
             if (port_ssl_tsl->isChecked()) {
                 notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the MUD server.\n\n%1").arg(check.errorString())));
+                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
                 host_name_entry->setPalette(mErrorPalette);
                 validUrl = false;
                 valid = false;
@@ -795,6 +786,8 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
         return QLatin1String("Luminari is a deep, engaging game set in the world of the Luminari - A place where magic is entwined with the fabric of reality and the forces of evil and destruction "
                              "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
                              "or any of the many RPG systems based on the d20 ruleset.");
+    } else if (hostUrl == QStringLiteral("stickmud.com")) {
+        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Upon maturing to level 5, join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
         return QStringLiteral(
                 "The oldest Spanish free mud with more than 20 years of running history.\n\n"
@@ -893,6 +886,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Luminari")) {
             host_url = QStringLiteral("luminarimud.com");
+        }
+        if (profile_name == QStringLiteral("StickMUD")) {
+            host_url = QStringLiteral("stickmud.com");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             host_url = QStringLiteral("reinosdeleyenda.es");
@@ -995,6 +991,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             host_port = QStringLiteral("4100");
             port_ssl_tsl->setChecked(false);
         }
+        if (profile_name == QStringLiteral("StickMUD")) {
+            host_port = QStringLiteral("7680");
+        }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             //host_url = QStringLiteral("reinosdeleyenda.es");
             host_port = QStringLiteral("23");
@@ -1079,6 +1078,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Luminari")) {
             val = QStringLiteral("<center><a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a></center>");
+        }
+        if (profile_name == QStringLiteral("StickMUD")) {
+            val = QStringLiteral("<center><a href='http://www.stickmud.com/'>stickmud.com</a></center>");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
@@ -1476,6 +1478,21 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+    mudServer = QStringLiteral("StickMUD");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/stickmud_icon.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                              Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("stickmud.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
     mudServer = QStringLiteral("Reinos de Leyenda");
     if (!deletedDefaultMuds.contains(mudServer)) {
         pM = new QListWidgetItem(mudServer);
@@ -1515,6 +1532,7 @@ void dlgConnectionProfiles::fillout_form()
             || (!mProfileList.at(i).compare(QStringLiteral("3Kingdoms"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Luminari"), Qt::CaseInsensitive))
+            || (!mProfileList.at(i).compare(QStringLiteral("StickMUD"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Reinos de Leyenda"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
             delete pItem;
@@ -1746,8 +1764,9 @@ void dlgConnectionProfiles::slot_connectToServer()
             slot_update_login(pHost->getLogin());
         }
 
-        QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
-        pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
+        // This settings also need to be configured, note that the only time not to
+        // save the setting is on profile loading:
+        pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());

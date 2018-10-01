@@ -590,7 +590,7 @@ QList<int> TRoomDB::getAreaIDList()
  *    lines (no key for an normal or special exit that isn't there), locks
  *    (beware of duplicate QList<T> elements), room and exit weights (can only
  *    have a weight on an actual exit).
- * 10) Validate TArea elements: ebenen (beware of duplicate QList<T> elements)
+ * 10) Validate TArea elements: zLevels (beware of duplicate QList<T> elements)
  */
 void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRemapping)
 {

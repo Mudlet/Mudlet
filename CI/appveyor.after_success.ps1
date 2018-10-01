@@ -14,7 +14,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   Write-Output "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git C:\projects\installers
   cd C:\projects\installers\windows
-  
+
   Write-Output "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
 

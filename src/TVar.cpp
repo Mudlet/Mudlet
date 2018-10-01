@@ -157,7 +157,7 @@ int TVar::getValueType()
     return vType;
 }
 
-void TVar::setNewName(const QString n, const int t)
+void TVar::setNewName(const QString& n, const int t)
 {
     nName = n;
     nkType = t;

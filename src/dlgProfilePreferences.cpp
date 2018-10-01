@@ -34,7 +34,6 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
-#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtConcurrent>
@@ -65,20 +64,26 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // should be added to the (QGridLayout*) returned by:
     // qobject_cast<QGridLayout*>(groupBox_debug->layout())
 
-    QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-    checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
-    checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    // As we reflect the state of the above two checkboxes in the preview widget
-    // on another tab we have to track their changes in state and update that
-    // edbee widget straight away - however we do not need to update any open
-    // widgets of the same sort in use in ANY profile's editor until we hit
-    // the save button...
-    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
+    mudlet* pMudlet = mudlet::self();
 
-    MainIconSize->setValue(mudlet::self()->mToolbarIconSize);
-    TEFolderIconSize->setValue(mudlet::self()->mEditorTreeWidgetIconSize);
-    switch (mudlet::self()->menuBarVisibility()) {
+    checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
+
+    // As we demonstrate the options that these next two checkboxes control in
+    // the editor "preview" widget (on another tab) we will need to track
+    // changes and update the edbee widget straight away. As we can have
+    // multiple profiles each with a separate instance of this form open we also
+    // have to respond to changes in the settings when *another* profile saves
+    // them.
+    checkBox_showSpacesAndTabs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+
+    checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
+
+
+    MainIconSize->setValue(pMudlet->mToolbarIconSize);
+    TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
+
+    switch (pMudlet->menuBarVisibility()) {
     case mudlet::visibleNever:
         comboBox_menuBarVisibility->setCurrentIndex(0);
         break;
@@ -89,7 +94,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         comboBox_menuBarVisibility->setCurrentIndex(2);
     }
 
-    switch (mudlet::self()->toolBarVisibility()) {
+    switch (pMudlet->toolBarVisibility()) {
     case mudlet::visibleNever:
         comboBox_toolBarVisibility->setCurrentIndex(0);
         break;
@@ -101,13 +106,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     // Set the properties of the log options
+
     lineEdit_logFileFolder->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
-    pushButton_whereToLog->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Select a directory where logs will be saved.</p>"));
-    pushButton_resetLogDir->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
-    comboBox_logFileNameFormat->setToolTip(tr("<html><head/><body>%1</body></html>")
-                                                   .arg("<p>This option sets the format of the log name.</p>"
-                                                        "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>"));
-    lineEdit_logFileName->setToolTip(tr("<html><head/><body>%1</body></html>").arg("<p>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</p>"));
+    pushButton_whereToLog->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Select a directory where logs will be saved.</p>")));
+    pushButton_resetLogDir->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>")));
+    comboBox_logFileNameFormat->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+            .arg(tr("<p>This option sets the format of the log name.</p>"
+                    "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)</p>")));
+    lineEdit_logFileName->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</p>")));
     lineEdit_logFileName->setPlaceholderText(
             tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
     label_logFileNameExtension->setVisible(false);
@@ -129,7 +135,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
     } else {
-        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
+        checkbox_noAutomaticUpdates->setChecked(!pMudlet->updater->updateAutomatically());
+        // This is the extra connect(...) relating to settings' changes saved by
+        // a different profile mentioned further down in this constructor:
+        connect(pMudlet->updater, &Updater::signal_automaticUpdatesChanged, this, &dlgProfilePreferences::slot_changeAutomaticUpdates);
     }
 #else
     groupBox_updates->hide();
@@ -194,13 +203,41 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
-    connect(mudlet::self(), &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
-    connect(mudlet::self(), &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
+    connect(pMudlet, &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
+    connect(pMudlet, &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
     // Because QComboBox::currentIndexChanged has multiple (overloaded) forms we
     // have to state which one we want to use for these two:
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 
+    // This group of signal/slot connections handle updating *this* instance of
+    // the "Profile preferences" form/dialog when a *different* profile saves
+    // new settings from it's one - there is a further connect(...) above which
+    // is also involved but it is conditional on having the updater code being
+    // included in compliation:
+    connect(pMudlet, &mudlet::signal_enableFulScreenModeChanged, this, &dlgProfilePreferences::slot_changeEnableFullScreenMode);
+    connect(pMudlet, &mudlet::signal_editorTextOptionsChanged, this, &dlgProfilePreferences::slot_changeEditorTextOptions);
+    connect(pMudlet, &mudlet::signal_showMapAuditErrorsChanged, this, &dlgProfilePreferences::slot_changeShowMapAuditErrors);
+    connect(pMudlet, &mudlet::signal_setToolBarIconSize, this, &dlgProfilePreferences::slot_setToolBarIconSize);
+    connect(pMudlet, &mudlet::signal_setTreeIconSize, this, &dlgProfilePreferences::slot_setTreeWidgetIconSize);
+    connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
+    connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
+
+    label_languageChangeWarning->hide();
+
+    comboBox_guiLanguage->clear();
+    for (auto& code : pMudlet->getAvailableTranslationCodes()) {
+        auto& translatedName = pMudlet->mLanguageCodeMap.value(code).first;
+        int translatedPc = pMudlet->mLanguageCodeMap.value(code).second;
+        comboBox_guiLanguage->addItem(translatedName, code);
+        if (translatedPc >= pMudlet->mTranslationStar) {
+            comboBox_guiLanguage->setItemIcon(comboBox_guiLanguage->count()-1, QIcon(":/icons/rating.png"));
+        }
+    }
+    comboBox_guiLanguage->model()->sort(0);
+    auto current = pMudlet->mInterfaceLanguage;
+    comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
+    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -209,7 +246,8 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
-    groupBox_encoding->setEnabled(false);
+    label_encoding->setEnabled(false);
+    comboBox_encoding->setEnabled(false);
     groupBox_miscellaneous->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
@@ -285,7 +323,8 @@ void dlgProfilePreferences::disableHostDetails()
 
 void dlgProfilePreferences::enableHostDetails()
 {
-    groupBox_encoding->setEnabled(true);
+    label_encoding->setEnabled(true);
+    comboBox_encoding->setEnabled(true);
     groupBox_miscellaneous->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
@@ -414,7 +453,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     if (url.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-     || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+     || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
+     || url.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
 
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
@@ -720,6 +760,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
     enableHostDetails();
 
+    // Identify which Profile we are showing the settings for:
+    setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
+
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
     connect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandLineFgColor);
@@ -957,6 +1000,9 @@ void dlgProfilePreferences::clearHostDetails()
 
     mSearchEngineMap.clear();
     search_engine_combobox->clear();
+
+    // Remove the reference to the Host/profile in the title:
+    setWindowTitle(tr("Profile preferences"));
 }
 
 void dlgProfilePreferences::loadEditorTab()
@@ -975,7 +1021,9 @@ void dlgProfilePreferences::loadEditorTab()
     config->setIndentSize(2);
     config->setThemeName(pHost->mEditorTheme);
     config->setCaretWidth(1);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->mDisplayFont);
     config->endChanges();
@@ -1607,7 +1655,11 @@ void dlgProfilePreferences::downloadMap()
         mudlet::self()->createMapper(false);
     }
 
-    pHost->mpMap->downloadMap();
+    if (pHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
+        pHost->mpMap->downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
+    } else {
+        pHost->mpMap->downloadMap();
+    }
 }
 
 void dlgProfilePreferences::loadMap()
@@ -1995,6 +2047,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         mpDialogMapGlyphUsage = nullptr;
     }
 
+    mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
         if (dictList->currentItem()) {
@@ -2022,7 +2075,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
             pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             bool isAreaWidgetInNeedOfResetting = false;
-            if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAID == -1)) {
+            if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
                 isAreaWidgetInNeedOfResetting = true;
             }
 
@@ -2061,8 +2114,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
 
 
-        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            mudlet::self()->mConsoleMap[pHost]->changeColors();
+        if (pMudlet->mConsoleMap.contains(pHost)) {
+            pMudlet->mConsoleMap[pHost]->changeColors();
         }
 
         QString lIgnore = doubleclick_ignore_lineedit->text();
@@ -2122,8 +2175,8 @@ void dlgProfilePreferences::slot_save_and_exit()
             dlgIRC::writeIrcNickName(pHost, newIrcNick);
 
             // if the client is active, update our client nickname.
-            if (mudlet::self()->mpIrcClientMap[pHost]) {
-                mudlet::self()->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
+            if (pMudlet->mpIrcClientMap[pHost]) {
+                pMudlet->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
             }
         }
 
@@ -2142,18 +2195,18 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && mudlet::self()->mpIrcClientMap[pHost]) {
-            mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
+        if (restartIrcClient && pMudlet->mpIrcClientMap[pHost]) {
+            pMudlet->mpIrcClientMap[pHost]->ircRestart();
         }
 
         setDisplayFont();
 
-        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            int x = mudlet::self()->mConsoleMap[pHost]->width();
-            int y = mudlet::self()->mConsoleMap[pHost]->height();
+        if (pMudlet->mConsoleMap.contains(pHost)) {
+            int x = pMudlet->mConsoleMap[pHost]->width();
+            int y = pMudlet->mConsoleMap[pHost]->height();
             QSize s = QSize(x, y);
             QResizeEvent event(s, s);
-            QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
+            QApplication::sendEvent(pMudlet->mConsoleMap[pHost], &event);
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
@@ -2172,50 +2225,37 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
 
 #if defined(INCLUDE_UPDATER)
-    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
 #endif
 
-    mudlet::self()->setToolBarIconSize(MainIconSize->value());
-    mudlet::self()->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
+    pMudlet->setToolBarIconSize(MainIconSize->value());
+    pMudlet->setEditorTreeWidgetIconSize(TEFolderIconSize->value());
     switch (comboBox_menuBarVisibility->currentIndex()) {
     case 0:
-        mudlet::self()->setMenuBarVisibility(mudlet::visibleNever);
+        pMudlet->setMenuBarVisibility(mudlet::visibleNever);
         break;
     case 1:
-        mudlet::self()->setMenuBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        pMudlet->setMenuBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
         break;
     default:
-        mudlet::self()->setMenuBarVisibility(mudlet::visibleAlways);
+        pMudlet->setMenuBarVisibility(mudlet::visibleAlways);
     }
     switch (comboBox_toolBarVisibility->currentIndex()) {
     case 0:
-        mudlet::self()->setToolBarVisibility(mudlet::visibleNever);
+        pMudlet->setToolBarVisibility(mudlet::visibleNever);
         break;
     case 1:
-        mudlet::self()->setToolBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
+        pMudlet->setToolBarVisibility(mudlet::visibleOnlyWithoutLoadedProfile);
         break;
     default:
-        mudlet::self()->setToolBarVisibility(mudlet::visibleAlways);
+        pMudlet->setToolBarVisibility(mudlet::visibleAlways);
     }
 
-    QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-    if (checkBox_USE_SMALL_SCREEN->isChecked()) {
-        file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream out(&file_use_smallscreen);
-        Q_UNUSED(out);
-        file_use_smallscreen.close();
-    } else {
-        file_use_smallscreen.remove();
-    }
+    pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
+    pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
+    pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    pMudlet->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
 
-    // These are only set on saving because they are application wide and
-    // will affect all editors even the ones of other profiles so, if two
-    // profile both had their preferences open they would fight each other if
-    // they changed things at the same time:
-    mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
-    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
-
-    mudlet::self()->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
     switch (checkBox_showIconsOnMenus->checkState()) {
     case Qt::Unchecked:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
@@ -2487,7 +2527,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
         QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
             label->hide();
-            label->setText(tr("Updating themes from colorsublime.com..."));
+            label->setText(tr("Updating themes from colorsublime.github.io..."));
         });
         getReply->deleteLater();
     });
@@ -2635,7 +2675,9 @@ void dlgProfilePreferences::slot_changeShowSpacesAndTabs(const bool state)
 {
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
-    config->setShowWhitespaceMode(state ? 1 : 0);
+    config->setShowWhitespaceMode(state
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->endChanges();
 }
 
@@ -2985,4 +3027,117 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
 {
     button->setStyleSheet(QStringLiteral("QPushButton{color: %1; background-color: %2;}").arg(color.lightness() > 127 ? QStringLiteral("black") : QStringLiteral("white"),
                                                                                               color.name()));
+}
+
+// These next eight slots are so that if there are multiple profile preferences
+// opened for different Profiles then common (application wide) settings changed
+// in one of them is immediately updated in the others (so they do not get out
+// of sync):
+void dlgProfilePreferences::slot_changeEnableFullScreenMode(const bool state)
+{
+    if (checkBox_USE_SMALL_SCREEN->isChecked() != state) {
+        checkBox_USE_SMALL_SCREEN->setChecked(state);
+    }
+}
+
+// Connected to mudlet::signal_editorTextOptionsChanged which is emitted when
+// (void) mudlet::setEditorTextoptions(...) is called from this or another
+// instance:
+void dlgProfilePreferences::slot_changeEditorTextOptions(const QTextOption::Flags state)
+{
+    if (checkBox_showSpacesAndTabs->isChecked() != (state & QTextOption::ShowTabsAndSpaces)) {
+        // Changing the state of the checkbox with setChecked() does NOT fire
+        // the slot_changeShowSpacesAndTabs() because that is connected to the
+        // clicked() rather than the toggled() signal:
+        checkBox_showSpacesAndTabs->setChecked(state & QTextOption::ShowTabsAndSpaces);
+        // So we need to call the slot ourselves:
+        slot_changeShowSpacesAndTabs(state & QTextOption::ShowTabsAndSpaces);
+    }
+
+    if (checkBox_showLineFeedsAndParagraphs->isChecked() != (state & QTextOption::ShowLineAndParagraphSeparators)) {
+        checkBox_showLineFeedsAndParagraphs->setChecked(state & QTextOption::ShowLineAndParagraphSeparators);
+        slot_changeShowLineFeedsAndParagraphs(state & QTextOption::ShowLineAndParagraphSeparators);
+    }
+}
+
+void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
+{
+    if (checkBox_reportMapIssuesOnScreen->isChecked() != state) {
+        checkBox_reportMapIssuesOnScreen->setChecked(state);
+    }
+}
+
+// We do not use the QSpinBox::valueChanged() signal and it is only emitted if
+// the new value is different - so there is no need to worry about if we are or
+// are not changing the value in the next two methods:
+void dlgProfilePreferences::slot_setToolBarIconSize(const int s)
+{
+    MainIconSize->setValue(s);
+}
+
+void dlgProfilePreferences::slot_setTreeWidgetIconSize(const int s)
+{
+    TEFolderIconSize->setValue(s);
+}
+
+void dlgProfilePreferences::slot_changeAutomaticUpdates(const bool state)
+{
+    if (checkbox_noAutomaticUpdates->isChecked() != state) {
+        checkbox_noAutomaticUpdates->setChecked(state);
+    }
+}
+
+void dlgProfilePreferences::slot_changeMenuBarVisibility(const mudlet::controlsVisibility state)
+{
+    switch (state) {
+    case mudlet::visibleNever:
+        if (comboBox_menuBarVisibility->currentIndex() != 0) {
+            comboBox_menuBarVisibility->setCurrentIndex(0);
+        }
+        break;
+    case mudlet::visibleOnlyWithoutLoadedProfile:
+        if (comboBox_menuBarVisibility->currentIndex() != 1) {
+            comboBox_menuBarVisibility->setCurrentIndex(1);
+        }
+        break;
+    default:
+        if (comboBox_menuBarVisibility->currentIndex() != 2) {
+            comboBox_menuBarVisibility->setCurrentIndex(2);
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsVisibility state)
+{
+    switch (state) {
+    case mudlet::visibleNever:
+        if (comboBox_toolBarVisibility->currentIndex() != 0) {
+            comboBox_toolBarVisibility->setCurrentIndex(0);
+        }
+        break;
+    case mudlet::visibleOnlyWithoutLoadedProfile:
+        if (comboBox_toolBarVisibility->currentIndex() != 1) {
+            comboBox_toolBarVisibility->setCurrentIndex(1);
+        }
+        break;
+    default:
+        if (comboBox_toolBarVisibility->currentIndex() != 2) {
+            comboBox_toolBarVisibility->setCurrentIndex(2);
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_changeGuiLanguage(const QString &language)
+{
+    Q_UNUSED(language);
+
+    auto languageCode = comboBox_guiLanguage->currentData().toString();
+    // WIP remove hardcoding when PR is done and languages have names in Preferences
+    if (languageCode == QStringLiteral("English")) {
+        mudlet::self()->setInterfaceLanguage(QStringLiteral("en_US"));
+    } else {
+        mudlet::self()->setInterfaceLanguage(languageCode);
+    }
+
+    label_languageChangeWarning->show();
 }

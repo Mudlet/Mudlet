@@ -162,5 +162,8 @@
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
         <file>send-text-to-all-games.xml</file>
+        <file>lua-function-list.json</file>
+        <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
+        <file>icons/stickmud_icon.jpg</file>
     </qresource>
 </RCC>

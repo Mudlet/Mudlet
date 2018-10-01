@@ -23,6 +23,7 @@
  ***************************************************************************/
 
 
+#include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -137,6 +138,15 @@ private slots:
     void slot_setMapSymbolFontStrategy(bool);
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
+    void slot_changeEditorTextOptions(const QTextOption::Flags);
+    void slot_changeEnableFullScreenMode(const bool);
+    void slot_changeShowMapAuditErrors(const bool);
+    void slot_changeAutomaticUpdates(const bool);
+    void slot_setToolBarIconSize(const int);
+    void slot_setTreeWidgetIconSize(const int);
+    void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeGuiLanguage(const QString &language);
 
 private:
     void setColors();
