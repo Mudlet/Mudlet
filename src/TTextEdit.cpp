@@ -1427,7 +1427,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
 void TTextEdit::slot_copySelectionToClipboardImage()
 {
-    t1 = std::chrono::high_resolution_clock::now();
+    mCopyImageStartTime = std::chrono::high_resolution_clock::now();
 
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
@@ -1459,7 +1459,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         }
     }
 
-    auto heightpx = qMin(1'000'000, (mPB.y() - mPA.y()+1)*mFontHeight);
+    auto heightpx = qMin(1'000'000, (mPB.y() - mPA.y() + 1) * mFontHeight);
     auto lineOffset = mPA.y();
 
     // find the biggest width of text we need to work with
@@ -1469,10 +1469,9 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         characterWidth = qMax(lineWidth, characterWidth);
     }
 
-    auto widthpx = qMin(100'000, characterWidth*mFontWidth);
+    auto widthpx = qMin(100'000, characterWidth * mFontWidth);
 
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
-    qDebug() << "rect" << rect;
 
     auto pixmap = QPixmap(widthpx, heightpx);
     pixmap.fill(palette().base().color());
@@ -1485,19 +1484,27 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     // deselect to prevent inverted colours in image
     unHighlight();
     mSelectedRegion = QRegion(0, 0, 0, 0);
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep done";
 
-    drawTextForClipboard(painter, rect, lineOffset);
+    auto result = drawTextForClipboard(painter, rect, lineOffset);
 
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms finished painting all";
-    QApplication::clipboard()->setImage(pixmap.toImage(), QClipboard::Clipboard);
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms end";
+    // if we cut didn't finish painting the complete picture, trim the bottom of the image
+    if (!result.first) {
+        qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count()
+                 << "ms didn't finish painting everything, cuttin off irrelevant bits";
+        const auto& smallerPixmap = pixmap.scaled(QSize(widthpx, result.second * mFontHeight), Qt::KeepAspectRatio);
+        QApplication::clipboard()->setImage(smallerPixmap.toImage());
+        qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() << "ms copied to clipboard";
+        return;
+    }
 
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() << "ms finished painting all";
+    QApplication::clipboard()->setImage(pixmap.toImage());
+    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() << "ms copied to clipboard";
 }
 
 // a stateless version of drawForeground that doesn't do any caching
 // (and thus doesn't mess up any of the caches)
-void TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
+std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
 {
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     if (!mIsDebugConsole && !mIsMiniConsole) {
@@ -1508,21 +1515,21 @@ void TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lin
         painter.setRenderHint(QPainter::TextAntialiasing, false);
     }
 
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - t1 ).count() << "ms prep before lines";
-    int toLine = rectangle.height() / mFontHeight;
-    qDebug() << "drawing" << (toLine+lineOffset) - (lineOffset) <<"lines";
+    int lineCount = rectangle.height() / mFontHeight;
+    int linesDrawn = 0;
     auto timeout = mudlet::self()->mCopyAsImageMaxDuration;
-    for (int i = 0; i <= toLine; i++) {
+    for (int i = 0; i <= lineCount; i++, linesDrawn++) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
         drawLine(painter, i + lineOffset, i);
 
-        if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - t1 ).count() >= timeout) {
-            qDebug().nospace() << "timeout (" << timeout << "s) reached, managed to draw " << i << " lines";
-            break;
+        if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
+            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
+            return std::make_pair(false, linesDrawn);
         }
     }
+    return std::make_pair(true, linesDrawn);
 }
 
 void TTextEdit::searchSelectionOnline()

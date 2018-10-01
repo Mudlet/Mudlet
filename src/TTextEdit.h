@@ -125,7 +125,7 @@ private slots:
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
-    void drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
+    std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
 
     int mFontHeight;
     int mFontWidth;
@@ -162,7 +162,7 @@ private:
     int mScreenWidth;
     QTime mLastClickTimer;
     bool mWideAmbigousWidthGlyphs;
-    std::chrono::system_clock::time_point t1;
+    std::chrono::system_clock::time_point mCopyImageStartTime;
 };
 
 #endif // MUDLET_TTEXTEDIT_H
