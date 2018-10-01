@@ -10539,6 +10539,10 @@ int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
+        return 2;
     }
 
     if (lua_isstring(L, 1)) {
@@ -10562,6 +10566,10 @@ int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
+        return 2;
     }
 
     lua_pushfstring(L, pMudlet->mDiscord.getLargeImage(&host).toUtf8().constData());
@@ -10578,6 +10586,10 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon text is disabled in settings for privacy");
         return 2;
     }
 
@@ -10623,6 +10635,10 @@ int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord small icon is disabled in settings for privacy");
+        return 2;
     }
 
     if (lua_isstring(L, 1)) {
@@ -10666,6 +10682,10 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord small icon text is disabled in settings for privacy");
         return 2;
     }
 
@@ -10712,6 +10732,10 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
+        return 2;
     }
 
     if (lua_isstring(L, 1)) {
@@ -10735,14 +10759,11 @@ int TLuaInterpreter::getDiscordDetail(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
-    }
-
-    if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
         lua_pushnil(L);
         lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
         return 2;
     }
-
 
     lua_pushfstring(L, pMudlet->mDiscord.getDetailText(&host).toUtf8().constData());
     return 1;
@@ -10758,6 +10779,14 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
         return 2;
     }
 
@@ -10784,6 +10813,10 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord state is disabled in settings for privacy");
+        return 2;
     }
 
     if (lua_isstring(L, 1)) {
@@ -10807,9 +10840,7 @@ int TLuaInterpreter::getDiscordState(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
-    }
-
-    if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
         lua_pushnil(L);
         lua_pushstring(L, "Access to Discord state is disabled in settings for privacy");
         return 2;
@@ -10829,6 +10860,10 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
         return 2;
     }
 
@@ -10860,6 +10895,10 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
+        return 2;
     }
 
     if (lua_isnumber(L, 1)) {
@@ -10890,6 +10929,10 @@ int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
+        return 2;
     }
 
     QPair<int64_t, int64_t> timeStamps = mudlet::self()->mDiscord.getTimeStamps(&host);
@@ -10908,6 +10951,10 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord party info is disabled in settings for privacy");
         return 2;
     }
 
@@ -10952,6 +10999,10 @@ int TLuaInterpreter::getDiscordParty(lua_State* L)
     if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord party info is disabled in settings for privacy");
         return 2;
     }
 
