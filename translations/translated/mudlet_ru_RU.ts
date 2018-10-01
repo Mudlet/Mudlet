@@ -1608,7 +1608,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="95"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Неизвестно</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="227"/>
@@ -2834,12 +2834,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="412"/>
       <source>SE</source>
-      <translation type="unfinished"/>
+      <translation>SE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="422"/>
       <source>DOWN</source>
-      <translation type="unfinished"/>
+      <translation>DOWN</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
@@ -3405,7 +3405,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="553"/>
       <source>Other profiles to Map to:</source>
-      <translation type="unfinished"/>
+      <translation>Другие профили куда карту скопировать:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
@@ -3430,7 +3430,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="669"/>
       <source>Profile preferences - %1</source>
-      <translation type="unfinished"/>
+      <translation>Настройки профиля - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="906"/>
@@ -3554,7 +3554,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2169"/>
       <source>%1 selected - press to change</source>
-      <translation type="unfinished"/>
+      <translation>%1 выбран - нажмите для изменения</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2172"/>
@@ -3685,7 +3685,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2816"/>
       <source>Map symbol usage - %1</source>
-      <translation type="unfinished"/>
+      <translation>Символы использованные в карте - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2893"/>
