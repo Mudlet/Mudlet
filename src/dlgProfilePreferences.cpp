@@ -211,6 +211,22 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
 
     generateDicordTooltips();
+
+    label_languageChangeWarning->hide();
+
+    comboBox_guiLanguage->clear();
+    for (auto& code : pMudlet->getAvailableTranslationCodes()) {
+        auto& translatedName = pMudlet->mLanguageCodeMap.value(code).first;
+        int translatedPc = pMudlet->mLanguageCodeMap.value(code).second;
+        comboBox_guiLanguage->addItem(translatedName, code);
+        if (translatedPc >= pMudlet->mTranslationStar) {
+            comboBox_guiLanguage->setItemIcon(comboBox_guiLanguage->count()-1, QIcon(":/icons/rating.png"));
+        }
+    }
+    comboBox_guiLanguage->model()->sort(0);
+    auto current = pMudlet->mInterfaceLanguage;
+    comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
+    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -219,7 +235,8 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
-    groupBox_encoding->setEnabled(false);
+    label_encoding->setEnabled(false);
+    comboBox_encoding->setEnabled(false);
     groupBox_miscellaneous->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
@@ -292,7 +309,8 @@ void dlgProfilePreferences::disableHostDetails()
 
 void dlgProfilePreferences::enableHostDetails()
 {
-    groupBox_encoding->setEnabled(true);
+    label_encoding->setEnabled(true);
+    comboBox_encoding->setEnabled(true);
     groupBox_miscellaneous->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
@@ -3149,4 +3167,19 @@ void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsV
             comboBox_toolBarVisibility->setCurrentIndex(2);
         }
     }
+}
+
+void dlgProfilePreferences::slot_changeGuiLanguage(const QString &language)
+{
+    Q_UNUSED(language);
+
+    auto languageCode = comboBox_guiLanguage->currentData().toString();
+    // WIP remove hardcoding when PR is done and languages have names in Preferences
+    if (languageCode == QStringLiteral("English")) {
+        mudlet::self()->setInterfaceLanguage(QStringLiteral("en_US"));
+    } else {
+        mudlet::self()->setInterfaceLanguage(languageCode);
+    }
+
+    label_languageChangeWarning->show();
 }

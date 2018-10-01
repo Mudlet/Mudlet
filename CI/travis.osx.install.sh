@@ -5,6 +5,7 @@ if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
 fi
 
 set +e
+shopt -s expand_aliases
 BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
@@ -48,3 +49,9 @@ for i in $BREWS; do
   done
 done
 gem update cocoapods
+
+# create an alias to avoid the need to list the lua dir all the time
+# we want to expand the subshell only once (it's only tmeporary anyways)
+# shellcheck disable=2139
+alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
+luarocks-5.1 --local install lua-yajl

@@ -341,13 +341,17 @@ public:
         editorWidgetThemeJsonFile,
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
-        moduleBackupsPath
+        moduleBackupsPath,
+        // Returns path to Qt's own translation files
+        qtTranslationsPath
     };
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
-    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);    
+    void setInterfaceLanguage(const QString &languageCode);
+    QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -360,6 +364,18 @@ public:
     // QSetting file - it is only stored as a file now to maintain backwards
     // compatibility...
     bool mEnableFullScreenMode;
+
+    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    QString mInterfaceLanguage;
+
+    // ISO language code, translated human-readable name w/ English, and percent translated
+    // ie: ru_RU, Русский (Russian), 75
+    QHash<QString, std::pair<QString, int>> mLanguageCodeMap;
+    // translations done high enough will get a gold star to hide the last few percent
+    // as well as encourage translators to maintain it;
+    const int mTranslationStar = 95;
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -450,8 +466,9 @@ private slots:
 
 private:
     void initEdbee();
-
     void goingDown() { mIsGoingDown = true; }
+    void loadTranslators();
+
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
@@ -523,6 +540,16 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+
+    // QMap has key of interface languages (in format of mInterfaceLanguage)
+    // value: a QList of QPointers to all the translators needed (mudlet + Qt)
+    // for the specific GUI Language, on language change to remove
+    // the translators for the old settings and add the ones for
+    // the new language
+    QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
+    QList<QPointer<QTranslator>> mTranslatorsLoadedList;
+    void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
+    void loadLanguagesMap();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

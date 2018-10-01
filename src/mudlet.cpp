@@ -128,6 +128,56 @@ mudlet* mudlet::self()
     return _self;
 }
 
+void mudlet::loadLanguagesMap()
+{
+    mLanguageCodeMap = {
+            {"en_US", make_pair(tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
+            {"en_GB", make_pair(tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_CN", make_pair(tr("Chinese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_TW", make_pair(tr("Chinese (Traditional)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"nl_NL", make_pair(tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"fr_FR", make_pair(tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"de_DE", make_pair(tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"el_GR", make_pair(tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"it_IT", make_pair(tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+    };
+
+    QFile file(QStringLiteral(":/translation-stats.json"));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "translation statistics file isn't available, won't show stats in preferences";
+        return;
+    }
+
+    QByteArray saveData = file.readAll();
+    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+    QJsonObject translationStats = loadDoc.object();
+
+    for (auto& languageKey : translationStats.keys()) {
+        auto languageData = mLanguageCodeMap.value(languageKey);
+
+        auto value = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
+        if (value == QJsonValue::Undefined) {
+            continue;
+        }
+        auto translatedpc = value.toInt();
+
+        // show translation % for languages with less than 95%
+        // for languages above 95%, show a gold star
+        if (translatedpc < mTranslationStar) {
+            mLanguageCodeMap.insert(
+                    languageKey,
+                    make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc),
+                              translatedpc));
+        } else {
+            mLanguageCodeMap.insert(languageKey, make_pair(languageData.first, translatedpc));
+        }
+    }
+    qDebug() << "mLanguageCodeMap" << mLanguageCodeMap;
+ }
+
 mudlet::mudlet()
 : QMainWindow()
 , mFontManager()
@@ -160,6 +210,7 @@ mudlet::mudlet()
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mDiscord()
 , mShowIconsOnDialogs(true)
+, mInterfaceLanguage(QStringLiteral("en_US"))
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -169,6 +220,8 @@ mudlet::mudlet()
         // have to invert the sense because the attribute is a negative one:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
+
+    loadTranslators();
 
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -471,8 +524,6 @@ mudlet::mudlet()
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
-    // mToolbarIconSize has been set to 0 in the initialisation list but if it
-    // has not been changed from that in readSettings() then set it now:
     if (!mToolbarIconSize) {
         setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
     }
@@ -489,6 +540,7 @@ mudlet::mudlet()
 
     // load bundled fonts
     mFontManager.addFonts();
+    loadLanguagesMap();
 }
 
 QSettings* mudlet::getQSettings()
@@ -520,6 +572,68 @@ void mudlet::initEdbee()
     //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
 
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+}
+
+void mudlet::loadTranslationFile(const QString& fileName, const QString& filePath, QString& languageCode)
+{
+    QPointer<QTranslator> pMudletTranslator = new QTranslator();
+    auto translatorList = mTranslatorsMap.value(languageCode);
+
+    if (pMudletTranslator->load(fileName, filePath)) {
+        translatorList.append(pMudletTranslator);
+
+        if (!mTranslatorsMap.contains(languageCode)) {
+            mTranslatorsMap.insert(languageCode, translatorList);
+        }
+    } else {
+        qDebug() << "mudlet::mudlet() Failed to load translation file" << fileName << "from" << filePath;
+    }
+
+    if (languageCode != mInterfaceLanguage) {
+        return;
+    }
+
+    qDebug() << "mudlet::mudlet() INFO - loading Mudlet:" << languageCode << "translations from:" << fileName;
+
+    for (auto& translator : qAsConst(translatorList)) {
+        if (!qApp->installTranslator(translator)) {
+            qDebug() << "mudlet::mudlet() ERROR - Failed to directly load a translator for:" << languageCode << "a translation to the specified language will not be available";
+        } else {
+            mTranslatorsLoadedList.append(translator);
+        }
+    }
+}
+
+void mudlet::loadTranslators()
+{
+    auto loadTranslations =
+            [=](const QString& path) {
+                qDebug() << "mudlet::mudlet() INFO - Seeking Mudlet translations files in:" << path;
+
+                QDir translationDir(path);
+                translationDir.setNameFilters(QStringList() << QStringLiteral("mudlet_*.qm"));
+                QStringList translationFilesList(translationDir.entryList(QDir::Files | QDir::Readable, QDir::Name));
+
+                for (auto& translationFileName : qAsConst(translationFilesList)) {
+                    QString languageCode(translationFileName);
+
+                    languageCode.remove(QStringLiteral("mudlet_"), Qt::CaseInsensitive);
+                    languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
+
+                    loadTranslationFile(translationFileName, path, languageCode);
+                }
+            };
+
+    QPointer<QTranslator> pMudletTranslator = new QTranslator();
+    auto translatorList = mTranslatorsMap.value(QStringLiteral("en_US"));
+    translatorList.append(pMudletTranslator);
+    mTranslatorsMap.insert(QStringLiteral("en_US"), translatorList);
+
+    // Qt translations are not loaded properly at the moment
+    loadTranslations(getMudletPath(qtTranslationsPath));
+    loadTranslations(QStringLiteral(":/lang"));
+
+
 }
 
 bool mudlet::moduleTableVisible()
@@ -2364,6 +2478,8 @@ void mudlet::readEarlySettings(const QSettings& settings)
         QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
+
+    mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2387,6 +2503,8 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+
+
     resize(size);
     move(pos);
     if (settings.value("maximized", false).toBool()) {
@@ -2514,6 +2632,7 @@ void mudlet::writeSettings()
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
+    settings.setValue("interfaceLanguage", mInterfaceLanguage);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -3670,6 +3789,8 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
+    case qtTranslationsPath:
+        return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
     }
     Q_UNREACHABLE();
     return QString();
@@ -3831,4 +3952,9 @@ void mudlet::setShowMapAuditErrors(const bool state)
         emit signal_showMapAuditErrorsChanged(state);
     }
 
+}
+
+void mudlet::setInterfaceLanguage(const QString& languageCode)
+{
+    mInterfaceLanguage = languageCode;
 }

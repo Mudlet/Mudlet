@@ -318,7 +318,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>无地图或无有效位置。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
@@ -363,7 +363,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2165"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>标签类型？</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2166"/>
@@ -378,17 +378,18 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="107"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection. Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>点击行已选择或反选此房号 (若已命名则选择名称) 以从选择项中添加或删除房间。
+点击相关页眉以使用此方法排序。请注意名称列仅会在至少一个房间拥有名称时呈现。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2184"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>选择图像</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
       <source>Draw label as background or on top of everything?</source>
-      <translation type="unfinished"/>
+      <translation>是否作为背景或在所有内容顶部绘制标签？</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2192"/>
@@ -528,22 +529,22 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>通过在中途添加新点以划分线段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2776"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>先选择点，再在线段中间添加新点朝向房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2786"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>通过移除此点合并线段对</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2788"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>通过移除此点移除上个线段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
@@ -553,18 +554,18 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>更改此段自定义线的属性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>删除所有此自定义线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3236"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>移动选择，将中心从高亮房间 (%1) 移至:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3238"/>
@@ -586,13 +587,15 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3353"/>
       <location filename="../src/T2DMap.cpp" line="3392"/>
       <source>Enter room symbol</source>
-      <translation type="unfinished"/>
+      <translation>输入房间符号</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3345"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>输入用于此/这些房间的符号:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3355"/>
@@ -600,20 +603,20 @@ for this/these room(s):</source>
 more of the selected rooms, delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
-      <translation type="unfinished"/>
+      <translation>在一个或多个选择的房间中仅使用的符号为 &quot;%1&quot;，删除此符号以从所有选择的房间中清除或替换用于所有房间的新符号:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3360"/>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
-      <translation type="unfinished"/>
+      <translation>选择的房间符号为 &quot;%1&quot;，点击此处以清除符号或使用新符号替换此房间符号:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3385"/>
       <location filename="../src/T2DMap.cpp" line="3789"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {计数: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3393"/>
@@ -624,12 +627,12 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>从列表中选择已有符号 (根据常用等级分类) 或输入一个或多个字形 (即可见字符) 已设置;或输入空格以清除;所有被选择的房间:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3547"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>分散房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3548"/>
