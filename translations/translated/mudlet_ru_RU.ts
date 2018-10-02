@@ -493,12 +493,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2702"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Пользовательские линии выхода не отображаются и не редактируюемы в режиме сетки</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2705"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Заменить стандартный выход с линией</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2710"/>
@@ -1743,7 +1743,8 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1301"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - В комнате с ID: %1 найдена одина или более избыточных пользовательских элементов линии, которые
+были удалены: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1307"/>
@@ -2860,7 +2861,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Указывает, что если выход выбран, какие-то пользовательские линии для этого специальньного выхода будут заменены.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
@@ -2870,7 +2871,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>The room this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Комната куда етот специальный выход выводит.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
@@ -2880,7 +2881,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>The command or LUA script that goes to the given room.</source>
-      <translation type="unfinished"/>
+      <translation>Команда или скрипт Lua, который идет к данной комнате.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
