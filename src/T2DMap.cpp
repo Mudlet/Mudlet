@@ -2645,7 +2645,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
 
             if (mMultiSelectionSet.isEmpty()) {
-                mpCreateRoomAction = new QAction("create room", this);
+                mpCreateRoomAction = new QAction(tr("create room", "Menu option to create a new room in the mapper"), this);
                 mpCreateRoomAction->setToolTip(tr("Create a new room here"));
                 connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
                 popup->addAction(mpCreateRoomAction);
