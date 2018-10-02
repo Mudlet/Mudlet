@@ -3510,7 +3510,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1681"/>
       <source>Creating a destination directory failed...</source>
-      <translation type="unfinished"/>
+      <translation>Создание директории завершено неудачно...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1768"/>
@@ -3530,12 +3530,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1815"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Карта копируется в %1 - пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1821"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось скопировать карту в %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1825"/>
