@@ -1534,6 +1534,12 @@ void Host::setDiscordApplicationID(const QString& s)
     writeProfileData(QStringLiteral("discordApplicationId"), s);
 }
 
+const QString& Host::getDiscordApplicationID()
+{
+    QMutexLocker locker(&mLock);
+    return mDiscordApplicationID;
+}
+
 // Compares the current discord username and discriminator against the non-empty
 // arguments. Returns true if neither match, otherwise false.
 bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const

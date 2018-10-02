@@ -1102,9 +1102,7 @@ void dlgConnectionProfiles::updateDiscordStatus()
         discord_optin_checkBox->setDisabled(true);
         discord_optin_checkBox->setChecked(false);
         discord_optin_checkBox->setToolTip(tr("Discord integration not available on this platform"));
-    } else if (mDiscordApplicationId.isEmpty()
-               && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
-
+    } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
         // Disable discord support if it is not recognised by name and a
         // Application Id has not been previously entered:
         discord_optin_checkBox->setDisabled(true);

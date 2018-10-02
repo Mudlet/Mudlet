@@ -102,7 +102,6 @@ Discord::Discord(QObject* parent)
         // process Discord callbacks every 50ms once we are all set up:
         startTimer(50);
     });
-
 }
 
 Discord::~Discord()
@@ -420,7 +419,6 @@ QString Discord::deduceGameName(const QString& address)
 {
     // Handle using localhost as an off-line testing case
     if (address == QLatin1String("localhost") || address == QLatin1String("127.0.0.1") || address == QLatin1String("::1")) {
-
         return QStringLiteral("localhost");
     }
 
@@ -437,9 +435,8 @@ QString Discord::deduceGameName(const QString& address)
         // Too complex - abandon
         qDebug().noquote().noquote() << "Discord::deduceGameName(\"" << address << "\") WARN - Unable to deduce MUD name from given address.";
         break;
-    case 2:
-    {
-            // three terms - assume last is a TLD so remove it but the first may be significant
+    case 2: {
+        // three terms - assume last is a TLD so remove it but the first may be significant
 
         QStringList fragments = address.split(QChar('.'));
         fragments.removeLast();
@@ -454,7 +451,8 @@ QString Discord::deduceGameName(const QString& address)
             break;
         }
     }
-        qDebug().noquote().noquote() << "Discord::deduceGameName(\"" << address << "\") WARN - Unable to deduce MUD name from given address - even after discarding last element to consider just: \"" << otherName << "\".";
+        qDebug().noquote().noquote() << "Discord::deduceGameName(\"" << address << "\") WARN - Unable to deduce MUD name from given address - even after discarding last element to consider just: \""
+                                     << otherName << "\".";
         otherName.clear();
         break;
     case 1:
@@ -501,7 +499,6 @@ QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
 
     // Handle using localhost as an off-line testing case
     if (deducedName == QLatin1String("localhost")) {
-
         return qMakePair(true, deducedName);
     } else {
         return qMakePair((!deducedName.isEmpty() && mKnownGames.contains(deducedName)), deducedName);
@@ -557,21 +554,21 @@ QString Discord::getApplicationId(Host* pHost) const
 
 DiscordRichPresence localDiscordPresence::convert() const
 {
-    return DiscordRichPresence { mState,
-                                 mDetails,
-                                 mStartTimestamp,
-                                 mEndTimestamp,
-                                 mLargeImageKey,
-                                 mLargeImageText,
-                                 mSmallImageKey,
-                                 mSmallImageText,
-                                 mPartyId,
-                                 mPartySize,
-                                 mPartyMax,
-                                 mMatchSecret,
-                                 mJoinSecret,
-                                 mSpectateSecret,
-                                 mInstance };
+    return DiscordRichPresence{mState,
+                               mDetails,
+                               mStartTimestamp,
+                               mEndTimestamp,
+                               mLargeImageKey,
+                               mLargeImageText,
+                               mSmallImageKey,
+                               mSmallImageText,
+                               mPartyId,
+                               mPartySize,
+                               mPartyMax,
+                               mMatchSecret,
+                               mJoinSecret,
+                               mSpectateSecret,
+                               mInstance};
 }
 
 void localDiscordPresence::setDetailText(const QString& text)

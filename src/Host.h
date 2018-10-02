@@ -112,7 +112,7 @@ public:
                                                                                ? Qt::PartiallyChecked
                                                                                : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     void               setDiscordApplicationID(const QString& s);
-    const QString&     getDiscordApplicationID() { QMutexLocker locker(& mLock); return mDiscordApplicationID; }
+    const QString&     getDiscordApplicationID();
 
     void closingDown();
     bool isClosingDown();
