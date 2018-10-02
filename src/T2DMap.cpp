@@ -2644,6 +2644,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 return;
             }
 
+            if (mMultiSelectionSet.isEmpty()) {
+                mpCreateRoomAction = new QAction("create room", this);
+                mpCreateRoomAction->setToolTip(tr("Create a new room here"));
+                connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
+                popup->addAction(mpCreateRoomAction);
+            }
+
             auto moveRoom = new QAction("move", this);
             moveRoom->setToolTip(tr("Move room"));
             connect(moveRoom, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
@@ -2863,6 +2870,50 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     }
     update();
 }
+
+// returns the current mouse position as X, Y coordinates on the map
+std::pair<int, int> T2DMap::getMousePosition()
+{
+    QPoint mousePosition = this->mapFromGlobal(QCursor::pos());
+
+    float mx = (mousePosition.x() / mRoomWidth) + mOx - (xspan / 2.0);
+    float my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mOy;
+
+    return make_pair(std::round(mx), std::round(my));
+}
+
+void T2DMap::slot_createRoom()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    auto currentRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
+    if (!currentRoom) {
+        return;
+    }
+
+    auto roomID = mpHost->mpMap->createNewRoomID();
+    if (!mpHost->mpMap->addRoom(roomID)) {
+        return;
+    }
+
+    mpHost->mpMap->setRoomArea(roomID, currentRoom->getArea(), false);
+
+    auto mousePosition = getMousePosition();
+    mpHost->mpMap->setRoomCoordinates(roomID, mousePosition.first, mousePosition.second, mOz);
+
+    mpHost->mpMap->mMapGraphNeedsUpdate = true;
+    if (mpHost->mpMap->mpM) {
+        mpHost->mpMap->mpM->update();
+    }
+    if (mpHost->mpMap->mpMapper->mp2dMap) {
+        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
+    }
+}
+
 
 // Used both by "properties..." context menu item for existing lines AND
 // during drawing new ones.
