@@ -2764,7 +2764,7 @@ void mudlet::show_options_dialog(QString tab)
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
     }
-    mpProfilePreferencesDlg->setTab(tab);
+    mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
     mpProfilePreferencesDlgMap.value(pHost)->raise();
     mpProfilePreferencesDlgMap.value(pHost)->show();
 }
