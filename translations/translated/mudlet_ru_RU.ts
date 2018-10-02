@@ -2450,7 +2450,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - повтор завершился.</translation>
     </message>
   </context>
   <context>
@@ -3466,12 +3466,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1591"/>
       <source>Loaded map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Карта загруженна из %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1593"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось загрузить карту с %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1610"/>
@@ -3492,7 +3492,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1634"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Карта сохраненна в %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1636"/>
