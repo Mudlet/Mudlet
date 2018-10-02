@@ -26,7 +26,7 @@
 #include <QSet>
 #include <QHash>
 #include <ctime>
-#include <string.h> // For strncpy
+#include <string.h>
 #include "post_guard.h"
 
 QReadWriteLock Discord::smReadWriteLock;
