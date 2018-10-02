@@ -7799,7 +7799,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="446"/>
       <source>fire length</source>
-      <translation type="unfinished"/>
+      <translation>объем</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
