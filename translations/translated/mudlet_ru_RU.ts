@@ -324,7 +324,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2007"/>
       <source>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </source>
-      <translation>Площадь: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
+      <translation>Область: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </translation>
     </message>
     <message>
