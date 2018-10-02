@@ -2681,7 +2681,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="27"/>
       <source>Custom Line Properties [*]</source>
-      <translation type="unfinished"/>
+      <translation>Свойства линии [*]</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
@@ -2734,7 +2734,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="14"/>
       <source>Custom Line selection</source>
-      <translation type="unfinished"/>
+      <translation>Выбор линии</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
@@ -2855,7 +2855,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
       <source>Has
 custom line?</source>
-      <translation type="unfinished"/>
+      <translation>Имеет линию?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
