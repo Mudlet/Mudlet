@@ -7521,7 +7521,8 @@ Route</source>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
       <source>Exit
 Weight</source>
-      <translation type="unfinished"/>
+      <translation>Вес
+выхода</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
@@ -7805,7 +7806,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
       <location filename="../src/ui/triggers_main_area.ui" line="995"/>
       <source>Within how many lines must all condition be true to fire the trigger?</source>
-      <translation type="unfinished"/>
+      <translation>В сколько линий должны все шаблоны быть правдой, чтобы триггер совпал?</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
@@ -7830,7 +7831,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="922"/>
       <source>multiline / AND Trigger</source>
-      <translation type="unfinished"/>
+      <translation>многострочный / И триггер</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="961"/>
@@ -7920,7 +7921,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>матч на оперативную линию</translation>
     </message>
   </context>
   <context>
