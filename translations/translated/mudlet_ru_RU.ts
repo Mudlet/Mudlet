@@ -403,7 +403,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2439"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation>Зажмите кнопку мыши, чтобы выбрать несколько комнат или меток; отпустите кнопку мыши, чтобы закончить...</translation>
+      <translation>Нажмите кнопку мыши, чтобы выбрать несколько комнат или меток; отпустите кнопку мыши, чтобы закончить...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2598"/>
