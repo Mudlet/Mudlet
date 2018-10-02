@@ -2888,17 +2888,12 @@ void T2DMap::slot_createRoom()
         return;
     }
 
-    auto currentRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
-    if (!currentRoom) {
-        return;
-    }
-
     auto roomID = mpHost->mpMap->createNewRoomID();
     if (!mpHost->mpMap->addRoom(roomID)) {
         return;
     }
 
-    mpHost->mpMap->setRoomArea(roomID, currentRoom->getArea(), false);
+    mpHost->mpMap->setRoomArea(roomID, mAreaID, false);
 
     auto mousePosition = getMousePosition();
     mpHost->mpMap->setRoomCoordinates(roomID, mousePosition.first, mousePosition.second, mOz);
@@ -2913,7 +2908,6 @@ void T2DMap::slot_createRoom()
         mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
     }
 }
-
 
 // Used both by "properties..." context menu item for existing lines AND
 // during drawing new ones.
