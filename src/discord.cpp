@@ -99,6 +99,9 @@ Discord::Discord(QObject* parent)
         Q_ASSERT(mudlet::self());
         connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
 
+        // update Discord with the default Mudlet logo
+        UpdatePresence();
+
         // process Discord callbacks every 50ms once we are all set up:
         startTimer(50);
     });
@@ -307,6 +310,11 @@ void Discord::UpdatePresence()
 
     auto pHost = mudlet::self()->getActiveHost();
     if (!pHost) {
+        localDiscordPresence tempPresence;
+        tempPresence.setLargeImageKey(QStringLiteral("mudlet"));
+        DiscordRichPresence convertedPresence(tempPresence.convert());
+        Discord_UpdatePresence(&convertedPresence);
+
         return;
     }
 
@@ -366,7 +374,11 @@ void Discord::UpdatePresence()
     }
 
     if (pHost->mDiscordAccessFlags & Host::DiscordSetLargeIcon) {
-        pDiscordPresence->setLargeImageKey(mLargeImages.value(pHost));
+        auto image = mLargeImages.value(pHost);
+        if (image.isEmpty() && applicationID == mMudletApplicationId) {
+            image = QStringLiteral("mudlet");
+        }
+        pDiscordPresence->setLargeImageKey(image);
     } else {
         pDiscordPresence->setLargeImageKey(QString());
     }
