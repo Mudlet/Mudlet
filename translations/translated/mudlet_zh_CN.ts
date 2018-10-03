@@ -2443,19 +2443,19 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1333"/>
       <source>WARN</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>警告</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1344"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>警告</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1355"/>
       <source>INFO</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>信息</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1366"/>
@@ -7158,7 +7158,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>编号:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
