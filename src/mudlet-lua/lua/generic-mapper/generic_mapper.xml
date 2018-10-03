@@ -48,14 +48,16 @@
 			<colorTriggerFgColor>#000000</colorTriggerFgColor>
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
-				<string>^(?:Alas, )?[Yy]ou can(?:no|')t (?:go|move) .*</string>
-				<string>^The .+ is closed.</string>
-				<string>.+ (?:is not going to|will not) let you pass.</string>
-				<string>^That exit is blocked.</string>
-				<string>^You are blocked by .*</string>
-				<string>^There is no exit in that direction.</string>
+				<string>^(?:Alas, )?[Yy]ou can(?:no|')t (?:go|move) .*$</string>
+				<string>^The .+ is closed.$</string>
+				<string>.+ (?:is not going to|will not) let you pass.$</string>
+				<string>^That exit is blocked.$</string>
+				<string>^You are blocked by .*$</string>
+				<string>^There is no exit in that direction.$</string>
+				<string>^The .* is locked.$</string>
 			</regexCodeList>
 			<regexCodePropertyList>
+				<integer>1</integer>
 				<integer>1</integer>
 				<integer>1</integer>
 				<integer>1</integer>
@@ -144,188 +146,50 @@ end</script>
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
 				<string>^It is pitch black...</string>
+				<string>^It's too dark and you can't see anything</string>
 			</regexCodeList>
 			<regexCodePropertyList>
+				<integer>1</integer>
+				<integer>1</integer>
+			</regexCodePropertyList>
+		</Trigger>
+		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Multi-Line Exits Trigger</name>
+			<script>local exits = multimatches[1][2] .. " " .. multimatches[3][2]
+raiseEvent("onNewRoom",exits)</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>1</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList>
+				<string>^\s*There are \w+ (?:visible|obvious) exit[s]?:\s*(.*[d,]\s*)$</string>
+				<string>1</string>
+				<string>^([\w\s,]+)</string>
+			</regexCodeList>
+			<regexCodePropertyList>
+				<integer>1</integer>
+				<integer>5</integer>
 				<integer>1</integer>
 			</regexCodePropertyList>
 		</Trigger>
 	</TriggerPackage>
 	<TimerPackage />
 	<AliasPackage>
-		<Alias isActive="yes" isFolder="no">
-			<name>Save Map Alias</name>
-			<script>saveMap(getMudletHomeDir() .. "/map.dat")</script>
+		<AliasGroup isActive="yes" isFolder="yes">
+			<name>Setup Aliases</name>
+			<script></script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^save map$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Set Room Area Alias</name>
-			<script>map.set_area(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^set area (.*)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Set Map Prompt Alias</name>
-			<script>-- USE PATTERNS FOR STRING.GSUB
-map.make_prompt_pattern(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^map prompt (.*)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Find Map Prompt Alias</name>
-			<script>map.find_prompt()</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^find prompt$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Set Character Alias</name>
-			<script>map.character = matches[2]</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^set character (.*)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Set Recall Alias</name>
-			<script>map.set_recall()</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^set recall$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Find Path Alias</name>
-			<script>map.find_path(matches[2],matches[3])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^find path ([^;]+)(?:\s*;\s*(.+))?</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Find Me Alias</name>
-			<script>map.find_me()</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^find me$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Clear Moves Alias</name>
-			<script>map.clear_moves()</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^clear moves$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Add Portal Alias</name>
-			<script>map.set_portal(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^add portal (.*)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Set Room Exit Alias</name>
-			<script>map.set_exit(matches[2],matches[3])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^set exit (.+) (\d+)</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Add Door Alias</name>
-			<script>map.set_door(matches[2],matches[3],matches[4])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^add door (\w+)(?: (none|open|closed|locked)(?: (yes|no))?)?$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Merge Rooms Alias</name>
-			<script>map.merge_rooms()</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^merge rooms$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Shift Room Alias</name>
-			<script>map.shift_room(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^shift (.*)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Set Map Mode Alias</name>
-			<script>map.set_mode(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^map mode (\w+)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Import Map Area Alias</name>
-			<script>map.import_area(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^import area (.*)</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Export Map Area Alias</name>
-			<script>map.export_area(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^export area (.*)</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Load Map Alias</name>
-			<script>map.load_map(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^load map(?: (local))?$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Stop Mapping Alias</name>
-			<script>map.stop_mapping()</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^stop mapping$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Start Mapping Alias</name>
-			<script>map.start_mapping(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^start mapping(?: (.*))?$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Set Map Ignore Alias</name>
-			<script>-- USE PATTERNS FOR STRING.GSUB
-map.make_ignore_pattern(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^map ignore (.*)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Map Debug Alias</name>
-			<script>map.configs.debug = not map.configs.debug
-map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^map debug$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Map Areas Alias</name>
-			<script>map.echoAreaList()</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^map areas$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Map Rooms Alias</name>
-			<script>map.echoRoomList(matches[2])</script>
-			<command></command>
-			<packageName></packageName>
-			<regex>^map rooms (.*)$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Map Show Alias</name>
-			<script>local configs = map.configs.map_window
+			<regex></regex>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Show Alias</name>
+				<script>local configs = map.configs.map_window
 local shown = not configs.shown
 map.configs.map_window.shown = shown
 local x, y, w, h, origin = configs.x, configs.y, configs.w, configs.h, configs.origin
@@ -357,24 +221,241 @@ if shown then
 else
     mapper:hide()
 end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map show$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Find Map Prompt Alias</name>
+				<script>map.find_prompt()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^find prompt$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Set Map Prompt Alias</name>
+				<script>-- USE PATTERNS FOR STRING.GSUB
+map.make_prompt_pattern(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map prompt (.*)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Set Map Ignore Alias</name>
+				<script>-- USE PATTERNS FOR STRING.GSUB
+map.make_ignore_pattern(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map ignore (.*)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Debug Alias</name>
+				<script>map.configs.debug = not map.configs.debug
+map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map debug$</regex>
+			</Alias>
+		</AliasGroup>
+		<AliasGroup isActive="yes" isFolder="yes">
+			<name>Information Aliases</name>
+			<script></script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^map show$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Map Help Alias</name>
-			<script>cecho(map.help)</script>
+			<regex></regex>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Quick Start Alias</name>
+				<script>cecho(map.help.quick_start)</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map basics$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Help Alias</name>
+				<script>local cmd = matches[2]
+if cmd and cmd ~= "" then
+	cmd = cmd:lower():gsub(" ","_")
+	if map.help[cmd] then
+		cecho(map.help[cmd])
+	else
+		map.echo("No help file on that command.")
+	end
+else
+	cecho(map.help[1])
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map help(?: (.*))?$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Rooms Alias</name>
+				<script>map.echoRoomList(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map rooms (.*)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Areas Alias</name>
+				<script>map.echoAreaList()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map areas$</regex>
+			</Alias>
+		</AliasGroup>
+		<AliasGroup isActive="yes" isFolder="yes">
+			<name>Regular Use Aliases</name>
+			<script></script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^map help$</regex>
-		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>Map Quick Start Alias</name>
-			<script>cecho(map.quick_start)</script>
+			<regex></regex>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Me Alias</name>
+				<script>map.find_me()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map me$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Path Alias</name>
+				<script>map.find_path(matches[2],matches[3])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map path ([^;]+)(?:\s*;\s*(.+))?</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Set Recall Alias</name>
+				<script>map.set_recall()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map recall$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Set Character Alias</name>
+				<script>map.character = matches[2]</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map character (.*)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Stop Alias</name>
+				<script>raiseEvent("mapStop")</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map stop$</regex>
+			</Alias>
+		</AliasGroup>
+		<AliasGroup isActive="yes" isFolder="yes">
+			<name>Map Creation Aliases</name>
+			<script></script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^map basics$</regex>
-		</Alias>
+			<regex></regex>
+			<Alias isActive="yes" isFolder="no">
+				<name>Set Room Area Alias</name>
+				<script>map.set_area(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^set area (.*)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Start Mapping Alias</name>
+				<script>map.start_mapping(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^start mapping(?: (.*))?$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Stop Mapping Alias</name>
+				<script>map.stop_mapping()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^stop mapping$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Shift Room Alias</name>
+				<script>map.shift_room(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^shift (.*)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Add Portal Alias</name>
+				<script>map.set_portal(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^add portal (.*)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Clear Moves Alias</name>
+				<script>map.clear_moves()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^clear moves$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Add Door Alias</name>
+				<script>map.set_door(matches[2],matches[3],matches[4])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^add door (\w+)(?: (none|open|closed|locked))?(?: (yes|no))?$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Merge Rooms Alias</name>
+				<script>map.merge_rooms()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^merge rooms$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Set Map Mode Alias</name>
+				<script>map.set_mode(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map mode (\w+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Set Room Exit Alias</name>
+				<script>map.set_exit(matches[2],matches[3])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^set exit (.+) (\d+)</regex>
+			</Alias>
+		</AliasGroup>
+		<AliasGroup isActive="yes" isFolder="yes">
+			<name>Map Sharing Aliases</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex></regex>
+			<Alias isActive="yes" isFolder="no">
+				<name>Save Map Alias</name>
+				<script>saveMap(getMudletHomeDir() .. "/map.dat")</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map save$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Load Map Alias</name>
+				<script>map.load_map(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map load(?: (.*))?$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Import Map Area Alias</name>
+				<script>map.import_area(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map import (.*)</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Export Map Area Alias</name>
+				<script>map.export_area(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map export (.*)</regex>
+			</Alias>
+		</AliasGroup>
 	</AliasPackage>
 	<ActionPackage />
 	<ScriptPackage>
@@ -382,127 +463,443 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 9/04/2018
+-- 10/03/2018
 -- v2.0
 --
 
+-- continue making second level help files for specific events/aliases/functions/etc.
+    -- finish help files for configs
+    -- add help for key variables?
+
+mudlet = mudlet or {}
+mudlet.mapper_script = true
 map = map or {}
 
-map.help = [[
-    Jor'Mox's Generic Map Script
+map.help = {[[
+    Generic Map Script
 
-    This needs to be massively overhauled.
-		
-    This script allows for semi-automatic mapping using just room names and exits. It is
-    a good idea to know the general layout of the area you are trying to map before
-    turning on mapping with this script, so as to minimize how much you need to move
-    things around to make it look how you want it to. The script will automatically
-    stretch out a map to make space for a room if it would overlap with another one, but
-    it is important to make sure that things line up properly, or you will have inaccurate
-    maps with duplicate sections in them.
+    This script allows for semi-automatic mapping using the included triggers. While
+    different games can have dramatically different ways of displaying information, some
+    effort has been put into giving the script a wide range of potential patterns to look
+    for, so that it can work with minimal effort in many cases. The script locates the
+    room name by searching up from the detected exits line until a prompt is found or it
+    runs out of text to search, clearing saved text each time a prompt is detected or a
+    movement command is sent, with the room name being set to the last line of text found.
+    An accurate prompt pattern is necessary for this to work well, and sometimes other
+    text can end up being shown between the prompt and the room name, or on the same line
+    as the room name, which can be handled by providing appropriate patterns telling the
+    script to ignore that text. Below is an overview of the included commands and important
+    events that this script uses to work. Additional information on each command or event
+    is available in individual help files.
 
-    It is up to YOU to create triggers that appropriately raise the following events, and
-    gather the necessary information. The way in which such things are displayed varies
-    dramatically from game to game, so any set of triggers for one game will likely not
-    work for the next.
+    &lt;cyan&gt;Fundamental Commands:&lt;reset&gt;
+        These are commands used to get the mapper functional on a basic level
 
-    Important Events for Proper Mapping
-        onMoveFail - raise this event to indicate that you attempted to move, but no move
-            was made
-        onVisionFail - raise this event to indicate that you moved successfully, but are
-            unable to gather some or all of the necessary info about the room
-        onRandomMove - raise this event to indicate that you moved, but do not know what
-            direction you moved in
-        onNewRoom - raise this event to indicate that a room has been detected, typically
-            after moving or looking to see the room you are currently in
-        onPrompt - raise this event to indicate a prompt has been detected, room name and
-            exits must be stored in map.prompt.room and map.prompt.exits before raising
-            this event
-        onForcedMove - raise this event to indicate that you have been moved without
-            entering a command, but you know the direction you went. pass the relevant
-            direction as the first argument. if this movement needs to preempt other
-            movement commands in the queue (often the case), then pass "true" as a string
-            as the second argument
+        &lt;yellow&gt;map show&lt;reset&gt; - Displays or hides a map window
+        &lt;yellow&gt;map basics&lt;reset&gt; - Shows a quick-start guide with some basic information to help get
+            the script working
+        &lt;yellow&gt;map help &lt;optional command name&gt;&lt;reset&gt; - Shows either this help file or the help file
+            for the command given
+        &lt;yellow&gt;find prompt&lt;reset&gt; - Instructs the script to look for a prompt that matches a known pattern
+        &lt;yellow&gt;map prompt&lt;reset&gt; - Provides a specific pattern to the script that matches your prompt,
+            uses Lua string-library patterns
+        &lt;yellow&gt;map ignore&lt;reset&gt; - Provides a specific pattern for the script to ignore, uses Lua
+            string-library patterns
+        &lt;yellow&gt;map debug&lt;reset&gt; - Toggles on debug mode, in which extra messages are shown with the
+            intent of assisting in troubleshooting getting the script setup
+        &lt;yellow&gt;map me&lt;reset&gt; - Locates the user on the map, if possible
+        &lt;yellow&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;reset&gt; - Finds a walking path to the named
+            room, in the named area if specified
+        &lt;yellow&gt;map character &lt;name&gt;&lt;reset&gt; - Sets a given name as the current character for the purposes
+            of the script, used for different prompt patterns and recall locations
+        &lt;yellow&gt;map recall&lt;reset&gt; - Sets the current room as the recall location of the current character
 
-    Important Commands (Aliases) for Proper Mapping
+    &lt;cyan&gt;Mapping Commands:&lt;reset&gt;
+        These are commands used in the process of actually creating a map
 
-        Fundamental Aliases
-        start mapping &lt;optional area name&gt; - use this command to start adding new content
-            to the map, area name is required if there are no rooms in the map
-        stop mapping - use this command to stop mapping
-        save map - saves the map to a file (map.dat, located in the profile folder), this
-            is generally only needed to share the map with someone else, or to act as a
-            backup in case something happens to the map that Mudlet maintains for your
-            profile
-        load map &lt;optional 'local'&gt; - loads the map from the location specified in the
-            download_path, or from the local copy
-        export area &lt;area name&gt; - exports a file to the profile folder with data for the
-            named area
-        import area &lt;area name&gt; - imports area data from a file created with export area,
-            must be located in profile folder
+        &lt;yellow&gt;start mapping &lt;optional area name&gt;&lt;reset&gt; - Starts adding content to the map, using either
+            the area of the room the user is currently in, or the area name provided
+        &lt;yellow&gt;stop mapping&lt;reset&gt; - Stops adding content to the map
+        &lt;yellow&gt;set area &lt;area name&gt;&lt;reset&gt; - Moves the current room to the named area
+        &lt;yellow&gt;map mode &lt;simple, normal, or complex&gt;&lt;reset&gt; - Sets the mapping mode
+        &lt;yellow&gt;add door &lt;direction&gt; &lt;optional door status&gt; &lt;optional one-direction&gt;&lt;reset&gt; - Creates a
+            door in the given direction, with the given status (default closed), in both
+            directions, unless a one-direction door is specified
+        &lt;yellow&gt;add portal &lt;entry command&gt;&lt;reset&gt; - Creates a portal in the current room, using the given
+            command for entry
+        &lt;yellow&gt;shift &lt;direction&gt;&lt;reset&gt; - Moves the current room on the map in the given direction
+        &lt;yellow&gt;merge rooms&lt;reset&gt; - Combines overlapping rooms that have the same name into a single room
+        &lt;yellow&gt;clear moves&lt;reset&gt; - Clears the list of movement commands maintained by the script
+        &lt;yellow&gt;set exit &lt;direction&gt; &lt;roomID&gt;&lt;reset&gt; - Creates a one-way exit in the given direction to
+            the room with the specified roomID, can also be used with portals
+        &lt;yellow&gt;map areas&lt;reset&gt; - Shows a list of all area, with links to show a list of rooms in the area
+        &lt;yellow&gt;map rooms &lt;area name&gt;&lt;reset&gt; - Shows a list of rooms in the named area
 
+    &lt;cyan&gt;Sharing and Backup Commands:&lt;reset&gt;
+        &lt;yellow&gt;map save&lt;reset&gt; - Creates a backup of the map
+        &lt;yellow&gt;map load &lt;remote address&gt;&lt;reset&gt; - Loads a map backup, or a map file from a remote address
+        &lt;yellow&gt;map export &lt;area name&gt;&lt;reset&gt; - Creates a file from the named area that can be shared
+        &lt;yellow&gt;map import &lt;area name&gt;&lt;reset&gt; - Loads an area from a file
 
-        Mapping Aliases
-        map mode &lt;simple, normal, or complex&gt; - sets the mapping mode, determining what
-            exits are set automatically as you move around
-        set area &lt;area name&gt; - move the current room into the named area, area will be
-            created if it does not currently exist
-        shift &lt;direction&gt; - use this command to move the room you are currently in around
-            on the map
-        merge rooms - use this command to combine the room you are in with any other rooms
-            in the same location and with the same name
-        clear moves - use this command to clear the move queue after you attempt a move
-            that doesn't succeed, but for which there is no trigger indicating this with
-            the onMoveFail event
-        add door &lt;direction&gt; &lt;optional none, open, closed, locked&gt; &lt;optional yes, no&gt; -
-            adds a door in the given direction, defaulting to closed (use none to remove
-            a door), and defaulting 'no' for one-way status
-        add portal &lt;entry command&gt; - adds a portal that uses the given command for entry
-            to force this command to create a new room, rather than linking to an existing
-            one, put -f before the entry command, like this: add portal -f enter portal
-        set exit &lt;direction&gt; &lt;roomID&gt; - sets the given direction to connect, one way,
-            to the room with the specified roomID, used for very complex areas
-            to set the destination room for a portal, put -p before the portal entry command
-            like this: set exit -p enter portal 1124
+    &lt;cyan&gt;Mapping Events:&lt;reset&gt;
+        These events are used by triggers to direct the script's behavior
 
-        Normal User Aliases
-        find me - use this command to search the entire map to try to locate you based on
-            room name and exits, typically not necessary, as this will be done anyway if
-            a person moves and their location is unknown
-        find path &lt;room name&gt; OR &lt;room name&gt; ; &lt;area name&gt; - used to find a walking path
-            to a room with the given name, in the given area if specified
-        set character &lt;name&gt; - sets the current character name (stored as map.character)
-        set recall - sets the current room as the recall room for the current character
+        &lt;yellow&gt;onNewRoom&lt;reset&gt; - Signals that a room has been detected, optional exits argument
+        &lt;yellow&gt;onMoveFail&lt;reset&gt; - Signals that an attempted move failed
+        &lt;yellow&gt;onForcedMove&lt;reset&gt; - Signals that the character moved without a command being entered,
+            required direction argument
+        &lt;yellow&gt;onRandomMove&lt;reset&gt; - Signals that the character moved in an unknown direction without a
+            command being entered
+        &lt;yellow&gt;onVisionFail&lt;reset&gt; - Signals that the character moved but some or all of the room
+            information was not able to be gathered
 
-    Important Information Regarding Speedwalking
+    &lt;cyan&gt;Key Variables:&lt;reset&gt;
+        These variables are used by the script to keep track of important information
 
-        The existing doSpeedWalk function (which is located at the bottom of the script,
-        just above the event handler function) currently only displays a list of moves
-        to make to get to the target room. This function should be modified to implement
-        speedwalking in your game. For this purpose, a table of roomIDs is generated and
-        and stored in speedWalkPath, and a matching table of directions is stored in
-        speedWalkDir. You can check for doors with a roomID and a direction using the
-        check_doors function in the following manner: check_doors(roomID,dir) or
-        check_doors(roomID,tbl_of_dirs). It will return false if a door is not present,
-        or a table of directions and door status codes, like what you would get using the
-        getDoors function, but only for the exit(s) specified.
+        &lt;yellow&gt;map.prompt.room&lt;reset&gt; - Can be set to specify the room name
+        &lt;yellow&gt;map.prompt.exits&lt;reset&gt; - Can be set to specify the room exits
+        &lt;yellow&gt;map.character&lt;reset&gt; - Contains the current character name
+        &lt;yellow&gt;map.save.recall&lt;reset&gt; - Contains a table of recall roomIDs for all characters
+        &lt;yellow&gt;map.save.prompt_pattern&lt;reset&gt; - Contains a table of prompt patterns for all characters
+        &lt;yellow&gt;map.save.ignore_patterns&lt;reset&gt; - Contains a table of patterns of text the script ignores
+        &lt;yellow&gt;map.configs&lt;reset&gt; - Contains a number of different options that can be set to modify
+            script behavior
+]]}
+map.help.save = [[
+    &lt;cyan&gt;Map Save&lt;reset&gt;
+        syntax: &lt;yellow&gt;map save&lt;reset&gt;
 
-        For the sake of convenience, whenever the mapper moves to a new room, it raises the
-        "onMoveMap" event and passes the new roomID with the event, which may be helpful
-        in implementing more advanced scripts and functions that rely on map information.
+        This command creates a copy of the current map and stores it in the profile folder
+        as map.dat. This can be useful for creating a backup before adding new content, in
+        case of problems, and as a way to share an entire map at once.
+]]
+map.help.load = [[
+    &lt;cyan&gt;Map Load&lt;reset&gt;
+        syntax: &lt;yellow&gt;map load &lt;optional download address&gt;&lt;reset&gt;
+
+        This command replaces the current map with the map stored as map.dat in the profile
+        folder. Alternatively, if a download address is provided, a map is downloaded from
+        that location and loaded to replace the current map. If no filename is given with
+        the download address, the script tries to download map.dat. If a filename is given
+        it MUST end with .dat.
+]]
+map.help.export = [[
+    &lt;cyan&gt;Map Export&lt;reset&gt;
+        syntax: &lt;yellow&gt;map export &lt;area name&gt;&lt;reset&gt;
+
+        This command creates a file containing all the informatino about the named area
+        and stores it in the profile folder, with a file name based on the area name. This
+        file can then be imported, allowing for easy sharing of single map areas. The file
+        name will be the name of the area in all lower case, with spaces replaced with
+        underscores, and a .dat file extension.
+]]
+map.help.import = [[
+    &lt;cyan&gt;Map Import&lt;reset&gt;
+        syntax: &lt;yellow&gt;map import &lt;area name&gt;&lt;reset&gt;
+
+        This command imports a file from the profile folder with a name matching the name
+        of the file, and uses it to create an area on the map. The area name used can be
+        capitalized or not, and may have either spaces or underscores between words. The
+        actual area name is stored within the file, and is not set by the area name used
+        in this command.
+]]
+map.help.start_mapping = [[
+    &lt;cyan&gt;Start Mapping&lt;reset&gt;
+        syntax: &lt;yellow&gt;start mapping &lt;optional area name&gt;&lt;reset&gt;
+
+        This command instructs the script to add new content to the map when it is seen.
+        When first used, an area name is mandatory, so that an area is created for new
+        rooms to be placed in. If used with an area name while the map shows the character
+        within a room on the map, that room will be moved to be in the named area, if it
+        is not already in it. If used without an area name, the room is not moved, and
+        mapping begins in the area the character is currently located in.
+]]
+map.help.stop_mapping = [[
+    &lt;cyan&gt;Stop Mapping&lt;reset&gt;
+        syntax: &lt;yellow&gt;stop mapping&lt;reset&gt;
+
+        This command instructs the script to stop adding new content until mapping is
+        resumed at a later time. The map will continue to perform other functions.
+]]
+map.help.find_prompt = [[
+    &lt;cyan&gt;Find Prompt&lt;reset&gt;
+        syntax: &lt;yellow&gt;find prompt&lt;reset&gt;
+
+        This command instructs the script to begin searching newly arriving text for
+        something that matches one of its known prompt patterns. If one is found, that
+        pattern will be set as the current prompt pattern. This should typically be the
+        first command used to set up this script with a new profile. If your prompt appears
+        after using this command, but there is no message saying that the prompt has been
+        found, it will be necessary to use the map prompt command to manually set a pattern.
+]]
+map.help.prompt = [[
+    &lt;cyan&gt;Map Prompt&lt;reset&gt;
+        syntax: &lt;yellow&gt;map prompt &lt;prompt pattern&gt;&lt;reset&gt;
+
+        This command manually sets a prompt pattern for the script to use. Because of the
+        way this script works, the prompt pattern should match the entire prompt, so that
+        if the text matching the pattern were removed, the line with the prompt would be
+        blank. The patterns must be of the type used by the Lua string library. If you
+        are unsure about what pattern to use, seek assistance on the Mudlet Forums or the
+        Mudlet Discord channel.
+]]
+map.help.debug = [[
+    &lt;cyan&gt;Map Debug&lt;reset&gt;
+        syntax: &lt;yellow&gt;map debug&lt;reset&gt;
+
+        This command toggles the map script's debug mode on or off when it is used. Debug
+        mode provides some extra messages to help with setting up the script and identifying
+        problems to help with troubleshooting. If you are getting assistance with setting
+        up this script, using debug mode may make the process faster and easier.
+]]
+map.help.ignore = [[
+    &lt;cyan&gt;Map Ignore&lt;reset&gt;
+        syntax: &lt;yellow&gt;map ignore &lt;ignore pattern&gt;&lt;reset&gt;
+
+        This command adds the given pattern to a list the script maintains to help it
+        locate the room name. Any text that might appear after a command is sent to move
+        and before the room name appears, or after the prompt and before the room name
+        if several movement commands are sent at once, should have an ignore pattern added
+        for it.
+
+        If the given pattern is already in the list of ignore patterns, that pattern will
+        be removed from the list.
+]]
+map.help.areas = [[
+    &lt;cyan&gt;Map Areas&lt;reset&gt;
+        syntax: &lt;yellow&gt;map areas&lt;reset&gt;
+
+        This command displays a linked list of all areas in the map. When clicked, the rooms
+        in the selected area will be displayed, as if the 'map rooms' command had been used
+        with that area as an argument.
+]]
+map.help.rooms = [[
+    &lt;cyan&gt;Map Rooms&lt;reset&gt;
+        syntax: &lt;yellow&gt;map rooms &lt;area name&gt;&lt;reset&gt;
+
+        This command shows a list of all rooms in the area, with the roomID and the room
+        name, as well as a count of how many rooms are in the area total. Note that the
+        area name argument is not case sensitive.
+]]
+map.help.set_area = [[
+    &lt;cyan&gt;Set Area&lt;reset&gt;
+        syntax: &lt;yellow&gt;set area &lt;area name&gt;&lt;reset&gt;
+
+        This command move the current room into the named area, creating the area if needed.
+]]
+map.help.mode = [[
+    &lt;cyan&gt;Map Mode&lt;reset&gt;
+        syntax: &lt;yellow&gt;map mode &lt;simple, normal, or complex&gt;&lt;reset&gt;
+
+        This command changes the current mapping mode, which determines what happens when
+        new rooms are added to the map.
+
+        In simple mode, if an adjacent room has an exit stub pointing toward the newly
+        created room, and the new room has an exit in that direction, those stubs are
+        connected in both directions.
+
+        In normal mode, the newly created room is connected to the room you left from, so
+        long as it has an exit leading in that direction.
+
+        In complex mode, none of the exits of the newly connected room are connected
+        automatically when it is created.
+]]
+map.help.add_door = [[
+    &lt;cyan&gt;Add Door&lt;reset&gt;
+        syntax: &lt;yellow&gt;add door &lt;direction&gt; &lt;optional none, open, closed, or locked&gt; &lt;optional yes or no&gt;&lt;reset&gt;
+
+        This command places a door on the exit in the given direction, or removes it if
+        "none" is given as the second argument. The door status is set as given by the
+        second argument, default "closed". The third argument determines if the door is
+        a one-way door, default "no".
+]]
+map.help.add_portal = [[
+    &lt;cyan&gt;Add Portal&lt;reset&gt;
+        syntax: &lt;yellow&gt;add portal &lt;optional -f&gt; &lt;entry command&gt;&lt;reset&gt;
+
+        This command creates a special exit in the current room that is entered by using
+        the given entry command. The given entry command is then sent, moving to the
+        destination room. If the destination room matches an existing room, the special
+        exit will link to that room, and if not a new room will be created. If the optional
+        "-f" argument is given, a new room will be created for the destination regardless
+        of if an existing room matches the room seen when arriving at the destination.
+]]
+map.help.shift = [[
+    &lt;cyan&gt;Shift&lt;reset&gt;
+        syntax: &lt;yellow&gt;shift &lt;direction&gt;&lt;reset&gt;
+
+        This command moves the current room one step in the direction given, on the map.
+]]
+map.help.merge_rooms = [[
+    &lt;cyan&gt;Merge Rooms&lt;reset&gt;
+        syntax: &lt;yellow&gt;merge rooms&lt;reset&gt;
+
+        This command combines all rooms that share the same coordinates and the same room
+        name into a single room, with all of the exits preserved and combined.
+]]
+map.help.clear_moves = [[
+    &lt;cyan&gt;Clear Moves&lt;reset&gt;
+        syntax: &lt;yellow&gt;clear moves&lt;reset&gt;
+
+        This command clears the script's queue of movement commands, and is intended to be
+        used after you attempt to move while mapping but the movement is prevented in some
+        way that is not caught and handled by a trigger that raises the onMoveFail event.
+]]
+map.help.set_exit = [[
+    &lt;cyan&gt;Set Exit&lt;reset&gt;
+        syntax: &lt;yellow&gt;set exit &lt;direction&gt; &lt;destination roomID&gt;&lt;reset&gt;
+
+        This command sets the exit in the current room in the given direction to connect
+        to the target room, as specified by the roomID. This is a one-way connection.
+]]
+map.help.onnewroom = [[
+    &lt;cyan&gt;onNewRoom Event&lt;reset&gt;
+
+        This event is raised to inform the script that a room has been detected. When
+        raised, a string containing the exits from the detected room should be passed as
+        a second argument to the raiseEvent function, unless those exits have previously
+        been stored in map.prompt.exits.
+]]
+map.help.onmovefail = [[
+    &lt;cyan&gt;onMoveFail Event&lt;reset&gt;
+
+        This event is raised to inform the script that a move was attempted but the
+        character was unable to move in the given direction, causing that movement command
+        to be removed from the script's movement queue.
+]]
+map.help.onforcedmove = [[
+    &lt;cyan&gt;onForcedMove Event&lt;reset&gt;
+
+        This event is raised to inform the script that the character moved in a specified
+        direction without a command being entered. When raised, a string containing the
+        movement direction must be passed as a second argument to the raiseEvent function.
+
+        The most common reason for this event to be raised is when a character is following
+        someone else.
+]]
+map.help.onrandommove = [[
+    &lt;cyan&gt;onRandomMove Event&lt;reset&gt;
+
+        This event is raised to inform the script that the character has moved in an
+        unknown direction. The script will compare the next room seen with rooms that
+        are adjacent to the current room to try to determine the best match for where
+        the character has gone.
+
+        In some situations, multiple options are equally viable, so mistakes may result.
+        The script will automatically keep verifying positioning with each step, and
+        automatically correct the shown location on the map when possible.
+]]
+map.help.onvisionfail = [[
+    &lt;cyan&gt;onVisionFail Event&lt;reset&gt;
+
+        This event is raised to inform the script that some or all of the room information
+        was not able to be gathered, but the character still successfully moved between
+        rooms in the intended direction.
+]]
+map.help.me = [[
+    &lt;cyan&gt;Map Me&lt;reset&gt;
+        syntax: &lt;yellow&gt;map me&lt;reset&gt;
+
+        This command forces the script to look at the currently captured room name and
+        exits, and search for a potentially matching room, moving the map if applicable.
+        Note that this command is generally never needed, as the script performs a similar
+        search any time the room name and exits don't match expectations.
+]]
+map.help.path = [[
+    &lt;cyan&gt;Map Path&lt;reset&gt;
+        syntax: &lt;yellow&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;reset&gt;
+
+        This command tries to find a walking path from the current room to the named room.
+        If an area name is given, only rooms within that area that is given are checked.
+        Neither the room name nore the area name are case sensitive, but otherwise an
+        exact match is required. Note that a semicolon is required between the room name
+        and area name, if an area name is given, but spaces before or after the semicolon
+        are optional.
+
+        Example: &lt;yellow&gt;map path main street ; newbie town&lt;reset&gt;
+]]
+map.help.character = [[
+    &lt;cyan&gt;Map Character&lt;reset&gt;
+        syntax: &lt;yellow&gt;map character &lt;name&gt;&lt;reset&gt;
+
+        This command tells the script what character is currently being used. Setting a
+        character is optional, but recall locations and prompt patterns are stored by
+        character name, so using this command allows for easy switching between different
+        setups. The name given is stored in map.character. The name is a case sensitive
+        exact match. The value of map.character is not saved between sessions, so this
+        must be set again if needed each time the profile is opened.
+]]
+map.help.recall = [[
+    &lt;cyan&gt;Map Recall&lt;reset&gt;
+        syntax: &lt;yellow&gt;map recall&lt;reset&gt;
+
+        This command tells the script that the current room is the recall point for the
+        current character, as stored in map.character. This information is stored in
+        map.save.recall[map.character], and is remembered between sessions.
 ]]
 
-map.quick_start = [[
-    This is supposed to be a quick start guide. It sucks right now.
-    
-    Use "&lt;yellow&gt;map basics&lt;reset&gt;" to see this again
-    Use "map help" to see more detailed help
-    Use "map show" to show or hide the map window
-    Use "find prompt" to have script auto-detect common prompts
-    Use "map prompt" followed by a Lua-type pattern to set a specific prompt pattern
-    Use "map ignore" followed by a Lua-type pattern to tell mapper to ignore certain
-        text when looking for a room name
-    Use "map debug" to turn debug mode on or off
+-- add more details about configs, and make formatting nice
+map.help.configs = [[
+    &lt;cyan&gt;Map Configs&lt;reset&gt;
+
+    This is a list of all available configurations found in the map.configs table, what
+    options are available for them, and what each one does.
+
+    * map_window -- config info for mapping window created by script (if used)
+    * speedwalk_delay -- delay time between commands or after room entrance when speedwalking
+    * speedwalk_wait -- wait to enter next room before sending movement command
+    * speedwalk_random -- add random extra time to speedwalk delay
+    * mode -- default mapping mode on startup
+    * stretch_map -- when adding a new room that would overlap an existing room, stretches map to avoid overlap
+    * search_on_look -- uses "look" as a valid room command, forcing the map to verify your location
+    * clear_lines_on_send -- clears recorded lines from game when command is entered
+    * download_path -- path updates are downloaded from
+    * prompt_test_patterns -- default patterns used when using the "find prompt" command
+    * custom_exits -- table of custom exit directions and their relevant extra pieces of info
+    * use_lang_dirs -- use movement translation table
+    * lang_dirs -- table of movement translations
+    * debug -- sets starting debug mode status
+]]
+
+map.help.quick_start = [[
+    MAP BASICS (Quick Start Guide)
+    ----------------------------------------
+    To see this again: &lt;yellow&gt;map basics&lt;reset&gt;
+
+    Quick Commands:
+    1. &lt;yellow&gt;map help&lt;reset&gt;
+       This will bring up a more detailed help file, starting with the available
+       help topics.
+    2. &lt;yellow&gt;map show&lt;reset&gt;
+       This will toggle the map window. If you don't see the map window, type
+       this command first.
+    3. &lt;yellow&gt;find prompt&lt;reset&gt;
+       This will make the script start looking for a prompt using several standard
+       prompt patterns. If a prompt is found, you will be notified, if not, you
+       will need to set a prompt pattern yourself.
+    4. &lt;yellow&gt;map prompt&lt;reset&gt;
+       This sets the prompt pattern you specify, using Lua String Library type
+       patterns.
+    5. &lt;yellow&gt;map ignore&lt;reset&gt;
+       This creates a pattern for text to ignore when the script is looking for
+       the room name. This should include anything that might appear between
+       the sent movement command or the prompt preceeding the room description,
+       and the room name itself. This can also be used to remove extra text
+       on the same line as the room name that should not be included.
+    6. &lt;yellow&gt;map debug&lt;reset&gt;
+       This toggles debug mode. When on, messages will be displayed showing what
+       information is captured and a few additional error messages that can help
+       with getting the script fully functional.
+
+    At this point, there are two ways to use the script:
+    (A) Load in a map file using a script provided from another user. That user
+        will need to specify any manual adjustments to the script that one might
+        need to make to make their script work.
+    (B) Begin mapping yourself. If you want to map yourself, the help files do
+        their best to explain every alias and script tool. If you need further
+        assistance, reach out to the Mudlet community.
+
+    &lt;red&gt;IF YOU RUN INTO ANY ISSUES&lt;reset&gt; &lt;yellow&gt;map&lt;reset&gt; &lt;cyan&gt;troubleshoot&lt;reset&gt; &lt;red&gt;DOES ITS BEST TO COVER THEM.&lt;reset&gt;
 ]]
 
 map.character = map.character or ""
@@ -524,6 +921,7 @@ map.configs = {
     download_path = "",
     stretch_map = true,
     search_on_look = true,
+    max_search_distance = 0,
     prompt_test_patterns = {"^%[?%a*%]?&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]", "^[Hh][Pp]:.*&gt;"},
     custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
                         -- ex: { us = {"upsouth", "downnorth", 0, -1, 1}, dn = {"downnorth", "upsouth", 0, 1, -1} }
@@ -542,11 +940,17 @@ map.configs = {
         origin = "topright",
         shown = false,
     },
+    speedwalk_delay = 1,
+    speedwalk_wait = true,
+    speedwalk_random = true,
 }
+
+local move_queue, lines = {}, {}
+local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking
+local mt = getmetatable(map) or {}
 
 local function config()
     local configs = map.configs
-    map_mode = configs.mode
 
     -- incorporate custom exits
     for k,v in pairs(map.configs.custom_exits) do
@@ -558,19 +962,32 @@ local function config()
         stubmap[count] = v[1]
         stubmap[v[1]] = count
     end
-    
+    -- load map from save file
     if io.exists(getMudletHomeDir() .. "/map_save.dat") then
         table.load(getMudletHomeDir() .. "/map_save.dat",map.save)
     end
-end
 
-local move_queue = {}
-local prevRoom, prevName, prevExits
-local currentRoom, currentName, currentExits, currentArea
-local mapping, map_mode, downloading
-local find_portal, vision_fail, room_detected, random_move, force_portal
-local find_prompt
-local lines = lines or {}
+    -- setup metatable to store sensitive values
+    local protected = {"mapping", "currentRoom", "currentName", "currentExits", "currentArea",
+        "prevRoom", "prevName", "prevExits", "mode", "version"}
+    mt = getmetatable(map) or {}
+    mt.__index = mt
+    mt.__newindex = function(tbl, key, value)
+            if not table.contains(protected, key) then
+                rawset(tbl, key, value)
+            else
+                error("Protected Map Table Value")
+            end
+        end
+    mt.set = function(key, value)
+            if table.contains(protected, key) then
+                mt[key] = value
+            end
+        end
+    setmetatable(map, mt)
+    map.set("mode", configs.mode)
+    map.set("version", "2.0")
+end
 
 local exitmap = {
     n = 'north',    ne = 'northeast',   nw = 'northwest',   e = 'east',
@@ -645,23 +1062,23 @@ end
 
 local function set_room(roomID)
     -- moves the map to the new room
-    if currentRoom ~= roomID then
-        prevRoom = currentRoom
-        currentRoom = roomID
+    if map.currentRoom ~= roomID then
+        map.set("prevRoom", map.currentRoom)
+        map.set("currentRoom", roomID)
     end
-    if getRoomName(currentRoom) ~= currentName then
-        prevName = currentName
-        prevExits = currentExits
-        currentName = getRoomName(currentRoom)
-        currentExits = getRoomExits(currentRoom)
+    if getRoomName(map.currentRoom) ~= map.currentName then
+        map.set("prevName", map.currentName)
+        map.set("prevExits", map.currentExits)
+        map.set("currentName", getRoomName(map.currentRoom))
+        map.set("currentExits", getRoomExits(map.currentRoom))
         -- check handling of custom exits here
         for i = 13,#stubmap do
-            currentExits[stubmap[i]] = tonumber(getRoomUserData(currentRoom,"exit " .. stubmap[i]))
+            map.currentExits[stubmap[i]] = tonumber(getRoomUserData(map.currentRoom,"exit " .. stubmap[i]))
         end
     end
-    currentArea = getRoomArea(currentRoom)
-    centerview(currentRoom)
-    raiseEvent("onMoveMap", currentRoom)
+    map.set("currentArea", getRoomArea(map.currentRoom))
+    centerview(map.currentRoom)
+    raiseEvent("onMoveMap", map.currentRoom)
 end
 
 local function add_door(roomID, dir, status)
@@ -697,9 +1114,9 @@ local function check_doors(roomID,exits)
     local dir
     for k,v in pairs(exits) do
         dir = short[k] or short[v]
-                if table.contains({'u','d'},dir) then
-                    dir = exitmap[dir]
-                end
+        if table.contains({'u','d'},dir) then
+            dir = exitmap[dir]
+        end
         if not doors[dir] or doors[dir] == 0 then
             return false
         else
@@ -777,7 +1194,7 @@ local function connect_rooms(ID1, ID2, dir1, dir2, no_check)
             add_door(ID2,dir2,dstatus1)
         end
     end
-    if map_mode ~= "complex" then
+    if map.mode ~= "complex" then
         local stubs = getRoomStubs(ID2)
         if stubs[dir2] then match = true end
         if (match or no_check) then
@@ -816,8 +1233,9 @@ end
 local function stretch_map(dir,x,y,z)
     -- stretches a map to make room for just added room that would overlap with existing room
     local dx,dy,dz
-    for k,v in pairs(getAreaRooms(currentArea)) do
-        if v ~= currentRoom then
+    if not dir then return end
+    for k,v in pairs(getAreaRooms(map.currentArea)) do
+        if v ~= map.currentRoom then
             dx,dy,dz = getRoomCoordinates(v)
             if dx &gt;= x and string.find(dir,"east") then
                 dx = dx + 1
@@ -843,11 +1261,11 @@ local function create_room(name, exits, dir, coords)
     -- makes a new room with captured name and exits
     -- links with other rooms as appropriate
     -- links to adjacent rooms in direction of exits if in simple mode
-    if mapping then
-        map.echo("New Room: " .. name,false,false,true)
+    if map.mapping then
+        map.echo("New Room: " .. name,false,false,(dir or find_portal or force_portal) and true or false)
         local newID = createRoomID()
         addRoom(newID)
-        setRoomArea(newID, currentArea)
+        setRoomArea(newID, map.currentArea)
         setRoomName(newID, name)
         for k,v in ipairs(exits) do
             if stubmap[v] then
@@ -860,23 +1278,24 @@ local function create_room(name, exits, dir, coords)
             end
         end
         if dir then
-            connect_rooms(currentRoom, newID, dir)
+            connect_rooms(map.currentRoom, newID, dir)
         elseif find_portal or force_portal then
-            addSpecialExit(currentRoom, newID, (find_portal or force_portal))
-            setRoomUserData(newID,"portals",tostring(currentRoom)..":"..(find_portal or force_portal))
+            addSpecialExit(map.currentRoom, newID, (find_portal or force_portal))
+            setRoomUserData(newID,"portals",tostring(map.currentRoom)..":"..(find_portal or force_portal))
         end
         setRoomCoordinates(newID,unpack(coords))
-        if not (find_portal or force_portal) and map.configs.stretch_map and table.size(getRoomsByPosition(currentArea,unpack(coords))) &gt; 1 then
+        local pos_rooms = getRoomsByPosition(map.currentArea,unpack(coords))
+        if not (find_portal or force_portal) and map.configs.stretch_map and table.size(pos_rooms) &gt; 1 then
             set_room(newID)
             stretch_map(dir,unpack(coords))
         end
-        if map_mode == "simple" then
+        if map.mode == "simple" then
             local x,y,z = unpack(coords)
             local dx,dy,dz,rooms
             for k,v in ipairs(exits) do
                 if v ~= dir then
                     dx,dy,dz = unpack(coordmap[stubmap[v]])
-                    rooms = getRoomsByPosition(currentArea,x+dx,y+dy,z+dz)
+                    rooms = getRoomsByPosition(map.currentArea,x+dx,y+dy,z+dz)
                     if table.size(rooms) == 1 then
                         connect_rooms(newID,rooms[0],v)
                     end
@@ -910,24 +1329,24 @@ end
 
 local function find_link(name, exits, dir, max_distance)
     -- search for matching room in desired direction
-    local x,y,z = getRoomCoordinates(currentRoom)
-    if mapping and x then
+    local x,y,z = getRoomCoordinates(map.currentRoom)
+    if map.mapping and x then
+        if max_distance &lt; 1 then
+            max_distance = nil
+        else
+            max_distance = max_distance - 1
+        end
         local dx,dy,dz = unpack(coordmap[stubmap[dir]])
-        local minx, maxx, miny, maxy, minz, maxz = find_area_limits(currentArea)
+        local minx, maxx, miny, maxy, minz, maxz = find_area_limits(map.currentArea)
         local rooms, match, stubs
         if max_distance then
-            minx = x - max_distance
-            maxx = x + max_distance
-            miny = y - max_distance
-            maxy = y + max_distance
-            minz = z - max_distance
-            maxz = z + max_distance
+            minx, maxx = x - max_distance, x + max_distance
+            miny, maxy = y - max_distance, y + max_distance
+            minz, maxz = z - max_distance, z + max_distance
         end
         repeat
-            x = x + dx
-            y = y + dy
-            z = z + dz
-            rooms = getRoomsByPosition(currentArea,x,y,z)
+            x, y, z = x + dx, y + dy, z + dz
+            rooms = getRoomsByPosition(map.currentArea,x,y,z)
         until (x &gt; maxx or x &lt; minx or y &gt; maxy or y &lt; miny or z &gt; maxz or z &lt; minz or not table.is_empty(rooms))
         for k,v in pairs(rooms) do
             if check_room(v,name,exits) then
@@ -936,10 +1355,10 @@ local function find_link(name, exits, dir, max_distance)
             end
         end
         if match then
-            connect_rooms(currentRoom, match, dir)
+            connect_rooms(map.currentRoom, match, dir)
             set_room(match)
         else
-            x,y,z = getRoomCoordinates(currentRoom)
+            x,y,z = getRoomCoordinates(map.currentRoom)
             create_room(name, exits, dir,{x+dx,y+dy,z+dz})
         end
     end
@@ -949,14 +1368,14 @@ local function move_map()
     -- tries to move the map to the next room
     local move = table.remove(move_queue,1)
     if move or random_move then
-        local exits = (currentRoom and getRoomExits(currentRoom)) or {}
+        local exits = (map.currentRoom and getRoomExits(map.currentRoom)) or {}
         -- check handling of custom exits here
-        if currentRoom then
+        if map.currentRoom then
             for i = 13, #stubmap do
-                exits[stubmap[i]] = tonumber(getRoomUserData(currentRoom,"exit " .. stubmap[i]))
+                exits[stubmap[i]] = tonumber(getRoomUserData(map.currentRoom,"exit " .. stubmap[i]))
             end
         end
-        local special = (currentRoom and getSpecialExitsSwap(currentRoom)) or {}
+        local special = (map.currentRoom and getSpecialExitsSwap(map.currentRoom)) or {}
         if move and not exits[move] and not special[move] then
             for k,v in pairs(special) do
                 if string.starts(k,move) then
@@ -966,27 +1385,27 @@ local function move_map()
             end
         end
         if find_portal then
-            map.find_me(currentName,currentExits,move)
+            map.find_me(map.currentName,map.currentExits,move)
             find_portal = false
         elseif force_portal then
             find_portal = false
             map.echo("Creating portal destination")
-            create_room(currentName, currentExits, nil, {getRoomCoordinates(currentRoom)})
+            create_room(map.currentName, map.currentExits, nil, {getRoomCoordinates(map.currentRoom)})
             force_portal = false
         elseif move == "recall" and map.save.recall[map.character] then
             set_room(map.save.recall[map.character])
-        elseif move == "look" then
-            map.find_me(currentName,currentExits)
+        elseif move == "look" and not check_room(map.currentRoom, map.currentName, map.currentExits) then
+            map.find_me(map.currentName,map.currentExits)
         else
-            if exits[move] and (vision_fail or check_room(exits[move], currentName, currentExits)) then
+            if exits[move] and (vision_fail or check_room(exits[move], map.currentName, map.currentExits)) then
                 set_room(exits[move])
-            elseif special[move] and (vision_fail or check_room(special[move], currentName, currentExits)) then
+            elseif special[move] and (vision_fail or check_room(special[move], map.currentName, map.currentExits)) then
                 set_room(special[move])
             elseif not vision_fail then
-                if mapping and move then
-                    find_link(currentName, currentExits, move)
+                if map.mapping and move then
+                    find_link(map.currentName, map.currentExits, move, map.configs.max_search_distance)
                 else
-                    map.find_me(currentName,currentExits, move)
+                    map.find_me(map.currentName,map.currentExits, move)
                 end
             end
         end
@@ -1007,15 +1426,15 @@ local function capture_move_cmd(dir,priority)
         dir = configs.lang_dirs[dir] or dir
     end
     local door = string.match(dir,"open (%a+)")
-    if mapping and door then
-        local doors = getDoors(currentRoom)
+    if map.mapping and door then
+        local doors = getDoors(map.currentRoom)
         if not doors[door] and not doors[short[door]] then
             map.set_door(door,"","")
         end
     end
     local portal = string.match(dir,"enter (%a+)")
-    if mapping and portal then
-        local portals = getSpecialExitsSwap(currentRoom)
+    if map.mapping and portal then
+        local portals = getSpecialExitsSwap(map.currentRoom)
         if not portals[dir] then
             map.set_portal(dir, true)
         end
@@ -1028,8 +1447,8 @@ local function capture_move_cmd(dir,priority)
         end
     elseif configs.search_on_look and dir == "look" then
         table.insert(move_queue, dir)
-    elseif currentRoom then
-        local special = getSpecialExitsSwap(currentRoom) or {}
+    elseif map.currentRoom then
+        local special = getSpecialExitsSwap(map.currentRoom) or {}
         if special[dir] then
             if priority then
                 table.insert(move_queue,1,dir)
@@ -1043,18 +1462,18 @@ end
 local function capture_room_info(name, exits)
     -- captures room info, and tries to move map to match
     if (not vision_fail) and name and exits then
-        prevName = currentName
-        prevExits = currentExits
+        map.set("prevName", map.currentName)
+        map.set("prevExits", map.currentExits)
         name = string.trim(name)
-        currentName = name
+        map.set("currentName", name)
         exits = string.gsub(string.lower(exits)," and "," ")
         if exits:ends(".") then exits = exits:sub(1,#exits-1) end
         if map.configs.use_lang_dirs then
             exits = exits:gsub("%a+",map.configs.lang_dirs)
         end
-        currentExits = {}
+        map.set("currentExits", {})
         for w in string.gmatch(exits,"%a+") do
-            table.insert(currentExits,w)
+            table.insert(map.currentExits,w)
         end
         move_map()
     elseif vision_fail then
@@ -1076,16 +1495,18 @@ local function find_area(name)
     if not areaID then
         show_err("Invalid Area. No such area found, and area could not be added.",true)
     end
-    currentArea = areaID
+    map.set("currentArea", areaID)
 end
 
-function map.load_map(use_local)
+function map.load_map(address)
     local path = getMudletHomeDir() .. "/map.dat"
-    if use_local then
+    if not address then
         loadMap(path)
         map.echo("Map reloaded from local copy.")
     else
-        local address = map.configs.download_path .. "map.dat"
+        if not string.match(address,"/[%a_]+%.dat$") then
+            address = address .. "/map.dat"
+        end
         downloading = true
         downloadFile(path,address)
         map.echo(string.format("Downloading map file from: %s.",address))
@@ -1094,7 +1515,7 @@ end
 
 function map.set_exit(dir,roomID)
     -- used to set unusual exits from the room you are standing in
-    if mapping then
+    if map.mapping then
         roomID = tonumber(roomID)
         if not roomID then
             show_err("Set Exit: Invalid Room ID")
@@ -1107,17 +1528,17 @@ function map.set_exit(dir,roomID)
             local exit
             if stubmap[exitmap[dir] or dir] &lt;= 12 then
                 exit = short[exitmap[dir] or dir]
-                setExit(currentRoom,roomID,exit)
+                setExit(map.currentRoom,roomID,exit)
             else
                 -- check handling of custom exits here
                 exit = exitmap[dir] or dir
                 exit = "exit " .. exit
-                setRoomUserData(currentRoom,exit,roomID)
+                setRoomUserData(map.currentRoom,exit,roomID)
             end
             map.echo("Exit " .. dir .. " now goes to roomID " .. roomID)
         else
             dir = string.gsub(dir,"^-p ","")
-            addSpecialExit(currentRoom,roomID,dir)
+            addSpecialExit(map.currentRoom,roomID,dir)
             map.echo("Special exit '" .. dir .. "' now goes to roomID " .. roomID)
         end
     else
@@ -1131,7 +1552,7 @@ function map.find_path(roomName,areaName,return_tables)
     local found,dirs = false,{}
     local path = {}
     for k,v in pairs(rooms) do
-        found = getPath(currentRoom,k)
+        found = getPath(map.currentRoom,k)
         if found and (#dirs == 0 or #dirs &gt; #speedWalkDir) then
             dirs = speedWalkDir
             path = speedWalkPath
@@ -1265,14 +1686,14 @@ end
 
 function map.set_recall()
     -- assigned the current room to be recall for the current character
-    map.save.recall[map.character] = currentRoom
+    map.save.recall[map.character] = map.currentRoom
     table.save(getMudletHomeDir() .. "/map_save.dat",map.save)
-    map.echo("Recall room set to: " .. getRoomName(currentRoom) .. ".")
+    map.echo("Recall room set to: " .. getRoomName(map.currentRoom) .. ".")
 end
 
 function map.set_portal(name, is_auto)
     -- creates a new portal in the room
-    if mapping then
+    if map.mapping then
         if not string.starts(name,"-f ") then
             find_portal = name
         else
@@ -1293,42 +1714,42 @@ function map.set_mode(mode)
     if not table.contains({"simple","normal","complex"},mode) then
         show_err("Invalid Map Mode, must be 'simple', 'normal', or 'complex'.")
     end
-    map_mode = mode
+    map.set("mode", mode)
     map.echo("Current mode set to: " .. mode)
 end
 
 function map.start_mapping(area_name)
     -- starts mapping, and sets the current area to the given one, or uses the current one
-    if not currentName then
+    if not map.currentName then
         show_err("Start Mapping Error: No room detected!")
     end
     local rooms
     move_queue = {}
     area_name = area_name ~= "" and area_name or nil
-    if currentArea and not area_name then
+    if map.currentArea and not area_name then
         local areas = getAreaTableSwap()
-        area_name = areas[currentArea]
+        area_name = areas[map.currentArea]
     end
     if not area_name then
         show_err("Start Mapping Error: No area set!")
     end
     map.echo("Now mapping in area: " .. area_name)
-    mapping = true
+    map.set("mapping", true)
     find_area(area_name)
-    rooms = find_room(currentName, currentArea)
+    rooms = find_room(map.currentName, map.currentArea)
     if table.is_empty(rooms) then
-        if currentRoom and getRoomName(currentRoom) then
+        if map.currentRoom and getRoomName(map.currentRoom) == map.currentName then
             map.set_area(area_name)
         else
-            create_room(currentName, currentExits, nil, {0,0,0})
+            create_room(map.currentName, map.currentExits, nil, {0,0,0})
         end
-    elseif currentRoom and currentArea ~= getRoomArea(currentRoom) then
+    elseif map.currentRoom and map.currentArea ~= getRoomArea(map.currentRoom) then
         map.set_area(area_name)
     end
 end
 
 function map.stop_mapping()
-    mapping = false
+    map.set("mapping", false)
     map.echo("Mapping off.")
 end
 
@@ -1339,11 +1760,11 @@ end
 
 function map.set_area(name)
     -- assigns the current room to the area given, creates the area if necessary
-    if mapping then
+    if map.mapping then
         find_area(name)
-        if currentRoom and getRoomArea(currentRoom) ~= currentArea then
-            setRoomArea(currentRoom,currentArea)
-            set_room(currentRoom)
+        if map.currentRoom and getRoomArea(map.currentRoom) ~= map.currentArea then
+            setRoomArea(map.currentRoom,map.currentArea)
+            set_room(map.currentRoom)
         end
     else
         map.echo("Not mapping",false,true)
@@ -1352,8 +1773,8 @@ end
 
 function map.set_door(dir,status,one_way)
     -- adds a door on a given exit
-    if mapping then
-        if not currentRoom then
+    if map.mapping then
+        if not map.currentRoom then
             show_err("Make Door: No room found.")
         end
         dir = exitmap[dir] or dir
@@ -1366,12 +1787,12 @@ function map.set_door(dir,status,one_way)
             show_err("Make Door: Invalid one-way status, must be yes or no.")
         end
 
-        local exits = getRoomExits(currentRoom)
+        local exits = getRoomExits(map.currentRoom)
         local exit
         -- check handling of custom exits here
         for i = 13,#stubmap do
             exit = "exit " .. stubmap[i]
-            exits[stubmap[i]] = tonumber(getRoomUserData(currentRoom,exit))
+            exits[stubmap[i]] = tonumber(getRoomUserData(map.currentRoom,exit))
         end
         local target_room = exits[dir]
         if target_room then
@@ -1382,10 +1803,10 @@ function map.set_door(dir,status,one_way)
                 exits[stubmap[i]] = tonumber(getRoomUserData(target_room,exit))
             end
         end
-        if one_way == "no" and (target_room and exits[reverse_dirs[dir]] == currentRoom) then
+        if one_way == "no" and (target_room and exits[reverse_dirs[dir]] == map.currentRoom) then
             add_door(target_room,reverse_dirs[dir],status)
         end
-        add_door(currentRoom,dir,status)
+        add_door(map.currentRoom,dir,status)
         map.echo(string.format("Adding %s door to the %s", status, dir))
     else
         map.echo("Not mapping",false,true)
@@ -1394,19 +1815,19 @@ end
 
 function map.shift_room(dir)
     -- shifts a room around on the map
-    if mapping then
+    if map.mapping then
         dir = exitmap[dir] or (table.contains(exitmap,dir) and dir)
         if not dir then
             show_err("Shift Room: Exit Not Found")
         end
-        local x,y,z = getRoomCoordinates(currentRoom)
+        local x,y,z = getRoomCoordinates(map.currentRoom)
         dir = stubmap[dir]
         local coords = coordmap[dir]
         x = x + coords[1]
         y = y + coords[2]
         z = z + coords[3]
-        setRoomCoordinates(currentRoom,x,y,z)
-        centerview(currentRoom)
+        setRoomCoordinates(map.currentRoom,x,y,z)
+        centerview(map.currentRoom)
         map.echo("Shifting room",true)
     else
         map.echo("Not mapping",false,true)
@@ -1439,9 +1860,9 @@ function map.find_me(name, exits, dir)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
     if move ~= "recall" then move_queue = {} end
-    local check = dir and currentRoom and table.contains(exitmap,dir)
-    name = name or currentName
-    exits = exits or currentExits
+    local check = dir and map.currentRoom and table.contains(exitmap,dir)
+    name = name or map.currentName
+    exits = exits or map.currentExits
     local rooms = find_room(name)
     local match_IDs = {}
     for k,v in pairs(rooms) do
@@ -1453,13 +1874,13 @@ function map.find_me(name, exits, dir)
     match_IDs = {}
     if table.size(rooms) &gt; 1 and check then
         for k,v in pairs(rooms) do
-            if check_link(currentRoom,v,dir) then
+            if check_link(map.currentRoom,v,dir) then
                 table.insert(match_IDs,v)
             end
         end
     elseif random_move then
-        for k,v in pairs(getRoomExits(currentRoom)) do
-            if check_room(v,currentName,currentExits) then
+        for k,v in pairs(getRoomExits(map.currentRoom)) do
+            if check_room(v,map.currentName,map.currentExits) then
                 table.insert(match_IDs,v)
             end
         end
@@ -1467,8 +1888,8 @@ function map.find_me(name, exits, dir)
     if table.size(match_IDs) == 0 then
         match_IDs = rooms
     end
-    if table.contains(match_IDs,currentRoom) then
-        match_IDs = {currentRoom}
+    if table.contains(match_IDs,map.currentRoom) then
+        match_IDs = {map.currentRoom}
     end
     if not table.is_empty(match_IDs) and not find_portal then
         set_room(match_IDs[1])
@@ -1476,15 +1897,15 @@ function map.find_me(name, exits, dir)
     elseif find_portal then
         if not table.is_empty(match_IDs) then
             map.echo("Found portal destination, linking rooms",false,false,true)
-            addSpecialExit(currentRoom,match_IDs[1],find_portal)
+            addSpecialExit(map.currentRoom,match_IDs[1],find_portal)
             local portals = getRoomUserData(match_IDs[1],"portals") or ""
-            portals = portals .. "," .. tostring(currentRoom)..":"..find_portal
+            portals = portals .. "," .. tostring(map.currentRoom)..":"..find_portal
             setRoomUserData(match_IDs[1],"portals",portals)
             set_room(match_IDs[1])
             map.echo("Room found, ID: " .. match_IDs[1],true)
         else
             map.echo("Creating portal destination",false,false,true)
-            create_room(currentName, currentExits, nil, {getRoomCoordinates(currentRoom)})
+            create_room(map.currentName, map.currentExits, nil, {getRoomCoordinates(map.currentRoom)})
         end
         find_portal = false
     elseif table.is_empty(match_IDs) then
@@ -1493,7 +1914,7 @@ function map.find_me(name, exits, dir)
 end
 
 function map.fix_portals()
-    if mapping then
+    if map.mapping then
         -- used to clear and update data for portal back-referencing
         local rooms = getRooms()
         local portals
@@ -1517,39 +1938,39 @@ end
 function map.merge_rooms()
     -- used to combine essentially identical rooms with the same coordinates
     -- typically, these are generated due to mapping errors
-    if mapping then
+    if map.mapping then
         map.echo("Merging rooms")
-        local x,y,z = getRoomCoordinates(currentRoom)
-        local rooms = getRoomsByPosition(currentArea,x,y,z)
+        local x,y,z = getRoomCoordinates(map.currentRoom)
+        local rooms = getRoomsByPosition(map.currentArea,x,y,z)
         local exits, portals, room, cmd, curportals
         local room_count = 1
         for k,v in pairs(rooms) do
-            if v ~= currentRoom then
-                if getRoomName(v) == getRoomName(currentRoom) then
+            if v ~= map.currentRoom then
+                if getRoomName(v) == getRoomName(map.currentRoom) then
                     room_count = room_count + 1
                     for k1,v1 in pairs(getRoomExits(v)) do
-                        setExit(currentRoom,v1,stubmap[k1])
+                        setExit(map.currentRoom,v1,stubmap[k1])
                         exits = getRoomExits(v1)
                         if exits[reverse_dirs[k1]] == v then
-                            setExit(v1,currentRoom,stubmap[reverse_dirs[k1]])
+                            setExit(v1,map.currentRoom,stubmap[reverse_dirs[k1]])
                         end
                     end
                     for k1,v1 in pairs(getDoors(v)) do
-                        setDoor(currentRoom,k1,v1)
+                        setDoor(map.currentRoom,k1,v1)
                     end
                     for k1,v1 in pairs(getSpecialExitsSwap(v)) do
-                        addSpecialExit(currentRoom,v1,k1)
+                        addSpecialExit(map.currentRoom,v1,k1)
                     end
                     portals = getRoomUserData(v,"portals") or ""
                     if portals ~= "" then
                         portals = string.split(portals,",")
                         for k1,v1 in ipairs(portals) do
                             room,cmd = unpack(string.split(v1,":"))
-                            addSpecialExit(tonumber(room),currentRoom,cmd)
-                            curportals = getRoomUserData(currentRoom,"portals") or ""
+                            addSpecialExit(tonumber(room),map.currentRoom,cmd)
+                            curportals = getRoomUserData(map.currentRoom,"portals") or ""
                             if not string.find(curportals,room) then
                                 curportals = curportals .. "," .. room .. ":" .. cmd
-                                setRoomUserData(currentRoom,"portals",curportals)
+                                setRoomUserData(map.currentRoom,"portals",curportals)
                             end
                         end
                     end
@@ -1558,14 +1979,14 @@ function map.merge_rooms()
                         local door = "door " .. stubmap[i]
                         local tmp = tonumber(getRoomUserData(v,door))
                         if tmp then
-                            setRoomUserData(currentRoom,door,tmp)
+                            setRoomUserData(map.currentRoom,door,tmp)
                         end
                         local exit = "exit " .. stubmap[i]
                         tmp = tonumber(getRoomUserData(v,exit))
                         if tmp then
-                            setRoomUserData(currentRoom,exit,tmp)
+                            setRoomUserData(map.currentRoom,exit,tmp)
                             if tonumber(getRoomUserData(tmp, "exit " .. reverse_dirs[stubmap[i]])) == v then
-                                setRoomUserData(tmp, exit, currentRoom)
+                                setRoomUserData(tmp, exit, map.currentRoom)
                             end
                         end
                     end
@@ -1615,7 +2036,7 @@ function map.echoRoomList(areaname, exact)
     end
     if areaid then
         local roomlist, endresult = getAreaRooms(areaid) or {}, {}
-        
+
         -- obtain a room list for each of the room IDs we got
         local getRoomName = getRoomName
         for _, id in pairs(roomlist) do
@@ -1624,7 +2045,7 @@ function map.echoRoomList(areaname, exact)
         roomlist[#roomlist+1], roomlist[0] = roomlist[0], nil
         -- sort room IDs so we can display them in order
         table.sort(roomlist)
-        
+
         local echoLink, format, fg, echo = echoLink, string.format, fg, cecho
         -- now display something half-decent looking
         cecho(format("&lt;%s&gt;List of all rooms in &lt;%s&gt;%s&lt;%s&gt; (areaID &lt;%s&gt;%s&lt;%s&gt; - &lt;%s&gt;%d&lt;%s&gt; rooms):\n",
@@ -1632,7 +2053,7 @@ function map.echoRoomList(areaname, exact)
         -- use pairs, as we can have gaps between room IDs
         for _, roomid in pairs(roomlist) do
             local roomname = endresult[roomid]
-            cechoLink(format("&lt;%s&gt;%7s",othercolor,roomid), 'map.gotoRoom('..roomid..')',
+            cechoLink(format("&lt;%s&gt;%7s",othercolor,roomid), 'map.speedwalk('..roomid..')',
                 format("Go to %s (%s)", roomid, tostring(roomname)), true)
             cecho(format("&lt;%s&gt;: &lt;%s&gt;%s&lt;%s&gt;.\n", listcolor, othercolor, roomname, listcolor))
         end
@@ -1673,7 +2094,7 @@ function map.echoAreaList()
         totalroomcount = totalroomcount + areac
         return areac
     end
-    
+
     local getAreaRooms, cecho, fg, echoLink, format = getAreaRooms, cecho, fg, echoLink, string.format
     cecho(format("&lt;%s&gt;List of all areas we know of (click to view room list):\n",listcolor))
     for id = 1,table.maxn(rlist) do
@@ -1703,9 +2124,14 @@ end
 
 function map.make_ignore_pattern(str)
     map.save.ignore_patterns = map.save.ignore_patterns or {}
-    table.insert(map.save.ignore_patterns,str)
+    if not table.contains(map.save.ignore_patterns,str) then
+        table.insert(map.save.ignore_patterns,str)
+        map.echo("Ignore pattern added: " .. str)
+    else
+        table.remove(map.save.ignore_patterns, table.index_of(map.save.ignore_patterns, str))
+        map.echo("Ignore pattern removed: " .. str)
+    end
     table.save(getMudletHomeDir() .. "/map_save.dat",map.save)
-    map.echo("Ignore pattern added: " .. str)
 end
 
 local function grab_line()
@@ -1758,6 +2184,7 @@ local function name_search()
         end
     end
     lines = {}
+    room_name = room_name:sub(1,100)
     return room_name
 end
 
@@ -1776,14 +2203,115 @@ local function handle_exits(exits)
     end
 end
 
+-- add basic speedwalking functionality that allows the option of a delay between moves and/or
+-- waiting for a room to be seen before taking the next step
+    -- added, look into options for non-standard door usage
+
+local continue_walk, timerID
+continue_walk = function(new_room)
+    if not walking then return end
+    -- calculate wait time until next command, with randomness
+    local wait = map.configs.speedwalk_delay or 0
+    if wait &gt; 0 and map.configs.speedwalk_random then
+        wait = wait * (1 + math.random(0,100)/100)
+    end
+    -- if no wait after new room, move immediately
+    if new_room and map.configs.speedwalk_wait and wait == 0 then
+        new_room = false
+    end
+    -- send command if we don't need to wait
+    if not new_room then
+        send(table.remove(map.walkDirs,1))
+        -- check to see if we are done
+        if #map.walkDirs == 0 then
+            walking = false
+        end
+    end
+    -- make tempTimer to send next command if necessary
+    if walking and (not map.configs.speedwalk_wait or (map.configs.speedwalk_wait and wait &gt; 0)) then
+        if timerID then killTimer(timerID) end
+        timerID = tempTimer(wait, function() continue_walk() end)
+    end
+end
+
+function map.speedwalk(roomID, walkPath, walkDirs)
+    roomID = roomID or speedWalkPath[#speedWalkPath]
+    getPath(map.currentRoom, roomID)
+    walkPath = speedWalkPath
+    walkDirs = speedWalkDir
+    if #speedWalkPath == 0 then
+        map.echo("No path to chosen room found.",false,true)
+        return
+    end
+    table.insert(walkPath, 1, map.currentRoom)
+    -- go through dirs to find doors that need opened, etc
+    -- add in necessary extra commands to walkDirs table
+    local k = 1
+    repeat
+        local id, dir = walkPath[k], walkDirs[k]
+        if exitmap[dir] or short[dir] then
+            local door = check_doors(id, exitmap[dir] or dir)
+            local status = door and door[dir]
+            if status and status &gt; 1 then
+                -- if locked, unlock door
+                if status == 3 then
+                    table.insert(walkPath,k,id)
+                    table.insert(walkDirs,k,"unlock " .. (exitmap[dir] or dir))
+                    k = k + 1
+                end
+                -- if closed, open door
+                table.insert(walkPath,k,id)
+                table.insert(walkDirs,k,"open " .. (exitmap[dir] or dir))
+                k = k + 1
+            end
+        end
+        k = k + 1
+    until k &gt; #walkDirs
+
+    -- perform walk
+    walking = true
+    if map.configs.speedwalk_wait or map.configs.speedwalk_delay &gt; 0 then
+        map.walkDirs = walkDirs
+        continue_walk()
+    else
+        for _,dir in ipairs(walkDirs) do
+            send(dir)
+        end
+        walking = false
+    end
+end
+
 function doSpeedWalk()
-    -- we can do a lot here, this fires when a room is double clicked on, and is intended to speedwalk to it
-    map.echo("Path to " .. getRoomName(speedWalkPath[#speedWalkPath]) .. ": " .. table.concat(speedWalkDir, ", "))
+    if #speedWalkPath ~= 0 then
+        map.speedwalk(nil, speedWalkPath, speedWalkDir)
+    else
+        map.echo("No path to chosen room found.",false,true)
+    end
+end
+
+-- add auto-check for update, plus command to download new version
+-- check on sysLoadEvent and repeat check on 1h loop
+-- before printing the update reminder, check if the last line is its own update reminder
+-- otherwise disconnecting and leaving Mudlet for the night will leave you to 10 spammy messages
+    -- since the script already handles the sysDataSendRequest event, consider restarting timer when
+    -- a command is sent, rather than looking at the last printed line.
+    -- version number accessible in map.version
+    -- map.version set at end of config function as a protected variable
+
+function map.checkVersion()
+    
+end
+
+function map.updateVersion()
+
 end
 
 function map.eventHandler(event,...)
     if event == "onNewRoom" then
         handle_exits(arg[1])
+        if walking and map.configs.speedwalk_wait then
+            continue_walk(true)
+        end
     elseif event == "onMoveFail" then
         map.echo("onMoveFail",true)
         table.remove(move_queue,1)
@@ -1809,9 +2337,13 @@ function map.eventHandler(event,...)
     elseif event == "sysConnectionEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
-        if not map.save.prompt_pattern[""] then
+        if not map.save.prompt_pattern[map.character or ""] then
             cecho(map.quick_start)
         end
+    elseif event == "mapStop" then
+        map.set("mapping", false)
+        walking = false
+        map.echo("Mapping and speedwalking stopped.")
     end
 end
 
@@ -1825,7 +2357,8 @@ registerAnonymousEventHandler("onRandomMove"," map.eventHandler")
 registerAnonymousEventHandler("onForcedMove"," map.eventHandler")
 registerAnonymousEventHandler("onNewRoom"," map.eventHandler")
 registerAnonymousEventHandler("onNewLine"," map.eventHandler")
-registerAnonymousEventHandler("mapOpenEvent"," map.eventHandler")</script>
+registerAnonymousEventHandler("mapOpenEvent"," map.eventHandler")
+registerAnonymousEventHandler("mapStop"," map.eventHandler")</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>
