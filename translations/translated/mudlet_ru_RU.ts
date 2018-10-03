@@ -1205,7 +1205,7 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[ ОК ] - Аудит карты завершён (%1s). Наслаждайтесь игрой...</translation>
+      <translation>[  OK  ] - Аудит карты завершён (%1s). Наслаждайтесь игрой...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
@@ -2451,7 +2451,7 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1344"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation>ОПОВЕЩ</translation>
+      <translation>ТРЕВОГА</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1355"/>
@@ -7848,7 +7848,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="495"/>
       <source>more lines</source>
-      <translation type="unfinished"/>
+      <translation>еще строк</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="532"/>
