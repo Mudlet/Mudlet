@@ -1180,7 +1180,7 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation>[ ИНФО ] - Аудит загруженной карты начинается...</translation>
+      <translation>[ ИНФО ]  - Аудит загруженной карты начинается...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
@@ -1443,7 +1443,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2149"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[ Инфо ] - Загрузка карты начата, пожалуйста, подождите...</translation>
+      <translation>[ Инфо ]  - Загрузка карты начата, пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2157"/>
@@ -1743,7 +1743,7 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1301"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation>[ ИНФО ] - В комнате с ID: %1 найдена одина или более избыточных пользовательских элементов линии, которые
+      <translation>[ ИНФО ]  - В комнате с ID: %1 найдена одина или более избыточных пользовательских элементов линии, которые
 были удалены: %2.</translation>
     </message>
     <message>
@@ -2398,14 +2398,14 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="351"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation>[ ИНФО ] - IP-адрес %1 был найден. Это: %2
+      <translation>[ ИНФО ]  - IP-адрес %1 был найден. Это: %2
 </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="352"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation>[ ИНФО ] - Идёт подключение к %1: %2 ...
+      <translation>[ ИНФО ]  - Идёт подключение к %1: %2 ...
 </translation>
     </message>
     <message>
