@@ -1045,7 +1045,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Предварительная загрузка карты(1) отчет</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1627"/>
@@ -1093,7 +1093,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2376"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Предварительная загрузка карты(2) отчет</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2386"/>
@@ -2430,6 +2430,42 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <translation>&lt;Сервер хочет обновить интерфейс на новою версию &apos;%1&apos;. Убираем старую версию &apos;%2&apos;&gt;</translation>
     </message>
     <message>
+      <location filename="../src/ctelnet.cpp" line="1310"/>
+      <source>ERROR</source>
+      <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="1322"/>
+      <source>LUA</source>
+      <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="1333"/>
+      <source>WARN</source>
+      <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="1344"/>
+      <source>ALERT</source>
+      <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="1355"/>
+      <source>INFO</source>
+      <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="1366"/>
+      <source>OK</source>
+      <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ctelnet.cpp" line="1555"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
@@ -3575,32 +3611,32 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2528"/>
       <source>{missing, possibly recently deleted trigger item}</source>
-      <translation type="unfinished"/>
+      <translation>{не существует, триггер может быть был удалён}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2531"/>
       <source>{missing, possibly recently deleted alias item}</source>
-      <translation type="unfinished"/>
+      <translation>{не существует, алиас может быть был удалён}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2534"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation type="unfinished"/>
+      <translation>{не существует, скрипт может быть был удалён}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2537"/>
       <source>{missing, possibly recently deleted timer item}</source>
-      <translation type="unfinished"/>
+      <translation>{не существует, таймер может быть был удалён}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2540"/>
       <source>{missing, possibly recently deleted key item}</source>
-      <translation type="unfinished"/>
+      <translation>{не существует, ключ может быть был удалён}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2543"/>
       <source>{missing, possibly recently deleted button item}</source>
-      <translation type="unfinished"/>
+      <translation>{не существует, кнопка может быть была удалена}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="164"/>
@@ -3691,7 +3727,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2893"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (например, 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2894"/>
