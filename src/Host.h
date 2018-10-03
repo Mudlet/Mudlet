@@ -185,7 +185,7 @@ public:
     bool currentlySavingProfile();
     void waitForProfileSave();    
     void setMmpMapLocation(const QString& var);
-    QString mmpMapLocation() const;
+    QString getMmpMapLocation() const;
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;

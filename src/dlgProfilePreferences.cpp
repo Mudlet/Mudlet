@@ -440,7 +440,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
      || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
-     || !pHost->mmpMapLocation().isEmpty()) {
+     || !pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
     } else {

@@ -149,7 +149,7 @@ public:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
     void setMmpMapLocation(const QString &location);
-    QString mmpMapLocation() const;
+    QString getMmpMapLocation() const;
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;

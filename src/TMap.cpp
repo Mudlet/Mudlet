@@ -1536,7 +1536,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
             || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
             || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
-            || !mmpMapLocation().isEmpty()) {
+            || !getMmpMapLocation().isEmpty()) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
@@ -2096,8 +2096,8 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     QUrl url;
 
     if (remoteUrl.isEmpty()) {
-        if (!mmpMapLocation().isEmpty()) {
-            url = QUrl::fromUserInput(mmpMapLocation());
+        if (!getMmpMapLocation().isEmpty()) {
+            url = QUrl::fromUserInput(getMmpMapLocation());
         } else {
             url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
         }
@@ -2435,7 +2435,7 @@ void TMap::setMmpMapLocation(const QString &location)
     qDebug() << "MMP map registered at" << mMmpMapLocation;
 }
 
-QString TMap::mmpMapLocation() const
+QString TMap::getMmpMapLocation() const
 {
     return mMmpMapLocation;
 }

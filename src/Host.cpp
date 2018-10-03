@@ -494,9 +494,9 @@ void Host::setMmpMapLocation(const QString &var)
     mpMap->setMmpMapLocation(urlValue.toString());
 }
 
-QString Host::mmpMapLocation() const
+QString Host::getMmpMapLocation() const
 {
-    return mpMap->mmpMapLocation();
+    return mpMap->getMmpMapLocation();
 }
 
 // Now returns the total weight of the path
