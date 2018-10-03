@@ -3732,7 +3732,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2894"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (например, 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2895"/>
@@ -3747,12 +3747,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2899"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (например, 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2900"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (например, 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2901"/>
@@ -3826,7 +3826,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1775"/>
       <location filename="../src/dlgRoomExits.cpp" line="1894"/>
       <source>Exit to unnamed room is valid</source>
-      <translation type="unfinished"/>
+      <translation>Выход в комнату без названия действителен</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
@@ -4101,7 +4101,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1833"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation type="unfinished"/>
+      <translation>Выходы для комнаты номер: %1[*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1903"/>
@@ -4570,7 +4570,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="4796"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4926"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>матч на оперативную линию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4799"/>
@@ -4719,13 +4719,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7497"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7504"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7518"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7504"/>
