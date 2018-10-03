@@ -2097,7 +2097,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     if (remoteUrl.isEmpty()) {
         if (!mmpMapLocation().isEmpty()) {
-            url = mmpMapLocation();
+            url = QUrl::fromUserInput(mmpMapLocation());
         } else {
             url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
         }
