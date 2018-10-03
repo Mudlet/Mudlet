@@ -2445,13 +2445,13 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1333"/>
       <source>WARN</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ВНИМ</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1344"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ОПОВЕЩ</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1355"/>
