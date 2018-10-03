@@ -439,8 +439,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
      || url.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
      || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-     || url.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
-
+     || url.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
+     || !pHost->mmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
     } else {

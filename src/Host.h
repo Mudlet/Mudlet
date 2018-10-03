@@ -183,7 +183,9 @@ public:
     QString readProfileData(const QString &);
     void xmlSaved(const QString &xmlName);
     bool currentlySavingProfile();
-    void waitForProfileSave();
+    void waitForProfileSave();    
+    void setMmpMapLocation(const QString& var);
+    QString mmpMapLocation() const;
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;

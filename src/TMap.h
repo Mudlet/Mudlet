@@ -148,6 +148,8 @@ public:
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
+    void setMmpMapLocation(const QString &location);
+    QString mmpMapLocation() const;
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
@@ -223,6 +225,10 @@ public:
     qreal mMapSymbolFontFudgeFactor;
     // Disables font substitution if set:
     bool mIsOnlyMapSymbolFontToBeUsed;
+
+    // location of an MMP map provided by the game
+    QString mMmpMapLocation;
+
 
 
 public slots:

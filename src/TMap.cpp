@@ -1535,7 +1535,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
             || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
             || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
+            || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
+            || !mmpMapLocation().isEmpty()) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
@@ -2095,8 +2096,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     QUrl url;
 
     if (remoteUrl.isEmpty()) {
-        // TODO: Provide a per profile means to specify a "user settable" default Url...
-        url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
+        if (!mmpMapLocation().isEmpty()) {
+            url = mmpMapLocation();
+        } else {
+            url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
+        }
     } else {
         url = QUrl::fromUserInput(remoteUrl);
     }
@@ -2422,4 +2426,16 @@ QHash<QString, QSet<int>> TMap::roomSymbolsHash()
         }
     }
     return results;
+}
+
+void TMap::setMmpMapLocation(const QString &location)
+{
+    mMmpMapLocation = location;
+
+    qDebug() << "MMP map registered at" << mMmpMapLocation;
+}
+
+QString TMap::mmpMapLocation() const
+{
+    return mMmpMapLocation;
 }
