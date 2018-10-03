@@ -1355,12 +1355,15 @@ void TConsole::hideEvent(QHideEvent* event)
 void TConsole::reset()
 {
     deselect();
-    mFormatCurrent.bgR = mStandardFormat.bgR;
-    mFormatCurrent.bgG = mStandardFormat.bgG;
-    mFormatCurrent.bgB = mStandardFormat.bgB;
-    mFormatCurrent.fgR = mStandardFormat.fgR;
-    mFormatCurrent.fgG = mStandardFormat.fgG;
-    mFormatCurrent.fgB = mStandardFormat.fgB;
+    auto& mBgColor = mpHost->mBgColor;
+    auto& mFgColor = mpHost->mFgColor;
+
+    mFormatCurrent.bgR = mBgColor.red();
+    mFormatCurrent.bgG = mBgColor.green();
+    mFormatCurrent.bgB = mBgColor.blue();
+    mFormatCurrent.fgR = mFgColor.red();
+    mFormatCurrent.fgG = mFgColor.green();
+    mFormatCurrent.fgB = mFgColor.blue();
     mFormatCurrent.flags &= ~(TCHAR_BOLD);
     mFormatCurrent.flags &= ~(TCHAR_ITALICS);
     mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
@@ -2570,16 +2573,16 @@ void TConsole::printSystemMessage(const QString& msg)
         bgColor = mpHost->mBgColor;
     }
 
-    QString txt = QString("System Message: ") + msg;
+    QString txt = tr("System message: %1").arg(msg);
     buffer.append(txt,
                   0,
                   txt.size(),
                   mSystemMessageFgColor.red(),
                   mSystemMessageFgColor.green(),
                   mSystemMessageFgColor.blue(),
-                  mSystemMessageBgColor.red(),
-                  mSystemMessageBgColor.green(),
-                  mSystemMessageBgColor.blue(),
+                  bgColor.red(),
+                  bgColor.green(),
+                  bgColor.blue(),
                   false,
                   false,
                   false,

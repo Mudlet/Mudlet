@@ -345,7 +345,6 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
 
-
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
