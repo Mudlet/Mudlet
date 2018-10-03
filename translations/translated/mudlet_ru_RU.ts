@@ -3560,7 +3560,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2172"/>
       <source>Press to pick destination(s)</source>
-      <translation>Нажмите, чтобы выбрать место назначения(ий)</translation>
+      <translation>Выбрать пункт назначения(с)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2408"/>
@@ -6823,12 +6823,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1657"/>
       <source>Save your current map:</source>
-      <translation>Сохраняет текущую карту:</translation>
+      <translation>Сохранить текущую карту:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1667"/>
       <source>Press to choose location and save</source>
-      <translation>Нажмите, чтобы выбрать местоположение и сохранить</translation>
+      <translation>Выбрать местоположение и сохранить</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1674"/>
@@ -6838,7 +6838,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1684"/>
       <source>Press to choose file and load</source>
-      <translation>Нажмите, чтобы выбрать файл и загрузить</translation>
+      <translation>Выбрать файл и загрузить</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1691"/>
