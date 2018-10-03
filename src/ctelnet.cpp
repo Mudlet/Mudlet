@@ -1146,12 +1146,12 @@ void cTelnet::setGMCPVariables(const QString& msg)
 {
     QString var;
     QString arg;
-    if (msg.indexOf('\n') > -1) {
+    var = msg.section(QChar::Space, 0, 0);
+    arg = msg.section(QChar::Space, 1);
+
+    if (arg.isEmpty()) {
         var = msg.section(QChar::LineFeed, 0, 0);
         arg = msg.section(QChar::LineFeed, 1);
-    } else {
-        var = msg.section(QChar::Space, 0, 0);
-        arg = msg.section(QChar::Space, 1);
     }
 
     if (msg.startsWith(QStringLiteral("Client.GUI"))) {
