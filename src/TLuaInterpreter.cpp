@@ -5677,7 +5677,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
         // *THAT* value so, though it is probably okay to not worry about the
         // need to "escape" it to get it through the telnet protocol unscathed
         // it is trival to fix:
-        output = mudlet::ReplaceString(output, "\xff", "\xff\xff");
+        output = mudlet::replaceString(output, "\xff", "\xff\xff");
         host.mTelnet.socketOutRaw(output);
         lua_pushboolean(L, true);
         return 1;

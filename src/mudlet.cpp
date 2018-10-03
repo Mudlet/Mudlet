@@ -3799,7 +3799,7 @@ QStringList mudlet::getAvailableFonts()
     return database.families(QFontDatabase::Any);
 }
 
-std::string mudlet::ReplaceString(std::string subject, const std::string& search, const std::string& replace)
+std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
 {
     size_t pos = 0;
     while ((pos = subject.find(search, pos)) != std::string::npos) {

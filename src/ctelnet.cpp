@@ -421,7 +421,7 @@ bool cTelnet::sendData(QString& data)
         // outData is using the selected Mud Server encoding here:
         // we need to cook any byte values from the encoding process that are
         // 0xff (assuming that there are no Telnet protocol sequences in here):
-        outData = mudlet::ReplaceString(outData, "\xff", "\xff\xff");
+        outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
         return socketOutRaw(outData);
     } else {
 
@@ -1045,7 +1045,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
                 postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
-                    postMessage(tr("[  OK  [ - Package is already installed."));
+                    postMessage(tr("[  OK  ] - Package is already installed."));
                     return;
                 }
 
@@ -2159,10 +2159,10 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
         // encoding to the required Mud Server encoding as a QByteArray,
         // QString::fromStdString(...) converts from a UTF8 encoded std::string
         // to a UTF16BE encoded QString:
-        return mudlet::ReplaceString(mpOutOfBandDataIncomingCodec->fromUnicode(QString::fromStdString(data)).toStdString(), "\xff", "\xff\xff");
+        return mudlet::replaceString(mpOutOfBandDataIncomingCodec->fromUnicode(QString::fromStdString(data)).toStdString(), "\xff", "\xff\xff");
     } else {
         // std::string::c_str() converts the std::string into a char array WITH
         // a garenteed terminating null byte.
-        return mudlet::ReplaceString(data, "\xff", "\xff\xff");
+        return mudlet::replaceString(data, "\xff", "\xff\xff");
     }
 }
