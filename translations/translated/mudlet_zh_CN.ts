@@ -2461,7 +2461,7 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1366"/>
       <source>OK</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>好</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1555"/>
