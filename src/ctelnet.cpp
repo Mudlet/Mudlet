@@ -1193,7 +1193,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
     packageMessage = msg.section(QChar::Space, 0, 0);
     data = msg.section(QChar::Space, 1);
 
-    if (arg.isEmpty()) {
+    if (data.isEmpty()) {
         packageMessage = msg.section(QChar::LineFeed, 0, 0);
         data = msg.section(QChar::LineFeed, 1);
     }
