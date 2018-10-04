@@ -10504,7 +10504,6 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
         }
     } else {
         pMudlet->mDiscord.setApplicationID(&host, QString());
-        // This must always succeed
         lua_pushboolean(L, true);
         return 1;
     }
@@ -10715,7 +10714,6 @@ int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
         return 2;
     }
 
-
     lua_pushfstring(L, pMudlet->mDiscord.getSmallImageText(&host).toUtf8().constData());
     return 1;
 }
@@ -10804,7 +10802,6 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordState
 int TLuaInterpreter::setDiscordState(lua_State* L)
 {
-    mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
     auto result = discordApiEnabled(L);
@@ -10920,7 +10917,6 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordTimeStamps
 int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
 {
-    mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
     auto result = discordApiEnabled(L);
@@ -12310,7 +12306,6 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
             }
         }
         //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
-// Disabled until PR #1852 merged in as it will clash here:
 //        mpHost->processDiscordMSDP(token, script);
         setMSDPTable(token, script);
     }

@@ -830,7 +830,6 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("DiscordAccessOptions"))) {
-        // Only set this option if there is a value - otherwise use the Host defaults
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("DiscordAccessOptions").toString().toInt());
     }
 

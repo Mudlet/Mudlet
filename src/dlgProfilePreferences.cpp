@@ -81,10 +81,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
 
-    
+
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
-    
+
     switch (pMudlet->menuBarVisibility()) {
     case mudlet::visibleNever:
         comboBox_menuBarVisibility->setCurrentIndex(0);

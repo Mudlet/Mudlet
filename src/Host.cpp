@@ -1508,7 +1508,6 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     }
 }
 
-// Called from dlgConnectionPreferences if the discord opt-in is unclicked
 void Host::clearDiscordData()
 {
     mudlet* pMudlet = mudlet::self();
@@ -1572,14 +1571,11 @@ const QString& Host::getDiscordApplicationID()
 // arguments. Returns true if neither match, otherwise false.
 bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const
 {
-    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty()
-            && userName != mRequiredDiscordUserName) {
+    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName != mRequiredDiscordUserName) {
         return false;
     }
 
-    if (!userDiscriminator.isEmpty()
-            && !mRequiredDiscordUserDiscriminator.isEmpty()
-            && userDiscriminator != mRequiredDiscordUserDiscriminator) {
+    if (!userDiscriminator.isEmpty() && !mRequiredDiscordUserDiscriminator.isEmpty() && userDiscriminator != mRequiredDiscordUserDiscriminator) {
         return false;
     } else {
         return true;
