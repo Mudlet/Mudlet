@@ -154,7 +154,6 @@ public:
     QString mHelpMsg;
 
 public slots:
-
     void slot_roomSelectionChanged();
     void slot_deleteCustomExitLine();
     void slot_moveLabel();
@@ -230,6 +229,13 @@ private:
     QCache<QString, QPixmap> mSymbolPixmapCache;
     ushort mSymbolFontSize;
     QFont mMapSymbolFont;
+
+    QPointer<QAction> mpCreateRoomAction;
+
+    std::pair<int, int> getMousePosition();
+
+private slots:
+    void slot_createRoom();
 };
 
 #endif // MUDLET_T2DMAP_H

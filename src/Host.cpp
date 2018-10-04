@@ -478,6 +478,34 @@ void Host::waitForProfileSave()
     }
 }
 
+void Host::setMmpMapLocation(const QString &var)
+{
+    auto document = QJsonDocument::fromJson(var.toUtf8());
+    if (!document.isObject()) {
+        return;
+    }
+    auto json = document.object();
+    if (json.isEmpty()) {
+        return;
+    }
+
+    auto urlValue = json.value(QStringLiteral("url"));
+    if (urlValue == QJsonValue::Undefined) {
+        return;
+    }
+    auto url = QUrl(urlValue.toString());
+    if (!url.isValid()) {
+        return;
+    }
+
+    mpMap->setMmpMapLocation(urlValue.toString());
+}
+
+QString Host::getMmpMapLocation() const
+{
+    return mpMap->getMmpMapLocation();
+}
+
 // Now returns the total weight of the path
 const unsigned int Host::assemblePath()
 {

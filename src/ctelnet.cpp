@@ -1243,6 +1243,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
+    } else if (msg.startsWith(QStringLiteral("Client.Map"))) {
+        mpHost->setMmpMapLocation(arg);
     }
     data.remove('\n');
     // remove \r's from the data, as yajl doesn't like it
