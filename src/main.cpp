@@ -250,7 +250,6 @@ int main(int argc, char* argv[])
                                                      "                       program easier to debug and often much slower. The --sync\n"
                                                      "                       option is only valid for the X11 version of Qt.\n"
 #endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
-        // NB: it is probably impossible to actually get to see this on Windows!
                                                      "       --widgetcount   prints debug message at the end about number of widgets\n"
                                                      "                       left undestroyed and maximum number of widgets existing\n"
                                                      "                       at the same time.\n"
