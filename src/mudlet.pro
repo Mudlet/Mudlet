@@ -340,8 +340,7 @@ macx:LIBS += \
     -lz \
     -lzzip
 
-# Pull in the headers for the Discord RPC library
-    INCLUDEPATH += ../3rdparty/discord/rpc/include
+INCLUDEPATH += ../3rdparty/discord/rpc/include
 
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a

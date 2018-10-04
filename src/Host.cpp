@@ -478,9 +478,9 @@ void Host::waitForProfileSave()
     }
 }
 
-void Host::setMmpMapLocation(const QString &var)
+void Host::setMmpMapLocation(const QString& data)
 {
-    auto document = QJsonDocument::fromJson(var.toUtf8());
+    auto document = QJsonDocument::fromJson(data.toUtf8());
     if (!document.isObject()) {
         return;
     }

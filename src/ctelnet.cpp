@@ -695,9 +695,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
             socketOutRaw(_h);
 
-            if (mudlet::self()->mDiscord.libraryLoaded()
-                    && !mpHost->mDiscordDisableServerSide) {
-
+            if (mudlet::self()->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
                 _h = TN_IAC;
                 _h += TN_SB;
                 _h += GMCP;
@@ -1244,7 +1242,7 @@ void cTelnet::setGMCPVariables(const QString& msg)
         mpProgressDialog->show();
         return;
     } else if (msg.startsWith(QStringLiteral("Client.Map"))) {
-        mpHost->setMmpMapLocation(arg);
+        mpHost->setMmpMapLocation(data);
     }
     data.remove('\n');
     // remove \r's from the data, as yajl doesn't like it

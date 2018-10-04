@@ -203,11 +203,11 @@ public:
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
-    void reprocessDiscordData();
+    void waitForProfileSave();
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
-    void setMmpMapLocation(const QString& var);
+    void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
 
     cTelnet mTelnet;

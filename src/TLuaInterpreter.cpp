@@ -10467,7 +10467,7 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
     }
 
     if (lua_gettop(L)) {
-        if (lua_isstring(L,1)) {
+        if (lua_isstring(L, 1)) {
             // Treat it as a UTF-8 string because although it is likely to be an
             // unsigned long long integer (0 to 18446744073709551615) we want to
             // be able to handle any input so we can report bad input strings back:
@@ -10499,8 +10499,7 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
                 return 1;
             }
         } else {
-            lua_pushfstring(L, "setDiscordApplicationID: bad argument #1 type (id as string expected, got %s!)",
-                           luaL_typename(L,1));
+            lua_pushfstring(L, "setDiscordApplicationID: bad argument #1 type (id as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
     } else {

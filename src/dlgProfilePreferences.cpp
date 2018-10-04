@@ -108,14 +108,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     // Set the properties of the log options
-    lineEdit_logFileFolder->setToolTip(mudlet::htmlWrapper(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>")));
-    pushButton_whereToLog->setToolTip(mudlet::htmlWrapper(tr("<p>Select a directory where logs will be saved.</p>")));
-    pushButton_resetLogDir->setToolTip(mudlet::htmlWrapper(tr("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>")));
-    comboBox_logFileNameFormat->setToolTip(mudlet::htmlWrapper(tr("<p>This option sets the format of the log name.</p>"
+    lineEdit_logFileFolder->setToolTip(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>"));
+    pushButton_whereToLog->setToolTip(tr("<p>Select a directory where logs will be saved.</p>"));
+    pushButton_resetLogDir->setToolTip(tr("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
+    comboBox_logFileNameFormat->setToolTip(tr("<p>This option sets the format of the log name.</p>"
                                                                   "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended "
-                                                                  "if a log file of the same name already exists.)</p>")));
-    lineEdit_logFileName->setToolTip(mudlet::htmlWrapper(tr("<p>Set a custom name for your log. (New logs are appended if a log file of the same name "
-                                                            "already exists).</p>")));
+                                                                  "if a log file of the same name already exists.)</p>"));
+    lineEdit_logFileName->setToolTip(tr("<p>Set a custom name for your log. (New logs are appended if a log file of the same name "
+                                                            "already exists).</p>"));
     lineEdit_logFileName->setPlaceholderText(tr("logfile",
                                                 "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
     label_logFileNameExtension->setVisible(false);
@@ -135,7 +135,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
-        checkbox_noAutomaticUpdates->setToolTip(mudlet::htmlWrapper(tr("<p>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</p>")));
+        checkbox_noAutomaticUpdates->setToolTip(tr("<p>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</p>"));
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->updater->updateAutomatically());
         // This is the extra connect(...) relating to settings' changes saved by
@@ -153,28 +153,28 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
-    pushButton_showGlyphUsage->setToolTip(mudlet::htmlWrapper(tr("<p>This will bring up a display showing all the symbols used in the current "
+    pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
                                                                  "map and whether they can be drawn using just the specifed font, any other "
                                                                  "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
                                                                  "that make up that symbol, so that they can be identified even if they "
                                                                  "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                                 "that symbol are listed, which may help to identify any unexpected or odd cases.<p>")));
-    fontComboBox_mapSymbols->setToolTip(mudlet::htmlWrapper(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                                               "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(mudlet::htmlWrapper(tr("<p>Using a single font is likely to produce a more consistent style but may "
+                                                                 "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+    fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                                               "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
                                                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
                                                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
                                                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                            "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
-    checkBox_runAllKeyBindings->setToolTip(mudlet::htmlWrapper(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
+                                                                            "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+    checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
                                                                   "(combination of key and modifiers) even if more than one of them is set to be "
                                                                   "active. This means that a temporary keybinding (not visible in the Editor) "
                                                                   "created by a script or package may be used in preference to a permanent one "
                                                                   "that is shown and is set to be active. If checked then all matching keybindings "
                                                                   "will be run.</p>"
                                                                   "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                                                  "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>")));
-    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(mudlet::htmlWrapper(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                                  "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
                                                                                 "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
                                                                                 "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
                                                                                 "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
@@ -185,7 +185,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                                                 "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
                                                                                 "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
                                                                                 "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
-                                                                                "full support for languages other than English.</i></p>")));
+                                                                                "full support for languages other than English.</i></p>"));
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -210,7 +210,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
 
-    generateDicordTooltips();
+    generateDiscordTooltips();
 
     label_languageChangeWarning->hide();
 
@@ -2868,7 +2868,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     mpDialogMapGlyphUsage->raise();
 }
 
-void dlgProfilePreferences::generateDicordTooltips()
+void dlgProfilePreferences::generateDiscordTooltips()
 {
     if (!mpHost) {
         return;

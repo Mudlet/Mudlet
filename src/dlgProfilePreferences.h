@@ -167,7 +167,7 @@ private:
     void clearHostDetails();
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
-    void generateDicordTooltips();
+    void generateDiscordTooltips();
 
     int mFontSize;
     QPointer<Host> mpHost;
