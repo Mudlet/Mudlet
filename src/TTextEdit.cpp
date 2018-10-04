@@ -1519,7 +1519,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
     int lineCount = rectangle.height() / mFontHeight;
     int linesDrawn = 0;
-    auto timeout = mudlet::self()->mCopyAsImageMaxDuration;
+    auto timeout = mudlet::self()->mCopyAsImageTimeout;
     for (int i = 0; i <= lineCount; i++, linesDrawn++) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
