@@ -2570,37 +2570,37 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1310"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>FEHLER</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1322"/>
       <source>LUA</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1333"/>
       <source>WARN</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>WARNUNG</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1344"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ACHTUNG</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1355"/>
       <source>INFO</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>INFO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1366"/>
       <source>OK</source>
       <comment>Keep the capisalisation and try to keep the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1555"/>
