@@ -34,12 +34,6 @@
 #include <QSplashScreen>
 #include "post_guard.h"
 
-/*
- * Use to enable "Windows" behaviour for command line "--help"/"--version" on
- * other platforms - for testing/debugging of that feature on non-Windows
- * platforms...
- */
-// #define DEBUG_TEST_WIN_CMDLINE_TEXTS
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
@@ -119,13 +113,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     }
 
     if ((action) & (1 | 2)) {
-        // Ah, we're gonna bail out early, if Windows we still need a GUI Application
-#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
-        return new QApplication(argc, argv);
-#else
-        // otherwise, just need a command-line application
         return new QCoreApplication(argc, argv);
-#endif
     } else {
 #if defined(Q_OS_MACOS)
         // Workaround for horrible mac rendering issues once the mapper widget
@@ -216,103 +204,13 @@ int main(int argc, char* argv[])
 #endif // ! defined(QT_DEBUG)
         texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n").arg(QLatin1String(QT_VERSION_STR), qVersion());
         texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
-#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
-        texts << QStringLiteral("%1 <a href=\"http://www.gnu.org/licenses/gpl.html\">www.gnu.org/licenses/gpl.html</a>")
-                 .arg(QCoreApplication::translate("main", "Licence: GPLv2+ - GNU General Public License version 2.0 (or at your option, any later version)."));
-#else // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>.\n");
-#endif // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                      "There is NO WARRANTY, to the extent permitted by law.");
-#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
-        // On Windows have to dump the information to a QMessageBox, we do have a GUI application...
-        QMessageBox msgBox;
-        msgBox.setWindowTitle(QCoreApplication::translate("main", "Mudlet - Version Information"));
-        msgBox.setIconPixmap(QPixmap(QStringLiteral(":/icons/mudlet_information.png")));
-        msgBox.setTextFormat(Qt::RichText);
-        msgBox.setText(texts.join(QLatin1String("<br>")));
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        app->processEvents();
-        msgBox.exec();
-#else // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         std::cout << texts.join(QString()).toStdString();
-#endif // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         return 0;
     } else if (startupAction & 1) {
         // Do "help" action
-#if defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS)
-        // &#8209; is the non-breaking hyphen...!
-        texts << QStringLiteral("<html><head/><body><table cellpadding=\"1\"><tr><td colspan=\"2\" style=\"width:100%\"><kdb>%1</kdb></td></tr>"
-                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%2</kdb></td><td style=\"width:75%\">%3</td></tr>"
-                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%4</tte></td><td style=\"width:75%\">%5</td></tr>"
-                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%6</kdb></td><td style=\"width:75%\">%7</td></tr>"
-                                "<tr><td colspan=\"2\" style=\"width:100%\">%8</td></tr>")
-                 .arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]").arg(QLatin1String(APP_TARGET)),
-                      QCoreApplication::translate("main", "&#8209;h, &#8209;&#8209;help", "This may not be translatable"),
-                      QCoreApplication::translate("main", "displays this message."),
-                      QCoreApplication::translate("main", "&#8209;v, &#8209;&#8209;version", "This may not be translatable"),
-                      QCoreApplication::translate("main", "displays version information."),
-                      QCoreApplication::translate("main", "&#8209;q, &#8209;&#8209;quiet", "This may not be translatable"),
-                      QCoreApplication::translate("main", "no splash screen on startup."),
-                      QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which "
-                                                          "are not likely to be useful for normal use of this application:"));
-
-        // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
-        // QString::Arg(...) methods can only handle up to 9 argments
-        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
-                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%3</kdb></td><td style=\"width:75%\">%4</td></tr>")
-                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;dograb", "This may not be translatable"),
-                      QCoreApplication::translate("main", "ignore any implicit or explicit <kdb>&#8209;&#8209;nograb</kdb>. "
-                                                          "<kdb>&#8209;&#8209;dograb</kdb> wins over <kdb>&#8209;&#8209;nograb</kdb> even when "
-                                                          "<kdb>&#8209;&#8209;nograb</kdb> is last on the command line.",
-                                                  "Please leave the <kdb>...</kdb> delimited parts untranslated!"),
-                      QCoreApplication::translate("main", "&#8209;&#8209;nograb", "This may not be translatable"),
-                      QCoreApplication::translate("main", "the application should never grab the mouse or the keyboard."));
-
-        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
-                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%3</kdb></td><td style=\"width:75%\">%4</td></tr>"
-                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%5</kdb></td><td style=\"width:75%\">%6</td></tr>")
-                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;reverse", "This may not be translatable"),
-                      QCoreApplication::translate("main", "sets the application's layout direction to right to left."),
-                      QCoreApplication::translate("main", "&#8209;&#8209;style= style", "This may not be translatable"),
-                      QCoreApplication::translate("main", "sets the application GUI style. Possible values depend on your system configuration. "
-                                                          "If Qt was compiled with additional styles or has additional styles as plugins these "
-                                                          "will be available to the <kdb>&#8209;&#8209;style</kdb> command line option. You can also set the "
-                                                          "style for all Qt applications by setting the <kdb>QT_STYLE_OVERRIDE</kdb> environment "
-                                                          "variable.",
-                                                          "Please leave the <kdb>...</kdb> delimited parts untranslated!"),
-                      QCoreApplication::translate("main", "&#8209;&#8209;style style", "This may not be translatable"),
-                      QCoreApplication::translate("main", "is the same as listed above."));
-
-        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
-                                "<tr><td align=\"center\" style=\"width:25%\"><kdb>%3</kdb></td><td style=\"width:75%\">%4</td></tr>")
-                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;stylesheet= stylesheet", "This may not be translatable"),
-                      QCoreApplication::translate("main", "sets the application styleSheet.\n"
-                                                          "The value must be a path to a file that contains the "
-                                                          "Style Sheet. Note: Relative URLs in the Style Sheet "
-                                                          "file are relative to the Style Sheet file's path."),
-                      QCoreApplication::translate("main", "&#8209;&#8209;stylesheet stylesheet", "This may not be translatable"),
-                      QCoreApplication::translate("main", "is the same as listed above."));
-
-        texts << QStringLiteral("<tr><td align=\"center\" style=\"width:25%\"><kdb>%1</kdb></td><td style=\"width:75%\">%2</td></tr>"
-                                "<tr><td align=\"center\" style=\"width:100%\" colspan=\"2\"><kdb>%3</kdb></td></tr>"
-                                "<tr><td align=\"center\" style=\"width:100%\" colspan=\"2\"><kdb>%4</kdb></td></tr></table>")
-                 .arg(QCoreApplication::translate("main", "&#8209;&#8209;qmljsdebugger=1234[,block]", "This may not be translatable"),
-                      QCoreApplication::translate("main", "activates the QML/JS debugger with a specified port. "
-                                                          "The number is the port value and block is optional and will "
-                                                          "make the application wait until a debugger connects to it."),
-                      QCoreApplication::translate("main", "Report bugs to: %1.").arg(QLatin1String("<a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a>")),
-                      QCoreApplication::translate("main", "Project home page: %1.").arg(QLatin1String("<a href=\"https://www.mudlet.org/\">www.mudlet.org</a>")));
-        // On Windows have to dump the information to a QMessageBox
-        QMessageBox msgBox;
-        msgBox.setWindowTitle(QCoreApplication::translate("main", "Mudlet - Command Line Help"));
-        msgBox.setIconPixmap(QPixmap(QStringLiteral(":/icons/mudlet_information.png")));
-        msgBox.setTextFormat(Qt::RichText);
-        msgBox.setText(texts.join(QString()));
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        app->processEvents();
-        msgBox.exec();
-#else // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         texts << QCoreApplication::translate("main", "Usage: %1 [OPTION...]\n"
                                                      "       -h, --help      displays this message.\n"
                                                      "       -v, --version   displays version information.\n"
@@ -363,7 +261,6 @@ int main(int argc, char* argv[])
         texts << QCoreApplication::translate("main", "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>.\n");
         texts << QCoreApplication::translate("main", "Project home page: <http://www.mudlet.org/>.\n");
         std::cout << texts.join(QString()).toStdString();
-#endif // ! (defined(Q_OS_WIN32) || defined(DEBUG_TEST_WIN_CMDLINE_TEXTS))
         return 0;
     }
 
