@@ -1458,7 +1458,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         }
     }
 
-    auto heightpx = qMin(1'000'000, (mPB.y() - mPA.y() + 1) * mFontHeight);
+    // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
+    auto heightpx = qMin(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
     auto lineOffset = mPA.y();
 
     // find the biggest width of text we need to work with
@@ -1468,7 +1469,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         characterWidth = qMax(lineWidth, characterWidth);
     }
 
-    auto widthpx = qMin(100'000, characterWidth * mFontWidth);
+    auto widthpx = qMin(65500, characterWidth * mFontWidth);
 
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
 
@@ -1480,25 +1481,27 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
+    auto oldMpa = mPA;
+    auto oldMpb = mPB;
+
     // deselect to prevent inverted colours in image
     unHighlight();
     mSelectedRegion = QRegion(0, 0, 0, 0);
 
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
+    mPA = oldMpa;
+    mPB = oldMpb;
+    highlight();
+
     // if we cut didn't finish painting the complete picture, trim the bottom of the image
     if (!result.first) {
-        qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count()
-                 << "ms didn't finish painting everything, cuttin off irrelevant bits";
         const auto& smallerPixmap = pixmap.scaled(QSize(widthpx, result.second * mFontHeight), Qt::KeepAspectRatio);
         QApplication::clipboard()->setImage(smallerPixmap.toImage());
-        qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() << "ms copied to clipboard";
         return;
     }
 
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() << "ms finished painting all";
     QApplication::clipboard()->setImage(pixmap.toImage());
-    qDebug() << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() << "ms copied to clipboard";
 }
 
 // a stateless version of drawForeground that doesn't do any caching
