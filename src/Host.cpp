@@ -133,6 +133,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
+, mDiscordDisableServerSide(true)
+, mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
 , mRoomSize(0.5)
 , mShowInfo(true)
@@ -206,6 +208,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"DuckDuckGo", "https://duckduckgo.com/?q="},
                     {"Google",     "https://www.google.com/search?q="}
     });
+
+    auto optin = readProfileData(QStringLiteral("discordserveroptin"));
+    if (!optin.isEmpty()) {
+        mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
+    }
 }
 
 Host::~Host()
@@ -223,19 +230,85 @@ Host::~Host()
 void Host::saveModules(int sync, bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
-    QStringList modulesToSync;
-    QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
-    QDir savePath = QDir(dirName);
-    if (!savePath.exists()) {
-        savePath.mkpath(dirName);
+    mModulesToSync.clear();
+    QString savePath = mudlet::getMudletPath(mudlet::moduleBackupsPath);
+    auto savePathDir = QDir(savePath);
+    if (!savePathDir.exists()) {
+        savePathDir.mkpath(savePath);
     }
     while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
-        QString filename_xml = entry[0];
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
-        QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         QString moduleName = it.key();
+        QString filename_xml = entry[0];
+
+        if (backup) {
+            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
+            QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+            savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
+        }
+
+        auto writer = new XMLexport(this);
+        writers.insert(filename_xml, writer);
+        writer->writeModuleXML(moduleName, filename_xml);
+
+        if (entry[1].toInt()) {
+            mModulesToSync << moduleName;
+        }
+    }
+    modulesToWrite.clear();
+
+    if (sync) {
+        connect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
+    }
+}
+
+void Host::slot_reloadModules()
+{
+    // update the module zips
+    updateModuleZips();
+
+    //synchronize modules across sessions
+    QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
+    QMapIterator<Host*, TConsole*> sessionIterator(activeSessions);
+    while (sessionIterator.hasNext()) {
+        sessionIterator.next();
+        Host* otherHost = sessionIterator.key();
+        if (otherHost->getName() == mHostName) {
+            continue;
+        }
+        QMap<QString, int> modulePri = otherHost->mModulePriorities;
+        QMap<int, QStringList> moduleOrder;
+        for (auto it = modulePri.keyBegin(); it != modulePri.keyEnd(); ++it) {
+            moduleOrder[modulePri[*it]].append(*it);
+        }
+        QMapIterator<int, QStringList> it(moduleOrder);
+        while (it.hasNext()) {
+            it.next();
+            QStringList moduleList = it.value();
+            for (int i = 0, total = moduleList.size(); i < total; ++i) {
+                QString moduleName = moduleList[i];
+                if (mModulesToSync.contains(moduleName)) {
+                    otherHost->reloadModule(moduleName);
+                }
+            }
+        }
+    }
+
+    // disconnect the one-time event so we're not always reloading modules whenever a profile save happens
+    mModulesToSync.clear();
+    QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
+}
+
+void Host::updateModuleZips() const
+{
+    QMapIterator<QString, QStringList> it(modulesToWrite);
+    while (it.hasNext()) {
+        it.next();
+        QStringList entry = it.value();
+        QString moduleName = it.key();
+        QString filename_xml = entry[0];
+
         QString zipName;
         zip* zipFile = nullptr;
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
@@ -248,85 +321,40 @@ void Host::saveModules(int sync, bool backup)
             if (!packageDir.exists()) {
                 packageDir.mkpath(packagePathName);
             }
-        } else if (backup) {
-            savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
-        }
 
-        auto writer = new XMLexport(this);
-        writers.insert(filename_xml, writer);
-        writer->writeModuleXML(moduleName, filename_xml);
-
-        if (entry[1].toInt()) {
-            modulesToSync << moduleName;
-        }
-
-        if (!zipName.isEmpty()) {
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
-            QTime t;
-            t.start();
-            //            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
-            int err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
+            err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
             //FIXME: error checking
             if (zipFile) {
                 err = zip_close(zipFile);
-            }
-            //FIXME: error checking
-        }
-    }
-    modulesToWrite.clear();
-    if (sync) {
-        //synchronize modules across sessions
-        QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
-        QMapIterator<Host*, TConsole*> it2(activeSessions);
-        while (it2.hasNext()) {
-            it2.next();
-            Host* host = it2.key();
-            if (host->mHostName == mHostName) {
-                continue;
-            }
-            QMap<QString, int> modulePri = host->mModulePriorities;
-            QMapIterator<QString, int> it3(modulePri);
-            QMap<int, QStringList> moduleOrder;
-            while (it3.hasNext()) {
-                it3.next();
-                //QStringList moduleEntry = moduleOrder[it3.value()];
-                //moduleEntry.append(it3.key());
-                moduleOrder[it3.value()].append(it3.key()); // = moduleEntry;
-            }
-            QMapIterator<int, QStringList> it4(moduleOrder);
-            while (it4.hasNext()) {
-                it4.next();
-                QStringList moduleList = it4.value();
-                for (int i = 0; i < moduleList.size(); i++) {
-                    QString moduleName = moduleList[i];
-                    if (modulesToSync.contains(moduleName)) {
-                        host->reloadModule(moduleName);
-                    }
-                }
+                //FIXME: error checking
             }
         }
     }
 }
 
-void Host::reloadModule(const QString& moduleName)
+
+void Host::reloadModule(const QString& reloadModuleName)
 {
     QMap<QString, QStringList> installedModules = mInstalledModules;
-    QMapIterator<QString, QStringList> it(installedModules);
-    while (it.hasNext()) {
-        it.next();
-        QStringList entry = it.value();
-        if (it.key() == moduleName) {
-            uninstallPackage(it.key(), 2);
-            installPackage(entry[0], 2);
+    QMapIterator<QString, QStringList> moduleIterator(installedModules);
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        const auto& moduleName = moduleIterator.key();
+        const auto& moduleLocation = moduleIterator.value()[0];
+
+        if (moduleName == reloadModuleName) {
+            uninstallPackage(moduleName, 2);
+            installPackage(moduleLocation, 2);
         }
     }
     //iterate through mInstalledModules again and reset the entry flag to be correct.
     //both the installedModules and mInstalled should be in the same order now as well
-    QMapIterator<QString, QStringList> it2(mInstalledModules);
-    while (it2.hasNext()) {
-        it2.next();
-        QStringList entry = installedModules[it2.key()];
-        mInstalledModules[it2.key()] = entry;
+    moduleIterator.toFront();
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        QStringList entry = installedModules[moduleIterator.key()];
+        mInstalledModules[moduleIterator.key()] = entry;
     }
 }
 
@@ -426,6 +454,7 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
+    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
@@ -448,6 +477,34 @@ void Host::waitForProfileSave()
             future.waitForFinished();
         }
     }
+}
+
+void Host::setMmpMapLocation(const QString& data)
+{
+    auto document = QJsonDocument::fromJson(data.toUtf8());
+    if (!document.isObject()) {
+        return;
+    }
+    auto json = document.object();
+    if (json.isEmpty()) {
+        return;
+    }
+
+    auto urlValue = json.value(QStringLiteral("url"));
+    if (urlValue == QJsonValue::Undefined) {
+        return;
+    }
+    auto url = QUrl(urlValue.toString());
+    if (!url.isValid()) {
+        return;
+    }
+
+    mpMap->setMmpMapLocation(urlValue.toString());
+}
+
+QString Host::getMmpMapLocation() const
+{
+    return mpMap->getMmpMapLocation();
 }
 
 // Now returns the total weight of the path
@@ -757,12 +814,11 @@ bool Host::installPackage(const QString& fileName, int module)
     QDialog* pUnzipDialog = Q_NULLPTR;
 
     //     Module notes:
-    //     For the module install, a module flag of 0 is a package, a flag
-    //     of 1 means the module is being installed for the first time via
-    //     the UI, a flag of 2 means the module is being synced (so it's "installed"
-    //     already), a flag of 3 means the module is being installed from
-    //     a script.  This separation is necessary to be able to reuse code
-    //     while avoiding infinite loops from script installations.
+    //     For the module install, a module flag of 0 is a package,
+    // a flag of 1 means the module is being installed for the first time via the UI,
+    // a flag of 2 means the module is being synced (so it's "installed" already),
+    // a flag of 3 means the module is being installed from a script.
+    //     This separation is necessary to be able to reuse code while avoiding infinite loops from script installations.
 
     if (fileName.isEmpty()) {
         return false;
@@ -1275,5 +1331,259 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
     // work with whilst the connected methods react to the signal:
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
+    }
+}
+
+// handles out of band (OOB) GMCP/MSDP data for Discord - called whenever GMCP
+// Telnet sub-option comes in and starts with "External.Discord.(Status|Info)"
+void Host::processDiscordGMCP(const QString& packageMessage, const QString& data)
+{
+    if (mDiscordDisableServerSide) {
+        return;
+    }
+
+    auto document = QJsonDocument::fromJson(data.toUtf8());
+    if (!document.isObject()) {
+        return;
+    }
+
+    auto json = document.object();
+    if (json.isEmpty()) {
+        return;
+    }
+
+    if (packageMessage == QLatin1String("External.Discord.Status")) {
+        processGMCPDiscordStatus(json);
+    } else if (packageMessage == QLatin1String("External.Discord.Info")) {
+        processGMCPDiscordInfo(json);
+    }
+}
+
+void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
+{
+    mudlet* pMudlet = mudlet::self();
+    bool hasInvite = false;
+    auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
+    // Will be of form: "https://discord.gg/#####"
+    if (inviteUrl != QJsonValue::Undefined) {
+        hasInvite = true;
+    }
+
+    bool hasApplicationId = false;
+    bool hasCustomAppID = false;
+    auto appID = discordInfo.value(QStringLiteral("applicationid"));
+    if (appID != QJsonValue::Undefined) {
+        hasApplicationId = true;
+        if (appID.toString() == Discord::mMudletApplicationId) {
+            pMudlet->mDiscord.setApplicationID(this, QString());
+        } else {
+            hasCustomAppID = true;
+            pMudlet->mDiscord.setApplicationID(this, appID.toString());
+            auto image = pMudlet->mDiscord.getLargeImage(this);
+
+            if (image.isEmpty() || image == QLatin1String("mudlet")) {
+                pMudlet->mDiscord.setLargeImage(this, QStringLiteral("server-icon"));
+            }
+        }
+    }
+
+    if (hasInvite) {
+        if (hasCustomAppID) {
+            qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
+        } else if (hasApplicationId) {
+            qDebug() << "Game using Mudlets Discord server. Invite URL: " << inviteUrl.toString();
+        } else {
+            qDebug() << "Discord invite URL: " << inviteUrl.toString();
+        }
+    } else {
+        if (hasCustomAppID) {
+            qDebug() << "Game is using custom server Discord application ID";
+        } else if (hasApplicationId) {
+            qDebug() << "Game is using Mudlets Discord application ID";
+        }
+    }
+}
+
+void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
+{
+    auto pMudlet = mudlet::self();
+    auto gameName = discordInfo.value(QStringLiteral("game"));
+    if (gameName != QJsonValue::Undefined) {
+        QPair<bool, QString> richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
+        if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
+            pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
+            pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
+            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+        } else {
+            // We are using a custom application id, so the top line is
+            // likely to be saying "Playing MudName"
+            if (richPresenceSupported.first) {
+                pMudlet->mDiscord.setDetailText(this, QString());
+                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+                pMudlet->mDiscord.setLargeImage(this, QStringLiteral("server-icon"));
+            }
+        }
+    }
+
+    auto details = discordInfo.value(QStringLiteral("details"));
+    if (details != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setDetailText(this, details.toString());
+    }
+
+    auto state = discordInfo.value(QStringLiteral("state"));
+    if (state != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setStateText(this, state.toString());
+    }
+
+    auto largeImages = discordInfo.value(QStringLiteral("largeimage"));
+    if (largeImages != QJsonValue::Undefined) {
+        auto largeImage = largeImages.toArray().first();
+        if (largeImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setSmallImage(this, largeImage.toString());
+        }
+    }
+
+    auto largeImageText = discordInfo.value(QStringLiteral("largeimagetext"));
+    if (largeImageText != QJsonValue::Undefined) {
+        pMudlet->mDiscord.setSmallImageText(this, largeImageText.toString());
+    }
+
+    auto smallImages = discordInfo.value(QStringLiteral("smallimage"));
+    if (smallImages != QJsonValue::Undefined) {
+        auto smallImage = smallImages.toArray().first();
+        if (smallImage != QJsonValue::Undefined) {
+            pMudlet->mDiscord.setSmallImage(this, smallImage.toString());
+        }
+    }
+
+    auto smallImageText = discordInfo.value(QStringLiteral("smallimagetext"));
+    if ((smallImageText != QJsonValue::Undefined)) {
+        pMudlet->mDiscord.setSmallImageText(this, smallImageText.toString());
+    }
+
+    // Use -1 so we can detect (at least during debugging) that a value of 0
+    // has been seen:
+    int64_t timeStamp = -1;
+    auto endTimeStamp = discordInfo.value(QStringLiteral("endtime"));
+    if (endTimeStamp.isDouble()) {
+        // It is not entirely clear from the proposed specification
+        // whether the integral seconds since epoch is a string or a
+        // double, so handle both:
+        // This only works properly when the value is less than
+        // 9007199254740992 but since when I last checked it was
+        //       1533042027 second since beginning of 1970 it should be
+        // good enough!
+        timeStamp = static_cast<int64_t>(endTimeStamp.toDouble());
+        pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
+    } else if (endTimeStamp.isString()) {
+        timeStamp = endTimeStamp.toString().toLongLong();
+        pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
+    } else {
+        auto startTimeStamp = discordInfo.value(QStringLiteral("starttime"));
+        if (startTimeStamp.isDouble()) {
+            timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
+            pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
+        } else if (endTimeStamp.isString()) {
+            timeStamp = endTimeStamp.toString().toLongLong();
+            pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
+        }
+    }
+
+    // Use -1 so we can detect (at least during debugging) that a value of 0
+    // has been seen:
+    int partySizeValue = -1;
+    int partyMaxValue = -1;
+    auto partyMax = discordInfo.value(QStringLiteral("partymax"));
+    auto partySize = discordInfo.value(QStringLiteral("partysize"));
+    if (partyMax.isDouble()) {
+        partyMaxValue = static_cast<int>(partyMax.toDouble());
+        if (partyMaxValue > 0 && partySize.isDouble()) {
+            partySizeValue = static_cast<int>(partySize.toDouble());
+            pMudlet->mDiscord.setParty(this, partySizeValue, partyMaxValue);
+        } else {
+            // Switches off the party detail from the RP
+            pMudlet->mDiscord.setParty(this, 0, 0);
+        }
+    } else {
+        if (partySize.isDouble()) {
+            partySizeValue = static_cast<int>(partySize.toDouble());
+            pMudlet->mDiscord.setParty(this, partySizeValue);
+        } else {
+            pMudlet->mDiscord.setParty(this, 0, 0);
+        }
+    }
+}
+
+void Host::clearDiscordData()
+{
+    mudlet* pMudlet = mudlet::self();
+    pMudlet->mDiscord.setDetailText(this, QString());
+    pMudlet->mDiscord.setStateText(this, QString());
+    pMudlet->mDiscord.setLargeImage(this, QString());
+    pMudlet->mDiscord.setLargeImageText(this, QString());
+    pMudlet->mDiscord.setSmallImage(this, QString());
+    pMudlet->mDiscord.setSmallImageText(this, QString());
+    pMudlet->mDiscord.setStartTimeStamp(this, 0);
+    pMudlet->mDiscord.setParty(this, 0, 0);
+}
+
+
+void Host::processDiscordMSDP(const QString& variable, QString value)
+{
+    if (mDiscordDisableServerSide) {
+        return;
+    }
+
+    Q_UNUSED(variable)
+    Q_UNUSED(value)
+// TODO:
+//    if (!(variable == QLatin1String("SERVER_ID") || variable == QLatin1String("AREA_NAME"))) {
+//        return;
+//    }
+
+//    // MSDP value comes padded with quotes - strip them (from the local copy of
+//    // the supplied argument):
+//    if (value.startsWith(QLatin1String("\""))) {
+//        value = value.mid(1);
+//    }
+
+//    if (value.endsWith(QLatin1String("\""))) {
+//        value.chop(1);
+//    }
+
+//    if (variable == QLatin1String("SERVER_ID")) {
+//        mudlet::self()->mDiscord.setGame(this, value);
+//    } else if (variable == QLatin1String("AREA_NAME")) {
+//        mudlet::self()->mDiscord.setArea(this, value);
+//    }
+}
+
+void Host::setDiscordApplicationID(const QString& s)
+{
+    QMutexLocker locker(& mLock);
+    mDiscordApplicationID = s;
+    locker.unlock();
+
+    writeProfileData(QStringLiteral("discordApplicationId"), s);
+}
+
+const QString& Host::getDiscordApplicationID()
+{
+    QMutexLocker locker(&mLock);
+    return mDiscordApplicationID;
+}
+
+// Compares the current discord username and discriminator against the non-empty
+// arguments. Returns true if neither match, otherwise false.
+bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const
+{
+    if (!userName.isEmpty() && !mRequiredDiscordUserName.isEmpty() && userName != mRequiredDiscordUserName) {
+        return false;
+    }
+
+    if (!userDiscriminator.isEmpty() && !mRequiredDiscordUserDiscriminator.isEmpty() && userDiscriminator != mRequiredDiscordUserDiscriminator) {
+        return false;
+    } else {
+        return true;
     }
 }

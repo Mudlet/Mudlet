@@ -7,7 +7,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2015-2016, 2018 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,6 +34,9 @@
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
+
+#include "discord.h"
+
 #include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
@@ -46,6 +49,7 @@
 #include <QTextOption>
 #include <QTime>
 #include <QTimer>
+#include "edbee/models/textautocompleteprovider.h"
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -89,6 +93,7 @@ public:
     static void start();
     HostManager& getHostManager() { return mHostManager; }    
     FontManager mFontManager;
+    Discord mDiscord;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
@@ -219,13 +224,14 @@ public:
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
+    static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
     QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
     QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
-    QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
+    QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
@@ -250,6 +256,7 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
+    static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
@@ -260,7 +267,7 @@ public:
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
-    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    void setShowMapAuditErrors(const bool);
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
@@ -330,17 +337,44 @@ public:
         editorWidgetThemeJsonFile,
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
-        moduleBackupsPath
+        moduleBackupsPath,
+        // Returns path to Qt's own translation files
+        qtTranslationsPath
     };
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
-    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);    
+    void setInterfaceLanguage(const QString &languageCode);
+    QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
+
+    void setEnableFullScreenMode(const bool);
+
+    // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
+    // may eventually migrate solely to the "EnableFullScreenMode" in the main
+    // QSetting file - it is only stored as a file now to maintain backwards
+    // compatibility...
+    bool mEnableFullScreenMode;
+
+    // approximate max duration that 'Copy as image' is allowed to take (seconds)
+    int mCopyAsImageTimeout;
+
+    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    QString mInterfaceLanguage;
+
+    // ISO language code, translated human-readable name w/ English, and percent translated
+    // ie: ru_RU, Русский (Russian), 75
+    QHash<QString, std::pair<QString, int>> mLanguageCodeMap;
+    // translations done high enough will get a gold star to hide the last few percent
+    // as well as encourage translators to maintain it;
+    const int mTranslationStar = 95;
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -394,10 +428,15 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
+    void signal_tabChanged(const QString& hostName);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_enableFulScreenModeChanged(bool);
+    void signal_showMapAuditErrorsChanged(bool);
+    void signal_menuBarVisibilityChanged(const controlsVisibility);
+    void signal_toolBarVisibilityChanged(const controlsVisibility);
 
 private slots:
     void slot_close_profile();
@@ -426,8 +465,9 @@ private slots:
 
 private:
     void initEdbee();
-
     void goingDown() { mIsGoingDown = true; }
+    void loadTranslators();
+
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
@@ -499,6 +539,16 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+
+    // QMap has key of interface languages (in format of mInterfaceLanguage)
+    // value: a QList of QPointers to all the translators needed (mudlet + Qt)
+    // for the specific GUI Language, on language change to remove
+    // the translators for the old settings and add the ones for
+    // the new language
+    QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
+    QList<QPointer<QTranslator>> mTranslatorsLoadedList;
+    void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
+    void loadLanguagesMap();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

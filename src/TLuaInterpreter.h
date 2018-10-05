@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -33,6 +33,10 @@
 #include <QProcess>
 #include <QThread>
 #include <QTimer>
+#include <edbee/texteditorwidget.h>
+#ifdef QT_TEXTTOSPEECH_LIB
+#include <QTextToSpeech>
+#endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
 extern "C" {
@@ -93,7 +97,7 @@ public:
     bool compileAndExecuteScript(const QString&);
     QString formatLuaCode(const QString &);
     void loadGlobal();
-    QString get_lua_string(const QString& stringName);
+    QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
@@ -178,6 +182,7 @@ public:
     static int getRoomAreaName(lua_State*);
     static int addAreaName(lua_State* L);
     static int getRoomIDbyHash(lua_State* L);
+    static int getRoomHashByID(lua_State* L);
     static int setRoomIDbyHash(lua_State* L);
     static int sendSocket(lua_State* L);
     static int openUrl(lua_State*);
@@ -434,10 +439,32 @@ public:
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
     static int getAvailableFonts(lua_State* L);
+    static int setDiscordApplicationID(lua_State* L);
+    static int usingMudletsDiscordID(lua_State*);
+    static int setDiscordState(lua_State*);
+    static int setDiscordDetail(lua_State*);
+    static int setDiscordLargeIcon(lua_State*);
+    static int setDiscordLargeIconText(lua_State*);
+    static int setDiscordSmallIcon(lua_State*);
+    static int setDiscordSmallIconText(lua_State*);
+    static int setDiscordElapsedStartTime(lua_State*);
+    static int setDiscordRemainingEndTime(lua_State*);
+    static int setDiscordParty(lua_State*);
+    static int getDiscordState(lua_State*);
+    static int getDiscordDetail(lua_State*);
+    static int getDiscordLargeIcon(lua_State*);
+    static int getDiscordLargeIconText(lua_State*);
+    static int getDiscordSmallIcon(lua_State*);
+    static int getDiscordSmallIconText(lua_State*);
+    static int getDiscordTimeStamps(lua_State*);
+    static int getDiscordParty(lua_State*);
+    static int setDiscordGame(lua_State *L);
+    static int getPlayerRoom(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
+
+
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
-
 public slots:
     void slot_replyFinished(QNetworkReply*);
     void slotPurge();
@@ -453,6 +480,8 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
+    static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
+    void setMatches(lua_State* L);
 
     QMap<QNetworkReply*, QString> downloadMap;
 

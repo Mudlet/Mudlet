@@ -76,6 +76,7 @@ private:
 
 signals:
     void updateInstalled();
+    void signal_automaticUpdatesChanged(const bool);
 
 public slots:
     void installOrRestartClicked(QAbstractButton* button, const QString& filePath);
