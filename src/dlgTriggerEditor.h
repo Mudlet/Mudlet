@@ -462,6 +462,9 @@ private:
 
     // profile autosave interval in minutes
     int mAutosaveInterval;
+
+    // approximate max duration "Copy as image" can take in seconds
+    int mCopyAsImageMax;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

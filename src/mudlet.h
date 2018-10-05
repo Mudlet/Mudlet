@@ -361,6 +361,9 @@ public:
     // compatibility...
     bool mEnableFullScreenMode;
 
+    // approximate max duration that 'Copy as image' is allowed to take (seconds)
+    int mCopyAsImageTimeout;
+
     // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
