@@ -4,6 +4,10 @@ init:
 environment:
   signing_password:
     secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
+  DEPLOY_KEY_PASS:
+    secure: 81sr0SJzuWG+mgH3X6fJTh4rfX5/O1qa3MsItNvFukQ=
+  DEPLOY_PATH:
+    secure: XQhASAJJm4Owpu74K4jgL0gszN59XJnCAS27NG7CW5G1LSRSWRh/EhKiTD36DvSr
   matrix:
   - QT_BASE_DIR: C:\Qt\5.11\mingw53_32
 install:

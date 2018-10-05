@@ -139,6 +139,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
+    connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_discord_optin);
+
     // website_entry atm is only a label
     //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
@@ -267,6 +269,33 @@ void dlgConnectionProfiles::slot_update_autologin(int state)
     }
     QString profile = pItem->text();
     writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
+}
+
+// This gets called when the QCheckBox that it is connect-ed to gets it's
+// checked state set programatically AS WELL as when the user clicks on it:
+void dlgConnectionProfiles::slot_update_discord_optin(int state)
+{
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    if (!pItem) {
+        return;
+    }
+    QString profile = pItem->text();
+    writeProfileData(profile, QStringLiteral("discordserveroptin"), QString::number(state));
+
+    // in case the user is already connected, pull up stored GMCP data
+    auto& hostManager = mudlet::self()->getHostManager();
+    auto pHost = hostManager.getHost(profile_name_entry->text());
+    if (!pHost) {
+        return;
+    }
+
+    if (state == Qt::Checked) {
+        pHost->mDiscordDisableServerSide = false;
+        pHost->mTelnet.requestDiscordInfo();
+    } else {
+        pHost->mDiscordDisableServerSide = true;
+        pHost->clearDiscordData();
+    }
 }
 
 void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
@@ -613,7 +642,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->raise();
 }
 
-QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
+QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     bool success = file.open(QIODevice::ReadOnly);
@@ -891,6 +920,21 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         autologin_checkBox->setChecked(false);
     }
 
+    mDiscordApplicationId = readProfileData(profile, QStringLiteral("discordApplicationId"));
+
+    // val will be null if this is the first time the profile has been read
+    // since an update to a Mudlet version supporting Discord - so a toint()
+    // will return 0 - which just happens to be Qt::Unchecked() but lets not
+    // rely on that...
+    val = readProfileData(profile, QStringLiteral("discordserveroptin"));
+    if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
+        discord_optin_checkBox->setChecked(true);
+    } else {
+        discord_optin_checkBox->setChecked(false);
+    }
+
+    updateDiscordStatus();
+
     mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
 
     val = readProfileData(profile, QStringLiteral("website"));
@@ -1047,6 +1091,26 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             notificationAreaMessageBox->hide();
             notificationAreaMessageBox->setText(QString());
         }
+    }
+}
+
+void dlgConnectionProfiles::updateDiscordStatus()
+{
+    auto discordLoaded = mudlet::self()->mDiscord.libraryLoaded();
+
+    if (!discordLoaded) {
+        discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setChecked(false);
+        discord_optin_checkBox->setToolTip(tr("Discord integration not available on this platform"));
+    } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
+        // Disable discord support if it is not recognised by name and a
+        // Application Id has not been previously entered:
+        discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setChecked(false);
+        discord_optin_checkBox->setToolTip(tr("Discord integration not supported by game"));
+    } else {
+        discord_optin_checkBox->setEnabled(true);
+        discord_optin_checkBox->setToolTip(tr("Check to enable Discord integration"));
     }
 }
 
@@ -1494,6 +1558,8 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     profiles_tree_widget->setCurrentRow(toselectRow);
+
+    updateDiscordStatus();
 }
 
 void dlgConnectionProfiles::slot_cancel()
@@ -1556,6 +1622,10 @@ void dlgConnectionProfiles::slot_copy_profile()
                mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     mProfileList << profile_name;
     slot_item_clicked(pItem);
+    // Clear the Discord optin on the copied profile - just because the source
+    // one may have had it enabled does not mean we can assume the new one would
+    // want it set:
+    discord_optin_checkBox->setChecked(false);
 }
 
 void dlgConnectionProfiles::slot_connectToServer()
@@ -1635,6 +1705,9 @@ void dlgConnectionProfiles::slot_connectToServer()
         pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
+
+        // This also writes the value out to the profile's base directory:
+        mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
     if (needsGenericPackagesInstall) {
