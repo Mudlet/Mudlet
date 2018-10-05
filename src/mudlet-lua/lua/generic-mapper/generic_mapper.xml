@@ -256,6 +256,34 @@ map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
 				<packageName></packageName>
 				<regex>^map debug$</regex>
 			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Update Alias</name>
+				<script>map.updateVersion()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map update$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Config Alias</name>
+				<script>local startStr, endStr = string.match(matches[2],"(.*) ([\w\.]+)")
+local vals = {'on', 'off', 'true', 'false'}
+local modes = {'simple','normal','complex'}
+if (table.contains(vals, endStr) or tonumber(endStr)) or (startStr == "mode" and table.contains(modes, endStr)) then
+	map.setConfigs(startStr, endStr)
+else
+	map.setConfigs(matches[2])
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map config ([\w\s\.]+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Window Config Alias</name>
+				<script>map.setConfigs("map_window",matches[3],matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map window (x|y|w|h|origin|shown)(?: ([\w%]+))?</regex>
+			</Alias>
 		</AliasGroup>
 		<AliasGroup isActive="yes" isFolder="yes">
 			<name>Information Aliases</name>
@@ -915,13 +943,24 @@ string.format = oldstring.format
 string.trim = oldstring.trim
 string.starts = oldstring.starts
 string.split = oldstring.split
+string.ends = oldstring.ends
 
-map.configs = {
+map.defaults = {
     mode = "normal", -- can be simple, normal, or complex
-    download_path = "",
     stretch_map = true,
     search_on_look = true,
+    speedwalk_delay = 1,
+    speedwalk_wait = true,
+    speedwalk_random = true,
     max_search_distance = 0,
+    clear_lines_on_send = true,
+    map_window = {x = 0,
+        y = 0,
+        w = "30%",
+        h = "40%",
+        origin = "topright",
+        shown = false,
+    },
     prompt_test_patterns = {"^%[?%a*%]?&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]", "^[Hh][Pp]:.*&gt;"},
     custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
                         -- ex: { us = {"upsouth", "downnorth", 0, -1, 1}, dn = {"downnorth", "upsouth", 0, 1, -1} }
@@ -931,18 +970,8 @@ map.configs = {
         east = 'east', west = 'west', south = 'south', southeast = 'southeast', southwest = 'southwest',
         up = 'up', down = 'down',
     },
-    clear_lines_on_send = true,
     debug = false,
-    map_window = {x = 0,
-        y = 0,
-        w = "30%",
-        h = "40%",
-        origin = "topright",
-        shown = false,
-    },
-    speedwalk_delay = 1,
-    speedwalk_wait = true,
-    speedwalk_random = true,
+    download_path = "http://dslpnp.altervista.org",
 }
 
 local move_queue, lines = {}, {}
@@ -950,8 +979,16 @@ local find_portal, vision_fail, room_detected, random_move, force_portal, find_p
 local mt = getmetatable(map) or {}
 
 local function config()
-    local configs = map.configs
-
+    local defaults = map.defaults
+    local configs = map.configs or {}
+    -- load stored configs from file if it exists
+    if io.exists(getMudletHomeDir().."/map downloads/configs.lua") then
+        table.load(getMudletHomeDir().."/map downloads/configs.lua",configs)
+    end
+    -- overwrite default values with stored config values
+    configs = table.update(defaults, configs)
+    map.configs = configs
+    
     -- incorporate custom exits
     for k,v in pairs(map.configs.custom_exits) do
         exitmap[k] = v[1]
@@ -962,11 +999,7 @@ local function config()
         stubmap[count] = v[1]
         stubmap[v[1]] = count
     end
-    -- load map from save file
-    if io.exists(getMudletHomeDir() .. "/map_save.dat") then
-        table.load(getMudletHomeDir() .. "/map_save.dat",map.save)
-    end
-
+    
     -- setup metatable to store sensitive values
     local protected = {"mapping", "currentRoom", "currentName", "currentExits", "currentArea",
         "prevRoom", "prevName", "prevExits", "mode", "version"}
@@ -1025,6 +1058,75 @@ local wait_echo = {}
 local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
+
+local bool_configs = {'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
+    'clear_lines_on_send', 'debug', 'use_lang_dirs'}
+-- function intended to be used by an alias to change config values and save them to a file for later
+function map.setConfigs(key, val, sub_key)
+    if val == "off" or val == "false" then
+        val = false
+    elseif val == "on" or val == "true" then
+        val = true
+    end
+    local toggle = false
+    if val == nil or val == "" then toggle = true end
+    key = key:gsub(" ","_")
+    if tonumber(val) then val = tonumber(val) end
+    if not toggle then
+        if key == "map_window" then
+            if map.configs.map_window[sub_key] then
+                map.configs.map_window[sub_key] = val
+                map.echo(string.format("Map config %s set to: %s", sub_key, tostring(val)))
+            else
+                map.echo("Unknown map config.",false, true)
+            end
+        elseif key =="lang_dirs" then
+            if lang_dirs[sub_key] then
+                lang_dirs[sub_key] = val
+                map.echo(string.format("Direction %s now interpreted as %s.", val, sub_key))
+            else
+                map.echo("Invalid direction.", false, true)
+            end
+        elseif key == "prompt_test_patterns" then
+            if not table.contains(map.configs.prompt_test_patterns) then
+                table.insert(map.configs.prompt_test_patterns, val)
+                map.echo("Prompt pattern added to list: " .. val)
+            else
+                table.remove(map.configs.prompt_test_patterns, table.index_of(map.configs.prompt_test_patterns, val))
+                map.echo("Prompt pattern removed from list: " .. val)
+            end
+        elseif key == "custom_exits" then
+            if type(val) == "table" then
+                for k, v in pairs(val) do
+                    map.configs.custom_exit[k] = v
+                    map.echo(string.format("Custom Exit short direction %s, long direction %s",k,v[1]))
+                    map.echo(string.format("    set to: x: %s, y: %s, z: %s, reverse: %s",v[3],v[4],v[5],v[2]))
+                end
+            else
+                map.echo("Custom Exit config must be in the form of a table.", false, true)
+            end
+        elseif map.configs[key] then
+            map.configs[key] = val
+            map.echo(string.format("Config %s set to: %s", key, tostring(val)))
+        else
+            map.echo("Unknown configuration.",false,true)
+            return
+        end
+    elseif toggle then
+        if (type(map.configs[key]) == "boolean" and table.contains(bool_configs, key)) then
+            map.configs[key] = not map.configs[key]
+            map.echo(string.format("Config %s set to: %s", key, tostring(map.configs[key])))
+        elseif key == "map_window" and sub_key == "shown" then
+            map.configs.map_window.shown = not map.configs.map_window.shown
+            map.echo(string.format("Map config %s set to: %s", "shown", tostring(map.configs.map_window.shown)))
+        else
+            map.echo("Unknown configuration.",false,true)
+            return
+        end
+    end
+    table.save(getMudletHomeDir().."/map downloads/configs.lua",map.configs)
+    config()
+end
 
 local function show_err(msg,debug)
     map.echo(msg,debug,true)
@@ -1499,16 +1601,17 @@ local function find_area(name)
 end
 
 function map.load_map(address)
-    local path = getMudletHomeDir() .. "/map.dat"
+    local path, file = getMudletHomeDir() .. "/map downloads", "/map.dat"
+    if not io.exists(path) then lfs.mkdir(path) end
     if not address then
-        loadMap(path)
+        loadMap(path .. file)
         map.echo("Map reloaded from local copy.")
     else
         if not string.match(address,"/[%a_]+%.dat$") then
             address = address .. "/map.dat"
         end
         downloading = true
-        downloadFile(path,address)
+        downloadFile(path .. file, address)
         map.echo(string.format("Downloading map file from: %s.",address))
     end
 end
@@ -2298,12 +2401,50 @@ end
     -- version number accessible in map.version
     -- map.version set at end of config function as a protected variable
 
+-- versions.lua file is intended with this implementation to be a simple indexed table with each
+-- new version added to the end. actual version number doesn't matter so long as each is unique
+local function check_version()
+    downloading = false
+    local path = getMudletHomeDir() .. "/map downloads/versions.lua"
+    local versions = {}
+    table.load(path, versions)
+    local pos = table.index_of(versions, map.version) or 0
+    if pos ~= #versions then
+        enableAlias("Map Update Alias")
+        map.echo(string.format("The Generic Mapping Script is currently &lt;red&gt;%d&lt;reset&gt; versions behind.",#versions - pos))
+        map.echo("To update now, please type: &lt;yellow&gt;map update&lt;reset&gt;")
+    end
+    map.update_timer = tempTimer(3600, [[map.checkVersions()]])
+end
+
 function map.checkVersion()
-    
+    if map.update_timer then
+        killTimer(map.update_timer)
+        map.update_timer = nil
+    end
+    if not map.update_waiting and map.configs.download_path ~= "" then
+        local path, file = getMudletHomeDir() .. "/map downloads", "/versions.lua"
+        if not io.exists(path) then lfs.mkdir(path) end
+        downloading = true
+        downloadFile(path .. file, map.configs.download_path .. file)
+        map.update_waiting = true
+    end
+end
+
+local function update_version()
+    downloading = false
+    local path = getMudletHomeDir() .. "/map downloads/generic_mapper.xml"
+    disableAlias("Map Update Alias")
+    uninstallPackage("generic_mapper")
+    installPackage(path)
+    map.echo("Generic Mapping Script updated successfully.")
 end
 
 function map.updateVersion()
-
+    local path, file = getMudletHomeDir() .. "/map downloads", "/generic_mapper.xml"
+    if not io.exists(path) then lfs.mkdir(path) end
+    downloading = true
+    downloadFile(path .. file, map.configs.download_path .. file)
 end
 
 function map.eventHandler(event,...)
@@ -2330,10 +2471,24 @@ function map.eventHandler(event,...)
         grab_line()
     elseif event == "sysDataSendRequest" then
         capture_move_cmd(arg[1])
+        -- check to prevent multiple version checks in a row without user intervention
+        if map.update_waiting and map.update_timer then
+            map.update_waiting = nil
+        -- check to ensure version check cycle is started
+        elseif not map.update_waiting and not map.update_timer then
+            map.checkVersion()
+        end
     elseif event == "sysDownloadDone" and downloading then
-        loadMap(getMudletHomeDir() .. "/map.dat")
-        downloading = false
-        map.echo("Map File Loaded.")
+        local file = arg[1]
+        if string.ends(file,"/map.dat") then
+            loadMap(file)
+            downloading = false
+            map.echo("Map File Loaded.")
+        elseif string.ends(file,"/versions.lua") then
+            check_version()
+        elseif string.ends(file,"/generic_mapper.xml") then
+            update_version()
+        end
     elseif event == "sysConnectionEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
