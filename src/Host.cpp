@@ -1378,6 +1378,11 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
         } else {
             hasCustomAppID = true;
             pMudlet->mDiscord.setApplicationID(this, appID.toString());
+            auto image = pMudlet->mDiscord.getLargeImage(this);
+
+            if (image.isEmpty() || image == QLatin1String("mudlet")) {
+                pMudlet->mDiscord.setLargeImage(this, QStringLiteral("server-icon"));
+            }
         }
     }
 
