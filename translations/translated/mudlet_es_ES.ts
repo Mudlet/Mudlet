@@ -3846,7 +3846,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2942"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
-      <translation type="unfinished"/>
+      <translation>Hora</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2977"/>
