@@ -1470,7 +1470,11 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>「警告」－在最近的地图操作中至少发现了一个问题
+建议你检查最近的报告文件：
+“%1”
+－找到带有下面标题的报告：
+“%2”</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2067"/>
@@ -1480,17 +1484,20 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－关于上次地图操作的信息己保存在最近的报告文件中：
+“%1”
+－查找带有下面标题的报告：
+“%2”</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2153"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－己开始下载地图，请稍等……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2161"/>
       <source>Downloading XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>下载XML地图文件中，该文件用于%1……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2161"/>
