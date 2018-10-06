@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>760</width>
-    <height>708</height>
+    <height>744</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -79,17 +79,17 @@
           <height>0</height>
          </size>
         </property>
-        <layout class="QGridLayout" name="gridLayout_5">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="spacing">
+          <number>0</number>
+         </property>
          <property name="topMargin">
           <number>0</number>
          </property>
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <item row="0" column="0">
+         <item>
           <widget class="QListWidget" name="profiles_tree_widget">
            <property name="minimumSize">
             <size>
@@ -102,7 +102,7 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="0">
+         <item>
           <widget class="QFrame" name="notificationArea">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -2029,7 +2029,7 @@
            </layout>
           </widget>
          </item>
-         <item row="2" column="0">
+         <item>
           <widget class="QWidget" name="profileAdminArea" native="true">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -2168,21 +2168,6 @@
          </size>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
-         <property name="spacing">
-          <number>12</number>
-         </property>
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>12</number>
-         </property>
-         <property name="rightMargin">
-          <number>9</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
          <item>
           <widget class="QTextBrowser" name="welcome_message">
            <property name="enabled">
@@ -2219,50 +2204,38 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="styleSheet">
-            <string notr="true"/>
+           <property name="title">
+            <string>Required</string>
            </property>
            <layout class="QGridLayout" name="gridLayout">
-            <property name="topMargin">
-             <number>9</number>
-            </property>
-            <item row="4" column="1" colspan="3">
-             <widget class="QComboBox" name="profile_history">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <item>
-               <property name="text">
-                <string>load newest profile</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>load oldest profile</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_9">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_profileName">
               <property name="text">
-               <string>Profile history:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               <string>Profile name:</string>
               </property>
              </widget>
             </item>
-            <item row="1" column="1">
+            <item row="0" column="1" colspan="2">
+             <widget class="QLineEdit" name="profile_name_entry">
+              <property name="font">
+               <font>
+                <family>Bitstream Charter</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
+              <property name="readOnly">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_serverUrl">
+              <property name="text">
+               <string>Server address:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1" colspan="2">
              <widget class="QLineEdit" name="host_name_entry">
               <property name="minimumSize">
                <size>
@@ -2278,17 +2251,14 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="2">
-             <widget class="QLabel" name="label_3">
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_port">
               <property name="text">
                <string>Port:</string>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
              </widget>
             </item>
-            <item row="1" column="3">
+            <item row="2" column="1">
              <widget class="QLineEdit" name="port_entry">
               <property name="minimumSize">
                <size>
@@ -2322,70 +2292,47 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label">
-              <property name="text">
-               <string>Profile name:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_2">
-              <property name="text">
-               <string>Server address:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1" colspan="3">
+            <item row="2" column="2">
              <widget class="QCheckBox" name="port_ssl_tsl">
               <property name="layoutDirection">
                <enum>Qt::RightToLeft</enum>
               </property>
               <property name="text">
-               <string>Secure Port</string>
+               <string>Secure:</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="1" colspan="3">
-             <widget class="QLineEdit" name="profile_name_entry">
-              <property name="font">
-               <font>
-                <family>Bitstream Charter</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
-              <property name="readOnly">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QCheckBox" name="autologin_checkBox">
-              <property name="toolTip">
-               <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
-              </property>
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_profileHistory">
               <property name="text">
-               <string>Auto connect</string>
+               <string>Profile history:</string>
               </property>
              </widget>
             </item>
-            <item row="5" column="1" colspan="3">
-             <widget class="QCheckBox" name="auto_reconnect">
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
+            <item row="3" column="1" colspan="2">
+             <widget class="QComboBox" name="profile_history">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
               </property>
-              <property name="text">
-               <string>Auto Reconnect</string>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
               </property>
+              <item>
+               <property name="text">
+                <string>load newest profile</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>load oldest profile</string>
+               </property>
+              </item>
              </widget>
             </item>
            </layout>
@@ -2409,7 +2356,14 @@
             <string>Optional</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="1">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_characterName">
+              <property name="text">
+               <string>Character name:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1" colspan="2">
              <widget class="QLineEdit" name="login_entry">
               <property name="toolTip">
                <string>The characters name</string>
@@ -2420,16 +2374,13 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QLabel" name="label_5">
+             <widget class="QLabel" name="label_password">
               <property name="text">
                <string>Password:</string>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
              </widget>
             </item>
-            <item row="1" column="1">
+            <item row="1" column="1" colspan="2">
              <widget class="QLineEdit" name="character_password_entry">
               <property name="toolTip">
                <string>Characters password. Note that the password isn't encrypted in storage</string>
@@ -2439,13 +2390,55 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="text">
-               <string>Character name:</string>
+            <item row="2" column="0" colspan="2">
+             <widget class="QCheckBox" name="autologin_checkBox">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <property name="toolTip">
+               <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text">
+               <string>Connect on start</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2">
+             <widget class="QCheckBox" name="auto_reconnect">
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text">
+               <string>Auto reconnect</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0" colspan="3">
+             <widget class="QCheckBox" name="discord_optin_checkBox">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="toolTip">
+               <string>Enable Discord integration (not supported by game)</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../mudlet.qrc">
+                <normaloff>:/icons/Discord-Logo+Wordmark-Color.png</normaloff>:/icons/Discord-Logo+Wordmark-Color.png</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>65</width>
+                <height>22</height>
+               </size>
               </property>
              </widget>
             </item>
@@ -2498,59 +2491,32 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="1">
-             <widget class="QWidget" name="widget_7" native="true">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
+            <item row="0" column="1">
+             <widget class="QLabel" name="website_entry">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_4">
-               <property name="spacing">
-                <number>0</number>
-               </property>
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item>
-                <widget class="QLabel" name="website_entry">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>DejaVu Sans</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="scaledContents">
-                  <bool>true</bool>
-                 </property>
-                 <property name="openExternalLinks">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              <property name="font">
+               <font>
+                <family>DejaVu Sans</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+              <property name="openExternalLinks">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
-            <item row="2" column="0" colspan="2">
+            <item row="1" column="0" colspan="3">
              <widget class="QPlainTextEdit" name="mud_description_textedit">
               <property name="minimumSize">
                <size>
@@ -2582,7 +2548,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget_10" native="true">
+    <widget class="QWidget" name="widget_bottom" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
        <spacer name="horizontalSpacer">
@@ -2634,20 +2600,8 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>welcome_message</tabstop>
-  <tabstop>profile_name_entry</tabstop>
-  <tabstop>host_name_entry</tabstop>
-  <tabstop>port_entry</tabstop>
-  <tabstop>port_ssl_tsl</tabstop>
-  <tabstop>profile_history</tabstop>
-  <tabstop>autologin_checkBox</tabstop>
-  <tabstop>login_entry</tabstop>
-  <tabstop>character_password_entry</tabstop>
-  <tabstop>mud_description_textedit</tabstop>
+  <tabstop>dialog_buttonbox</tabstop>
   <tabstop>remove_profile_button</tabstop>
-  <tabstop>copy_profile_button</tabstop>
-  <tabstop>new_profile_button</tabstop>
-  <tabstop>profiles_tree_widget</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>
