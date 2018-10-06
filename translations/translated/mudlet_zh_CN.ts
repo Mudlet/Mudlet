@@ -1513,12 +1513,12 @@ the file:
       <location filename="../src/TMap.cpp" line="2189"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation type="unfinished"/>
+      <translation>loadMap：无法执行请求，地图已在下载中或已被用户导入。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2221"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>导入XML地图文件中，该文件用于%1……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2222"/>
@@ -1529,7 +1529,7 @@ imported at user request.</source>
       <location filename="../src/TMap.cpp" line="2249"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap：导入XML地图文件失败，请前往主控制台查看更多信息！</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2284"/>
@@ -1554,24 +1554,24 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2325"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>「警告」－下载地图失败，无法打开目标文件：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2330"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>「警告」－下载地图失败，无法写入目标文件：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2337"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－……地图下载并存储完毕，开始分析……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2363"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>「错误」－地图下载出现错误，分析目标文件失败：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2368"/>
