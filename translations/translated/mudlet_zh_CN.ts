@@ -37,14 +37,14 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="1413"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>正在玩 %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1415"/>
       <location filename="../src/Host.cpp" line="1421"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%2:%3 上的 %1</translation>
     </message>
   </context>
   <context>
@@ -455,12 +455,12 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>创建房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>在这里创建一个新房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
