@@ -1414,7 +1414,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1540"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>Карта на найдена. Вы хотите загрузить карту или начать свою собственную?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1541"/>
@@ -2246,7 +2246,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="368"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>Присвоение комнат к своим областьям...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="518"/>
@@ -2510,7 +2510,8 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1601"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Загружается повтор журнала:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1619"/>
@@ -3366,7 +3367,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="602"/>
       <source>Your nick has changed.</source>
-      <translation type="unfinished"/>
+      <translation>Ваш ник был изменён.</translation>
     </message>
   </context>
   <context>
@@ -3459,7 +3460,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
       <source>Where do you want to save the package?</source>
-      <translation type="unfinished"/>
+      <translation>Где вы хотите сохранить пакет?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="144"/>
@@ -3533,7 +3534,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="624"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {модернизированный, экспериментальный, не рекомендуется}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="626"/>
@@ -3568,7 +3569,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1613"/>
       <source>Imported map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Карта загруженна из %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1615"/>
@@ -5339,7 +5340,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
       <source>Load replay</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить повтор</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="269"/>
@@ -5987,7 +5988,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="1360"/>
       <location filename="../src/mudlet.cpp" line="3346"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Загрузить повтор лога&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2820"/>
