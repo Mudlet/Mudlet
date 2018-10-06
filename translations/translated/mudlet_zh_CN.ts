@@ -1386,7 +1386,7 @@ older format.</source>
       <source>[ ALERT ] - Map file is really old, it&apos;s file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>「警告」－地图文件过于陈旧，其过时的保存格式（%1）导致Mudlet无法从中获得足够的信息，但Mudlet仍会尝试读取！这个文件是：“%2”</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1320"/>
