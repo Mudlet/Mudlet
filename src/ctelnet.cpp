@@ -274,7 +274,7 @@ void cTelnet::requestDiscordInfo()
         string data;
         data = TN_IAC;
         data += TN_SB;
-        data += GMCP;
+        data += OPT_GMCP;
         data += string("External.Discord.Get");
         data += TN_IAC;
         data += TN_SE;
@@ -724,7 +724,7 @@ void cTelnet::processTelnetCommand(const string& command)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            // APP_BUILD could, conceivable contain a non-ASCII character:
+            // APP_BUILD could, conceivably contain a non-ASCII character:
             output += encodeAndCookBytes(R"(Core.Hello { "client": "Mudlet", "version": )" APP_VERSION APP_BUILD R"(})");
             output += TN_IAC;
             output += TN_SE;
@@ -741,7 +741,7 @@ void cTelnet::processTelnetCommand(const string& command)
             if (mudlet::self()->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
                 output = TN_IAC;
                 output += TN_SB;
-                output += GMCP;
+                output += OPT_GMCP;
                 output += "External.Discord.Hello";
                 output += TN_IAC;
                 output += TN_SE;
@@ -1299,7 +1299,6 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-{
     QString transcodedMsg;
     if (mpOutOfBandDataIncomingCodec) {
         // Message is encoded
@@ -1360,13 +1359,12 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
-    } else if (msg.startsWith(QStringLiteral("Client.Map"))) {
+    } else if (packageMessage.startsWith(QStringLiteral("Client.Map"))) {
         mpHost->setMmpMapLocation(data);
     }
-    arg.remove(QChar::LineFeed);
+    data.remove(QChar::LineFeed);
     // remove \r's from the data, as yajl doesn't like it
-    arg.remove(QChar::CarriageReturn);
-    mpHost->mLuaInterpreter.setGMCPTable(var, arg);
+    data.remove(QChar::CarriageReturn);
 
     if (packageMessage.startsWith(QStringLiteral("External.Discord.Status"))
         || packageMessage.startsWith(QStringLiteral("External.Discord.Info"))) {

@@ -478,6 +478,7 @@ private:
     bool validLuaCode(const QString &code);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State* L);
+    static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
 
     QNetworkAccessManager* mpFileDownloader;
 
