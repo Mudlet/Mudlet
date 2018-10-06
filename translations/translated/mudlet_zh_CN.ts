@@ -712,7 +712,7 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>为所有选中房间输入新的房间权重（＝路程远近），最小值（默认值）为1，当前权重为：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3832"/>
