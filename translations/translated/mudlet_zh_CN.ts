@@ -1393,14 +1393,17 @@ it but it will try!  The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－也许你应该把这个地图文件捐赠给Mudlet博物馆！
+这个地图文件已经缺少了太多数据，你最好还是重新做一个……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1329"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－读取地图文件中（格式版本：%1）：
+“%2”
+请稍等……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1437"/>
