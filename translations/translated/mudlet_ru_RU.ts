@@ -5222,7 +5222,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="163"/>
       <source>configure connection details of, and make a connection to, game servers</source>
-      <translation type="unfinished"/>
+      <translation>настроить параметры соединения и подключения к игровым серверам</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
@@ -5232,7 +5232,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="185"/>
       <source>disconnect and then reconnect to the current game server</source>
-      <translation type="unfinished"/>
+      <translation>отключится и снова подключится к текущему игровому серверу</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
@@ -5318,7 +5318,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
       <source>IRC help channel</source>
-      <translation type="unfinished"/>
+      <translation>Чат с Поддержкой (IRC)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="253"/>
@@ -5349,7 +5349,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
       <source>show or hide the game map</source>
-      <translation type="unfinished"/>
+      <translation>показать/скрыть карту</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="277"/>
@@ -5424,7 +5424,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="343"/>
       <source>Package exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов (экспериментальный)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="346"/>
@@ -6965,7 +6965,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1915"/>
       <source>2D Map Room Symbol Font</source>
-      <translation type="unfinished"/>
+      <translation>Шрифт символов на 2D карте</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1925"/>
@@ -7119,17 +7119,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2548"/>
       <source>Hide state</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть состояние</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2555"/>
       <source>Hide party details</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть детали группы</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2562"/>
       <source>Hide detail</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть деталь</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2572"/>
@@ -7149,7 +7149,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2595"/>
       <source>#channel1 #channel2 #etc...</source>
-      <translation type="unfinished"/>
+      <translation>#канал1 #канал2 и т.д...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2602"/>
@@ -7612,7 +7612,8 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>Выход
+ID комнаты</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
@@ -7725,7 +7726,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
       <source>Which area would you like to move the room(s) to?</source>
-      <translation type="unfinished"/>
+      <translation>В какую область вы бы хотели переместить комнату(ы)?</translation>
     </message>
   </context>
   <context>
@@ -7980,7 +7981,7 @@ Without this option, the pattern matching will stop after the first successful m
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1291"/>
       <source>match all</source>
-      <translation type="unfinished"/>
+      <translation>совпадаеть со всем</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1336"/>
