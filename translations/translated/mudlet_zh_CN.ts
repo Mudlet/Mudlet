@@ -1006,7 +1006,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="978"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;记录开始于&apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="999"/>
@@ -1379,7 +1379,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1306"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－你需要升级你的Mudlet，或者另寻以旧格式存储的地图文件。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1313"/>
