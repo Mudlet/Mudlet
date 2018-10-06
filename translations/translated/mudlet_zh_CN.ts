@@ -757,7 +757,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4747"/>
       <source>Left-click and drag a square for the size and position of your label</source>
-      <translation type="unfinished"/>
+      <translation>单击左键并拖动一个方形可以设置标签大小和位置</translation>
     </message>
   </context>
   <context>
@@ -765,7 +765,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation type="unfinished"/>
+      <translation>房间号＝%1不存在，不能为一个不存在的房间设置属性！</translation>
     </message>
   </context>
   <context>
@@ -774,44 +774,44 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="66"/>
       <source>ISO 8859-2 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-2（中欧）</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="85"/>
       <location filename="../src/TBuffer.cpp" line="370"/>
       <source>ISO 8859-3 (South European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-3（南欧）</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="104"/>
       <source>ISO 8859-4 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-4（波罗的海）</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="123"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-5（西里尔）</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="142"/>
       <source>ISO 8859-6 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-6 (Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="161"/>
       <source>ISO 8859-7 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-7 (Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="180"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-8 (Hebrew Visual)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="199"/>
@@ -823,7 +823,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="218"/>
       <source>ISO 8859-10 (Nordic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-10 (Nordic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="237"/>
