@@ -735,7 +735,7 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation>从列表中选择一个使用过的房间权重（＝）</translation>
+      <translation>为所有选中房间设置房间权重（＝路程远近），可以从列表中选择一个使用过的值（常用的值排在前面），也可以输入一个新值（正整数）：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3892"/>
@@ -746,13 +746,13 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="3894"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet地图（*.dat）;;Xml地图数据（*.xml）;;所有文件（*）</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4700"/>
       <location filename="../src/T2DMap.cpp" line="4736"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
-      <translation type="unfinished"/>
+      <translation>单击左键『添加端点』，单击右键『撤销／修改／结束』……</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4747"/>
