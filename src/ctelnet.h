@@ -126,7 +126,7 @@ public:
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
-    void setReconnect(bool status);
+    void setAutoReconnect(bool status);
     void encodingChanged(const QString&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
@@ -251,7 +251,7 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableChannel102;
-    bool gagReconnect;
+    bool mDontReconnect;
     bool mAutoReconnect;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
@@ -263,7 +263,6 @@ private:
     QStringList mFriendlyEncodings;
 
 private slots:
-
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);
 #endif

@@ -864,6 +864,12 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
+    pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
+    pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
+    pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
+    //explicitly not loading ignore all ssl errors
+    //pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
 
     while (!atEnd()) {
         readNext();
@@ -1025,12 +1031,6 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 
 
-    pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
-    pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
-    pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
-    pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
-    //explicitly not loading ignore all ssl errors
-    //pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
 }
 
 // returns the ID of the root imported trigger/group

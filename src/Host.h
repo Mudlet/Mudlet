@@ -95,7 +95,7 @@ public:
     void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
     void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
-    void               setAutoReconnect(bool b)         {mTelnet.setReconnect(b);}
+    void               setAutoReconnect(bool b)         { mTelnet.setAutoReconnect(b); }
     QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
     void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
     QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }

@@ -86,7 +86,7 @@ cTelnet::cTelnet(Host* pH)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
-    gagReconnect  = false;
+    mDontReconnect  = false;
 
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -125,7 +125,6 @@ cTelnet::cTelnet(Host* pH)
     connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
     connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
     connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
-    //connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
  #if !defined(QT_NO_SSL)
     connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
 #endif
@@ -218,7 +217,6 @@ const QString& cTelnet::getComputerEncoding(const QString& encoding)
 }
 
 #if !defined(QT_NO_SSL)
-
 QSslCertificate cTelnet::getPeerCertificate()
 {
     return socket.peerCertificate();
@@ -228,7 +226,6 @@ QList<QSslError> cTelnet::getSslErrors()
 {
     return socket.sslErrors();
 }
-
 #endif
 
 QAbstractSocket::SocketError cTelnet::error()
@@ -331,7 +328,7 @@ void cTelnet::connectIt(const QString& address, int port)
 void cTelnet::disconnect()
 {
     socket.disconnectFromHost();
-    gagReconnect = true;
+    mDontReconnect = true;
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -359,10 +356,11 @@ void cTelnet::handle_socket_signal_connected()
 
     if (mpHost->mSslTsl)
     {
-        msg = "[ INFO ]  - A secure connection has been established successfully.\n    \n    ";
+        msg = tr("[ INFO ]  - A secure connection has been established successfully.");
     } else {
-        msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
+        msg = tr("[ INFO ]  - A connection has been established successfully.");
     }
+    msg.append(QStringLiteral("\n    \n    "));
     postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
@@ -403,7 +401,7 @@ void cTelnet::handle_socket_signal_disconnected()
     bool sslerr = (!socket.sslErrors().empty() || (socket.error() == QAbstractSocket::SslHandshakeFailedError) || (socket.error() == QAbstractSocket::SslInvalidUserDataError)
                    || (socket.error() == QAbstractSocket::QAbstractSocket::SslInternalError));
     if (sslerr) {
-        gagReconnect = true;
+        mDontReconnect = true;
     }
 #endif
     if (!mpHost->mIsGoingDown) {
@@ -414,11 +412,11 @@ void cTelnet::handle_socket_signal_disconnected()
 
 #if !defined(QT_NO_SSL)
     if (sslerr) {
-        mudlet::self()->show_options_dialog("Security");
+        mudlet::self()->show_options_dialog(QStringLiteral("Security"));
     }
 #endif
 
-    if ((!gagReconnect) && (mAutoReconnect)) {
+    if (mAutoReconnect && !mDontReconnect) {
         connectIt(hostName, hostPort);
     }
 }
@@ -1348,7 +1346,7 @@ void cTelnet::setChannel102Variables(const QString& msg)
     }
 }
 
-void cTelnet::setReconnect(bool status)
+void cTelnet::setAutoReconnect(bool status)
 {
     mAutoReconnect = status;
 }
