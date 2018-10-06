@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="134"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>через Mudlet</translation>
     </message>
   </context>
   <context>
@@ -37,14 +37,14 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="1413"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Играет в %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1415"/>
       <location filename="../src/Host.cpp" line="1421"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 на %2:%3</translation>
     </message>
   </context>
   <context>
@@ -454,12 +454,12 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>создать комнату</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Создать новую комнату</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
@@ -544,7 +544,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2726"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Не возможно установить новое местоположение когда больше чем одна комната выделена</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
@@ -1198,7 +1198,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Играет в %1</translation>
     </message>
   </context>
   <context>
@@ -2474,37 +2474,37 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1356"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ОШИБКА</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1368"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ЛУА</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1379"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ВНИМ</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1390"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ТРЕВОГА</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1401"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ИНФО</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1412"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ОК</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1601"/>
@@ -2721,12 +2721,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2431"/>
       <source>Connect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Автоматическое подключение</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2441"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>Включить Discord (не поддерживается игрой)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2370"/>
@@ -3449,12 +3449,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name</source>
-      <translation type="unfinished"/>
+      <translation>Имя пакета</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя пакета:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
@@ -3809,43 +3809,43 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2934"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>Большой значок</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2935"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>Деталь</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2937"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>Маленький значок</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2938"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>Состояние</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2940"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
-      <translation type="unfinished"/>
+      <translation>Размер группы</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2941"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
-      <translation type="unfinished"/>
+      <translation>Макс. размер группы</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2942"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
-      <translation type="unfinished"/>
+      <translation>Время</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2977"/>
