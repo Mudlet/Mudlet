@@ -969,7 +969,7 @@ if rex then
 
     deselect()
     reset()
-
+    if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then

@@ -65,10 +65,27 @@ class Host : public QObject
 
     friend class XMLexport;
     friend class XMLimport;
+    friend class dlgProfilePreferences;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
     ~Host();
+
+    enum DiscordOptionFlag {
+        DiscordNoOption = 0x0,
+        DiscordSetDetail = 0x01,
+        DiscordSetState = 0x02,
+        DiscordSetLargeIcon = 0x04,
+        DiscordSetLargeIconText = 0x08,
+        DiscordSetSmallIcon = 0x10,
+        DiscordSetSmallIconText = 0x20,
+        DiscordSetPartyInfo = 0x80,
+        DiscordSetTimeInfo = 0x100,
+        DiscordSetSubMask = 0x3ff,
+        DiscordLuaAccessEnabled = 0x800
+    };
+    Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
+
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     void               setName(const QString& s )       { QMutexLocker locker(& mLock); mHostName = s; }
@@ -95,6 +112,8 @@ public:
                                                                        return mAutoAmbigousWidthGlyphsSetting
                                                                                ? Qt::PartiallyChecked
                                                                                : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+    void               setDiscordApplicationID(const QString& s);
+    const QString&     getDiscordApplicationID();
 
     void closingDown();
     bool isClosingDown();
@@ -180,11 +199,17 @@ public:
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
-    QPair<bool, QString> writeProfileData(const QString &, const QString &);
-    QString readProfileData(const QString &);
-    void xmlSaved(const QString &xmlName);
+    QPair<bool, QString> writeProfileData(const QString&, const QString&);
+    QString readProfileData(const QString&);
+    void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    void processDiscordGMCP(const QString& packageMessage, const QString& data);
     void waitForProfileSave();
+    void clearDiscordData();
+    void processDiscordMSDP(const QString& variable, QString value);
+    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    void setMmpMapLocation(const QString& data);
+    QString getMmpMapLocation() const;
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -338,6 +363,13 @@ public:
     QMap<QString, QStringList> modulesToWrite;
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
+    // Privacy option to allow the game to set Discord Rich Presence information
+    bool mDiscordDisableServerSide;
+
+    // Discord privacy options to give the user control over what data a Server
+    // can set over OOB protocols (MSDP & GMCP) and the user via Lua API:
+    DiscordOptionFlags mDiscordAccessFlags;
+
     double mLineSize;
     double mRoomSize;
     bool mShowInfo;
@@ -433,7 +465,22 @@ private:
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
 
+    // Will be null/empty if is to use Mudlet's default/own presence
+    QString mDiscordApplicationID;
+
+    // Will be null/empty if we are not concerned to check the use of Discord
+    // Rich Presence against the local user currently logged into Discord -
+    // these two will be checked against the values from the Discord instance
+    // with which we are linked to by the RPC library - and if they do not match
+    // we won't use Discord functions.
+    QString mRequiredDiscordUserName;
+    QString mRequiredDiscordUserDiscriminator;
+
+    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
+    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
 
 #endif // MUDLET_HOST_H
