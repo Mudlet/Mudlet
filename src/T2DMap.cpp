@@ -3520,8 +3520,8 @@ void T2DMap::slot_changeColor()
     connect(listWidget, &QListWidget::itemClicked, this, &T2DMap::slot_selectRoomColor);
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
-        QMenu myMenu;
-        myMenu.addAction(tr("Delete color", "Deletes an environment colour"), this, [=]() {
+        QMenu menu;
+        menu.addAction(tr("Delete color", "Deletes an environment colour"), this, [=]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto colour = selectedItem->text();
 
@@ -3529,7 +3529,7 @@ void T2DMap::slot_changeColor()
             repaint();
         });
 
-        myMenu.exec(QCursor::pos());
+        menu.exec(QCursor::pos());
     });
 
     vboxLayout->addWidget(listWidget);
