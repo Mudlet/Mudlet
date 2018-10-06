@@ -701,7 +701,7 @@ factor of:</source>
 (= travel time), minimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>输入新的房间权重（＝路程远近），最小值（默认值）为1：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3799"/>
