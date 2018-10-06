@@ -1409,18 +1409,18 @@ please wait...</source>
       <location filename="../src/TMap.cpp" line="1437"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－找不到默认（重置）区域（对某些尚未指定区域的房间），添加保留区域号-1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1521"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation type="unfinished"/>
+      <translation>「通知」－读取地图文件成功（%1s），正在检查某些细节的一致性……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1540"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>找不到地图。要下载一个或者制作你自己的地图吗？</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1541"/>
@@ -1435,22 +1435,22 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2010"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>地图问题</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2017"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>区域问题</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>区域号：%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>房间问题</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2043"/>
@@ -1460,7 +1460,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2053"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>报告结束</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2059"/>
