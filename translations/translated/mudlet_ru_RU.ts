@@ -3175,7 +3175,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="717"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</translation>
     </message>
   </context>
   <context>
@@ -3253,17 +3253,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1104"/>
       <source>Discord integration not available on this platform</source>
-      <translation type="unfinished"/>
+      <translation>Интеграция Discord не доступна на этой платформе</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1110"/>
       <source>Discord integration not supported by game</source>
-      <translation type="unfinished"/>
+      <translation>Интеграция Discord не поддерживается игрой</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1113"/>
       <source>Check to enable Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Включить интеграцию с Discord</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1748"/>
@@ -5036,7 +5036,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="23"/>
       <source>No mapping script found</source>
-      <translation type="unfinished"/>
+      <translation>Скрипт для карты не найден</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="38"/>
@@ -5167,7 +5167,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="17"/>
       <source>Mudlet 1.0 - alpha 1</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 1.0 - alpha 1</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
@@ -5212,7 +5212,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="177"/>
       <source>Alt+D</source>
-      <translation type="unfinished"/>
+      <translation>Alt+D</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
@@ -5287,7 +5287,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="224"/>
       <source>Alt+N</source>
-      <translation type="unfinished"/>
+      <translation>Alt+N</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
@@ -7041,27 +7041,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2395"/>
       <source>Discord privacy</source>
-      <translation type="unfinished"/>
+      <translation>Конфиденциальность Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2402"/>
       <source>Don&apos;t hide small icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Не скрывать маленький значок и подсказку к нему</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
       <source>Hide small icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть подсказку к маленькому значку</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2412"/>
       <source>Hide small icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть маленький значок и подсказку к нему</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2420"/>
       <source>Hide timer</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть таймер</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2430"/>
@@ -7069,52 +7069,52 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2511"/>
       <location filename="../src/ui/profile_preferences.ui" line="2527"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet будет только показать информацию в Discord если вы подключены с этим именем (полезно, если у вас несколько аккаунтов). Оставьте поле пустым, чтобы показывать для любого аккаунта.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2448"/>
       <source>Restrict to:</source>
-      <translation type="unfinished"/>
+      <translation>Ограничить к:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2459"/>
       <source>Don&apos;t hide large icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Не скрывать большой значок и подсказку к нему</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2464"/>
       <source>Hide large icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть подсказку к большому значку</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2469"/>
       <source>Hide large icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Скрыть большой значок и подсказку к нему</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2477"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Позволять Луа постановлять состояние Discord&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2480"/>
       <source>Enable Lua API</source>
-      <translation type="unfinished"/>
+      <translation>Включить API Луа</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2501"/>
       <source>specific Discord username</source>
-      <translation type="unfinished"/>
+      <translation>конкретное имя в Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2514"/>
       <source> # </source>
-      <translation type="unfinished"/>
+      <translation> # </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2533"/>
       <source>9999;#</source>
-      <translation type="unfinished"/>
+      <translation>9999;#</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2548"/>
