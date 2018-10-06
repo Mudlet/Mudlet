@@ -672,12 +672,12 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>居中高亮房间，按指定倍数增加选中房间间距：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3654"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>聚拢房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3655"/>
@@ -686,7 +686,7 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>居中高亮房间，按指定倍数缩小选中房间间距：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3785"/>
