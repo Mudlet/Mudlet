@@ -267,6 +267,25 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     return qMakePair(true, QString());
 }
 
+void cTelnet::requestDiscordInfo()
+{
+    mudlet* pMudlet = mudlet::self();
+    if (pMudlet->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+        string data;
+        data = TN_IAC;
+        data += TN_SB;
+        data += GMCP;
+        data += string("External.Discord.Get");
+        data += TN_IAC;
+        data += TN_SE;
+
+        // some games are buggy with MCCP on and require actual input before GMCP is processed
+        data += "\n";
+
+        socketOutRaw(data);
+    }
+}
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     // wird an dieser Stelle gesetzt
@@ -281,6 +300,8 @@ void cTelnet::connectIt(const QString& address, int port)
         connectIt(address, port);
         return;
     }
+
+    emit signal_connecting(mpHost);
 
     hostName = address;
     hostPort = port;
@@ -328,6 +349,8 @@ void cTelnet::handle_socket_signal_connected()
         mTimerPass->start(3000);
     }
 
+    emit signal_connected(mpHost);
+
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -337,6 +360,8 @@ void cTelnet::handle_socket_signal_connected()
 void cTelnet::handle_socket_signal_disconnected()
 {
     postData();
+
+    emit signal_disconnected(mpHost);
 
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
@@ -708,10 +733,21 @@ void cTelnet::processTelnetCommand(const string& command)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1"])";
+            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1"])";
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
+            
+            if (mudlet::self()->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+                output = TN_IAC;
+                output += TN_SB;
+                output += GMCP;
+                output += "External.Discord.Hello";
+                output += TN_IAC;
+                output += TN_SE;
+
+                socketOutRaw(output);
+            }
 
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
@@ -1263,6 +1299,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
+{
     QString transcodedMsg;
     if (mpOutOfBandDataIncomingCodec) {
         // Message is encoded
@@ -1272,11 +1309,14 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         transcodedMsg = QString::fromUtf8(msg);
     }
 
-    QString var = transcodedMsg.section(QChar::Space, 0, 0);
-    QString arg = transcodedMsg.section(QChar::Space, 1);
-    if (arg.isEmpty()) {
-        var = transcodedMsg.section(QChar::LineFeed, 0, 0);
-        arg = transcodedMsg.section(QChar::LineFeed, 1);
+    QString packageMessage;
+    QString data;
+    packageMessage = transcodedMsg.section(QChar::Space, 0, 0);
+    data = transcodedMsg.section(QChar::Space, 1);
+
+    if (data.isEmpty()) {
+        packageMessage = transcodedMsg.section(QChar::LineFeed, 0, 0);
+        data = transcodedMsg.section(QChar::LineFeed, 1);
     }
 
     if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"))) {
@@ -1320,11 +1360,20 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
+    } else if (msg.startsWith(QStringLiteral("Client.Map"))) {
+        mpHost->setMmpMapLocation(data);
     }
     arg.remove(QChar::LineFeed);
     // remove \r's from the data, as yajl doesn't like it
     arg.remove(QChar::CarriageReturn);
     mpHost->mLuaInterpreter.setGMCPTable(var, arg);
+
+    if (packageMessage.startsWith(QStringLiteral("External.Discord.Status"))
+        || packageMessage.startsWith(QStringLiteral("External.Discord.Info"))) {
+        mpHost->processDiscordGMCP(packageMessage, data);
+    }
+
+    mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)

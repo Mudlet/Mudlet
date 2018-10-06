@@ -387,6 +387,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
+    host.append_attribute("DiscordAccessOptions") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
+    host.append_attribute("RequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
+    host.append_attribute("RequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);

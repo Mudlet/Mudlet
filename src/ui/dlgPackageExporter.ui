@@ -21,36 +21,6 @@
        <string>Check items to export</string>
       </property>
      </column>
-     <item>
-      <property name="text">
-       <string>Triggers</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Aliases</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Timers</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Scripts</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Keys</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Buttons</string>
-      </property>
-     </item>
     </widget>
    </item>
    <item>

@@ -208,7 +208,9 @@ mudlet::mudlet()
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+, mDiscord()
 , mShowIconsOnDialogs(true)
+, mCopyAsImageTimeout{3}
 , mInterfaceLanguage(QStringLiteral("en_US"))
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
@@ -1196,6 +1198,8 @@ void mudlet::slot_tab_changed(int tabID)
 
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
+
+    emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
 
 void mudlet::addConsoleForNewHost(Host* pH)
@@ -2507,6 +2511,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     if (settings.value("maximized", false).toBool()) {
         showMaximized();
     }
+    mCopyAsImageTimeout = settings.value(QStringLiteral("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2629,6 +2634,7 @@ void mudlet::writeSettings()
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
+    settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
 }
 

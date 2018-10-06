@@ -30,6 +30,7 @@ set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
     ctelnet.cpp
+    discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
     dlgAliasMainArea.cpp
@@ -127,6 +128,7 @@ set(mudlet_UIS
 
 set(mudlet_MOC_HDRS
     ctelnet.h
+    discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
     dlgAliasMainArea.h
@@ -149,9 +151,9 @@ set(mudlet_MOC_HDRS
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
-    Host.h
     exitstreewidget.h
     glwidget.h
+    Host.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
@@ -172,13 +174,14 @@ set(mudlet_MOC_HDRS
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
+    discord.h
     FontManager.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
-    pre_guard.h
     post_guard.h
+    pre_guard.h
     ScriptUnit.h
     TAction.h
     TAlias.h
