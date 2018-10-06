@@ -717,12 +717,12 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3832"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 『总数：%2，默认值』</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3840"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>1 『合计 0，默认值』</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3844"/>
@@ -735,7 +735,7 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>从列表中选择一个使用过的房间权重（＝）</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3892"/>
