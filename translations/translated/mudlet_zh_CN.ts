@@ -1013,7 +1013,8 @@ rooms:</source>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;日志会话开始于&apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1008"/>
@@ -1024,22 +1025,22 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1009"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="377"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>显示时间戳。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>录像。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>开始将游戏内容存入日志文件。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="410"/>
