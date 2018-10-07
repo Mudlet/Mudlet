@@ -1106,7 +1106,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1694"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation>『错误』－找不到地图文件，使用的路径和文件名是：%1。</translation>
+      <translation>「错误」－找不到地图文件，使用的路径和文件名是：%1。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1700"/>
@@ -1117,7 +1117,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1709"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>『通知』－已找到并打开地图文件，开始分析……</translation>
+      <translation>「通知」－已找到并打开地图文件，开始分析……</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
@@ -1143,17 +1143,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>『通知』－系统收到重新加载地图的请求……</translation>
+      <translation>「通知」－系统收到重新加载地图的请求……</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>『确定』－……系统已完成重新加载地图的请求。</translation>
+      <translation>「确定」－……系统已完成重新加载地图的请求。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2806"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation>『警告』－……系统重新加载地图失败。</translation>
+      <translation>「警告」－……系统重新加载地图失败。</translation>
     </message>
   </context>
   <context>
@@ -1181,7 +1181,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9113"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation>『警告』－使用了Lua命令setAreaUserData()，该命令尚处于测试阶段！</translation>
+      <translation>「警告」－使用了Lua命令setAreaUserData()，该命令尚处于测试阶段！</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9114"/>
@@ -1192,14 +1192,14 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation>『通知』－要想上述命令完全奏效，还需对地图文件格式进行一次修订。尽管此命令已经存在，但请不要使用，此命令的效果在会话之间不会一直存在，因为相关的数据不会被保存。
+      <translation>「通知」－要想上述命令完全奏效，还需对地图文件格式进行一次修订。尽管此命令已经存在，但请不要使用，此命令的效果在会话之间不会一直存在，因为相关的数据不会被保存。
 
 为避免这条通知反复出现在屏幕中，关于此命令的警告仅此一次……！</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9174"/>
       <source>[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!</source>
-      <translation>『警告』－使用了Lua命令setMapUserData()，该命令尚处于测试阶段！</translation>
+      <translation>「警告」－使用了Lua命令setMapUserData()，该命令尚处于测试阶段！</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
@@ -1222,37 +1222,37 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation>『通知』－开始审核 已装载／已导入／已下载 的地图……</translation>
+      <translation>「通知」－开始审核 已装载／已导入／已下载 的地图……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>『通知』－转换：旧版标签，区域号：%1 标签号：%2。</translation>
+      <translation>「通知」－转换：旧版标签，区域号：%1 标签号：%2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>『通知』－正在转换旧版标签，标签号: %1。</translation>
+      <translation>「通知」－正在转换旧版标签，标签号: %1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation>『警告』－转换：无法转换的旧版标签，该标签位于区域: %1，标签号：%2。</translation>
+      <translation>「警告」－转换：无法转换的旧版标签，该标签位于区域: %1，标签号：%2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="477"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation>『警告』－转换：无法转换的旧版标签，标签号：%1 。</translation>
+      <translation>「警告」－转换：无法转换的旧版标签，标签号：%1 。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>『确定』：审核地图完成（%1s），祝游戏愉快……</translation>
+      <translation>「确定」：审核地图完成（%1s），祝游戏愉快……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>『确定』－地图加载成功（%1s）。</translation>
+      <translation>「确定」－地图加载成功（%1s）。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -1331,7 +1331,7 @@ this command...!</source>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation>『警报』－地图保存格式『%1』与加载此地图时所用格式『%2』不一致。如果你想把保存后的地图分享给那些使用原地图格式的人，这可能是个问题。</translation>
+      <translation>「警报」－地图保存格式『%1』与加载此地图时所用格式『%2』不一致。如果你想把保存后的地图分享给那些使用原地图格式的人，这可能是个问题。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1040"/>
@@ -1344,20 +1344,20 @@ a release version may allow you to downgrade to save a map in
 a format compatible with others using older versions of MUDLET
 however some features may be crippled or non-operational for
 this version of MUDLET.</source>
-      <translation>『警告』－当前用来保存地图的格式『%1』与推荐使用的格式『%2』不一致，请注意软件版本。开发版软件可能会提供一些尚处于测试阶段的特性，这些特性使用的是一个修订过的格式，该格式与发布版软件中使用的格式互不兼容。反之发布版软件可能会允许你以一个低版本的格式保存地图，以便在旧版本的MUDLET也可以使用这些地图，但是这也会导致无法使用当前版本MUDLET中的某些特性。</translation>
+      <translation>「警告」－当前用来保存地图的格式『%1』与推荐使用的格式『%2』不一致，请注意软件版本。开发版软件可能会提供一些尚处于测试阶段的特性，这些特性使用的是一个修订过的格式，该格式与发布版软件中使用的格式互不兼容。反之发布版软件可能会允许你以一个低版本的格式保存地图，以便在旧版本的MUDLET也可以使用这些地图，但是这也会导致无法使用当前版本MUDLET中的某些特性。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1078"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation>『警报』－己保存地图文件中的用户地图数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！</translation>
+      <translation>「警报」－己保存地图文件中的用户地图数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1157"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation>『警报』－己保存地图文件中关于此区域的用户数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！
+      <translation>「警报」－己保存地图文件中关于此区域的用户数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！
 </translation>
     </message>
     <message>
@@ -1365,19 +1365,21 @@ format of at least 17 to preserve it before quitting!
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation type="unfinished"/>
+      <translation>「警报」－己保存地图文件中的区域用户数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！
+受影响的区域号：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1164"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>，</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1299"/>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>「错误」－地图文件版本太高，其文件格式（%1）超出当前版本Mudlet可处理的范围（%2）！该文件是：
+&quot;%3&quot;。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1306"/>
@@ -1581,7 +1583,7 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2368"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>「错误」－地图下载出现错误，无法读取目标文件：%1。</translation>
     </message>
   </context>
   <context>
