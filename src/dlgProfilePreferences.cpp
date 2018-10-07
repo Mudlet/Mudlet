@@ -151,65 +151,58 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // on top! 8-)
     tabWidget->setCurrentIndex(0);
 
-    pushButton_showGlyphUsage->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                          .arg(tr("<p>This will bring up a display showing all the symbols used in the current "
-                                                  "map and whether they can be drawn using just the specifed font, any other "
-                                                  "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                                  "that make up that symbol, so that they can be identified even if they "
-                                                  "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                  "that symbol are listed, which may help to identify any unexpected or odd cases.<p>")));
-    fontComboBox_mapSymbols->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                        .arg(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                                "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>")));
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                     .arg(tr("<p>Using a single font is likely to produce a more consistent style but may "
-                                                             "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                             "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                             "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                             "the best alternative glyph from another font to be used to draw that grapheme.</p>")));
-    checkBox_runAllKeyBindings->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                           .arg(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
-                                                   "(combination of key and modifiers) even if more than one of them is set to be "
-                                                   "active. This means that a temporary keybinding (not visible in the Editor) "
-                                                   "created by a script or package may be used in preference to a permanent one "
-                                                   "that is shown and is set to be active. If checked then all matching keybindings "
-                                                   "will be run.</p>"
-                                                   "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                                   "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>")));
-    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                         .arg("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                              "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                              "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                              "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                              "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                              "<p>This control has three settings:"
-                                                              "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                              "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                              "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
-                                                              "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
-                                                              "full support for languages other than English.</i></p>"));
+    pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
+                                             "map and whether they can be drawn using just the specifed font, any other "
+                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                             "that make up that symbol, so that they can be identified even if they "
+                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                             "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+    fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
+                                           "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
+                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                        "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+    checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
+                                              "(combination of key and modifiers) even if more than one of them is set to be "
+                                              "active. This means that a temporary keybinding (not visible in the Editor) "
+                                              "created by a script or package may be used in preference to a permanent one "
+                                              "that is shown and is set to be active. If checked then all matching keybindings "
+                                              "will be run.</p>"
+                                              "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
+                                              "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+    checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
+                                                            "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                            "<p>This control has three settings:"
+                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                            "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
+                                                            "full support for languages other than English.</i></p>"));
     checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mShowIconsOnMenuCheckedState);
-    checkBox_showIconsOnMenus->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                          .arg("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
-                                               "shown icons on menus, others, however do not. This control allows the user to override "
-                                               "the setting, if needed, as follows:"
-                                               "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
-                                               "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
-                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
-                                               "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                               "propogate everywhere until Mudlet is restarted.</i></p>"));
-    checkBox_enableTextAnalyzer->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                            .arg(tr("<p>Check this option to activate a context (right click) menu action on any "
-                                                    "console/user window that, when the mouse cursor is hovered over it, will "
-                                                    "display the UTF-16 and UTF-8 items that make up each Unicode codepoint on "
-                                                    "the <b>first</b> line of any selection.</p>"
-                                                    "<p><i>Note: the whole line of text will be analyzed even if only part of "
-                                                    "it is selected.</i></p>"
-                                                    "<p>This utility feature is intended to help the user identify any grapheme "
-                                                    "(visual equivalent to a <i>character</i>) that a Game server may send even "
-                                                    "if it is composed of multiple bytes as any non-ASCII character will be in the "
-                                                    "Lua sub-system which uses the UTF-8 encoding system.<p>")));
+    checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
+                                             "shown icons on menus, others, however do not. This control allows the user to override "
+                                             "the setting, if needed, as follows:"
+                                             "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
+                                             "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
+                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
+                                             "<p><i>This setting is only processed when individual menus are created and changes may not "
+                                             "propogate everywhere until Mudlet is restarted.</i></p>"));
+    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Check this option to activate a context (right click) menu action on any "
+                                               "console/user window that, when the mouse cursor is hovered over it, will "
+                                               "display the UTF-16 and UTF-8 items that make up each Unicode codepoint on "
+                                               "the <b>first</b> line of any selection.</p>"
+                                               "<p><i>Note: the whole line of text will be analyzed even if only part of "
+                                               "it is selected.</i></p>"
+                                               "<p>This utility feature is intended to help the user identify any grapheme "
+                                               "(visual equivalent to a <i>character</i>) that a Game server may send even "
+                                               "if it is composed of multiple bytes as any non-ASCII character will be in the "
+                                               "Lua sub-system which uses the UTF-8 encoding system.<p>"));
 
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
