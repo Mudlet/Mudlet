@@ -989,7 +989,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="895"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation>暂停记录。日志保存在%1
+      <translation>记录已停止。日志保存在%1
 </translation>
     </message>
     <message>
@@ -1040,7 +1040,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
       <source>Start logging game output to log file.</source>
-      <translation>开始将游戏内容存入日志文件。</translation>
+      <translation>开始向日志文件写入游戏输出。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="410"/>
@@ -1050,7 +1050,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="448"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation>紧急停止。关闭所有定时器和触发器。</translation>
+      <translation>紧急停止。停止所有定时器和触发器。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
@@ -1060,22 +1060,22 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>更早的搜索结果。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>最近的搜索结果。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1004"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;停止向日志文件写入游戏内容。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1022"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;开始向日志文件写入游戏输出。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
