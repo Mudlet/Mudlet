@@ -1344,20 +1344,21 @@ a release version may allow you to downgrade to save a map in
 a format compatible with others using older versions of MUDLET
 however some features may be crippled or non-operational for
 this version of MUDLET.</source>
-      <translation type="unfinished"/>
+      <translation>『警告』－当前用来保存地图的格式『%1』与推荐使用的格式『%2』不一致，请注意软件版本。开发版软件可能会提供一些尚处于测试阶段的特性，这些特性使用的是一个修订过的格式，该格式与发布版软件中使用的格式互不兼容。反之发布版软件可能会允许你以一个低版本的格式保存地图，以便在旧版本的MUDLET也可以使用这些地图，但是这也会导致无法使用当前版本MUDLET中的某些特性。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1078"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation type="unfinished"/>
+      <translation>『警报』－己保存地图文件中的用户地图数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1157"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation type="unfinished"/>
+      <translation>『警报』－己保存地图文件中关于此区域的用户数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1161"/>
