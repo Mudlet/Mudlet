@@ -1123,37 +1123,37 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1722"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: 错误的#1参数值（无法读取文件: &quot;%1&quot;）。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2376"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>加载地图前（2）的报告</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2386"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>加载地图中（2）的报告，时间：%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
       <source>System message: %1</source>
-      <translation type="unfinished"/>
+      <translation>系统消息：%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>『通知』－系统收到重新加载地图的请求……</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>『确定』－……系统已完成重新加载地图的请求。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2806"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>『警告』－……系统重新加载地图失败。</translation>
     </message>
   </context>
   <context>
@@ -1164,19 +1164,19 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="197"/>
       <source>failureToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>failureToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="159"/>
       <source>unableToOpenLocalFileForWriting</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToOpenLocalFileForWriting</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="176"/>
       <source>unableToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9113"/>
