@@ -982,7 +982,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="885"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation>开始记录。日志保存在%1
+      <translation>记录已开始。日志保存在%1
 </translation>
     </message>
     <message>
