@@ -1181,7 +1181,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9113"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>『警告』－使用了Lua命令setAreaUserData()，该命令尚处于测试阶段！</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9114"/>
