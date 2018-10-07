@@ -850,31 +850,31 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="313"/>
       <source>ISO 8859-16 (Romanian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>ISO 8859-16 (Rumuński/Romanian)</translation>
+      <translation>ISO 8859-16 (rumuński/Romanian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="332"/>
       <source>CP850 (Western Europe)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>CP850 (Western Europe)</translation>
+      <translation>CP850 (Europa Zachodnia/Western Europe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="351"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>CP866 (Cyrillic/Russian)</translation>
+      <translation>CP866 (cyrylica/rosyjski/Cyrillic/Russian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="389"/>
       <source>KOI8-R (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>KOI8-R (Cyrillic)</translation>
+      <translation>KOI8-R (z cyrylicą/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="408"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>KOI8-U (Cyrillic/Ukrainian)</translation>
+      <translation>KOI8-U (cyrylica/ukraiński/Cyrillic/Ukrainian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="427"/>
@@ -886,55 +886,55 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="446"/>
       <source>WINDOWS-1250 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>WINDOWS-1250 (Central European)</translation>
+      <translation>WINDOWS-1250 (środkowoeuropejskie/Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="465"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>WINDOWS-1251 (Cyrillic)</translation>
+      <translation>WINDOWS-1251 (cyrylica/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="484"/>
       <source>WINDOWS-1252 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>WINDOWS-1252 (Western)</translation>
+      <translation>WINDOWS-1252 (zachodni/Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="503"/>
       <source>WINDOWS-1253 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation>WINDOWS-1253 (Greek)</translation>
+      <translation>WINDOWS-1253 (grecki/Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="522"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1254 (turecki/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="541"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1255 (hebrajski/Hebrew)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="560"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1256 (arabski/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="579"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1257 (kraje bałtyckie/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="598"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (wietnamski/Vietnamese)</translation>
     </message>
   </context>
   <context>
@@ -952,50 +952,52 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Zapisać profil?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Czy chcesz zapisać profil %1?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="777"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Nie udało się zapisać profilu</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="777"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Przepraszamy, nie udało się zapisać profilu - otrzymano następujący błąd: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="850"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>plik dziennika</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="885"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Rozpoczęcie rejestrowania. Plik dziennika to %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="895"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Przerwanie rejestrowania. Plik dziennika to %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="940"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Wersja klienta MUD Mudlet: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="942"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, zapis z profilu %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="978"/>
