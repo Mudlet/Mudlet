@@ -423,17 +423,17 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2598"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Cofnij ostatnią edycję</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2607"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Zmień właściwości tej linii</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2611"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Zakończ rysowanie tej linii</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2632"/>
@@ -449,17 +449,17 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>stwórz lokację</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Stwórz nową lokację w tym miejscu</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Przesuń lokację</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2659"/>
@@ -474,32 +474,32 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2667"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Zwiększ odległość między zaznaczonymi lokacjami na osi X-Y</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2671"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Zmniejsz odległość między zaznaczonymi lokacjami na osi X-Y</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2675"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Zablokuj lokację dla łazików</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2679"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Odblokuj lokację dla łazików</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2683"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw wagę lokacji</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2687"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw wyjścia z lokacji</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2691"/>
@@ -509,22 +509,22 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2695"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Przenieś zaznaczoną grupę na podaną pozycję</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw ID obszaru, do którego należy lokacja</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2709"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Niestandardowe linie wyjścia nie są widoczne i nie mogą być edytowane w trybie siatki</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Zamień linię wyjścia na linię niestandardową</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2717"/>
@@ -534,12 +534,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw tutaj aktualną lokację gracza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2726"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Nie można ustawić położenia na mapie, gdy nie jest wybrana dokładnie jedna lokacja</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
@@ -554,7 +554,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2780"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Podziel segment przez dodanie nowego punktu w połowie drogi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2783"/>
@@ -850,61 +850,61 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="313"/>
       <source>ISO 8859-16 (Romanian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-16 (Rumuński/Romanian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="332"/>
       <source>CP850 (Western Europe)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP850 (Western Europe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="351"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP866 (Cyrillic/Russian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="389"/>
       <source>KOI8-R (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-R (Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="408"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-U (Cyrillic/Ukrainian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="427"/>
       <source>MACINTOSH</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>MACINTOSH</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="446"/>
       <source>WINDOWS-1250 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1250 (Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="465"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1251 (Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="484"/>
       <source>WINDOWS-1252 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1252 (Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="503"/>
       <source>WINDOWS-1253 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1253 (Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="522"/>
