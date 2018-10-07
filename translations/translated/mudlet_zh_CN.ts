@@ -1117,7 +1117,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1709"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>『通知』－已找到并打开地图文件，开始分析……</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
