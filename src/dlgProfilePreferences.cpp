@@ -197,8 +197,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                "console/user window that, when the mouse cursor is hovered over it, will "
                                                "display the UTF-16 and UTF-8 items that make up each Unicode codepoint on "
                                                "the <b>first</b> line of any selection.</p>"
-                                               "<p><i>Note: the whole line of text will be analyzed even if only part of "
-                                               "it is selected.</i></p>"
                                                "<p>This utility feature is intended to help the user identify any grapheme "
                                                "(visual equivalent to a <i>character</i>) that a Game server may send even "
                                                "if it is composed of multiple bytes as any non-ASCII character will be in the "
