@@ -1045,17 +1045,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="410"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; 表示游戏服务器和网络的延迟（亦称ping值，单位为秒），&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; 表示系统处理耗时，也就是你的触发器着手处理上一行（或者多行）游戏输出所花费的时间。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="448"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation type="unfinished"/>
+      <translation>紧急停止。关闭所有定时器和触发器。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>查找缓冲区。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
