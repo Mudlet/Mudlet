@@ -544,12 +544,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Przenieś etykietę</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2757"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Usuń etykietę</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2780"/>
@@ -595,30 +595,35 @@ the highlighted room (%1) to:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3283"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>współrzędna x (była %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3284"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>współrzędna y (była %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3285"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>współrzędna z (była %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3389"/>
       <location filename="../src/T2DMap.cpp" line="3398"/>
       <location filename="../src/T2DMap.cpp" line="3437"/>
       <source>Enter room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadź znak lokacji</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3390"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Wprowadź znak, aby użyć dla tej lokacji:</numerusform>
+        <numerusform>Wprowadź znak, aby użyć dla tych lokacji:</numerusform>
+        <numerusform>Wprowadź znak, aby użyć dla tych lokacji:</numerusform>
+        <numerusform>Wprowadź znak, aby użyć dla tych lokacji:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3400"/>
@@ -650,12 +655,12 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Wybierz istniejący symbol z listy (sortowanej od najpowszechniej używanych) lub wprowadź jeden lub więcej nowych grafemów (&quot;widocznych znaków&quot;) aby ustawić, lub spację aby wyczyścić wybrane lokacje:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3592"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Rozłóż lokacje</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3593"/>
@@ -664,7 +669,7 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Zwiększ odległość między wybranymi lokacjami, z wyśrodkowaniem na podkreślonym pokoju, przez współczynnik:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3654"/>
