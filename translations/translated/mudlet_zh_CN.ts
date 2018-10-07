@@ -1227,32 +1227,32 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>『通知』－转换：旧式风格的标签，区域号：%1 标签号：%2。</translation>
+      <translation>『通知』－转换：旧版标签，区域号：%1 标签号：%2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>『通知』－正在转换旧风格的标签，标签号: %1。</translation>
+      <translation>『通知』－正在转换旧版标签，标签号: %1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation>『警告』－转换：无法转换的旧风格的标签，该标签位于区域: %1，标签号：%2。</translation>
+      <translation>『警告』－转换：无法转换的旧版标签，该标签位于区域: %1，标签号：%2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="477"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation>『警告』－转换：无法转换的旧风格的标签，标签号：%1 。</translation>
+      <translation>『警告』－转换：无法转换的旧版标签，标签号：%1 。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>『确定』：审核地图完成（%1s），祝游戏愉快……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>『确定』－地图加载成功（%1s）。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -1331,7 +1331,7 @@ this command...!</source>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>『警报』－地图保存格式『%1』与加载此地图时所用格式『%2』不一致。如果你想把保存后的地图分享给那些使用原地图格式的人，这可能是个问题。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1040"/>
