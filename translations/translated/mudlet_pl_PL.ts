@@ -68,7 +68,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation>! %2 zaprosił(a) %3</translation>
+      <translation>! %2 zaprosił %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
@@ -113,7 +113,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
       <source>! %1 has changed nick to %2</source>
-      <translation>! %1 zmienił(a) pseudonim na %2</translation>
+      <translation>! %1 zmienił pseudonim na %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
@@ -166,17 +166,17 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation>! %1 opuścił(a) %2</translation>
+      <translation>! %1 opuścił %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
       <source>! %1 has left %2 (%3)</source>
-      <translation>! %1 opuścił(a) %2 (%3)</translation>
+      <translation>! %1 opuścił %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation>! %1 odpowiedział(a) w %2 sekund</translation>
+      <translation>! %1 odpowiedział w %2 sekund</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
@@ -211,12 +211,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 wyczyścił temat</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
       <source>! %2 changed topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 zmienił(a) temat</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
@@ -241,12 +241,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 jest nieobecny: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
       <source>[WHOIS] %1 is logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 jest zalogowany jako %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
@@ -276,7 +276,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="414"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 był zalogowany jako %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
@@ -353,19 +353,22 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2035"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID lokacji: %1 (obecna) pozycja na mapie: (%2, %3, %4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2044"/>
       <source>Room ID: %1 (Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID lokacji: %1 (wybrana) pozycja na mapie: (%2, %3, %4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2053"/>
       <source>Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID lokacji: %1 (%5 wybrana) pozycja na mapie: (%2, %3, %4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2066"/>
