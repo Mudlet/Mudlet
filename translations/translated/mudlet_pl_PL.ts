@@ -1026,12 +1026,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="377"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż znaczniki czasu.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Nagraj powtórkę.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
@@ -1056,12 +1056,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Poprzedni wynik wyszukiwania.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Następny wynik wyszukiwania.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1004"/>
