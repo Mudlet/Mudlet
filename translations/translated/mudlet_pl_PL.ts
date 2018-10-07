@@ -130,7 +130,7 @@ please wait...</source>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
       <location filename="../src/ircmessageformatter.cpp" line="268"/>
       <source>! %1 version is %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 jest w wersji %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
@@ -176,7 +176,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1 odpowiedział(a) w %2 sekund</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
@@ -324,7 +324,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>ID lokacji</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
@@ -334,7 +334,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Brak mapy lub nie można uzyskać położenia.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
@@ -380,7 +380,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2166"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Tekst etykiety</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2167"/>
@@ -390,7 +390,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="107"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection. Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij na linię, aby wybrać lub cofnąć wybór numeru lokacji (z nazwą, jeżeli lokacje są nazwane), aby dodać lub usunąć numer z zaznaczonych. Kliknij na odpowiedni nagłówek, aby sortować według tej metody. Należy zwrócić uwagę, że kolumna nazwa będzie wyświetlana tylko, jeśli przynajmniej jedna z lokacji ma swoją nazwę.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2184"/>
@@ -400,22 +400,22 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
       <source>Draw label as background or on top of everything?</source>
-      <translation type="unfinished"/>
+      <translation>Narysować etykietę jako tło czy na wierzchu?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2192"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Tło</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2193"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Pierwszy plan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2439"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Przeciągnij, aby zaznaczyć kilka pokoi lub etykiet, puść przycisk aby zakończyć...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2598"/>
