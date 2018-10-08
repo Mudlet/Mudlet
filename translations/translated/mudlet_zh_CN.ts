@@ -970,7 +970,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="777"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation>对不起，以下错误导致无法保存用户配置文件：%1</translation>
+      <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="850"/>
@@ -982,25 +982,25 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="885"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation>记录已开始。日志保存在%1
+      <translation>记录已开始. 日志保存在%1
 </translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="895"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation>记录已停止。日志保存在%1
+      <translation>记录已停止. 日志保存在%1
 </translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="940"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation>Mudlet MUD 客户端版本：%1%2</translation>
+      <translation>Mudlet MUD 客户端版本: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="942"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation>Mudlet，日志来自用户%1</translation>
+      <translation>Mudlet, 日志来自用户%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="978"/>
@@ -1019,7 +1019,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1008"/>
       <source>Log session ending at %1.</source>
-      <translation>日志会话结束于 %1。</translation>
+      <translation>日志会话结束于 %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1009"/>
@@ -1030,52 +1030,52 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="377"/>
       <source>Show Time Stamps.</source>
-      <translation>显示时间戳。</translation>
+      <translation>显示时间戳.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
       <source>Record a replay.</source>
-      <translation>录像。</translation>
+      <translation>记录本地录像.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
       <source>Start logging game output to log file.</source>
-      <translation>开始向日志文件写入游戏输出。</translation>
+      <translation>开始向日志文件写入游戏输出.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="410"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation>&lt;i&gt;N:&lt;/i&gt; 表示游戏服务器和网络的延迟（亦称ping值，单位为秒），&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; 表示系统处理耗时，也就是你的触发器着手处理上一行（或者多行）游戏输出所花费的时间。</translation>
+      <translation>&lt;i&gt;N:&lt;/i&gt; 表示游戏服务器和网络的延迟 (亦称ping值, 单位为秒), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; 表示系统处理耗时, 也就是你的触发器着手处理上一行 (或者多行) 游戏输出所花费的时间.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="448"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation>紧急停止。停止所有定时器和触发器。</translation>
+      <translation>紧急停止. 停止所有定时器和触发器.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Search buffer.</source>
-      <translation>查找缓冲区。</translation>
+      <translation>查找缓冲区.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
       <source>Earlier search result.</source>
-      <translation>更早的搜索结果。</translation>
+      <translation>更早的搜索结果。.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
       <source>Later search result.</source>
-      <translation>最近的搜索结果。</translation>
+      <translation>最近的搜索结果.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1004"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;停止向日志文件写入游戏内容。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;停止向日志文件写入游戏内容.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1022"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;开始向日志文件写入游戏输出。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;开始向日志文件写入游戏输出.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
@@ -1247,12 +1247,12 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[确定] - 审核地图完成(%1s)。祝游戏愉快...</translation>
+      <translation>[确定] - 审核地图完成(%1s). 祝游戏愉快...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[确定] - 地图加载成功(%1s)。</translation>
+      <translation>[确定] - 地图加载成功 (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -1331,7 +1331,7 @@ this command...!</source>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation>[警报] - 地图保存格式 {%1} 与加载此地图时所用格式 {%2} 不一致。如果你想把保存后的地图分享给那些使用原地图格式的人，这可能会导致问题。</translation>
+      <translation>[警告] - 当前用来保存地图的格式 {%1} 与原地图使用的格式 {%2} 不一致. 如果你想把保存后的地图分享给那些原地图格式的人, 这可能会导致问题.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1040"/>
@@ -1344,20 +1344,20 @@ a release version may allow you to downgrade to save a map in
 a format compatible with others using older versions of MUDLET
 however some features may be crippled or non-operational for
 this version of MUDLET.</source>
-      <translation>[警告] - 当前用来保存地图的格式 {%1} 与推荐使用的格式 {%2} 不一致，请注意软件版本。开发版软件可能会提供一些尚处于测试阶段的特性，这些特性使用的是一个修订过的格式，该格式与发布版软件中使用的格式互不兼容。反之发布版软件可能会允许你以一个低版本的格式保存地图，以便在旧版本的MUDLET也可以使用这些地图，但是这也会导致无法使用当前版本MUDLET中的某些特性。</translation>
+      <translation>[警告] - 当前用来保存地图的格式 {%1} 与推荐使用的格式 {%2} 不一致, 请注意软件版本. 开发版软件可能会提供一些尚处于测试阶段的特性，这些特性使用的是一个修订过的格式, 该格式与发布版软件中使用的格式互不兼容. 反之发布版软件可能会允许你以一个低版本的格式保存地图, 以便在旧版本的 MUDLET 也可以使用这些地图, 但是这也会导致无法使用当前版本 MUDLET 中的某些特性.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1078"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation>[警报] - 己保存地图文件中的用户地图数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！</translation>
+      <translation>[警报] - 己保存地图文件中的用户地图数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1157"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation>[警报] - 己保存地图文件中关于此区域的用户数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！
+      <translation>[警报] - 己保存地图文件中关于此区域的用户数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存! 
 </translation>
     </message>
     <message>
@@ -1365,68 +1365,68 @@ format of at least 17 to preserve it before quitting!
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation>[警报] - 己保存地图文件中的区域用户数据丢失。 要在退出前保存这些数据，请选择版本号在17以上的格式重新保存！
-受影响的区域号：%1。</translation>
+      <translation>[警报] - 己保存地图文件中的区域用户数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存!
+受影响的区域号: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1164"/>
       <source>, </source>
-      <translation>，</translation>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1299"/>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation>[错误] - 地图文件版本太高，其文件格式 (%1) 超出当前版本Mudlet可处理的范围 (%2) ！该文件是：
-&quot;%3&quot;。</translation>
+      <translation>[错误] - 地图文件版本太高, 其文件格式 (%1) 超出当前版本Mudlet可处理的范围 (%2)! 该文件是:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1306"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[通知] - 你需要升级你的Mudlet，或者另寻以旧格式存储的地图文件。</translation>
+      <translation>[通知] - 你需要升级你的Mudlet, 或者另寻以旧格式存储的地图文件.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1313"/>
       <source>[ ALERT ] - Map file is really old, it&apos;s file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation>[警告] - 地图文件过于陈旧，其过时的保存格式 (%1) 导致Mudlet无法从中获得足够的信息，但Mudlet仍会尝试读取！这个文件是：&quot;%2&quot;。</translation>
+      <translation>[警告] - 地图文件过于陈旧, 其过时的保存格式 (%1) 导致Mudlet无法从中获得足够的信息, 但Mudlet仍会尝试读取! 这个文件是: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1320"/>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[通知] - 也许你应该把这个地图文件捐赠给Mudlet博物馆！
-这个地图文件已经缺少了太多数据，你最好还是重新做一个...</translation>
+      <translation>[通知] - 也许你应该把这个地图文件捐赠给Mudlet博物馆!
+这个地图文件已经缺少了太多数据, 你最好还是重新做一个...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1329"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[通知] - 读取地图文件中 (格式版本：%1) ：
-&quot;%2&quot;，
+      <translation>[通知] - 读取地图文件中 (格式版本: %1):
+&quot;%2&quot;,
 请稍等...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1437"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[通知] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) ，添加保留区域号-1。</translation>
+      <translation>[通知] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 添加保留区域号-1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1521"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[通知] - 读取地图文件成功 (%1s) ，正在检查某些细节的一致性...</translation>
+      <translation>[通知] - 读取地图文件成功 (%1s) , 正在检查某些细节的一致性...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1540"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation>找不到地图。要下载一个或者制作你自己的地图吗？</translation>
+      <translation>找不到地图. 要下载一个或者制作你自己的地图吗?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1541"/>
@@ -1451,7 +1451,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
       <source>Area id: %1</source>
-      <translation>区域号：%1</translation>
+      <translation>区域编号: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
@@ -1477,10 +1477,10 @@ the file:
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
       <translation>[警告] - 在最近的地图操作中至少发现了一个问题
-建议你检查最近的报告文件：
+建议你检查最近的报告文件:
 &quot;%1&quot;
-- 找到 (最近一次的) 带有下面标题的报告：
-&quot;%2&quot;。</translation>
+- 找到 (最近一次的) 带有下面标题的报告:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2067"/>
@@ -1490,20 +1490,20 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[通知] - 关于上次地图操作的信息己保存在最近的报告文件中：
+      <translation>[通知] - 关于上次地图操作的信息己保存在最近的报告文件中:
 &quot;%1&quot;
-- 找到 (最近一次的) 带有下面标题的报告：
-&quot;%2&quot;。</translation>
+- 找到 (最近一次的) 带有下面标题的报告:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2153"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[通知] - 己开始下载地图，请稍等...</translation>
+      <translation>[通知] - 己开始下载地图, 请稍等...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2161"/>
       <source>Downloading XML map file for use in %1...</source>
-      <translation>下载XML地图文件中，该文件用于%1...</translation>
+      <translation>下载XML地图文件中, 该文件用于%1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2161"/>
@@ -1519,12 +1519,12 @@ the file:
       <location filename="../src/TMap.cpp" line="2189"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation>loadMap: 无法执行请求，地图已在下载中或已被用户导入。</translation>
+      <translation>loadMap: 无法执行请求, 地图已在下载中或已被用户导入.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2221"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation>导入XML地图文件中，该文件用于%1...</translation>
+      <translation>导入XML地图文件, 该文件用于%1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2222"/>
@@ -1535,7 +1535,7 @@ imported at user request.</source>
       <location filename="../src/TMap.cpp" line="2249"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation>loadMap: 导入XML地图文件失败，请前往主控制台查看更多信息！</translation>
+      <translation>loadMap: 导入XML地图文件失败, 请前往主控制台查看更多信息!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2284"/>
@@ -1547,37 +1547,37 @@ in main console!</source>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
       <translation>[错误] - 下载地图出错
-%1。</translation>
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2317"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation>[警告] - 下载地图失败。报错：
-%1。</translation>
+      <translation>[警告] - 下载地图失败. 报错:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation>「警告」－下载地图失败，无法打开目标文件：%1。</translation>
+      <translation>[警告] - 下载地图失败, 无法打开目标文件: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2330"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation>「警告」－下载地图失败，无法写入目标文件：%1。</translation>
+      <translation>[警告] - 下载地图失败, 无法写入目标文件: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2337"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[通知] - ... 地图下载并存储完毕，开始分析...</translation>
+      <translation>[通知] - ... 地图下载并存储完毕, 开始分析...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2363"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation>[错误] - 地图下载出现错误, 分析目标文件失败：%1。</translation>
+      <translation>[错误] - 地图下载出现错误, 分析目标文件失败: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2368"/>
