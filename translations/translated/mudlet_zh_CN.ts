@@ -765,7 +765,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation>房间号＝%1不存在，不能为一个不存在的房间设置属性！</translation>
+      <translation>房间号=%1不存在，不能为一个不存在的房间设置属性！</translation>
     </message>
   </context>
   <context>
@@ -1577,7 +1577,7 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2363"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation>[错误] - 地图下载出现错误，分析目标文件失败：%1。</translation>
+      <translation>[错误] - 地图下载出现错误, 分析目标文件失败：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2368"/>
