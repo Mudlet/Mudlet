@@ -1571,19 +1571,19 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2337"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>「通知」－……地图下载并存储完毕，开始分析……</translation>
+      <translation>[通知] - ... 地图下载并存储完毕，开始分析...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2363"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation>「错误」－地图下载出现错误，分析目标文件失败：%1。</translation>
+      <translation>[错误] - 地图下载出现错误，分析目标文件失败：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2368"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation>「错误」－地图下载出现错误，无法读取目标文件：%1。</translation>
+      <translation>[错误] - 地图下载出现错误，无法读取目标文件：%1。</translation>
     </message>
   </context>
   <context>
