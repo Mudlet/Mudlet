@@ -547,14 +547,20 @@ end
 --- Suffixes text at the end of the current line when used in a trigger.
 ---
 --- @see prefix
-function suffix(what, func, fg, bg, window)
-  local length = string.len(line)
-  moveCursor(window or "main", length - 1, getLineNumber())
-  if func and (func == cecho or func == decho or func == hecho) then
-    func(what, fg, bg, true, window)
+function suffix(what, func, fgc, bgc, window)
+  window = window or "main"
+  local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
+  func = insertFuncs[func] or func or insertText
+  local length = utf8.len(getCurrentLine())
+  moveCursor(window, length - 1, getLineNumber())
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  if window ~= "main" then
+    func(window,what)
   else
-    insertText(what)
+    func(what)
   end
+  resetFormat()
 end
 
 
