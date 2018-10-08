@@ -567,13 +567,15 @@ end
 ---   </pre>
 ---
 --- @see suffix
-function prefix(what, func, fg, bg, window)
-  moveCursor(window or "main", 0, getLineNumber());
-  if func and (func == cecho or func == decho or func == hecho) then
-    func(what, fg, bg, true, window)
-  else
-    insertText(what)
-  end
+function prefix(what, func, fgc, bgc, window)
+  window = window or "main"
+  local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
+  func = insertFuncs[func] or func or insertText
+  moveCursor(window, 0, getLineNumber(window))
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  func(window,what)
+  resetFormat(window)
 end
 
 
