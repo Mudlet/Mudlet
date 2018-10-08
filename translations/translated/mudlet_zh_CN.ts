@@ -701,7 +701,7 @@ factor of:</source>
 (= travel time), minimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation>输入新的房间权重（＝路程远近），最小值（默认值）为1：</translation>
+      <translation>输入新的房间权重 (＝路程远近) ，最小值 (默认值) 为1：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3799"/>
@@ -712,17 +712,17 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation>为所有选中房间输入新的房间权重（＝路程远近），最小值（默认值）为1，当前权重为：</translation>
+      <translation>为所有选中房间输入新的房间权重 (=路程远近) ，最小值 (默认值) 为1，当前权重为：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3832"/>
       <source>%1 {count:%2, default}</source>
-      <translation>%1 『总数：%2，默认值』</translation>
+      <translation>%1 {总数：%2，默认值}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3840"/>
       <source>1 {count 0, default}</source>
-      <translation>1 『合计 0，默认值』</translation>
+      <translation>1 {count 0, default}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3844"/>
@@ -735,7 +735,7 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation>为所有选中房间设置房间权重（＝路程远近），可以从列表中选择一个使用过的值（常用的值排在前面），也可以输入一个新值（正整数）：</translation>
+      <translation>为所有选中房间设置房间权重 (=路程远近) ，可以从列表中选择一个使用过的值 (常用的值排在前面)，也可以输入一个新值 (正整数) ：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3892"/>
@@ -746,13 +746,13 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="3894"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation>Mudlet地图（*.dat）;;Xml地图数据（*.xml）;;所有文件（*）</translation>
+      <translation>Mudlet 地图 (*.dat);;Xml 地图数据 (*.xml);;所有文件 (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4700"/>
       <location filename="../src/T2DMap.cpp" line="4736"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
-      <translation>单击左键『添加端点』，单击右键『撤销／修改／结束』……</translation>
+      <translation>单击左键添加端点，单击右键 撤销／修改／结束...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4747"/>
@@ -995,7 +995,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="940"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation>Mudlet MUD 客户端版本: %1%2</translation>
+      <translation>Mudlet MUD 客户端版本：%1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="942"/>
@@ -1019,7 +1019,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1008"/>
       <source>Log session ending at %1.</source>
-      <translation>日志会话结束于 %1.</translation>
+      <translation>日志会话结束于 %1。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1009"/>
@@ -1080,12 +1080,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
       <source>Pre-Map loading(1) report</source>
-      <translation>加载地图前（1）的报告</translation>
+      <translation>加载地图前 (1) 的报告</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1627"/>
       <source>Loading map(1) at %1 report</source>
-      <translation>加载地图中（1）的报告</translation>
+      <translation>加载地图中 (1) 的报告，时间：%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1650"/>
@@ -1095,18 +1095,18 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1663"/>
       <source>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation>loadMap: 无法初始化地图绘制器『在TConsole::importMap(...)中』－有地方出问题了！</translation>
+      <translation>loadMap: 无法初始化地图绘制器 {在TConsole::importMap(...)中} - 有地方出问题了！</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1671"/>
       <source>Pre-Map importing(1) report</source>
-      <translation>导入地图前（1）的报告</translation>
+      <translation>导入地图前 (1) 的报告</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1694"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation>「错误」－找不到地图文件，使用的路径和文件名是：%1。</translation>
+      <translation>[错误] - 找不到地图文件，使用的路径和文件名是：%1。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1700"/>
@@ -1547,14 +1547,14 @@ in main console!</source>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
       <translation>[错误] - 下载地图出错
-%1</translation>
+%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2317"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
       <translation>[警告] - 下载地图失败。报错：
-%1</translation>
+%1。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
