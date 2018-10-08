@@ -551,16 +551,12 @@ function suffix(what, func, fgc, bgc, window)
   window = window or "main"
   local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
   func = insertFuncs[func] or func or insertText
-  local length = utf8.len(getCurrentLine())
-  moveCursor(window, length - 1, getLineNumber())
+  local length = utf8.len(getCurrentLine(window))
+  moveCursor(window, length - 1, getLineNumber(window))
   if fgc then fg(window,fgc) end
   if bgc then bg(window,bgc) end
-  if window ~= "main" then
-    func(window,what)
-  else
-    func(what)
-  end
-  resetFormat()
+  func(window,what)
+  resetFormat(window)
 end
 
 
