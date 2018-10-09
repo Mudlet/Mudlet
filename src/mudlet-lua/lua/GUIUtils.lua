@@ -544,12 +544,12 @@ end
 
 
 
+local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
 --- Suffixes text at the end of the current line when used in a trigger.
 ---
 --- @see prefix
 function suffix(what, func, fgc, bgc, window)
   window = window or "main"
-  local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
   func = insertFuncs[func] or func or insertText
   local length = utf8.len(getCurrentLine(window))
   moveCursor(window, length - 1, getLineNumber(window))
