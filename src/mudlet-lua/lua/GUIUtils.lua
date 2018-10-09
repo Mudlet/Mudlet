@@ -544,6 +544,7 @@ end
 
 
 
+local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
 --- Suffixes text at the end of the current line when used in a trigger.
 ---
 --- @see prefix
@@ -569,7 +570,6 @@ end
 --- @see suffix
 function prefix(what, func, fgc, bgc, window)
   window = window or "main"
-  local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
   func = insertFuncs[func] or func or insertText
   moveCursor(window, 0, getLineNumber(window))
   if fgc then fg(window,fgc) end
