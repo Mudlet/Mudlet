@@ -960,7 +960,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
       <source>Do you want to save the profile %1?</source>
-      <translation>要保存用户配置文件%1吗？</translation>
+      <translation>要保存用户配置文件%1吗?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="777"/>
