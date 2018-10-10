@@ -1247,12 +1247,12 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[确定] - 审核地图完成(%1s). 祝游戏愉快...</translation>
+      <translation>[好] - 审核地图完成(%1s). 祝游戏愉快...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[确定] - 地图加载成功 (%1s).</translation>
+      <translation>[好] - 地图加载成功 (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -1571,7 +1571,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2337"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[通知] - ... 地图下载并存储完毕, 开始分析...</translation>
+      <translation>[信息] - ... 地图下载并存储完毕, 开始分析...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2363"/>
