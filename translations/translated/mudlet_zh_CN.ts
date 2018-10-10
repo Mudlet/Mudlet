@@ -1060,7 +1060,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
       <source>Earlier search result.</source>
-      <translation>更早的搜索结果。.</translation>
+      <translation>更早的搜索结果.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
@@ -1090,7 +1090,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1650"/>
       <source>loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation>loadMap: Host指针为空『在TConsole::importMap(...)中』－有地方出问题了！</translation>
+      <translation>loadMap: Host指针为空 [在TConsole::importMap(...)中] - 有地方出问题了!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1663"/>
@@ -1106,49 +1106,49 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1694"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation>[错误] - 找不到地图文件，使用的路径和文件名是：%1。</translation>
+      <translation>[错误] - 找不到地图文件, 使用的路径和文件名是: %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1700"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation>loadMap: 错误的#1参数值 (找不到文件：&quot;%1&quot; ）。</translation>
+      <translation>loadMap: 错误的#1参数值 (找不到文件：&quot;%1&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1709"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>「通知」－已找到并打开地图文件，开始分析……</translation>
+      <translation>[通知] - 已找到并打开地图文件, 开始分析...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation>loadMap: 错误的#1参数值（无法读取文件: &quot;%1&quot;）。</translation>
+      <translation>loadMap: 错误的#1参数值 (无法读取文件: &quot;%1&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2376"/>
       <source>Pre-Map loading(2) report</source>
-      <translation>加载地图前（2）的报告</translation>
+      <translation>加载地图前 (2) 的报告</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2386"/>
       <source>Loading map(2) at %1 report</source>
-      <translation>加载地图中（2）的报告，时间：%1</translation>
+      <translation>加载地图中 (2) 的报告, 时间: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
       <source>System message: %1</source>
-      <translation>系统消息：%1</translation>
+      <translation>系统消息: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>「通知」－系统收到重新加载地图的请求……</translation>
+      <translation>[通知] - 系统收到重新加载地图的请求...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>「确定」－……系统已完成重新加载地图的请求。</translation>
+      <translation>[确定] - ... 系统已完成重新加载地图的请求.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2806"/>
