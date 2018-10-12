@@ -1742,7 +1742,7 @@ room user data under a key:
 &quot;%4&quot;).</source>
       <translation>[警告] - 房间: %1 中的特殊出口 &quot;%2&quot; 通向
 一个非法房间: %3. 该出口将被删除(但错误的目标房间编号会被储存在
-房间用户数据中的一个键下：
+房间用户数据中的这个键下：
 &quot;%4&quot;).</translation>
     </message>
     <message>
@@ -1774,51 +1774,56 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1169"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间: %1 中发现了至少一项多余的门, 这些项已被删除:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1176"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 已删除房间中至少一项多余的门:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1192"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间: %1 中发现了至少一项多余的权值, 这些项已被删除:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1199"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 已删除房间中至少一项多余的权值:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1215"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间: %1 中发现了至少一项多余的出口锁, 这些项已被删除:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1222"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 已删除房间中至少一项多余的出口锁:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1301"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间: %1 中发现了至少一项多余的自定义行, 这些项已被删除:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1307"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 已删除房间中至少一项多余的自定义行:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 房间: %1 的特殊出口 &quot;%2&quot; 
+通向了一个包含非法房间出口的房间: %3, 现已更正为: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1351"/>
@@ -1827,7 +1832,10 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 房间: %1 中的出口 &quot;%2&quot; 通向
+一个不存在的房间: %3. 该出口将被删除(但目标房间编号会被储存在
+房间用户数据中的这个键下：
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1408"/>
