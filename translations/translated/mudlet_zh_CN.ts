@@ -1117,7 +1117,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1709"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>[通知] - 已找到并打开地图文件, 开始分析...</translation>
+      <translation>[信息] - 已找到并打开地图文件, 开始分析...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
@@ -1143,7 +1143,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[通知] - 系统收到重新加载地图的请求...</translation>
+      <translation>[信息] - 系统收到重新加载地图的请求...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
@@ -1192,7 +1192,7 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation>[通知] - 要想上述命令完全奏效, 还需对地图文件格式进行一次修订. 尽管此命令已经存在, 但请不要使用, 此命令的效果在会话之间不会一直存在, 因为相关的数据不会被保存.
+      <translation>[信息] - 要想上述命令完全奏效, 还需对地图文件格式进行一次修订. 尽管此命令已经存在, 但请不要使用, 此命令的效果在会话之间不会一直存在, 因为相关的数据不会被保存.
 
 为避免这条通知反复出现在屏幕中, 关于此命令的警告仅此一次...!</translation>
     </message>
@@ -1222,17 +1222,17 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation>[通知] - 开始审核 已装载/已导入/已下载 的地图...</translation>
+      <translation>[信息] - 开始审核 已装载/已导入/已下载 的地图...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>[通知] - 转换: 旧版标签, 区域号: %1 标签号: %2.</translation>
+      <translation>[信息] - 转换: 旧版标签, 区域号: %1 标签号: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[通知] - 正在转换旧版标签, 标签号: %1.</translation>
+      <translation>[信息] - 正在转换旧版标签, 标签号: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
