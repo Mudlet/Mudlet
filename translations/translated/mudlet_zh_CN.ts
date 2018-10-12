@@ -1842,7 +1842,8 @@ and the exit will be turned into a stub.</source>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 房间: %1 中通向房间: %3 的出口 &quot;%2&quot; 同时也
+通向一个未知房间! 由于未知房间不是一个真正的出口，后者将被删除。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1474"/>
@@ -1851,21 +1852,28 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 房间: %1 中的特殊出口 &quot;%2&quot; 通向
+一个非法的不存在的房间: %3. 该出口将被删除(但错误的目标房间编号会被储存在
+房间用户数据中的这个键下：
+&quot;%4&quot;), 之后该出口会通向一个未知房间.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1501"/>
       <source>
 It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+该出口被锁住了, 在用户数据中的键：
+&quot;%1&quot; 下有记录.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1513"/>
       <source>
 It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+该出口已有权重, 在用户数据中的键：
+&quot;%1&quot; 下有记录.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1528"/>
