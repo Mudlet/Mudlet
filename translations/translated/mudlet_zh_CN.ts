@@ -1718,7 +1718,8 @@ in main console!</source>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 房间: %1 的特殊出口 &quot;%2&quot; 
+通向了一个包含无效房间出口的房间: %3, 现已更正为: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1055"/>
@@ -1727,7 +1728,10 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 房间: %1 中的特殊出口 &quot;%2&quot; 通向
+一个不存在的房间: %3. 该出口将被删除(但目标房间编号会被储存在
+房间用户数据中的一个键下：
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1107"/>
