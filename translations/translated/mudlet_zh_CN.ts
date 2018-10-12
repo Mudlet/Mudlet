@@ -1148,7 +1148,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[确定] - ... 系统已完成重新加载地图的请求.</translation>
+      <translation>[好] - ... 系统已完成重新加载地图的请求.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2806"/>
@@ -1350,14 +1350,14 @@ this version of MUDLET.</source>
       <location filename="../src/TMap.cpp" line="1078"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation>[警报] - 己保存地图文件中的用户地图数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存!</translation>
+      <translation>[警告] - 己保存地图文件中的用户地图数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1157"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation>[警报] - 己保存地图文件中关于此区域的用户数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存! 
+      <translation>[警告] - 己保存地图文件中关于此区域的用户数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存! 
 </translation>
     </message>
     <message>
@@ -1365,7 +1365,7 @@ format of at least 17 to preserve it before quitting!
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation>[警报] - 己保存地图文件中的区域用户数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存!
+      <translation>[警告] - 己保存地图文件中的区域用户数据丢失.  要在退出前保存这些数据, 请选择版本号在17以上的格式重新保存!
 受影响的区域号: %1.</translation>
     </message>
     <message>
@@ -1385,7 +1385,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1306"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[通知] - 你需要升级你的Mudlet, 或者另寻以旧格式存储的地图文件.</translation>
+      <translation>[信息] - 你需要升级你的Mudlet, 或者另寻以旧格式存储的地图文件.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1313"/>
@@ -1399,7 +1399,7 @@ it but it will try!  The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[通知] - 也许你应该把这个地图文件捐赠给Mudlet博物馆!
+      <translation>[信息] - 也许你应该把这个地图文件捐赠给Mudlet博物馆!
 这个地图文件已经缺少了太多数据, 你最好还是重新做一个...</translation>
     </message>
     <message>
@@ -1407,7 +1407,7 @@ better off starting again...</source>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[通知] - 读取地图文件中 (格式版本: %1):
+      <translation>[信息] - 读取地图文件中 (格式版本: %1):
 &quot;%2&quot;,
 请稍等...</translation>
     </message>
@@ -1415,13 +1415,13 @@ please wait...</source>
       <location filename="../src/TMap.cpp" line="1437"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[通知] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 添加保留区域号-1.</translation>
+      <translation>[信息] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 添加保留区域号-1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1521"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[通知] - 读取地图文件成功 (%1s) , 正在检查某些细节的一致性...</translation>
+      <translation>[信息] - 读取地图文件成功 (%1s) , 正在检查某些细节的一致性...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1540"/>
@@ -1490,7 +1490,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[通知] - 关于上次地图操作的信息己保存在最近的报告文件中:
+      <translation>[信息] - 关于上次地图操作的信息己保存在最近的报告文件中:
 &quot;%1&quot;
 - 找到 (最近一次的) 带有下面标题的报告:
 &quot;%2&quot;.</translation>
@@ -1498,7 +1498,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2153"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[通知] - 己开始下载地图, 请稍等...</translation>
+      <translation>[信息] - 己开始下载地图, 请稍等...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2161"/>
@@ -1547,14 +1547,14 @@ in main console!</source>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
       <translation>[错误] - 下载地图出错
-%1.</translation>
+%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2317"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation>[警告] - 下载地图失败. 报错:
-%1.</translation>
+      <translation>[警告] - 下载地图失败。报错：
+%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
