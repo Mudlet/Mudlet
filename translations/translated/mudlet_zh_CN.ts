@@ -1669,7 +1669,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="227"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>无法创建区域! 请求的区域编号=%1. 注意: 区域编号必须 &gt; 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="249"/>
