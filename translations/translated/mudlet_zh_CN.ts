@@ -1674,7 +1674,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="249"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>警告: 正在为一个不属于任何区域的房间 (Id: %1) 设置区域!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="786"/>
@@ -1689,22 +1689,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="831"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>东南</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="846"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>西南</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="958"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 正在删除房间: %1中通向房间 %2 的无效 (特殊的) 出口 {没有路径}.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="965"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 房间里有一个无效 (特别的) 出口 %1 {没有路径!}, 已删除该出口。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="980"/>
