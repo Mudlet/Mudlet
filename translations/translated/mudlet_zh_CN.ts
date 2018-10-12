@@ -1740,7 +1740,10 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 房间: %1 中的特殊出口 &quot;%2&quot; 通向
+一个非法房间: %3. 该出口将被删除(但错误的目标房间编号会被储存在
+房间用户数据中的一个键下：
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1153"/>
@@ -1750,17 +1753,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1156"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (开着的)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1159"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (关上的)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1162"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (锁住的)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
