@@ -1710,7 +1710,8 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 房间:%1中通向房间:%2的 (特别) 出口的补丁{internal fixup}
+以前是： &quot;%3&quot; 现在是: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1014"/>
