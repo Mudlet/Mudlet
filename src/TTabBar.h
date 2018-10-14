@@ -34,17 +34,17 @@ public:
     ~TStyle() {}
 
     void drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = Q_NULLPTR) const;
-    void setTabBold(const QString& tabText, const bool state) { setNamedTabState(tabText, state, mBoldTabsSet); }
+    void setTabBold(const QString& tabString, const bool state) { setNamedTabState(tabString, state, mBoldTabsSet); }
     void setTabBold(const int index, const bool state) { setIndexedTabState(index, state, mBoldTabsSet); }
-    void setTabItalic(const QString& tabText, const bool state) { setNamedTabState(tabText, state, mItalicTabsSet); }
+    void setTabItalic(const QString& tabString, const bool state) { setNamedTabState(tabString, state, mItalicTabsSet); }
     void setTabItalic(const int index, const bool state) { setIndexedTabState(index, state, mItalicTabsSet); }
-    void setTabUnderline(const QString& tabText, const bool state) {setNamedTabState(tabText, state, mUnderlineTabsSet); }
+    void setTabUnderline(const QString& tabString, const bool state) {setNamedTabState(tabString, state, mUnderlineTabsSet); }
     void setTabUnderline(const int index, const bool state) { setIndexedTabState(index, state, mUnderlineTabsSet); }
-    bool tabBold(const QString& tabText) const { return namedTabState(tabText, mBoldTabsSet); }
+    bool tabBold(const QString& tabString) const { return namedTabState(tabString, mBoldTabsSet); }
     bool tabBold(const int index) const { return indexedTabState(index, mBoldTabsSet); }
-    bool tabItalic(const QString& tabText) const { return namedTabState(tabText, mItalicTabsSet); }
+    bool tabItalic(const QString& tabString) const { return namedTabState(tabString, mItalicTabsSet); }
     bool tabItalic(const int index) const { return indexedTabState(index, mItalicTabsSet); }
-    bool tabUnderline(const QString& tabText) const { return namedTabState(tabText, mUnderlineTabsSet); }
+    bool tabUnderline(const QString& tabString) const { return namedTabState(tabString, mUnderlineTabsSet); }
     bool tabUnderline(const int index) const { return indexedTabState(index, mUnderlineTabsSet); }
 
 private:
@@ -72,17 +72,17 @@ public:
     ~TTabBar() {}
 
     QSize tabSizeHint(int index) const;
-    void setTabBold(const QString& tabText, const bool state) {mStyle.setTabBold(tabText, state); }
+    void setTabBold(const QString& tabString, const bool state) {mStyle.setTabBold(tabString, state); }
     void setTabBold(const int index, const bool state) {mStyle.setTabBold(index, state); }
-    void setTabItalic(const QString& tabText, const bool state) {mStyle.setTabItalic(tabText, state); }
+    void setTabItalic(const QString& tabString, const bool state) {mStyle.setTabItalic(tabString, state); }
     void setTabItalic(const int index, const bool state) {mStyle.setTabItalic(index, state); }
-    void setTabUnderline(const QString& tabText, const bool state) {mStyle.setTabUnderline(tabText, state); }
+    void setTabUnderline(const QString& tabString, const bool state) {mStyle.setTabUnderline(tabString, state); }
     void setTabUnderline(const int index, const bool state) {mStyle.setTabUnderline(index, state); }
-    bool tabBold(const QString& tabText) const {return mStyle.tabBold(tabText);}
+    bool tabBold(const QString& tabString) const {return mStyle.tabBold(tabString);}
     bool tabBold(const int index) const {return mStyle.tabBold(index);}
-    bool tabItalic(const QString& tabText) const {return mStyle.tabItalic(tabText);}
+    bool tabItalic(const QString& tabString) const {return mStyle.tabItalic(tabString);}
     bool tabItalic(const int index) const {return mStyle.tabItalic(index);}
-    bool tabUnderline(const QString& tabText) const {return mStyle.tabUnderline(tabText);}
+    bool tabUnderline(const QString& tabString) const {return mStyle.tabUnderline(tabString);}
     bool tabUnderline(const int index) const {return mStyle.tabUnderline(index);}
 
 private:

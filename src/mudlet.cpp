@@ -992,7 +992,7 @@ void mudlet::slot_package_exporter()
 
 void mudlet::slot_close_profile_requested(int tab)
 {
-    QString name = mpTabBar->tabText(tab);
+    QString name = mpTabBar->tabData(tab).toString();
     Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
@@ -1146,7 +1146,7 @@ void mudlet::slot_close_profile()
 
 void mudlet::slot_tab_changed(int tabID)
 {
-    if ((!mTabMap.contains(mpTabBar->tabText(tabID))) && (tabID != -1)) {
+    if ((tabID != -1) && (!mTabMap.contains(mpTabBar->tabData(tabID).toString()))) {
         mpCurrentActiveHost = nullptr;
         return;
     }
@@ -1159,7 +1159,7 @@ void mudlet::slot_tab_changed(int tabID)
 
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         mpCurrentActiveHost->mpConsole->hide();
-        QString host = mpTabBar->tabText(tabID);
+        QString host = mpTabBar->tabData(tabID).toString();
         if (mTabMap.contains(host)) {
             mpCurrentActiveHost = mTabMap[host]->mpHost;
         } else {
@@ -1216,7 +1216,24 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
     mConsoleMap[pH] = pConsole;
-    int newTabID = mpTabBar->addTab(pH->getName());
+    QString tabText = pH->getName();
+    int newTabID = mpTabBar->addTab(tabText);
+    /*
+     * There is a sneaky feature on some OSes (I found it on FreeBSD but
+     * it is notable switched OFF by default on MacOs) where Qt adds an
+     * automatically generated accelarator to the text on the tab which - at
+     * least on FreeBSD - causes the Text to be CHANGED from what is set (an
+     * underscore is added to a suitably unique letter but that, being a text
+     * accelerator is converted to an additional '&' in the text when it is
+     * read) - this messes up identifying the tab by it's name - so we now get
+     * around it by also storing the text in the tab's data - see:
+     * + void qt_set_sequence_auto_mnemonic(bool) in 'QKeySequence' documentation
+     * + "Detailed Description" in 'QShortCut' documentation
+     * + "QTabBar creates automatic mnemonic keys in the manner of
+     *    QAbstractButton; e.g. if a tab's label is '&Graphics', Alt+G becomes
+     *    a shortcut key for switching to that tab." in 'QTabBar' documentation"
+     */
+    mpTabBar->setTabData(newTabID, tabText);
     mTabMap[pH->getName()] = pConsole;
     if (mConsoleMap.size() > 1) {
         mpTabBar->show();
