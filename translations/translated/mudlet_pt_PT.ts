@@ -275,12 +275,12 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="412"/>
       <source>[WHOWAS] %1 was connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 estava conectado pelo %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="414"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 estava logado como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
