@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="134"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>pelo Mudlet</translation>
     </message>
   </context>
   <context>
@@ -102,7 +102,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
       <source>[MOTD] %1%2</source>
-      <translation type="unfinished"/>
+      <translation>[MOTD] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
@@ -590,7 +590,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="3281"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation>Mover a seleção, centrada no espaço selecionado (%1) para:</translation>
+      <translation>Mover a seleção, centrada no espaço destacado (%1) para:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3283"/>
@@ -653,12 +653,12 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Escolha um símbolo existente da lista (ordenada por os mais comuns primeiro) ou introduza um ou mais grafemas novos (&quot;caracteres visíveis&quot;), a definir; ou um espaço branco para limpar; todos os espaços selecionados:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3592"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Espalhar espaços</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3593"/>
@@ -667,12 +667,12 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Aumentar o espaçamento dos espaços selecionados, centrado no espaço destacado por um fator de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3654"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Encolher os espaços</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3655"/>
@@ -681,14 +681,14 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Diminuir o espaçamento dos quartos selecionados, centrado no espaço destacado por um fator de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3785"/>
       <location filename="../src/T2DMap.cpp" line="3798"/>
       <location filename="../src/T2DMap.cpp" line="3843"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Introduza o peso do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3786"/>
@@ -696,7 +696,7 @@ factor of:</source>
 (= travel time), minimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Introduza um novo peso do espaço (= tempo de viagem), o mínimo (e padrão) é 1:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3799"/>
@@ -707,12 +707,12 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Introduza um novo peso do espaço (= tempo de viagem) para todos os espaços selecionados, o mínimo (e padrão) é 1 e o único valor atualmente utilizado é:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3832"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2, padrão}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3840"/>
@@ -730,18 +730,18 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Escolha um peso de espaço (= tempo de viagem) existente da lista (ordenada pelo mais comum primeiro) ou introduza um valor inteiro (positivo) novo para todos os espaços selecionados:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3892"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3894"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa Mudlet (*.dat);;Dados do mapa xml (*.xml);;Qualquer ficheiro (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4700"/>
