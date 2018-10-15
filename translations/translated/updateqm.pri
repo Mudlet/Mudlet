@@ -9,14 +9,17 @@ for(file, TS_FILES) {
 }
 
 isEmpty(QMAKE_LRELEASE) {
-    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
-    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
-    unix {
-      equals(QT_MAJOR_VERSION, 5) {
-        !exists($$QMAKE_LRELEASE) { QMAKE_LRELEASE = lrelease-qt5 }
-      }
+    win32 {
+        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     } else {
-        !exists($$QMAKE_LRELEASE) { QMAKE_LRELEASE = lrelease }
+        QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+        !exists($$QMAKE_LRELEASE) {
+            equals(QT_MAJOR_VERSION, 5) {
+                QMAKE_LRELEASE = lrelease-qt5
+            } else {
+                QMAKE_LRELEASE = lrelease
+            }
+        }
     }
 }
 
@@ -24,26 +27,31 @@ write_file(lrelease_output.txt)
 message("Building translations")
 TS_FILES_NOEXT = $$replace(TS_FILES, ".ts", "")
 for(file, TS_FILES_NOEXT) {
-    system("$$QMAKE_LRELEASE $${file}.ts -qm $${file}.qm >> lrelease_output.txt")
+    system("$$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
 }
 STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
 
 win32 {
     CMD = "where"
-}
-unix|max {
+    message("Please ignore one or two \"INFO: Could not find files for the given pattern(s).\" messages that may appear next:")
+} else {
     CMD = "which"
 }
 
 LUA_SEARCH_OUT = $$system("$$CMD lua5.1")
-isEmpty(LUA_SEARCH_OUT){
-    LUA_SEARCH_OUT = $$system("$$CMD lua")
-    isEmpty(LUA_SEARCH_OUT){
-        error("no lua found in PATH")
-    }else {
-        LUA_COMMAND = "lua"
+isEmpty(LUA_SEARCH_OUT) {
+    LUA_SEARCH_OUT = $$system("$$CMD lua51")
+    isEmpty(LUA_SEARCH_OUT) {
+        LUA_SEARCH_OUT = $$system("$$CMD lua")
+        isEmpty(LUA_SEARCH_OUT) {
+            error("no lua found in PATH")
+        } else {
+            LUA_COMMAND = "lua"
+        }
+    } else {
+        LUA_COMMAND = "lua51"
     }
-}else {
+} else {
     LUA_COMMAND = "lua5.1"
 }
 
