@@ -16,31 +16,35 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando módulo:
+&quot;%1&quot;
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="878"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando pacote:
+&quot;%1&quot;
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="882"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1413"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1415"/>
       <location filename="../src/Host.cpp" line="1421"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 em %2:%3</translation>
     </message>
   </context>
   <context>
@@ -48,52 +52,52 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation type="unfinished"/>
+      <translation>! %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 está fora (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation type="unfinished"/>
+      <translation>! %1 está de volta</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! convidou %1 para %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation type="unfinished"/>
+      <translation>! %2 convidou para %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
       <source>! You have joined %1 as %2</source>
-      <translation type="unfinished"/>
+      <translation>! Juntou-se a %1 como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="160"/>
       <source>! %1 has joined %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 juntou-se a %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 expulsou %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
       <source>! %1 mode is %2 %3</source>
-      <translation type="unfinished"/>
+      <translation>! O modo de %1 é %2 %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
       <source>! %1 sets mode %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>! %1 definiu os modos %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
@@ -103,49 +107,49 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
       <source>! %1 has %2 users: %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 tem %2 utilizadores: %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation type="unfinished"/>
+      <translation>! %1 tem %2 utilizadores</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
       <source>! %1 has changed nick to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 alterou o nick para %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 respondeu no %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
       <location filename="../src/ircmessageformatter.cpp" line="271"/>
       <source>! %1 time is %2</source>
-      <translation type="unfinished"/>
+      <translation>! O tempo de %1 é %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
       <location filename="../src/ircmessageformatter.cpp" line="268"/>
       <source>! %1 version is %2</source>
-      <translation type="unfinished"/>
+      <translation>! A versão de %1 é %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
