@@ -559,66 +559,69 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2783"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro selecione um ponto, de seguida adicione um novo ponto a meio do segmento em direção ao espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Junte um par de segmentos removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2795"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Remova o último segmento removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2803"/>
       <source>Select a point first, then remove it</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro selecione um ponto, de seguida remova-o</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Mudar as propriedades desta linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Remover tudo desta linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3281"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>Mover a seleção, centrada no espaço selecionado (%1) para:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3283"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada x (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3284"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada y (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3285"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada z (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3389"/>
       <location filename="../src/T2DMap.cpp" line="3398"/>
       <location filename="../src/T2DMap.cpp" line="3437"/>
       <source>Enter room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Introduza o símbolo do espaço</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3390"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Introduza o símbolo a usar para este espaço:</numerusform>
+        <numerusform>Introduza o símbolo a usar para este(s) espaço(s):</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3400"/>
@@ -626,20 +629,20 @@ for this/these room(s):</source>
 more of the selected rooms, delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
-      <translation type="unfinished"/>
+      <translation>O único símbolo usado é &quot;%1&quot; num ou mais dos espaços selecionados, remova isso para o limpar de todos os espaços selecionados ou substitua com um novo símbolo a usar em todos os espaços:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3405"/>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
-      <translation type="unfinished"/>
+      <translation>No espaço selecionado o símbolo e &quot;%1&quot;, remova isso para limpar o símbolo ou substitua-o com um novo símbolo para este espaço:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3430"/>
       <location filename="../src/T2DMap.cpp" line="3834"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3438"/>
