@@ -984,12 +984,13 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="895"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>O registo de logs for parado. O ficheiro de registo é %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="940"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Versão do cliente MUD, Mudlet: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="942"/>
