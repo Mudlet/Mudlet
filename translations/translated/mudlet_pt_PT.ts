@@ -529,32 +529,32 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2717"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Criar etiquetas para mostrar texto ou imagens.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Definir aqui a posição atual do jogador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2726"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Impossível definir a localização quando não se encontra exatamente um espaço selecionado</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Mover Etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2757"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2780"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Divida o segmento adicionando um novo ponto a meio do caminho</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2783"/>
