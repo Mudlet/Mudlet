@@ -2166,14 +2166,19 @@ void TTextEdit::slot_analyseSelection()
         if (rowItems > rowLimit) {
             if (isFirstRow) {
                 completedRows = QStringLiteral("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                               "<tr><th>Index (UTF-16)</th>%1</tr>"
-                                               "<tr><th>U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i></th>%2</tr>"
-                                               "<tr><th>Visual</th>%3</tr>"
-                                               "<tr><th>Index (UTF-8)</th>%4</tr>"
-                                               "<tr><th>Byte</th>%5</tr>"
-                                               "<tr><th>Lua character or code</th>%6</tr>"
+                                               "<tr><th>%1</th>%2</tr>"
+                                               "<tr><th>%3</th>%4</tr>"
+                                               "<tr><th>%5</th>%6</tr>"
+                                               "<tr><th>%7</th>%8</tr>"
+                                               "<tr><th>%9</th>%10</tr>"
+                                               "<tr><th>%11</th>%12</tr>"
                                                "</table></small><br>")
-                        .arg(indexes, vals, elements, utf8Indexes, utf8Vals, luaCodes);
+                        .arg(tr("Index (UTF-16)", "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"), indexes)
+                        .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>", "2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}"), vals)
+                        .arg(tr("Visual", "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}"), elements)
+                        .arg(tr("Index (UTF-8)", "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Indexes)
+                        .arg(tr("Byte", "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Vals)
+                        .arg(tr("Lua character or code", "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}"), luaCodes);
                 isFirstRow = false;
             } else {
                 completedRows.append(QStringLiteral("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
@@ -2202,14 +2207,20 @@ void TTextEdit::slot_analyseSelection()
             // less than 16 codepoints
             mpContextMenuAnalyser->setToolTip(QStringLiteral("<html><head/><body>%1"
                                                              "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                                             "<tr><th>Index (UTF-16)</th>%2</tr>"
-                                                             "<tr><th>U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i></th>%3</tr>"
-                                                             "<tr><th>Visual</th>%4</tr>"
-                                                             "<tr><th>Index (UTF-8)</th>%5</tr>"
-                                                             "<tr><th>Byte</th>%6</tr>"
-                                                             "<tr><th>Lua character or code</th>%7</tr>"
+                                                             "<tr><th>%2</th>%3</tr>"
+                                                             "<tr><th>%4</th>%5</tr>"
+                                                             "<tr><th>%6</th>%7</tr>"
+                                                             "<tr><th>%8</th>%9</tr>"
+                                                             "<tr><th>%10</th>%11</tr>"
+                                                             "<tr><th>%12</th>%13</tr>"
                                                              "</table></small></body></html>")
-                                              .arg(completedRows, indexes, vals, elements, utf8Indexes, utf8Vals, luaCodes));
+                                              .arg(completedRows)
+                                              .arg(tr("Index (UTF-16)", "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"), indexes)
+                                              .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>", "2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}"), vals)
+                                              .arg(tr("Visual", "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}"), elements)
+                                              .arg(tr("Index (UTF-8)", "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Indexes)
+                                              .arg(tr("Byte", "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Vals)
+                                              .arg(tr("Lua character or code", "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}"), luaCodes));
         } else {
             mpContextMenuAnalyser->setToolTip(QStringLiteral("<html><head/><body>%1"
                                                              "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
