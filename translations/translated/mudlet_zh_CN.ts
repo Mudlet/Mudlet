@@ -1912,7 +1912,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="528"/>
       <source>An area called %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>一个名为 %1 的区域已经存在！</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="613"/>
@@ -2182,7 +2182,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>复制为图片</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1247"/>
