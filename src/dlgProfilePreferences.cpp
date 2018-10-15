@@ -151,6 +151,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // on top! 8-)
     tabWidget->setCurrentIndex(0);
 
+    // To be moved to a slot that is used on GUI language change when that gets
+    // implimented:
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
                                              "map and whether they can be drawn using just the specifed font, any other "
                                              "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
@@ -184,15 +186,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                             "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
                                                             "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
                                                             "full support for languages other than English.</i></p>"));
-    checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mShowIconsOnMenuCheckedState);
-    checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
-                                             "shown icons on menus, others, however do not. This control allows the user to override "
-                                             "the setting, if needed, as follows:"
-                                             "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
-                                             "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
-                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
-                                             "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                             "propogate everywhere until Mudlet is restarted.</i></p>"));
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Check this option to activate a context (right click) menu action on any "
                                                "console/user window that, when the mouse cursor is hovered over it, will "
                                                "display the UTF-16 and UTF-8 items that make up each Unicode codepoint on "
