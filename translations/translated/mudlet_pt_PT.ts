@@ -358,171 +358,173 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2035"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation>ID do Espaço: %1 Posição (atual) no Mapa: (%2,%3,%4)
+      <translation>ID do Espaço: %1 Posição (Atual) no Mapa: (%2,%3,%4)
 </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2044"/>
       <source>Room ID: %1 (Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço: %1 Posição (Selecionada) no Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2053"/>
       <source>Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço: %1 Posição (%5 Selecionada) no Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2066"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
-      <translation type="unfinished"/>
+      <translation>tempo de renderização: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2165"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>Tipo de etiqueta?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2166"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2167"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="107"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection. Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Clique numa linha para selecionar ou desselecionar esse número de espaço (com o nome dado, se os espaços estiverem nomeados) para adicionar ou remover o espaço da seleção. Clique no cabeçalho relevante para ordenar por esse método. Note que a coluna de nome apenas aparecerá se pelo menos um dos espaços tiver um nome.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2184"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>Selecione a Imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
       <source>Draw label as background or on top of everything?</source>
-      <translation type="unfinished"/>
+      <translation>Apresentar a etiqueta no plano de fundo ou à frente de tudo?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2192"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2193"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2439"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Arraste para selecionar múltiplos espaços ou etiquetas, solte para terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2598"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Desfazer o último ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2607"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Mudar as propriedades desta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2611"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Acabar de desenhar esta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2632"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>criar um novo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2635"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>carregar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>criar espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Criar um novo espaço aqui</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Mover espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2659"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Remover espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2663"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Mudar cor do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2667"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Aumentar o espaçamento X-Y do mapa para os grupos de espaços selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2671"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Diminuir o espaçamento X-Y do mapa para os grupos de quartos selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2675"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Bloquear o espaço para "speed walks"</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2679"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Desbloquear o espaço para "speed walks"</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2683"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Definir peso do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2687"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Definir saídas do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2691"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Definir um ou mais símbolos ou letras para marcar espaços especiais</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2695"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Mover grupo selecionado para determinada posição</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Definir o ID da área do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2709"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Linhas de saída personalizadas não são mostradas e não são editáveis em modo de grelha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
