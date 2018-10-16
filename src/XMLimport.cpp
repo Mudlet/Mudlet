@@ -834,6 +834,22 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mTimerDebugOutputSuppressionInterval = QTime();
     }
+  
+    if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
+        pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
+        pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
+    } else {
+        pHost->mRequiredDiscordUserName.clear();
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
+        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
+    } else {
+        pHost->mRequiredDiscordUserDiscriminator.clear();
+    }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();

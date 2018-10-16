@@ -544,17 +544,19 @@ end
 
 
 
+local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
 --- Suffixes text at the end of the current line when used in a trigger.
 ---
 --- @see prefix
-function suffix(what, func, fg, bg, window)
-  local length = string.len(line)
-  moveCursor(window or "main", length - 1, getLineNumber())
-  if func and (func == cecho or func == decho or func == hecho) then
-    func(what, fg, bg, true, window)
-  else
-    insertText(what)
-  end
+function suffix(what, func, fgc, bgc, window)
+  window = window or "main"
+  func = insertFuncs[func] or func or insertText
+  local length = utf8.len(getCurrentLine(window))
+  moveCursor(window, length - 1, getLineNumber(window))
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  func(window,what)
+  resetFormat(window)
 end
 
 
@@ -567,13 +569,14 @@ end
 ---   </pre>
 ---
 --- @see suffix
-function prefix(what, func, fg, bg, window)
-  moveCursor(window or "main", 0, getLineNumber());
-  if func and (func == cecho or func == decho or func == hecho) then
-    func(what, fg, bg, true, window)
-  else
-    insertText(what)
-  end
+function prefix(what, func, fgc, bgc, window)
+  window = window or "main"
+  func = insertFuncs[func] or func or insertText
+  moveCursor(window, 0, getLineNumber(window))
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  func(window,what)
+  resetFormat(window)
 end
 
 
@@ -969,7 +972,7 @@ if rex then
 
     deselect()
     reset()
-
+    if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then

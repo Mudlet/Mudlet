@@ -66,6 +66,9 @@ void Updater::setAutomaticUpdates(const bool state)
 #else
     dblsqd::UpdateDialog::enableAutoDownload(state, settings);
 #endif
+    // The sense of this control is inverted on the dlgProfilePreferences - so
+    // must be inverted here:
+    emit signal_automaticUpdatesChanged(!state);
 }
 
 bool Updater::updateAutomatically() const

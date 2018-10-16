@@ -128,6 +128,56 @@ mudlet* mudlet::self()
     return _self;
 }
 
+void mudlet::loadLanguagesMap()
+{
+    mLanguageCodeMap = {
+            {"en_US", make_pair(tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
+            {"en_GB", make_pair(tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_CN", make_pair(tr("Chinese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_TW", make_pair(tr("Chinese (Traditional)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"nl_NL", make_pair(tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"fr_FR", make_pair(tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"de_DE", make_pair(tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"el_GR", make_pair(tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"it_IT", make_pair(tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+    };
+
+    QFile file(QStringLiteral(":/translation-stats.json"));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "translation statistics file isn't available, won't show stats in preferences";
+        return;
+    }
+
+    QByteArray saveData = file.readAll();
+    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+    QJsonObject translationStats = loadDoc.object();
+
+    for (auto& languageKey : translationStats.keys()) {
+        auto languageData = mLanguageCodeMap.value(languageKey);
+
+        auto value = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
+        if (value == QJsonValue::Undefined) {
+            continue;
+        }
+        auto translatedpc = value.toInt();
+
+        // show translation % for languages with less than 95%
+        // for languages above 95%, show a gold star
+        if (translatedpc < mTranslationStar) {
+            mLanguageCodeMap.insert(
+                    languageKey,
+                    make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc),
+                              translatedpc));
+        } else {
+            mLanguageCodeMap.insert(languageKey, make_pair(languageData.first, translatedpc));
+        }
+    }
+    qDebug() << "mLanguageCodeMap" << mLanguageCodeMap;
+ }
+
 mudlet::mudlet()
 : QMainWindow()
 , mFontManager()
@@ -155,11 +205,13 @@ mudlet::mudlet()
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
-, mpProfilePreferencesDlg(nullptr)
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+, mDiscord()
 , mShowIconsOnDialogs(true)
+, mCopyAsImageTimeout{3}
+, mInterfaceLanguage(QStringLiteral("en_US"))
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -169,6 +221,8 @@ mudlet::mudlet()
         // have to invert the sense because the attribute is a negative one:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
+
+    loadTranslators();
 
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -218,7 +272,7 @@ mudlet::mudlet()
     }
 
     mpActionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
-    mpActionConnect->setToolTip(tr("Connect to a MUD"));
+    mpActionConnect->setToolTip(tr("Connect to a game"));
     mpMainToolBar->addAction(mpActionConnect);
 
     // add name to the action's widget in the toolbar, which doesn't have one by default
@@ -358,10 +412,8 @@ mudlet::mudlet()
     generalRule -= QSize(30, 30);
     mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
     mpDebugArea->hide();
-    QFont mainFont;
-    mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
-    if (file_use_smallscreen.exists()) {
+    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    if (mEnableFullScreenMode) {
         showFullScreen();
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
@@ -473,10 +525,8 @@ mudlet::mudlet()
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
-    // mToolbarIconSize has been set to 0 in the initialisation list but if it
-    // has not been changed from that in readSettings() then set it now:
     if (!mToolbarIconSize) {
-        setToolBarIconSize(file_use_smallscreen.exists() ? 2 : 3);
+        setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
     }
 
 #if defined(QT_GAMEPAD_LIB)
@@ -491,6 +541,7 @@ mudlet::mudlet()
 
     // load bundled fonts
     mFontManager.addFonts();
+    loadLanguagesMap();
 }
 
 QSettings* mudlet::getQSettings()
@@ -522,6 +573,68 @@ void mudlet::initEdbee()
     //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
 
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+}
+
+void mudlet::loadTranslationFile(const QString& fileName, const QString& filePath, QString& languageCode)
+{
+    QPointer<QTranslator> pMudletTranslator = new QTranslator();
+    auto translatorList = mTranslatorsMap.value(languageCode);
+
+    if (pMudletTranslator->load(fileName, filePath)) {
+        translatorList.append(pMudletTranslator);
+
+        if (!mTranslatorsMap.contains(languageCode)) {
+            mTranslatorsMap.insert(languageCode, translatorList);
+        }
+    } else {
+        qDebug() << "mudlet::mudlet() Failed to load translation file" << fileName << "from" << filePath;
+    }
+
+    if (languageCode != mInterfaceLanguage) {
+        return;
+    }
+
+    qDebug() << "mudlet::mudlet() INFO - loading Mudlet:" << languageCode << "translations from:" << fileName;
+
+    for (auto& translator : qAsConst(translatorList)) {
+        if (!qApp->installTranslator(translator)) {
+            qDebug() << "mudlet::mudlet() ERROR - Failed to directly load a translator for:" << languageCode << "a translation to the specified language will not be available";
+        } else {
+            mTranslatorsLoadedList.append(translator);
+        }
+    }
+}
+
+void mudlet::loadTranslators()
+{
+    auto loadTranslations =
+            [=](const QString& path) {
+                qDebug() << "mudlet::mudlet() INFO - Seeking Mudlet translations files in:" << path;
+
+                QDir translationDir(path);
+                translationDir.setNameFilters(QStringList() << QStringLiteral("mudlet_*.qm"));
+                QStringList translationFilesList(translationDir.entryList(QDir::Files | QDir::Readable, QDir::Name));
+
+                for (auto& translationFileName : qAsConst(translationFilesList)) {
+                    QString languageCode(translationFileName);
+
+                    languageCode.remove(QStringLiteral("mudlet_"), Qt::CaseInsensitive);
+                    languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
+
+                    loadTranslationFile(translationFileName, path, languageCode);
+                }
+            };
+
+    QPointer<QTranslator> pMudletTranslator = new QTranslator();
+    auto translatorList = mTranslatorsMap.value(QStringLiteral("en_US"));
+    translatorList.append(pMudletTranslator);
+    mTranslatorsMap.insert(QStringLiteral("en_US"), translatorList);
+
+    // Qt translations are not loaded properly at the moment
+    loadTranslations(getMudletPath(qtTranslationsPath));
+    loadTranslations(QStringLiteral(":/lang"));
+
+
 }
 
 bool mudlet::moduleTableVisible()
@@ -1085,6 +1198,8 @@ void mudlet::slot_tab_changed(int tabID)
 
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
+
+    emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
 
 void mudlet::addConsoleForNewHost(Host* pH)
@@ -2354,6 +2469,18 @@ void mudlet::readEarlySettings(const QSettings& settings)
     // as soon as possible as well!
 
     mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
+
+    // PLACEMARKER: Full-screen mode controlled by File (1 of 2) At some point we might removal this "if" and only consider the QSetting - dropping consideration of the sentinel file:
+    if (settings.contains(QStringLiteral("enableFullScreenMode"))) {
+        // We have a setting stored for this
+        mEnableFullScreenMode = settings.value(QStringLiteral("enableFullScreenMode"), QVariant(false)).toBool();
+    } else {
+        // We do not have a QSettings value stored so check for the sentinel file:
+        QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+        mEnableFullScreenMode = file_use_smallscreen.exists();
+    }
+
+    mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2377,11 +2504,14 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+
+
     resize(size);
     move(pos);
     if (settings.value("maximized", false).toBool()) {
         showMaximized();
     }
+    mCopyAsImageTimeout = settings.value(QStringLiteral("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2421,6 +2551,7 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
     mMenuBarVisibility = state;
 
     adjustMenuBarVisibility();
+    emit signal_menuBarVisibilityChanged(state);
 }
 
 // This only adjusts the visibility as appropriate
@@ -2443,6 +2574,7 @@ void mudlet::setToolBarVisibility(const controlsVisibility state)
     mToolbarVisibility = state;
 
     adjustToolBarVisibility();
+    emit signal_toolBarVisibilityChanged(state);
 }
 
 // Override the main window context menu action to prevent the main tool bar
@@ -2501,6 +2633,9 @@ void mudlet::writeSettings()
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
+    settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
+    settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
+    settings.setValue("interfaceLanguage", mInterfaceLanguage);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2623,16 +2758,19 @@ void mudlet::show_options_dialog()
 {
     Host* pHost = getActiveHost();
 
-    if (!mpProfilePreferencesDlg) {
-        mpProfilePreferencesDlg = new dlgProfilePreferences(this, pHost);
-        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlg->need_reconnect_for_specialoption, &QWidget::hide);
-        mpProfilePreferencesDlg->setAttribute(Qt::WA_DeleteOnClose);
+    // value will automatically return a nullptr if there is NO entry for this
+    // Host in the QMap
+    if (!mpProfilePreferencesDlgMap.value(pHost)) {
+        mpProfilePreferencesDlgMap[pHost] = new dlgProfilePreferences(this, pHost);
+
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
+        mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
     }
-    mpProfilePreferencesDlg->raise();
-    mpProfilePreferencesDlg->show();
+    mpProfilePreferencesDlgMap.value(pHost)->raise();
+    mpProfilePreferencesDlgMap.value(pHost)->show();
 }
 
 void mudlet::show_help_dialog()
@@ -3654,6 +3792,8 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
         return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
+    case qtTranslationsPath:
+        return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
     }
     Q_UNREACHABLE();
     return QString();
@@ -3784,4 +3924,40 @@ QStringList mudlet::getAvailableFonts()
     QFontDatabase database;
 
     return database.families(QFontDatabase::Any);
+}
+
+void mudlet::setEnableFullScreenMode(const bool state)
+{
+    // PLACEMARKER: Full-screen mode controlled by File (2 of 2) At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
+    if (state != mEnableFullScreenMode) {
+        mEnableFullScreenMode = state;
+        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+        if (state) {
+            file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream out(&file_use_smallscreen);
+            Q_UNUSED(out);
+            file_use_smallscreen.close();
+        } else {
+            file_use_smallscreen.remove();
+        }
+    }
+
+    // Emit the signal whatever the stored value is - so that if there are
+    // multiple profile preference dialogs open they all update themselves:
+    emit signal_enableFulScreenModeChanged(state);
+}
+
+void mudlet::setShowMapAuditErrors(const bool state)
+{
+    if (mshowMapAuditErrors != state) {
+        mshowMapAuditErrors = state;
+
+        emit signal_showMapAuditErrorsChanged(state);
+    }
+
+}
+
+void mudlet::setInterfaceLanguage(const QString& languageCode)
+{
+    mInterfaceLanguage = languageCode;
 }

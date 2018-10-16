@@ -165,7 +165,6 @@ public:
     void showInfo(const QString&);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
-    void leaveEvent(QEvent *event) override;
     void enterEvent(QEvent* pE) override;
     bool eventFilter(QObject*, QEvent* event) override;
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
@@ -463,6 +462,9 @@ private:
 
     // profile autosave interval in minutes
     int mAutosaveInterval;
+
+    // approximate max duration "Copy as image" can take in seconds
+    int mCopyAsImageMax;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
