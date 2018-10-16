@@ -1000,7 +1000,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="942"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, log do perfil %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="978"/>
