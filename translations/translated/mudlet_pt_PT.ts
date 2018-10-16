@@ -285,12 +285,12 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
       <source>[WHO] %1 (%2)</source>
-      <translation type="unfinished"/>
+      <translation>[WHO] %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - ausente</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
@@ -300,27 +300,27 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 dia(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 hora(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 minuto(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 segundo(s)</translation>
     </message>
   </context>
   <context>
@@ -328,35 +328,38 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome do Espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum mapa ou nenhuma posição válida.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
       <source>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </source>
-      <translation type="unfinished"/>
+      <translation>Área: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2021"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nome do Espaço: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2035"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço: %1 Posição (atual) no Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2044"/>
