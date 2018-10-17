@@ -544,42 +544,6 @@ end
 
 
 
-local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
---- Suffixes text at the end of the current line when used in a trigger.
----
---- @see prefix
-function suffix(what, func, fgc, bgc, window)
-  window = window or "main"
-  func = insertFuncs[func] or func or insertText
-  local length = utf8.len(getCurrentLine(window))
-  moveCursor(window, length - 1, getLineNumber(window))
-  if fgc then fg(window,fgc) end
-  if bgc then bg(window,bgc) end
-  func(window,what)
-  resetFormat(window)
-end
-
-
-
---- Prefixes text at the beginning of the current line when used in a trigger.
----
---- @usage Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that.
----   <pre>
----   prefix(os.date("%H:%M:%S "))
----   </pre>
----
---- @see suffix
-function prefix(what, func, fgc, bgc, window)
-  window = window or "main"
-  func = insertFuncs[func] or func or insertText
-  moveCursor(window, 0, getLineNumber(window))
-  if fgc then fg(window,fgc) end
-  if bgc then bg(window,bgc) end
-  func(window,what)
-  resetFormat(window)
-end
-
-
 
 --- Function will gag the whole line. <b>Use deleteLine() instead.</b>
 function gagLine()
@@ -1491,4 +1455,41 @@ function setHexBgColor(windowName, colorString)
   else
     setBgColor(colTable.r, colTable.g, colTable.b)
   end
+end
+
+
+
+local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
+--- Suffixes text at the end of the current line when used in a trigger.
+---
+--- @see prefix
+function suffix(what, func, fgc, bgc, window)
+  window = window or "main"
+  func = insertFuncs[func] or func or insertText
+  local length = utf8.len(getCurrentLine(window))
+  moveCursor(window, length - 1, getLineNumber(window))
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  func(window,what)
+  resetFormat(window)
+end
+
+
+
+--- Prefixes text at the beginning of the current line when used in a trigger.
+---
+--- @usage Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that.
+---   <pre>
+---   prefix(os.date("%H:%M:%S "))
+---   </pre>
+---
+--- @see suffix
+function prefix(what, func, fgc, bgc, window)
+  window = window or "main"
+  func = insertFuncs[func] or func or insertText
+  moveCursor(window, 0, getLineNumber(window))
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  func(window,what)
+  resetFormat(window)
 end
