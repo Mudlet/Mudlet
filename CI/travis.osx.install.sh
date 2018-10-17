@@ -32,6 +32,9 @@ for i in $BREWS; do
   done
 done
 for i in $BREWS; do
+  if [ "${i}" = "cmake" ]; then
+    continue
+  fi
   for RETRIES in $(seq 1 3); do
     echo "Installing ${i}"
     brew list | grep -q $i || brew install $i
