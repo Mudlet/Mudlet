@@ -97,44 +97,44 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
       <source>! %1 sets mode %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>! %1 définit le mode %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
       <source>[MOTD] %1%2</source>
-      <translation type="unfinished"/>
+      <translation>[MOTD] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
       <source>! %1 has %2 users: %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 a %2 utilisateurs : %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation type="unfinished"/>
+      <translation>! %1 a %2 utilisateurs</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
       <source>! %1 has changed nick to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 s'est renommé %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 a répondu en %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
       <location filename="../src/ircmessageformatter.cpp" line="271"/>
       <source>! %1 time is %2</source>
-      <translation type="unfinished"/>
+      <translation>! le temps de %1 est %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
       <location filename="../src/ircmessageformatter.cpp" line="268"/>
       <source>! %1 version is %2</source>
-      <translation type="unfinished"/>
+      <translation>! La version de %1 est la %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
@@ -144,7 +144,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
@@ -160,7 +160,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
       <source>[Channel URL] %1</source>
-      <translation type="unfinished"/>
+      <translation>[URL du canal] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
@@ -170,42 +170,42 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 a quitté %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
       <source>! %1 has left %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 a quitté %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1 a répondu en %2 secondes</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
       <source>* %1 %2</source>
-      <translation type="unfinished"/>
+      <translation>* %1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>! %1 s'est déconnecté·e</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 a quitté (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! aucun sujet</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
@@ -215,37 +215,37 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 a effacé le sujet</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
       <source>! %2 changed topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 a changé le sujet</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
       <source>[WHOIS] %1 is %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 est %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[WHOIS] %1 is connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 est connecté via %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="394"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 est connecté depuis %2 (inactif %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 est absent : %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
