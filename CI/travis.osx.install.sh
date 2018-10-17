@@ -8,6 +8,9 @@ set +e
 shopt -s expand_aliases
 BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 for i in $BREWS; do
+  if [ "${i}" = "cmake" ]; then
+    continue
+  fi
   for RETRIES in $(seq 1 3); do
     echo "Upgrading ${i}"
     brew outdated | grep -q $i
@@ -32,9 +35,6 @@ for i in $BREWS; do
   done
 done
 for i in $BREWS; do
-  if [ "${i}" = "cmake" ]; then
-    continue
-  fi
   for RETRIES in $(seq 1 3); do
     echo "Installing ${i}"
     brew list | grep -q $i || brew install $i
