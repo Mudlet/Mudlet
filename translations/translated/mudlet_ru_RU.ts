@@ -714,7 +714,7 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3832"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {всего:%2, по умолчанию}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3840"/>
@@ -1081,7 +1081,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1627"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(1) в %1 отчет</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1650"/>
@@ -1129,7 +1129,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2386"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(2) в %1 отчет</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
@@ -2231,7 +2231,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="352"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>Анализ области...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="356"/>
@@ -3287,27 +3287,27 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="128"/>
       <source>$ Starting Mudlet IRC Client...</source>
-      <translation type="unfinished"/>
+      <translation>$ Загружается Mudlet IRC-клиент...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="129"/>
       <source>$ Host: %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>$ Хост: %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="130"/>
       <source>$ Nick: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Ник: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="131"/>
       <source>$ Auto-Join Channels: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Авто-присоединяться к каналам: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="132"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
-      <translation type="unfinished"/>
+      <translation>$ Этот клиент поддерживает автозавершения при помощи клавиши Tab.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="133"/>
@@ -3317,12 +3317,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="192"/>
       <source>Restarting IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Перезапуск клиента IRC</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="361"/>
       <source>[HELP] Available Commands: %1</source>
-      <translation type="unfinished"/>
+      <translation>[HELP] Доступные команды: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="363"/>
@@ -3337,7 +3337,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="372"/>
       <source>! Joining %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Вступление %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="377"/>
@@ -3347,7 +3347,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="382"/>
       <source>! Disconnected from %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Отключен от %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="444"/>
@@ -3357,7 +3357,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="446"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[OШИБКА] Неизвестная команда: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="590"/>
@@ -3574,7 +3574,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1615"/>
       <source>Could not import map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось импортировать карту из %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1618"/>
@@ -3633,7 +3633,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1800"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Резервное копирование текущей карты - пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1810"/>
@@ -4403,7 +4403,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="400"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="401"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Вставить триггеры/скрипты/алиасы/т. д. из буфера обмена</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="415"/>
