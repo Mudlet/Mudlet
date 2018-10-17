@@ -45,9 +45,11 @@ QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
 QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
 int dlgIRC::DefaultMessageBufferLimit = 5000;
 
-dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(false), mReadyForSending(false), mConnectedHostName()
+dlgIRC::dlgIRC(Host* pHost) : mReadyForSending(false), mpHost(pHost), mIrcStarted(false), mInputHistoryMax(8), mConnectedHostName()
 {
     mInputHistoryMax = 8;
+    mInputHistoryIdxNext = 0;
+    mInputHistoryIdxCurrent = 0;
 
     setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_irc.png")));
