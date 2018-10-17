@@ -250,12 +250,12 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
       <source>[WHOIS] %1 is logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 est connecté en tant que %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
       <source>[WHOIS] %1 is connected from %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 est connecté depuis %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
@@ -290,32 +290,32 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - absent</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
       <source> - server operator</source>
-      <translation type="unfinished"/>
+      <translation> - opérateur du serveur</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 jour(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 heure(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 minute(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
@@ -338,13 +338,14 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Aucune carte ou aucune position valide.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
       <source>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </source>
-      <translation type="unfinished"/>
+      <translation>Domaine: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2021"/>
