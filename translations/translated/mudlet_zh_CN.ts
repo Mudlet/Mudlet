@@ -2080,7 +2080,10 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在被记录为属于区域: %1的房间
+中有 %2 个房间已丢失，它们是：
+%3
+它们已经被增加.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
