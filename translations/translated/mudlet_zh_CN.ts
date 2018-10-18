@@ -1920,17 +1920,20 @@ it has not been possible to salvage this, it has been lost!</source>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 与房间编号: %1 相关的数据结构出现了问题 - 该
+房间的数据已丢失, 正在删除房间编号. 这
+表明当前运行的
+Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="621"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 与房间编号:  相关的数据结构出现了问题 - 该房间的数据已丢失, 正在删除房间编号. 这表明当前运行的Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="668"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 区域: %1没有找到，将会被创建。</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="671"/>
