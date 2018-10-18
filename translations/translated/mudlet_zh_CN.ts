@@ -1879,12 +1879,12 @@ It had a weight, this is recorded as user data with key:
       <location filename="../src/TRoom.cpp" line="1528"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 有一个自定义路径线关联了非法出口, 该路径线没有任何用途, 已经被删除!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1533"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 有一个自定义路径线关联了非法出口, 该路径线没有任何用途, 已经被删除!</translation>
     </message>
   </context>
   <context>
@@ -1907,7 +1907,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="524"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>未命名的区域不 (再) 被允许!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="528"/>
