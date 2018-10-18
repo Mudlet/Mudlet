@@ -1984,62 +1984,66 @@ in map, now working out what new id numbers to use...</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="756"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 在地图中发现了(%1) 个无效的区域编号(小于+1且不等于保留编号-1), 请留意针对这些无效区域的更多消息...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 重置的区域编号将表示为：
+旧编号==&gt; 新编号</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="781"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 无效的区域编号已重置为: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="782"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 该区域是由无效区域: %1重新编号形成的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <location filename="../src/TRoomDB.cpp" line="828"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 区域编号是符合要求的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="836"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 在地图中发现了(%1) 个无效的房间编号(小于+1)
+, 正在计算用于替换的新编号...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="841"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 在地图中发现了(%1) 个无效的房间编号(小于+1)
+, 请留意针对这些无效房间的更多消息...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="848"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 重新编号的房间将会是:
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="864"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 无效的房间编号已重置为: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="865"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 该房间是由无效房间: %1重新编号形成的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <location filename="../src/TRoomDB.cpp" line="904"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 房间编号是符合要求的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
