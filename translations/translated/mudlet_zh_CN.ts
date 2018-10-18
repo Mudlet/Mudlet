@@ -1969,13 +1969,17 @@ Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[信息] - 缺少的区域现在被表示为：
+(编号)==&gt; &quot;区域名字&quot;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="751"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 在地图中发现了(%1) 个无效的房间编号(小于+1且不等于保留编号-1)
+, 正在计算用于替换的新编号...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="756"/>
