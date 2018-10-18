@@ -1938,7 +1938,7 @@ Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="671"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 与此编号有关的区域没有找到, 将会被创建.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="700"/>
@@ -1946,7 +1946,11 @@ Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
  Look for further messsages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[警告] - 检测到 %n 个区域已丢失, 正在增加它们.
+ 请留意关于应该属于这些区域的
+ 房间的更多消息...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="707"/>
@@ -1954,7 +1958,11 @@ Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
  Look for further messsages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[警告] - 检测到 %n 个区域已丢失, 正在增加它们.
+ 请留意关于应该属于这些区域的
+ 房间的更多消息...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="716"/>
