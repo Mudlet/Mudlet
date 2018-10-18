@@ -2049,28 +2049,30 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="921"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间: %1中发现了重复的无效出口标识, 这是一个
+异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="926"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间中发现了重复的无效出口标识, 这是一个异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="935"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间: %1中发现了重复的出口锁标识, 这是一个
+异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="940"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在房间中发现了重复的无效出口标识, 这是一个异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1011"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 该房间应属于区域: %1，但是后者并没有它的记录. 为了添加该房间, 已对区域进行更新.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1017"/>
