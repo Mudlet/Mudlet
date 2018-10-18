@@ -2081,19 +2081,19 @@ should be recording as possessing, they were:
 %3
 they have been added.</source>
       <translation>[信息] - 在被记录为属于区域: %1的房间
-中有 %2 个房间已丢失，它们是：
+中有 %2 个房间已丢失, 它们是:
 %3
 它们已经被增加.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 在被记录为属于该区域的房间中有 %1 个房间已丢失, 它们是: %2 它们已经被增加.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1046"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 区域: %1声称拥有该房间, 但是后者并不属于那里. 为了排除后者, 已对区域进行更新.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1052"/>
