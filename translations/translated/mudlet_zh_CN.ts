@@ -2146,7 +2146,20 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
+地图中存在未命名区域或多个具有相同名字的区域.
+这会让事情变得混乱, 现在已经不允许这么做了.
+  为了解决这些问题, 如果一个区域没有名字(或者等以后
+再命名)系统将自动分配名称 &quot;%1&quot;.
+  重复的区域名称将导致除了第一个被处理的区域之外所有的
+区域名称都以 &quot;_###&quot; 式的后缀结尾, 其中 &quot;###&quot; 是一个递增
+数字; 或许你想改变这些后缀, 试试把后缀改成
+一 &quot;(子区域名称)&quot; 至于具体怎么做, 完全取决于你,
+只是之后你就不能把一个区域的名称设置成
+与另一个已存在的区域相同的名称了.
+  如果有多个没有名字的区域, 除了第一个区域之外所有的
+区域名称也都以这样的后缀结尾.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1198"/>
