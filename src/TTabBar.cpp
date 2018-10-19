@@ -33,7 +33,7 @@
 void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
 {
     if (element == QStyle::CE_TabBarTab) {
-        QString tabString = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
+        QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
         if (mBoldTabsSet.contains(tabString)||mItalicTabsSet.contains(tabString)||mUnderlineTabsSet.contains(tabString)) {
