@@ -1216,8 +1216,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
     mConsoleMap[pH] = pConsole;
-    QString tabText = pH->getName();
-    int newTabID = mpTabBar->addTab(tabText);
+    QString tabName = pH->getName();
+    int newTabID = mpTabBar->addTab(tabName);
     /*
      * There is a sneaky feature on some OSes (I found it on FreeBSD but
      * it is notable switched OFF by default on MacOs) where Qt adds an
@@ -1233,7 +1233,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
      *    QAbstractButton; e.g. if a tab's label is '&Graphics', Alt+G becomes
      *    a shortcut key for switching to that tab." in 'QTabBar' documentation"
      */
-    mpTabBar->setTabData(newTabID, tabText);
+    mpTabBar->setTabData(newTabID, tabName);
     mTabMap[pH->getName()] = pConsole;
     if (mConsoleMap.size() > 1) {
         mpTabBar->show();

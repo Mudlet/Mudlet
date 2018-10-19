@@ -36,11 +36,11 @@ void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPa
         QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
-        if (mBoldTabsSet.contains(tabString)||mItalicTabsSet.contains(tabString)||mUnderlineTabsSet.contains(tabString)) {
+        if (mBoldTabsSet.contains(tabName)||mItalicTabsSet.contains(tabName)||mUnderlineTabsSet.contains(tabName)) {
             painter->save();
-            font.setBold(mBoldTabsSet.contains(tabString));
-            font.setItalic(mItalicTabsSet.contains(tabString));
-            font.setUnderline(mUnderlineTabsSet.contains(tabString));
+            font.setBold(mBoldTabsSet.contains(tabName));
+            font.setItalic(mItalicTabsSet.contains(tabName));
+            font.setUnderline(mUnderlineTabsSet.contains(tabName));
             isStyleChanged = true;
             painter->setFont(font);
         }
