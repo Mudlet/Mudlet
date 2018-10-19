@@ -341,6 +341,8 @@ void Discord::UpdatePresence()
         pDiscordPresence = mPresencePtrs.value(nullptr);
         // Reset the empty applicationID to the one that belongs to Mudlet:
         applicationID = mHostApplicationIDs.value(nullptr);
+
+        Q_ASSERT_X(pDiscordPresence, "Discord", "no Discord presence available for Mudlets default presence");
     } else {
         pDiscordPresence = mPresencePtrs.value(applicationID);
 
