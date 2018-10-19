@@ -13,7 +13,7 @@ end
 
 local r =
   function(...)
-    if ... then
+    if not table.is_empty({...}) then
       display(...)
     end
   end
