@@ -1649,7 +1649,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="227"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>Область не создана! Запрашиваемая площадь ID=%1. Примечание: ID площадей должны быть &gt; 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="249"/>
@@ -2159,7 +2159,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1275"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Восстановить главное меню, чтобы получить доступ к элементам управления.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1277"/>
@@ -2169,7 +2169,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1280"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Восстановить главныю панель инструментов, чтобы получить доступ к элементам управления.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1338"/>
@@ -2179,12 +2179,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1343"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, экстракт %1 консоля из %2 профиля</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1349"/>
       <source>Mudlet, %1 console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, экстракт %1 консоля из %2 профиля</translation>
     </message>
   </context>
   <context>
@@ -3121,12 +3121,12 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="660"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaZip - чтение файлов внутри zip-файлов&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;автор: Данило Tuler&lt;br&gt;Авторское право © 2003-2007 Кеплер проекта&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="665"/>
       <source>&lt;h2&gt;&lt;u&gt;edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;edbee многофункциональный редактор&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;авторские права © 2012-2014 от Reliable Bits Software от Blommers IT&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="668"/>
@@ -4651,7 +4651,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2171"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2176"/>
       <source>Stylesheet {L: %1 C: %2}</source>
-      <translation type="unfinished"/>
+      <translation>Таблица стилей {Л: %1 С: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1575"/>
