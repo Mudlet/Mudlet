@@ -31,9 +31,10 @@ while line <= #lines do
   local lang = currentLine:match("mudlet_([a-z]+_[A-Z]+)%.qm")
   line = line + 1
   if lang then
+    local translated
     repeat
       currentLine = lines[line]
-      local translated = tonumber(currentLine:match("(%d+)"))
+      translated = tonumber(currentLine:match("(%d+)"))
       line = line + 1
     until translated ~= nil
     currentLine = lines[line]
