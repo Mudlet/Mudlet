@@ -12,7 +12,7 @@ if not f then
 end
 
 local r = f()
-if r ~= nil then display(r) end</script>
+if r ~= nil then display(f()) end</script>
             <command></command>
             <packageName></packageName>
             <regex>^lua (.*)$</regex>
