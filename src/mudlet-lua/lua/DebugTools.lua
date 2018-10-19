@@ -216,6 +216,8 @@ function prettywrite (tbl, space, not_clever)
 end
 
 function display(...)
+  local arg = {...}
+  arg.n = #arg
   if arg.n > 1 then
     for i = 1, arg.n do
       display(arg[i])
