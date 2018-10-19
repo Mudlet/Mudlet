@@ -254,6 +254,25 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     return qMakePair(true, QString());
 }
 
+void cTelnet::requestDiscordInfo()
+{
+    mudlet* pMudlet = mudlet::self();
+    if (pMudlet->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+        string data;
+        data = TN_IAC;
+        data += TN_SB;
+        data += GMCP;
+        data += string("External.Discord.Get");
+        data += TN_IAC;
+        data += TN_SE;
+
+        // some games are buggy with MCCP on and require actual input before GMCP is processed
+        data += "\n";
+
+        socketOutRaw(data);
+    }
+}
+
 void cTelnet::connectIt(const QString& address, int port)
 {
     // wird an dieser Stelle gesetzt
@@ -268,6 +287,8 @@ void cTelnet::connectIt(const QString& address, int port)
         connectIt(address, port);
         return;
     }
+
+    emit signal_connecting(mpHost);
 
     hostName = address;
     hostPort = port;
@@ -315,6 +336,8 @@ void cTelnet::handle_socket_signal_connected()
         mTimerPass->start(3000);
     }
 
+    emit signal_connected(mpHost);
+
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -324,6 +347,8 @@ void cTelnet::handle_socket_signal_connected()
 void cTelnet::handle_socket_signal_disconnected()
 {
     postData();
+
+    emit signal_disconnected(mpHost);
 
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
@@ -660,11 +685,22 @@ void cTelnet::processTelnetCommand(const string& command)
             _h = TN_IAC;
             _h += TN_SB;
             _h += GMCP;
-            _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1"])";
+            _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1"])";
             _h += TN_IAC;
             _h += TN_SE;
 
             socketOutRaw(_h);
+
+            if (mudlet::self()->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+                _h = TN_IAC;
+                _h += TN_SB;
+                _h += GMCP;
+                _h += "External.Discord.Hello";
+                _h += TN_IAC;
+                _h += TN_SE;
+
+                socketOutRaw(_h);
+            }
 
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
             break;
@@ -915,6 +951,7 @@ void cTelnet::processTelnetCommand(const string& command)
             mpHost->mLuaInterpreter.msdp2Lua(_m.toUtf8().data(), _m.length());
             return;
         }
+
         // ATCP
         if (option == static_cast<char>(200)) {
             QString _m = command.c_str();
@@ -1142,16 +1179,17 @@ void cTelnet::setATCPVariables(const QString& msg)
     }
 }
 
+// Called for any GMCP Telnet Suboption negotiation:
 void cTelnet::setGMCPVariables(const QString& msg)
 {
-    QString var;
-    QString arg;
-    if (msg.indexOf('\n') > -1) {
-        var = msg.section(QChar::LineFeed, 0, 0);
-        arg = msg.section(QChar::LineFeed, 1);
-    } else {
-        var = msg.section(QChar::Space, 0, 0);
-        arg = msg.section(QChar::Space, 1);
+    QString packageMessage;
+    QString data;
+    packageMessage = msg.section(QChar::Space, 0, 0);
+    data = msg.section(QChar::Space, 1);
+
+    if (data.isEmpty()) {
+        packageMessage = msg.section(QChar::LineFeed, 0, 0);
+        data = msg.section(QChar::LineFeed, 1);
     }
 
     if (msg.startsWith(QStringLiteral("Client.GUI"))) {
@@ -1199,11 +1237,19 @@ void cTelnet::setGMCPVariables(const QString& msg)
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
+    } else if (msg.startsWith(QStringLiteral("Client.Map"))) {
+        mpHost->setMmpMapLocation(data);
     }
-    arg.remove('\n');
+    data.remove('\n');
     // remove \r's from the data, as yajl doesn't like it
-    arg.remove(QChar('\r'));
-    mpHost->mLuaInterpreter.setGMCPTable(var, arg);
+    data.remove(QChar('\r'));
+
+    if (packageMessage.startsWith(QStringLiteral("External.Discord.Status"))
+        || packageMessage.startsWith(QStringLiteral("External.Discord.Info"))) {
+        mpHost->processDiscordGMCP(packageMessage, data);
+    }
+
+    mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
@@ -1307,7 +1353,7 @@ void cTelnet::postMessage(QString msg)
             QString prefix = body.at(0).left(prefixLength).toUpper();
             QString firstLineTail = body.at(0).mid(prefixLength);
             body.removeFirst();
-            if (prefix.contains(QLatin1String("ERROR"))) {
+            if (prefix.contains(tr("ERROR", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ERROR"))) {
                 mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
                 for (quint8 _i = 0; _i < body.size(); _i++) {
@@ -1319,7 +1365,7 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
                 }
-            } else if (prefix.contains(QLatin1String("LUA"))) {
+            } else if (prefix.contains(tr("LUA", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("LUA"))) {
                 mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
                 for (quint8 _i = 0; _i < body.size(); _i++) {
@@ -1330,7 +1376,7 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
                 }
-            } else if (prefix.contains(QLatin1String("WARN"))) {
+            } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
                 for (quint8 _i = 0; _i < body.size(); _i++) {
@@ -1341,7 +1387,7 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mBgColor);
                 }
-            } else if (prefix.contains(QLatin1String("ALERT"))) {
+            } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
                 mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orangish
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 for (quint8 _i = 0; _i < body.size(); _i++) {
@@ -1352,7 +1398,7 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 }
-            } else if (prefix.contains(QLatin1String("INFO"))) {
+            } else if (prefix.contains(tr("INFO", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("INFO"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 for (quint8 _i = 0; _i < body.size(); _i++) {
@@ -1363,7 +1409,7 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 }
-            } else if (prefix.contains(QLatin1String("OK"))) {
+            } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
                 for (quint8 _i = 0; _i < body.size(); _i++) {
@@ -1374,7 +1420,7 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
                 }
-            } else {                                                                                             // Unrecognised but still in a "[ something ] -  message..." format
+            } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
                 for (quint8 _i = 0; _i < body.size(); _i++) {
@@ -1386,7 +1432,7 @@ void cTelnet::postMessage(QString msg)
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
                 }
             }
-        } else {                                                                                      // No prefix found
+        } else {                                                                                             // No prefix found
             mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 190), mpHost->mBgColor); //Foreground bright grey
         }
         messageStack.removeFirst();

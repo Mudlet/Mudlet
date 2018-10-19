@@ -140,7 +140,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.13.0
+VERSION = 3.14.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -215,7 +215,6 @@ linux|macx|win32 {
 }
 # else we are on another platform which the updater code will not support so
 # don't include it either
-
 
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
@@ -341,6 +340,8 @@ macx:LIBS += \
     -lz \
     -lzzip
 
+INCLUDEPATH += ../3rdparty/discord/rpc/include
+
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
 # platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
@@ -455,6 +456,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     ctelnet.cpp \
+    discord.cpp \
     dlgAboutDialog.cpp \
     dlgActionMainArea.cpp \
     dlgAliasMainArea.cpp \
@@ -523,11 +525,11 @@ SOURCES += \
     XMLimport.cpp \
     wcwidth.cpp
 
-
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     ctelnet.h \
+    discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
     dlgAliasMainArea.h \

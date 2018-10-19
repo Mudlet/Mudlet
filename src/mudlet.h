@@ -34,6 +34,9 @@
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
+
+#include "discord.h"
+
 #include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
@@ -90,6 +93,7 @@ public:
     static void start();
     HostManager& getHostManager() { return mHostManager; }    
     FontManager mFontManager;
+    Discord mDiscord;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
@@ -357,6 +361,9 @@ public:
     // compatibility...
     bool mEnableFullScreenMode;
 
+    // approximate max duration that 'Copy as image' is allowed to take (seconds)
+    int mCopyAsImageTimeout;
+
     // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
@@ -421,6 +428,7 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
+    void signal_tabChanged(const QString& hostName);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);

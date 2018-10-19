@@ -42,6 +42,34 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   Write-Output "=== Copying installer over for appveyor ==="
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
+  # get winscp .NET dll for uploads
+  # activate higher TLS version. Seems PS only uses 1.0 by default
+  # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
+  [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
+  (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
+  Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
+
+  # do the upload
+  $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
+    # sftp://
+    Protocol = [WinSCP.Protocol]::Scp
+    HostName = "mudlet.org"
+    UserName = "keneanung"
+    SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
+    SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
+  }
+  $session = New-Object WinSCP.Session
+  $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
+  $sessionOptions.SshHostKeyFingerprint = $fingerprint
+  # Connect
+  $session.Open($sessionOptions)
+  $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
+  $session.Close()
+  $session.Dispose()
+  $DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+
  <#
   This is the shell version:
   # add ssh-key to ssh-agent for deployment
