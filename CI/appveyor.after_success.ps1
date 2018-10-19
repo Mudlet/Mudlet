@@ -10,6 +10,8 @@ Remove-Item * -include *.cpp, *.o
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
+  npm install -g dblsqd-cli
+  dblsqd --help
 } else {
   Write-Output "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git C:\projects\installers
