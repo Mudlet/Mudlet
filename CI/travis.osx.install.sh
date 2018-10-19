@@ -6,7 +6,7 @@ fi
 
 set +e
 shopt -s expand_aliases
-BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks node npm"
+BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo "Upgrading ${i}"
@@ -55,5 +55,3 @@ gem update cocoapods
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
-
-npm install -g dblsqd-cli
