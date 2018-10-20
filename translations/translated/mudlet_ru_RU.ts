@@ -8013,7 +8013,7 @@ Without this option, the pattern matching will stop after the first successful m
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1291"/>
       <source>match all</source>
-      <translation>совпадаеть со всем</translation>
+      <translation>совпадать на всё</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1336"/>
