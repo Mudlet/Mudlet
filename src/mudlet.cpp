@@ -436,7 +436,6 @@ mudlet::mudlet()
 
     connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
-    connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(mpActionTimers.data(), &QAction::triggered, this, &mudlet::show_timer_dialog);
     connect(mpActionAliases.data(), &QAction::triggered, this, &mudlet::show_alias_dialog);
     connect(mpActionScripts.data(), &QAction::triggered, this, &mudlet::show_script_dialog);
@@ -455,7 +454,6 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
 
     QAction* mactionConnect = new QAction(tr("Connect"), this);
-    QAction* mactionTriggers = new QAction(tr("Triggers"), this);
     QAction* mactionAlias = new QAction(tr("Aliases"), this);
     QAction* mactionTimers = new QAction(tr("Timers"), this);
     QAction* mactionButtons = new QAction(tr("Actions"), this);
@@ -481,7 +479,6 @@ mudlet::mudlet()
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(actionLive_Help_Chat, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(actionShow_Map, &QAction::triggered, this, &mudlet::slot_mapper);
 #if !defined(INCLUDE_UPDATER)
     dactionUpdate->setVisible(false);
 #endif
@@ -489,25 +486,29 @@ mudlet::mudlet()
     connect(actionPackage_Exporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(actionModule_manager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
+    connect(mactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
-
-    connect(mactionTriggers, &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(mactionMapper, &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(actionShow_Map, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mactionTimers, &QAction::triggered, this, &mudlet::show_timer_dialog);
     connect(mactionAlias, &QAction::triggered, this, &mudlet::show_alias_dialog);
     connect(mactionScripts, &QAction::triggered, this, &mudlet::show_script_dialog);
     connect(mactionKeys, &QAction::triggered, this, &mudlet::show_key_dialog);
     connect(mactionButtons, &QAction::triggered, this, &mudlet::show_action_dialog);
-
     connect(mactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
-
     connect(mactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
-
-    connect(mactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
+
+#if defined(Q_OS_MACOS)
+    triggersKeySequence = QKeySequence(Qt::CTRL | Qt::Key_E);
+#else
+    triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
+#endif
+    connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -2771,6 +2772,19 @@ void mudlet::show_options_dialog()
     }
     mpProfilePreferencesDlgMap.value(pHost)->raise();
     mpProfilePreferencesDlgMap.value(pHost)->show();
+}
+
+void mudlet::slot_update_shortcuts()
+{
+    if (mpMainToolBar->isVisible()) {
+        triggersShortcut = new QShortcut(triggersKeySequence, this);
+        connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_trigger_dialog);
+        dactionScriptEditor->setShortcut(QKeySequence());
+    } else {
+        triggersShortcut.clear();
+        dactionScriptEditor->setShortcut(triggersKeySequence);
+    }
+
 }
 
 void mudlet::show_help_dialog()

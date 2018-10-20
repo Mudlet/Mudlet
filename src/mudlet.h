@@ -50,6 +50,8 @@
 #include <QTime>
 #include <QTimer>
 #include "edbee/models/textautocompleteprovider.h"
+#include <QShortcut>
+#include <QKeySequence>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -451,6 +453,7 @@ private slots:
     void show_key_dialog();
     void show_variable_dialog();
     void show_options_dialog();
+    void slot_update_shortcuts();
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -490,6 +493,9 @@ private:
     QPointer<QLabel> mpLabelReplayTime;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
+
+    QPointer<QShortcut> triggersShortcut;
+    QKeySequence triggersKeySequence;
 
     void check_for_mappingscript();
 

@@ -209,9 +209,6 @@
    <property name="statusTip">
     <string>opens the Editor for the different types of things that can be scripted by the user</string>
    </property>
-   <property name="shortcut">
-    <string>Alt+E</string>
-   </property>
   </action>
   <action name="dactionNotepad">
    <property name="text">
