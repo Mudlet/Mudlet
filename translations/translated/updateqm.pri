@@ -33,7 +33,7 @@ STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
 
 win32 {
     CMD = "where"
-    message("Please ignore one or two \"INFO: Could not find files for the given pattern(s).\" messages that may appear next:")
+    message("You can safely ignore one or two \"INFO: Could not find files for the given pattern(s).\" messages that may appear!")
 } else {
     CMD = "which"
 }
