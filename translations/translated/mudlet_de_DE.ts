@@ -454,12 +454,12 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Neuer Raum</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Erstelle hier einen neuen Raum</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
@@ -1244,7 +1244,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Spielt %1</translation>
     </message>
   </context>
   <context>
@@ -2268,7 +2268,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Als Bild kopieren</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1247"/>
@@ -2859,7 +2859,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2431"/>
       <source>Connect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Automatisch verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2441"/>
