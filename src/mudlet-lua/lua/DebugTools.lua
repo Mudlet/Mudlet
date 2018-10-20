@@ -217,7 +217,7 @@ end
 
 function display(...)
   local arg = {...}
-  arg.n = #arg
+  arg.n = table.maxn(arg)
   if arg.n > 1 then
     for i = 1, arg.n do
       display(arg[i])
