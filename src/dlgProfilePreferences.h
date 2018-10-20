@@ -146,6 +146,7 @@ private slots:
     void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
     void slot_changeGuiLanguage(const QString &language);
+    void slot_setURIMudlet(const bool state);
 
 private:
     void setColors();

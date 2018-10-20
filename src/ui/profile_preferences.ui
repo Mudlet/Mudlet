@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>755</width>
-    <height>768</height>
+    <height>839</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -84,7 +84,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -174,6 +174,13 @@
            <widget class="QCheckBox" name="acceptServerGUI">
             <property name="text">
              <string>Allow server to install script packages</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="registerTelnetURI">
+            <property name="text">
+             <string>Register Telnet URI</string>
             </property>
            </widget>
           </item>

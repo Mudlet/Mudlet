@@ -226,7 +226,22 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     comboBox_guiLanguage->model()->sort(0);
     auto current = pMudlet->mInterfaceLanguage;
     comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
-    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+    connect(comboBox_guiLanguage, QOverload<const QString&>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+
+
+    connect(registerTelnetURI, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setURIMudlet);
+
+#if defined(Q_OS_WIN)
+    registerTelnetURI->setEnabled(false);
+#elif defined(Q_OS_LINUX)
+    registerTelnetURI->setEnabled(true);
+#elif defined(Q_OS_FREEBSD)
+    registerTelnetURI->setEnabled(false);
+#elif defined(Q_OS_MACOS)
+    registerTelnetURI->setEnabled(false);
+#else
+    registerTelnetURI->setEnabled(false);
+#endif
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -3046,6 +3061,40 @@ void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
         // control - so force it back to the "Only if no profile one
         comboBox_toolBarVisibility->setCurrentIndex(1);
     }
+}
+
+void dlgProfilePreferences::slot_setURIMudlet(const bool state)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+#if defined(Q_OS_WIN)
+#elif defined(Q_OS_LINUX)
+
+    QProcess process;
+
+        process.start("xdg-mime query default x-scheme-handler/telnet");
+        process.waitForFinished();
+        usleep(1000);
+        QString output(process.readAllStandardOutput());
+        //xdg-mime default apt.desktop x-scheme-handler/apt
+
+        process.start("xdg-mime default mudlet.desktop x-scheme-handler/telnet");
+        process.waitForFinished();
+        usleep(1000);
+        QString output2(process.readAllStandardOutput());
+//        std::cout << output.toStdString();
+
+        QString err(process.readAllStandardError());
+ //       std::cout << err.toStdString();
+#elif defined(Q_OS_FREEBSD)
+#elif defined(Q_OS_MACOS)
+#else
+#endif
+
+
 }
 
 void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
