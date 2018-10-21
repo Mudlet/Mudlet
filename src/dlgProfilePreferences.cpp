@@ -186,6 +186,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                                                 "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
                                                                                 "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
                                                                                 "full support for languages other than English.</i></p>"));
+    checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
+                                             "shown icons on menus, others, however do not. This control allows the user to override "
+                                             "the setting, if needed, as follows:"
+                                             "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
+                                             "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
+                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
+                                             "<p><i>This setting is only processed when individual menus are created and changes may not "
+                                             "propogate everywhere until Mudlet is restarted.</i></p>"));
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
