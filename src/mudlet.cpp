@@ -503,10 +503,31 @@ mudlet::mudlet()
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
 
+    // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
     triggersKeySequence = QKeySequence(Qt::CTRL | Qt::Key_E);
+    showMapKeySequence = QKeySequence(Qt::CTRL | Qt::Key_M);
+    inputLineKeySequence = QKeySequence(Qt::CTRL | Qt::Key_L);
+    optionsKeySequence = QKeySequence(Qt::CTRL | Qt::Key_P);
+    notepadKeySequence = QKeySequence(Qt::CTRL | Qt::Key_N);
+    packagesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_I);
+    modulesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_O);
+    multiViewKeySequence = QKeySequence(Qt::CTRL | Qt::Key_V);
+    connectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_C);
+    disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
+    reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
 #else
     triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
+    showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
+    inputLineKeySequence = QKeySequence(Qt::ALT | Qt::Key_L);
+    optionsKeySequence = QKeySequence(Qt::ALT | Qt::Key_P);
+    notepadKeySequence = QKeySequence(Qt::ALT | Qt::Key_N);
+    packagesKeySequence = QKeySequence(Qt::ALT | Qt::Key_O);
+    modulesKeySequence = QKeySequence(Qt::ALT | Qt::Key_I);
+    multiViewKeySequence = QKeySequence(Qt::ALT | Qt::Key_V);
+    connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
+    disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
+    reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
 
@@ -2780,11 +2801,80 @@ void mudlet::slot_update_shortcuts()
         triggersShortcut = new QShortcut(triggersKeySequence, this);
         connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_trigger_dialog);
         dactionScriptEditor->setShortcut(QKeySequence());
+
+        showMapShortcut = new QShortcut(showMapKeySequence, this);
+        connect(showMapShortcut.data(), &QShortcut::activated, this, &mudlet::slot_mapper);
+        actionShow_Map->setShortcut(QKeySequence());
+
+        inputLineShortcut = new QShortcut(inputLineKeySequence, this);
+        connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_compact_input_line);
+        dactionInputLine->setShortcut(QKeySequence());
+
+        optionsShortcut = new QShortcut(optionsKeySequence, this);
+        connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::show_options_dialog);
+        dactionOptions->setShortcut(QKeySequence());
+
+        notepadShortcut = new QShortcut(notepadKeySequence, this);
+        connect(notepadShortcut.data(), &QShortcut::activated, this, &mudlet::slot_notes);
+        dactionNotepad->setShortcut(QKeySequence());
+
+        packagesShortcut = new QShortcut(packagesKeySequence, this);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::show_options_dialog);
+        actionPackage_manager->setShortcut(QKeySequence());
+
+        modulesShortcut = new QShortcut(packagesKeySequence, this);
+        connect(modulesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_module_manager);
+        actionModule_manager->setShortcut(QKeySequence());
+
+        multiViewShortcut = new QShortcut(multiViewKeySequence, this);
+        connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_multi_view);
+        dactionMultiView->setShortcut(QKeySequence());
+
+        connectShortcut = new QShortcut(connectKeySequence, this);
+        connect(connectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_connection_dialog);
+        dactionConnect->setShortcut(QKeySequence());
+
+        disconnectShortcut = new QShortcut(disconnectKeySequence, this);
+        connect(disconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_disconnect);
+        dactionDisconnect->setShortcut(QKeySequence());
+
+        reconnectShortcut = new QShortcut(reconnectKeySequence, this);
+        connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
+        dactionReconnect->setShortcut(QKeySequence());
     } else {
         triggersShortcut.clear();
         dactionScriptEditor->setShortcut(triggersKeySequence);
-    }
 
+        showMapShortcut.clear();
+        actionShow_Map->setShortcut(showMapKeySequence);
+
+        inputLineShortcut.clear();
+        dactionInputLine->setShortcut(inputLineKeySequence);
+
+        optionsShortcut.clear();
+        dactionOptions->setShortcut(optionsKeySequence);
+
+        notepadShortcut.clear();
+        dactionNotepad->setShortcut(notepadKeySequence);
+
+        packagesShortcut.clear();
+        actionPackage_manager->setShortcut(packagesKeySequence);
+
+        modulesShortcut.clear();
+        actionModule_manager->setShortcut(modulesKeySequence);
+
+        multiViewShortcut.clear();
+        dactionMultiView->setShortcut(multiViewKeySequence);
+
+        connectShortcut.clear();
+        dactionConnect->setShortcut(connectKeySequence);
+
+        disconnectShortcut.clear();
+        dactionDisconnect->setShortcut(disconnectKeySequence);
+
+        reconnectShortcut.clear();
+        dactionReconnect->setShortcut(reconnectKeySequence);
+    }
 }
 
 void mudlet::show_help_dialog()

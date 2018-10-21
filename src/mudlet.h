@@ -495,7 +495,27 @@ private:
     QPointer<QToolBar> mpToolBarReplay;
 
     QPointer<QShortcut> triggersShortcut;
+    QPointer<QShortcut> showMapShortcut;
+    QPointer<QShortcut> inputLineShortcut;
+    QPointer<QShortcut> optionsShortcut;
+    QPointer<QShortcut> notepadShortcut;
+    QPointer<QShortcut> packagesShortcut;
+    QPointer<QShortcut> modulesShortcut;
+    QPointer<QShortcut> multiViewShortcut;
+    QPointer<QShortcut> connectShortcut;
+    QPointer<QShortcut> disconnectShortcut;
+    QPointer<QShortcut> reconnectShortcut;
     QKeySequence triggersKeySequence;
+    QKeySequence showMapKeySequence;
+    QKeySequence inputLineKeySequence;
+    QKeySequence optionsKeySequence;
+    QKeySequence notepadKeySequence;
+    QKeySequence packagesKeySequence;
+    QKeySequence modulesKeySequence;
+    QKeySequence multiViewKeySequence;
+    QKeySequence connectKeySequence;
+    QKeySequence disconnectKeySequence;
+    QKeySequence reconnectKeySequence;
 
     void check_for_mappingscript();
 
