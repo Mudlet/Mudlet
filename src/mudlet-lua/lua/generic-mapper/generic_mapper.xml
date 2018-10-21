@@ -18,7 +18,7 @@
 			<regexCodeList>
 				<string>^\s*\[\s*[Ee]xits:\s*(.*)\]</string>
 				<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
-				<string>^\[?\s*(?:[Vv]isible|[Oo]bvious) [Ee]xit[s]?(?: is| are)?:?\s*(.*)\]?</string>
+				<string>^\[?\s*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
 				<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>
 				<string>Exits:\s*(.*)</string>
 				<string>There are no obvious exits.</string>
@@ -282,6 +282,13 @@ end</script>
 				<packageName></packageName>
 				<regex>^map window (x|y|w|h|origin|shown)(?: ([\w%]+))?</regex>
 			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Translate Config Alias</name>
+				<script>map.setConfigs("lang_dirs", {matches[3], matches[4]}, matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map translate (\w+) (\w+) (\w+)$</regex>
+			</Alias>
 		</AliasGroup>
 		<AliasGroup isActive="yes" isFolder="yes">
 			<name>Information Aliases</name>
@@ -490,8 +497,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 10/15/2018
--- v2.0.7
+-- 10/21/2018
+-- v2.0.9
 --
 
     -- look into options for non-standard door usage for speedwalk
@@ -551,6 +558,9 @@ map.help = {[[
             given, or sets it to the given value
         &lt;yellow&gt;map window &lt;configuration&gt; &lt;value&gt;&lt;reset&gt; - Sets the given configuration for
             the map window to the given value
+        &lt;yellow&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;
+            &lt;translated short direction&gt;&lt;reset&gt; - Sets the provided translations for
+            the given english direction word.
 
     &lt;cyan&gt;Mapping Commands:&lt;reset&gt;
         These are commands used in the process of actually creating a map
@@ -928,96 +938,118 @@ map.help.recall = [[
         is stored in map.save.recall[map.character], and is remembered between
         sessions.
 ]]
-map.help.configs = [[
-    &lt;cyan&gt;Map Configs&lt;reset&gt;
+map.help.config = [[
+    &lt;cyan&gt;Map Config&lt;reset&gt;
+        syntax: &lt;yellow&gt;map config &lt;setting&gt; &lt;optional value&gt;&lt;reset&gt;
 
-    This is a list of all available configurations found in the map.configs
-        table, what options are available for them, and what each one does.
+        This command changes any of the available configurations listed below.
+        If no value is given, and the setting is either 'on' or 'off', then the
+        value is switched. When naming a setting, spaces can be used in place of
+        underscores. Details of what options are available and what each one
+        does are provided.
 
-    &lt;yellow&gt;speedwalk_delay&lt;reset&gt; - When using the speedwalk function of the script, this
-        is the amount of time the script waits after either sending a command
-        or, if speedwalk_wait is set, after arriving in a new room, before
-        the next command is sent. This may be any number 0 or higher.
+        &lt;yellow&gt;speedwalk_delay&lt;reset&gt; - When using the speedwalk function of the script,
+            this is the amount of time the script waits after either sending
+            a command or, if speedwalk_wait is set, after arriving in a new
+            room, before the next command is sent. This may be any number 0
+            or higher.
 
-    &lt;yellow&gt;speedwalk_wait&lt;reset&gt; - When using the speedwalk function of the script, this
-        indicates if the script waits for your character to move into a new
-        room before sending the next command. This may be true or false.
+        &lt;yellow&gt;speedwalk_wait&lt;reset&gt; - When using the speedwalk function of the script,
+            this indicates if the script waits for your character to move
+            into a new room before sending the next command. This may be true
+            or false.
 
-    &lt;yellow&gt;speedwalk_random&lt;reset&gt; - When using the speedwalk function of the script with a
-        speedwalk_delay value, introduces a randomness to the wait time by
-        adding some amount up to the speedwalk_delay value. This may be true
-        or false.
+        &lt;yellow&gt;speedwalk_random&lt;reset&gt; - When using the speedwalk function of the script
+            with a speedwalk_delay value, introduces a randomness to the wait
+            time by adding some amount up to the speedwalk_delay value. This
+            may be true or false.
 
-    &lt;yellow&gt;stretch_map&lt;reset&gt; - When adding a new room that would overlap an existing room,
-        if this is set the map will stretch out to prevent the overlap, with
-        all rooms further in the direction moved getting pushed one further
-        in that direction. This may be true or false.
+        &lt;yellow&gt;stretch_map&lt;reset&gt; - When adding a new room that would overlap an existing
+            room, if this is set the map will stretch out to prevent the
+            overlap, with all rooms further in the direction moved getting
+            pushed one further in that direction. This may be true or false.
 
-    &lt;yellow&gt;max_search_distance&lt;reset&gt; - When mapping, this is the maximum number of rooms
-        that the script will search in the movement direction for a matching
-        room before deciding to create a new room. This may be false, or any
-        positive whole number. This can also be set to 0, which is the same
-        as setting it to false.
+        &lt;yellow&gt;max_search_distance&lt;reset&gt; - When mapping, this is the maximum number of
+            rooms that the script will search in the movement direction for a
+            matching room before deciding to create a new room. This may be
+            false, or any positive whole number. This can also be set to 0,
+            which is the same as setting it to false.
 
-    &lt;yellow&gt;search_on_look&lt;reset&gt; - When this is set, using the "look" command causes the
-        map to verify your position using the room name and exits seen
-        following using the command. This may be true or false.
+        &lt;yellow&gt;search_on_look&lt;reset&gt; - When this is set, using the "look" command causes
+            the map to verify your position using the room name and exits
+            seen following using the command. This may be true or false.
 
-    &lt;yellow&gt;clear_lines_on_send&lt;reset&gt; - When this is set, any time a command is sent, any
-        lines stored from the game used to search for the room name are
-        cleared. This may be true or false.
+        &lt;yellow&gt;clear_lines_on_send&lt;reset&gt; - When this is set, any time a command is sent,
+            any lines stored from the game used to search for the room name
+            are cleared. This may be true or false.
 
-    &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and may be "simple",
-        "normal", or "complex".
+        &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and may be
+            "simple", "normal", or "complex".
 
-    &lt;yellow&gt;download_path&lt;reset&gt; - This is the path that updates are downloaded from. This
-        may be any web address where the versions.lua and generic_mapper.xml
-        files can be downloaded from.
+        &lt;yellow&gt;download_path&lt;reset&gt; - This is the path that updates are downloaded from.
+            This may be any web address where the versions.lua and
+            generic_mapper.xml files can be downloaded from.
 
-    &lt;yellow&gt;prompt_test_patterns&lt;reset&gt; - This is a table of default patterns checked when
-        using the "find prompt" command. The patterns in this table should
-        start with a '^', and be written to be used with the Lua string
-        library. Most importantly, '%' is used as the escape character
-        instead of '\' as in trigger regex patterns.
+        &lt;yellow&gt;prompt_test_patterns&lt;reset&gt; - This is a table of default patterns checked
+            when using the "find prompt" command. The patterns in this table
+            should start with a '^', and be written to be used with the Lua
+            string library. Most importantly, '%' is used as the escape
+            character instead of '\' as in trigger regex patterns.
 
-    &lt;yellow&gt;custom_exits&lt;reset&gt; - This is a table of custom exit directions and their
-        relevant extra pieces of info. Each entry should have the short
-        direction as the keyword for a table containing first the long
-        direction, then the long direction of the reverse of this direction,
-        and then the x, y, and z change in map position corresponding to the
-        movement. As an example: us = {'upsouth', 'downnorth', 0, -1, 1}
+        &lt;yellow&gt;custom_exits&lt;reset&gt; - This is a table of custom exit directions and their
+            relevant extra pieces of info. Each entry should have the short
+            direction as the keyword for a table containing first the long
+            direction, then the long direction of the reverse of this
+            direction, and then the x, y, and z change in map position
+            corresponding to the movement. As an example: us = {'upsouth',
+            'downnorth', 0, -1, 1}
 
-    &lt;yellow&gt;use_lang_dirs&lt;reset&gt; - When this is set, the lang_dirs table is used to
-        translate movement commands in some other language into the English
-        used by the script. This may be true or false.
+        &lt;yellow&gt;use_lang_dirs&lt;reset&gt; - When this is set, the lang_dirs table is used to
+            translate movement commands in some other language into the
+            English used by the script. This may be true or false.
 
-    &lt;yellow&gt;lang_dirs&lt;reset&gt; - This is a table of movement command translations, with each
-        entry having the key in the original language, and the corresponding
-        English command as the value. There should be both a short and long
-        entry for each command.
+        &lt;yellow&gt;debug&lt;reset&gt; - When this is set, the script will start in debug mode. This
+            may be true or false.
+]]
+map.help.window = [[
+    &lt;yellow&gt;Map Window&lt;reset&gt;
+        syntax: &lt;yellow&gt;map window &lt;setting&gt; &lt;value&gt;&lt;reset&gt;
 
-    &lt;yellow&gt;debug&lt;reset&gt; - When this is set, the script will start in debug mode. This may
-        be true or false.
+        This command changes any of the available configurations listed below,
+        which determine the appearance and positioning of the map window when
+        the 'map show' command is used. Details of what options are available
+        and what each one does are provided.
 
-    &lt;yellow&gt;map_window&lt;reset&gt; - This is a table containing a number of different
-        configuration options related to the map window generated when the
-        "map show" command is used, which are detailed below.
-
-        &lt;cyan&gt;x&lt;reset&gt; - This is the x position of the map window, and should be a
+        &lt;yellow&gt;x&lt;reset&gt; - This is the x position of the map window, and should be a
             positive number of pixels or a percentage of the screen width.
-        &lt;cyan&gt;y&lt;reset&gt; - This is the y position of the map window, and should be a
+
+        &lt;yellow&gt;y&lt;reset&gt; - This is the y position of the map window, and should be a
             positive number of pixels or a percentage of the screen height.
-        &lt;cyan&gt;w&lt;reset&gt; - This is the width of the map window, and should be a positive
+
+        &lt;yellow&gt;w&lt;reset&gt; - This is the width of the map window, and should be a positive
             number of pixels or a percentage of the screen width.
-        &lt;cyan&gt;h&lt;reset&gt; - This is the height of the map window, and should be a positive
+
+        &lt;yellow&gt;h&lt;reset&gt; - This is the height of the map window, and should be a positive
             number of pixels or a percentage of the screen height.
-        &lt;cyan&gt;origin&lt;reset&gt; - This is the corner from which the window position is
+
+        &lt;yellow&gt;origin&lt;reset&gt; - This is the corner from which the window position is
             measured, and may be 'topright', 'topleft', 'bottomright', or
             'bottomleft'.
-        &lt;cyan&gt;shown&lt;reset&gt; - This determines if the map window is shown immediately upon
+
+        &lt;yellow&gt;shown&lt;reset&gt; - This determines if the map window is shown immediately upon
             connecting to the game. This may be true or false. If you intend
             to have some other script control the map window, this should be
             set to false.
+]]
+map.help.translate = [[
+    &lt;yellow&gt;Map Translate&lt;reset&gt;
+        syntax: &lt;yellow&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;
+            &lt;translated short direction&gt;&lt;reset&gt;
+
+        This command sets direction translations for the script to use, either
+        for commands entered to move around, or listed exits the game shows when
+        you enter a room. Available directions: north, south, east, west,
+        northwest, northeast, southwest, southeast, up, down, in, and out.
 ]]
 map.help.quick_start = [[
     MAP BASICS (Quick Start Guide)
@@ -1153,7 +1185,7 @@ local function config()
         end
     setmetatable(map, mt)
     map.set("mode", configs.mode)
-    map.set("version", "2.0.7")
+    map.set("version", "2.0.9")
 
     local saves = {}
     table.load(profilePath.."/map downloads/map_save.dat",saves)
@@ -1223,9 +1255,13 @@ function map.setConfigs(key, val, sub_key)
                 map.echo("Unknown map config.",false, true)
             end
         elseif key =="lang_dirs" then
-            if lang_dirs[sub_key] then
-                lang_dirs[sub_key] = val
-                map.echo(string.format("Direction %s now interpreted as %s.", val, sub_key))
+            sub_key = exitmap[sub_key] or sub_key
+            if map.configs.lang_dirs[sub_key] then
+                local long_dir, short_dir = val[1],val[2]
+                if #long_dir &lt; #short_dir then long_dir, short_dir = short_dir, long_dir end
+                map.configs.lang_dirs[sub_key] = long_dir
+                map.configs.lang_dirs[short[sub_key]] = short_dir
+                map.echo(string.format("Direction %s, abbreviated as %s, now interpreted as %s.", long_dir, short_dir, sub_key))
             else
                 map.echo("Invalid direction.", false, true)
             end
