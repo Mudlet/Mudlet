@@ -7204,22 +7204,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2402"/>
       <source>Don&apos;t hide small icon or tooltip</source>
-      <translation>Kleines Symbol oder Tooltipp nicht verstecken</translation>
+      <translation>Tooltipp und kleines Symbol einblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
       <source>Hide small icon tooltip</source>
-      <translation>Tooltip am kleinen Symbol verstecken</translation>
+      <translation>Tooltip am kleinen Symbol ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2412"/>
       <source>Hide small icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Tooltipp und kleines Symbol ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2420"/>
       <source>Hide timer</source>
-      <translation type="unfinished"/>
+      <translation>Timer ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2430"/>
@@ -7237,17 +7237,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2459"/>
       <source>Don&apos;t hide large icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Tooltipp und großes Symbol einblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2464"/>
       <source>Hide large icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Tooltip am großen Symbol ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2469"/>
       <source>Hide large icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Tooltipp und großes Symbol ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2477"/>
@@ -7257,7 +7257,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2480"/>
       <source>Enable Lua API</source>
-      <translation type="unfinished"/>
+      <translation>Lua API aktivieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2501"/>
@@ -7267,27 +7267,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2514"/>
       <source> # </source>
-      <translation type="unfinished"/>
+      <translation> # </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2533"/>
       <source>9999;#</source>
-      <translation type="unfinished"/>
+      <translation>9999;#</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2548"/>
       <source>Hide state</source>
-      <translation type="unfinished"/>
+      <translation>Zustand ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2555"/>
       <source>Hide party details</source>
-      <translation type="unfinished"/>
+      <translation>Gruppendetails ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2562"/>
       <source>Hide detail</source>
-      <translation type="unfinished"/>
+      <translation>Detail ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2572"/>
