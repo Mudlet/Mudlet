@@ -80,7 +80,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
     checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
-
+    checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
@@ -209,6 +209,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_setTreeIconSize, this, &dlgProfilePreferences::slot_setTreeWidgetIconSize);
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
+    connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
 
     generateDiscordTooltips();
 
@@ -2210,21 +2211,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
-    pMudlet->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
+    pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
 
     mudlet::self()->mDiscord.UpdatePresence();
-
-    mudlet::self()->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
-    switch (checkBox_showIconsOnMenus->checkState()) {
-    case Qt::Unchecked:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
-        break;
-    case Qt::Checked:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
-        break;
-    case Qt::PartiallyChecked:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mudlet::self()->mShowIconsOnMenuOriginally);
-    }
 
     close();
 }
@@ -3166,6 +3155,13 @@ void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsV
         if (comboBox_toolBarVisibility->currentIndex() != 2) {
             comboBox_toolBarVisibility->setCurrentIndex(2);
         }
+    }
+}
+
+void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState state)
+{
+    if (checkBox_showIconsOnMenus->checkState() != state) {
+        checkBox_showIconsOnMenus->setCheckState(state);
     }
 }
 
