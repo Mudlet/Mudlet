@@ -2864,7 +2864,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2441"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>Discord Integration aktivieren (nicht unterstützt durch dieses Spiel)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2370"/>
@@ -3965,37 +3965,37 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgProfilePreferences.cpp" line="2934"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>Großes Symbol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2935"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>Detail</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2937"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>Kleines Symbol</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2938"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>Zustand</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2940"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
-      <translation type="unfinished"/>
+      <translation>Gruppengröße</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2941"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
-      <translation type="unfinished"/>
+      <translation>Maximale Gruppengröße</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2942"/>
@@ -7199,17 +7199,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2395"/>
       <source>Discord privacy</source>
-      <translation type="unfinished"/>
+      <translation>Discord Privatsphäre</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2402"/>
       <source>Don&apos;t hide small icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Kleines Symbol oder Tooltipp nicht verstecken</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
       <source>Hide small icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Tooltip am kleinen Symbol verstecken</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2412"/>
@@ -7227,12 +7227,12 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2511"/>
       <location filename="../src/ui/profile_preferences.ui" line="2527"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet wird Informationen zur Rich Presence nur zeigen, während du diesen Discord Benutzernamen benutzt (hilfreich, falls du mehrere Discord Konten hast). Leer lassen, um sie für jedes eingeloggtes Discord Konto anzuzeigen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2448"/>
       <source>Restrict to:</source>
-      <translation type="unfinished"/>
+      <translation>Beschränken auf:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2459"/>
@@ -7252,7 +7252,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2477"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Erlaube Lua, den Status des Discord zu setzen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2480"/>
@@ -7262,7 +7262,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2501"/>
       <source>specific Discord username</source>
-      <translation type="unfinished"/>
+      <translation>bestimmter Discord-Benutzername</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2514"/>
