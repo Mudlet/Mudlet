@@ -2227,7 +2227,7 @@ set one area&apos;s name to that of another that exists at the time.</source>
       <location filename="../src/TRoomDB.cpp" line="1241"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 将区域 &quot;%1&quot; 编号设置为保留区域号-1.</translation>
     </message>
   </context>
   <context>
@@ -2265,7 +2265,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1275"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>点此恢复主菜单以获取对控件的访问.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1277"/>
@@ -2275,22 +2275,22 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1280"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>点此恢复主工具栏以获取对控件的访问.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1338"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, 调试控制台提取内容</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1343"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 迷你控制台提取内容, 来自 %2 配置文件</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1349"/>
       <source>Mudlet, %1 console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 控制台提取内容, 来自 %2 配置文件</translation>
     </message>
   </context>
   <context>
@@ -2299,13 +2299,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1009"/>
       <source>Trigger name=%1 expired.
 </source>
-      <translation type="unfinished"/>
+      <translation>触发器名称=%1 过期了.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1012"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>触发器名称=%1 将被触发 %n 次.
+</numerusform>
+      </translation>
     </message>
   </context>
   <context>
