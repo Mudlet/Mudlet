@@ -2399,47 +2399,47 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;为你的按钮, 菜单或工具栏选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在按钮树上. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
       <source>Button Bar Properties</source>
-      <translation type="unfinished"/>
+      <translation>按钮栏属性</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>列数/行数(按排列方向):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>水平方向</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="155"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>垂直方向</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation>停靠区域顶部</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="175"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>停靠区域左侧</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
       <source>Dock Area Right</source>
-      <translation type="unfinished"/>
+      <translation>停靠区域右侧</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
       <source>Floating Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>浮动工具栏</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
