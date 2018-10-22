@@ -154,16 +154,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
 
-    checkBox_showIconsOnMenus->setCheckState(mudlet::self()->mShowIconsOnMenuCheckedState);
-    checkBox_showIconsOnMenus->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                          .arg("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
-                                               "shown icons on menus, others, however do not. This control allows the user to override "
-                                               "the setting, if needed, as follows:"
-                                               "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
-                                               "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
-                                               "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
-                                               "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                               "propogate everywhere until Mudlet is restarted.</i></p>"));
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
     widget_timerDebugOutputMinimumInterval->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
