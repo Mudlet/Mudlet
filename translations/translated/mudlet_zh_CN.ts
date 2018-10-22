@@ -2335,7 +2335,10 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 对不起, 正在读取的文件：
+&quot;%1&quot;
+的版本号(%2) 表明它来自更高的Mudlet版本，
+当前版本的Mudlet无法读取它, 你需要更新Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="352"/>
