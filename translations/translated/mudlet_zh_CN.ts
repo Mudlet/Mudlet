@@ -2449,12 +2449,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>按钮旋转:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
       <source>no rotation</source>
-      <translation type="unfinished"/>
+      <translation>不旋转</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
@@ -2469,7 +2469,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
       <source>Push down button</source>
-      <translation type="unfinished"/>
+      <translation>下拉按钮</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
