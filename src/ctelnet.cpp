@@ -1242,8 +1242,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
     }
     data.remove('\n');
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
-    // testing to see why the replacement seems to not have worked.
-    data.replace(QStringLiteral("\27"), QStringLiteral("-TEST-"));
+    // trying a different way of declaring the string being searched for, to see if that is responsible for the failure
+    data.replace('\27', QStringLiteral("\\u001B"));
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar('\r'));
 
