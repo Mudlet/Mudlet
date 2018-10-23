@@ -156,12 +156,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
-    widget_timerDebugOutputMinimumInterval->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                         .arg(tr("<p>A timer will a short interval will quickly fill up the <i>Central Debug Console</i> "
-                                                                 "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
-                                                                 "control adjusts a threshold that will hide those messages in just that window for those timers which "
-                                                                 "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
-                                                                 "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>")));
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer will a short interval will quickly fill up the <i>Central Debug Console</i> "
+                                                          "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
+                                                          "control adjusts a threshold that will hide those messages in just that window for those timers which "
+                                                          "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
+                                                          "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
 
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
                                                                  "map and whether they can be drawn using just the specifed font, any other "
