@@ -512,8 +512,8 @@ mudlet::mudlet()
     notepadKeySequence = QKeySequence(Qt::CTRL | Qt::Key_N);
     packagesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_I);
     modulesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_O);
-    multiViewKeySequence = QKeySequence(Qt::CTRL | Qt::Key_V);
-    connectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_C);
+    multiViewKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V);
+    connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
 #else
