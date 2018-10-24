@@ -143,7 +143,7 @@ void mudlet::loadLanguagesMap()
             {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"pt_PT", make_pair(tr("Portugese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"pt_PT", make_pair(tr("Portuguese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
     };
 
     QFile file(QStringLiteral(":/translation-stats.json"));
