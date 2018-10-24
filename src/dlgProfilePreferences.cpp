@@ -710,8 +710,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
         ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
         ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
-        ssl_alternate_names->setText("");
-
         checkBox_self_signed->setStyleSheet("");
         checkBox_expired->setStyleSheet("");
         ssl_issuer_label->setStyleSheet("");
@@ -772,10 +770,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 #endif
 
-    checkBox_ssl->setChecked((Qt::CheckState)pHost->mSslTsl);
-    checkBox_self_signed->setChecked((Qt::CheckState)pHost->mSslIgnoreSelfSigned);
-    checkBox_expired->setChecked((Qt::CheckState)pHost->mSslIgnoreExpired);
-    checkBox_ignore_all->setChecked((Qt::CheckState)pHost->mSslIgnoreAll);
+    checkBox_ssl->setChecked(pHost->mSslTsl);
+    checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
+    checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
+    checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:

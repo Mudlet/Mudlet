@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>733</width>
-    <height>803</height>
+    <width>747</width>
+    <height>808</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -84,7 +84,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>7</number>
+      <number>8</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -2732,16 +2732,6 @@
           <string>SSL</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_30">
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox_ignore_all">
-            <property name="toolTip">
-             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
-            </property>
-            <property name="text">
-             <string>Ignore All Ssl Errors       !! DANGEROUS !!</string>
-            </property>
-           </widget>
-          </item>
           <item row="4" column="0" colspan="2">
            <widget class="QFrame" name="notificationArea">
             <property name="sizePolicy">
@@ -4675,7 +4665,7 @@
              <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
             </property>
             <property name="text">
-             <string>Accept Self Signed Certificates</string>
+             <string>Accept self-signed certificates</string>
             </property>
            </widget>
           </item>
@@ -4685,7 +4675,7 @@
              <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
             </property>
             <property name="text">
-             <string>Accept Expired Certificates</string>
+             <string>Accept expired certificates</string>
             </property>
            </widget>
           </item>
@@ -4695,7 +4685,7 @@
              <string extracomment="Enable SSL / TLS for this game"/>
             </property>
             <property name="text">
-             <string>Secure Connection</string>
+             <string>Secure connection</string>
             </property>
            </widget>
           </item>
@@ -4710,21 +4700,39 @@
             <property name="title">
              <string>Certificate</string>
             </property>
-            <layout class="QGridLayout" name="gridLayout_16" columnstretch="0,3,0,0">
-             <item row="3" column="0">
-              <widget class="QLabel" name="label_3">
+            <layout class="QGridLayout" name="gridLayout_16" columnstretch="0,1,0,0">
+             <item row="2" column="1" colspan="3">
+              <widget class="QLabel" name="ssl_expires_label">
                <property name="text">
-                <string>Expires:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                <string/>
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_2">
+             <item row="1" column="1" colspan="3">
+              <widget class="QLabel" name="ssl_issued_label">
                <property name="text">
-                <string>Issued to:</string>
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1" colspan="3">
+              <widget class="QLabel" name="ssl_issuer_label">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1" colspan="3">
+              <widget class="QLabel" name="ssl_serial_label">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_7">
+               <property name="text">
+                <string>Serial:</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -4744,10 +4752,10 @@
                </property>
               </widget>
              </item>
-             <item row="4" column="0">
-              <widget class="QLabel" name="label_7">
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_2">
                <property name="text">
-                <string>Serial:</string>
+                <string>Issued to:</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -4755,48 +4763,26 @@
               </widget>
              </item>
              <item row="2" column="0">
-              <widget class="QLabel" name="label_4">
+              <widget class="QLabel" name="label_3">
                <property name="text">
-                <string>Alternates:</string>
+                <string>Expires:</string>
                </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QLabel" name="ssl_alternate_names">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_serial_label">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_issuer_label">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_issued_label">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_expires_label">
-               <property name="text">
-                <string/>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                </property>
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_ignore_all">
+            <property name="toolTip">
+             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
+            </property>
+            <property name="text">
+             <string>Accept all certificate errors       (unsecure)</string>
+            </property>
            </widget>
           </item>
          </layout>

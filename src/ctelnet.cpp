@@ -381,6 +381,11 @@ void cTelnet::handle_socket_signal_connected()
 
 void cTelnet::handle_socket_signal_disconnected()
 {
+    QString reason;
+    QString spacer = "    ";
+    bool sslerr = false;
+
+
     postData();
 
     emit signal_disconnected(mpHost);
@@ -395,18 +400,31 @@ void cTelnet::handle_socket_signal_disconnected()
     msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
     reset();
-    QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
-    QString spacer = "    ";
-#if !defined(QT_NO_SSL)
-    bool sslerr = (!socket.sslErrors().empty() || (socket.error() == QAbstractSocket::SslHandshakeFailedError) || (socket.error() == QAbstractSocket::SslInvalidUserDataError)
-                   || (socket.error() == QAbstractSocket::QAbstractSocket::SslInternalError));
-    if (sslerr) {
-        mDontReconnect = true;
-    }
-#endif
+
     if (!mpHost->mIsGoingDown) {
         postMessage(spacer);
-        postMessage(err);
+
+#if !defined(QT_NO_SSL)
+        QString errlist = "";
+        QList<QSslError> sslErrors = getSslErrors();
+
+        sslerr = ((sslErrors.count() > 1 && !mpHost->mSslIgnoreAll) || ((sslErrors.at(0) == QSslError::CertificateExpired) && !mpHost->mSslIgnoreExpired)
+                  || ((sslErrors.at(0) == QSslError::SelfSignedCertificate) && !mpHost->mSslIgnoreSelfSigned));
+
+        if (sslerr) {
+            mDontReconnect = true;
+
+            for (int a = 0; a < sslErrors.count(); a++) {
+                errlist.append(QString("        %1\n").arg(QString(sslErrors.at(a).errorString())));
+            }
+            QString err = "[ ALERT ] - Socket got disconnected.\nReason: \n" % errlist;
+            postMessage(err);
+        } else
+#endif
+        {
+            QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
+            postMessage(err);
+        }
         postMessage(msg);
     }
 
