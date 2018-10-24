@@ -942,7 +942,7 @@ if rex then
             out(win, v) else out(v)
           end
           if func == 'insertText' then
-            moveCursor(window or "main", getColumnNumber() + string.len(v), getLineNumber())
+            moveCursor(win or "main", getColumnNumber() + string.len(v), getLineNumber())
           end
         else
           -- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
