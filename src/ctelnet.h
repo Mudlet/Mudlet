@@ -138,6 +138,7 @@ public:
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
     const QString& getFriendlyEncoding();
+    void requestDiscordInfo();
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -163,6 +164,12 @@ public slots:
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
+
+signals:
+    // Intended to signal status changes for other parts of application
+    void signal_connecting(Host*);
+    void signal_connected(Host*);
+    void signal_disconnected(Host*);
 
 
 private:

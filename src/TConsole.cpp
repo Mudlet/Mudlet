@@ -396,7 +396,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
     logButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Start logging MUD output to log file.")));
+        tr("Start logging game output to log file.")));
     QIcon logIcon;
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
@@ -407,7 +407,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     networkLatency->setSizePolicy(sizePolicy4);
     networkLatency->setFocusPolicy(Qt::NoFocus);
     networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("<i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br>"
+        tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds), <br>"
            "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
     networkLatency->setMaximumSize(120, 30);
     networkLatency->setMinimumSize(120, 30);
@@ -946,7 +946,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                       << mpHost->mFgColor.red() << "," << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue()
                       << "); background-color:rgb("
                       << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
-            logStream << "        span { white-space: pre; } -->\n";
+            logStream << "        span { white-space: pre-wrap; } -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
             bool isAtBody = false;
@@ -1001,7 +1001,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         }
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Stop logging MUD output to log file.</p>")));
+                              .arg(tr("<p>Stop logging game output to log file.</p>")));
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
@@ -1019,7 +1019,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         mLogFile.flush();
         mLogFile.close();
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Start logging MUD output to log file.</p>")));
+                              .arg(tr("<p>Start logging game output to log file.</p>")));
     }
 }
 
@@ -1355,12 +1355,15 @@ void TConsole::hideEvent(QHideEvent* event)
 void TConsole::reset()
 {
     deselect();
-    mFormatCurrent.bgR = mStandardFormat.bgR;
-    mFormatCurrent.bgG = mStandardFormat.bgG;
-    mFormatCurrent.bgB = mStandardFormat.bgB;
-    mFormatCurrent.fgR = mStandardFormat.fgR;
-    mFormatCurrent.fgG = mStandardFormat.fgG;
-    mFormatCurrent.fgB = mStandardFormat.fgB;
+    auto& mBgColor = mpHost->mBgColor;
+    auto& mFgColor = mpHost->mFgColor;
+
+    mFormatCurrent.bgR = mBgColor.red();
+    mFormatCurrent.bgG = mBgColor.green();
+    mFormatCurrent.bgB = mBgColor.blue();
+    mFormatCurrent.fgR = mFgColor.red();
+    mFormatCurrent.fgG = mFgColor.green();
+    mFormatCurrent.fgB = mFgColor.blue();
     mFormatCurrent.flags &= ~(TCHAR_BOLD);
     mFormatCurrent.flags &= ~(TCHAR_ITALICS);
     mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
@@ -2570,16 +2573,16 @@ void TConsole::printSystemMessage(const QString& msg)
         bgColor = mpHost->mBgColor;
     }
 
-    QString txt = QString("System Message: ") + msg;
+    QString txt = tr("System message: %1").arg(msg);
     buffer.append(txt,
                   0,
                   txt.size(),
                   mSystemMessageFgColor.red(),
                   mSystemMessageFgColor.green(),
                   mSystemMessageFgColor.blue(),
-                  mSystemMessageBgColor.red(),
-                  mSystemMessageBgColor.green(),
-                  mSystemMessageBgColor.blue(),
+                  bgColor.red(),
+                  bgColor.green(),
+                  bgColor.blue(),
                   false,
                   false,
                   false,
