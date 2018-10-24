@@ -497,8 +497,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 10/21/2018
--- v2.0.9
+-- 10/24/2018
+-- v2.0.10
 --
 
     -- look into options for non-standard door usage for speedwalk
@@ -1147,9 +1147,11 @@ local mt = getmetatable(map) or {}
 local function config()
     local defaults = map.defaults
     local configs = map.configs or {}
+    local path = profilePath.."/map downloads"
+    if not io.exists(path) then lfs.mkdir(path) end
     -- load stored configs from file if it exists
-    if io.exists(profilePath.."/map downloads/configs.lua") then
-        table.load(profilePath.."/map downloads/configs.lua",configs)
+    if io.exists(path.."/configs.lua") then
+        table.load(path.."/configs.lua",configs)
     end
     -- overwrite default values with stored config values
     configs = table.update(defaults, configs)
@@ -1185,10 +1187,15 @@ local function config()
         end
     setmetatable(map, mt)
     map.set("mode", configs.mode)
-    map.set("version", "2.0.9")
+    map.set("version", "2.0.10")
 
     local saves = {}
-    table.load(profilePath.."/map downloads/map_save.dat",saves)
+    if io.exists(path.."/map_save.dat") then
+        table.load(path.."/map_save.dat",saves)
+    end
+    saves.prompt_pattern = saves.prompt_pattern or {}
+    saves.ignore_patterns = saves.ignore_patterns or {}
+    saves.recall = saves.recall or {}
     map.save = saves
 
     if map.configs.map_window.shown then
@@ -1675,7 +1682,7 @@ local function move_map()
             force_portal = false
         elseif move == "recall" and map.save.recall[map.character] then
             set_room(map.save.recall[map.character])
-        elseif move == "look" and not check_room(map.currentRoom, map.currentName, map.currentExits) then
+        elseif move == "look" and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
             -- this check isn't working as intended, find out why
             map.find_me(map.currentName,map.currentExits)
         else
@@ -1781,17 +1788,16 @@ local function find_area(name)
 end
 
 function map.load_map(address)
-    local path, file = profilePath .. "/map downloads", "/map.dat"
-    if not io.exists(path) then lfs.mkdir(path) end
+    local path = profilePath .. "/map downloads/map.dat"
     if not address then
-        loadMap(path .. file)
+        loadMap(path)
         map.echo("Map reloaded from local copy.")
     else
         if not string.match(address,"/[%a_]+%.dat$") then
             address = address .. "/map.dat"
         end
         downloading = true
-        downloadFile(path .. file, address)
+        downloadFile(path, address)
         map.echo(string.format("Downloading map file from: %s.",address))
     end
 end
@@ -2146,6 +2152,9 @@ function map.find_me(name, exits, dir)
     local check = dir and map.currentRoom and table.contains(exitmap,dir)
     name = name or map.currentName
     exits = exits or map.currentExits
+    if not name and not exits then
+        map.echo("Room not found, complete room name and exit data not available.",false,true)
+    end
     local rooms = find_room(name)
     local match_IDs = {}
     for k,v in pairs(rooms) do
@@ -2392,9 +2401,18 @@ function map.echoAreaList()
     cecho(string.format("&lt;%s&gt;Total amount of rooms in this map: %s\n", listcolor, totalroomcount))
 end
 
+function map.search_timer_check()
+    if find_prompt then
+        map.echo("Prompt not auto-detected, use 'map prompt' to set a prompt pattern.",false,true)
+        find_prompt = false
+    end
+end
+
 function map.find_prompt()
     find_prompt = true
     map.echo("Searching for prompt.")
+    send("\n", false)
+    tempTimer(5, "map.search_timer_check()")
 end
 
 function map.make_prompt_pattern(str)
@@ -2592,7 +2610,6 @@ function map.checkVersion()
     end
     if not map.update_waiting and map.configs.download_path ~= "" then
         local path, file = profilePath .. "/map downloads", "/versions.lua"
-        if not io.exists(path) then lfs.mkdir(path) end
         downloading = true
         downloadFile(path .. file, map.configs.download_path .. file)
         map.update_waiting = true
@@ -2610,7 +2627,6 @@ end
 
 function map.updateVersion()
     local path, file = profilePath .. "/map downloads", "/generic_mapper.xml"
-    if not io.exists(path) then lfs.mkdir(path) end
     downloading = true
     downloadFile(path .. file, map.configs.download_path .. file)
 end
