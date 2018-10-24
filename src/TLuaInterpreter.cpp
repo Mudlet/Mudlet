@@ -2879,7 +2879,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 {
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "hideUserWindow: wrong argument type");
+        lua_pushstring(L, "hideWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -3659,7 +3659,7 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
 {
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "showUserWindow: wrong argument type");
+        lua_pushstring(L, "showWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -5078,7 +5078,7 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, host.getName()));
+    QString nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
