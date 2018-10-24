@@ -241,7 +241,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(registerTelnetURI, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setURIMudlet);
 
 #if defined(Q_OS_WIN)
-    registerTelnetURI->setEnabled(false);
+    //registerTelnetURI->setEnabled(false);
+
 #elif defined(Q_OS_LINUX)
     registerTelnetURI->setEnabled(true);
 #elif defined(Q_OS_FREEBSD)

@@ -377,6 +377,8 @@ public:
     // as well as encourage translators to maintain it;
     const int mTranslationStar = 95;
 
+    QString mCMDLineURI;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();

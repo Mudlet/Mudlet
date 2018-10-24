@@ -68,9 +68,10 @@ static void pcre_free_dbg(void* ptr)
 
 #endif // _DEBUG && _MSC_VER
 
-QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& action)
+QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& action, QString &uri)
 {
     action = 0;
+
 
 // A crude and simplistic commandline options processor - note that Qt deals
 // with its options automagically!
@@ -109,6 +110,11 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
             if (tolower(argument) == 'q') {
                 action |= 4;
             }
+        } else {
+            // is uri
+            uri = QString(argv[i]);
+            //std::cout << "command line URI:";
+            //std::cout << argv[i];
         }
     }
 
@@ -132,6 +138,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 #endif
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
     }
+
 }
 
 #if defined(INCLUDE_FONTS)
@@ -187,13 +194,13 @@ int main(int argc, char* argv[])
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
-
-    QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
+    QString uri;
+    QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction, uri));
     auto * app = qobject_cast<QApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-	QStringList texts;
+    QStringList texts;
     if (startupAction & 2) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
@@ -500,6 +507,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
 
+    mudlet::self()->mCMDLineURI = uri;
     mudlet::self()->startAutoLogin();
 
 #if defined(INCLUDE_UPDATER)

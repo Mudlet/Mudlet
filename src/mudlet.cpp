@@ -2998,15 +2998,46 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    bool openedProfile = false;
+        bool openedProfile = false;
+        bool uriFound = false;
+    QString uriHost;
+    QString uriPort;
+    QString uriUser;
 
+    QRegularExpression rx(QStringLiteral("(.+@)*(.++)(:.+)*"));
+    QRegularExpressionMatch match = rx.match(mudlet::self()->mCMDLineURI);
+
+    if (match.capturedStart() != -1) {
+        uriUser = match.captured(1);
+        uriHost = match.captured(2);
+        uriPort = match.captured(3);
+    }
+
+    if (uriPort.length() == 0) {
+        uriPort = QString("23");
+    }
+
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (auto& host : hostList) {
-        QString val = readProfileData(host, QStringLiteral("autologin"));
-        if (val.toInt() == Qt::Checked) {
+        QString valAutoLogin = readProfileData(host, QStringLiteral("autologin"));
+        QString valHost = readProfileData(host, QStringLiteral("url"));
+        QString valPort = readProfileData(host, QStringLiteral("port"));
+        QString valUser = readProfileData(host, QStringLiteral("login"));
+
+        bool autologin =(valAutoLogin.toInt() == Qt::Checked);
+        bool hostmatch =(QString::compare(uriHost, valHost, Qt::CaseInsensitive) && (uriHost.length() > 0));
+        bool portmatch =(uriPort == valPort);
+        bool usermatch =(uriUser == valUser || valUser.length() == 0 || uriUser.length() == 0);
+        uriFound = (hostmatch && portmatch && usermatch);
+
+        if ( autologin || uriFound) {
             doAutoLogin(host);
             openedProfile = true;
         }
+    }
+
+    if ((match.capturedStart() != -1) && (!uriFound)) {
+
     }
 
     if (!openedProfile) {
