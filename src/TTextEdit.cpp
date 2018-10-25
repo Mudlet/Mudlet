@@ -1805,11 +1805,6 @@ int TTextEdit::getRowCount()
     return height() / rowHeight;
 }
 
-//QString TTextEdit::convertWhiteSpaceToVisual(const QChar & first, const QChar & second)
-//{
-// TODO: May not be needed as there may not be that many non-BMP codepoints frequently encountered with no visual represention?
-//}
-
 inline QString TTextEdit::htmlCenter(const QString& text)
 {
     return QStringLiteral("<center>%1</center>").arg(text);
@@ -1855,7 +1850,7 @@ inline QString TTextEdit::convertWhiteSpaceToVisual(const QChar& first, const QC
         case 0x202B:                    return htmlCenter(tr("{rle}"));     break; // Right-to-Left embedding
         case 0x202C:                    return htmlCenter(tr("{pdf}"));     break; // Pop directional formatting
         case 0x202D:                    return htmlCenter(tr("{lro}"));     break; // Left-to-Right override
-        case 0x202E:                    return htmlCenter(tr("{rle}"));     break; // Right-to-Left override
+        case 0x202E:                    return htmlCenter(tr("{rlo}"));     break; // Right-to-Left override
         case 0x202F:                    return htmlCenter(tr("{nnbsp}"));   break; // Narrow no break space
         case 0x205F:                    return htmlCenter(tr("{mmsp}"));    break; // Medium mathematical space (4/18 = 2/9 em space)
         case 0x2060:                    return htmlCenter(tr("{wj}"));      break; // Zero width non-breaking space
