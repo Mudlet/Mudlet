@@ -148,6 +148,7 @@ public:
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
     int selectSection(Host*, const QString& name, int, int);
+    std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
     void setBold(Host*, const QString& name, bool);
     void setLink(Host* pHost, const QString& name, const QString& linkText, QStringList& linkFunction, QStringList&);
     void setItalics(Host*, const QString& name, bool);
