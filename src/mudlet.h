@@ -271,6 +271,7 @@ public:
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
+    void setShowIconsOnMenu(const Qt::CheckState);
 
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
@@ -438,6 +439,7 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
+    void signal_showIconsOnMenusChanged(const Qt::CheckState);
 
 private slots:
     void slot_close_profile();

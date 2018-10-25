@@ -2879,7 +2879,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 {
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "hideUserWindow: wrong argument type");
+        lua_pushstring(L, "hideWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -3659,7 +3659,7 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
 {
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "showUserWindow: wrong argument type");
+        lua_pushstring(L, "showWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {

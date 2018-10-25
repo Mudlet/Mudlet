@@ -1340,6 +1340,9 @@ void cTelnet::setGMCPVariables(const QString& msg)
         mpHost->setMmpMapLocation(data);
     }
     data.remove('\n');
+    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
+    // trying a different way of specifying the escape character
+    data.replace(QStringLiteral("\u001B"), QStringLiteral("\\u001B"));
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar('\r'));
 

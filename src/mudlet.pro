@@ -1345,4 +1345,6 @@ DISTFILES += \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
-    ../README.md
+    ../README.md \
+    ../translations/translated/CMakeLists.txt \
+    ../translations/translated/generate-translation-stats.lua

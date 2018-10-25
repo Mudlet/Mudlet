@@ -3964,6 +3964,26 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
 }
 
+void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
+{
+    if (mShowIconsOnMenuCheckedState != state) {
+        mShowIconsOnMenuCheckedState = state;
+
+        switch (state) {
+        case Qt::Unchecked:
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
+            break;
+        case Qt::Checked:
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+            break;
+        case Qt::PartiallyChecked:
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mShowIconsOnMenuOriginally);
+        }
+
+        emit signal_showIconsOnMenusChanged(state);
+    }
+}
+
 void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
     mInterfaceLanguage = languageCode;
