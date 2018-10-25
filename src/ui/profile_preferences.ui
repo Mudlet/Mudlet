@@ -1083,6 +1083,7 @@
             <property name="text">
              <string>Enable text analyzer</string>
             </property>
+           </widget>
           </item>
           <item row="4" column="0" colspan="2">
            <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
