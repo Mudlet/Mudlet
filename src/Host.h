@@ -377,6 +377,13 @@ public:
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
+    // Set from last page of profile preferences if the timer interval is less
+    // than this then the normal reoccuring debug output of the entire command
+    // and script for any timer with a timeout LESS than this is NOT shown
+    // - this is so the spammy output from short timeout timers can be
+    // suppressed.
+    // An invalid/null value is treated as the "show all"/inactive case:
+    QTime mTimerDebugOutputSuppressionInterval;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
