@@ -57,8 +57,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   end
 
   if text then
-    self.front:echo(text)
-    self.back:echo(text)
+    self.text:echo(text)
   end
 end
 

@@ -150,6 +150,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
+, mTimerDebugOutputSuppressionInterval(QTime())
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -279,9 +280,13 @@ void Host::slot_reloadModules()
         }
         QMap<QString, int> modulePri = otherHost->mModulePriorities;
         QMap<int, QStringList> moduleOrder;
-        for (auto it = modulePri.keyBegin(); it != modulePri.keyEnd(); ++it) {
-            moduleOrder[modulePri[*it]].append(*it);
+
+        auto modulePrioritiesIt = modulePri.constBegin();
+        while (modulePrioritiesIt != modulePri.constEnd()) {
+            moduleOrder[modulePrioritiesIt.value()].append(modulePrioritiesIt.key());
+            ++modulePrioritiesIt;
         }
+
         QMapIterator<int, QStringList> it(moduleOrder);
         while (it.hasNext()) {
             it.next();

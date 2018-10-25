@@ -829,18 +829,24 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mSearchEngineName = QString("Google");
     }
 
-    if (attributes().hasAttribute(QLatin1String("DiscordAccessOptions"))) {
-        pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("DiscordAccessOptions").toString().toInt());
+    if (attributes().hasAttribute(QLatin1String("mTimerSupressionInterval"))) {
+        pHost->mTimerDebugOutputSuppressionInterval = QTime::fromString(attributes().value(QLatin1String("mTimerSupressionInterval")).toString(), QLatin1String("hh:mm:ss.zzz"));
+    } else {
+        pHost->mTimerDebugOutputSuppressionInterval = QTime();
+    }
+  
+    if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
+        pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }
 
-    if (attributes().hasAttribute(QLatin1String("RequiredDiscordUserName"))) {
-        pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("RequiredDiscordUserName")).toString();
+    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
+        pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
     } else {
         pHost->mRequiredDiscordUserName.clear();
     }
 
-    if (attributes().hasAttribute(QLatin1String("RequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("RequiredDiscordUserDiscriminator")).toString();
+    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
+        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
     } else {
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }

@@ -80,7 +80,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
     checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
-
+    checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
@@ -153,6 +153,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
+
+    // Set the tooltip on the containing widget so both the label and the
+    // control have the same tool-tip:
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer will a short interval will quickly fill up the <i>Central Debug Console</i> "
+                                                          "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
+                                                          "control adjusts a threshold that will hide those messages in just that window for those timers which "
+                                                          "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
+                                                          "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
+
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
                                              "map and whether they can be drawn using just the specifed font, any other "
                                              "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
@@ -194,6 +203,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                "(visual equivalent to a <i>character</i>) that a Game server may send even "
                                                "if it is composed of multiple bytes as any non-ASCII character will be in the "
                                                "Lua sub-system which uses the UTF-8 encoding system.<p>"));
+    checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
+                                             "shown icons on menus, others, however do not. This control allows the user to override "
+                                             "the setting, if needed, as follows:"
+                                             "<ul><li><b>Unchecked</b> '<i>off</i>' = Prevent menus from being drawn with icons.</li>"
+                                             "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
+                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
+                                             "<p><i>This setting is only processed when individual menus are created and changes may not "
+                                             "propogate everywhere until Mudlet is restarted.</i></p>"));
 
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
@@ -218,6 +235,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_setTreeIconSize, this, &dlgProfilePreferences::slot_setTreeWidgetIconSize);
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
+    connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
 
     generateDiscordTooltips();
 
@@ -265,6 +283,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
+    widget_timerDebugOutputMinimumInterval->setEnabled(false);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -338,6 +357,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
+    widget_timerDebugOutputMinimumInterval->setEnabled(true);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(true);
@@ -693,6 +713,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
+    timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -2150,6 +2171,8 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
 
+        pHost->mTimerDebugOutputSuppressionInterval = timeEdit_timerDebugOutputMinimumInterval->time();
+
         auto hideSmallIcon = false, hideSmallIconText = false;
         if (comboBox_discordSmallIconPrivacy->currentIndex() == 0) {
             hideSmallIcon = false;
@@ -2224,21 +2247,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
-    pMudlet->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
+    pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
 
     mudlet::self()->mDiscord.UpdatePresence();
-
-    mudlet::self()->mShowIconsOnMenuCheckedState = checkBox_showIconsOnMenus->checkState();
-    switch (checkBox_showIconsOnMenus->checkState()) {
-    case Qt::Unchecked:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
-        break;
-    case Qt::Checked:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
-        break;
-    case Qt::PartiallyChecked:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mudlet::self()->mShowIconsOnMenuOriginally);
-    }
 
     close();
 }
@@ -3180,6 +3191,13 @@ void dlgProfilePreferences::slot_changeToolBarVisibility(const mudlet::controlsV
         if (comboBox_toolBarVisibility->currentIndex() != 2) {
             comboBox_toolBarVisibility->setCurrentIndex(2);
         }
+    }
+}
+
+void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState state)
+{
+    if (checkBox_showIconsOnMenus->checkState() != state) {
+        checkBox_showIconsOnMenus->setCheckState(state);
     }
 }
 
