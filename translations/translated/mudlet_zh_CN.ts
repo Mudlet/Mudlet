@@ -2479,7 +2479,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;输入在按下按钮后你想直接发送到游戏的一个或多个命令. (可选) &lt;/p&gt;&lt;p&gt;如果这是一个 &lt;i&gt;下推&lt;/i&gt; 按钮, 命令只会在按钮状态从 &lt;i&gt;弹起&lt;/i&gt; 变成 &lt;i&gt;按下&lt;/i&gt; 时发送. &lt;/p&gt;&lt;p&gt;要发送更复杂的命令, 比如可能依赖或需要改变当前配置文件的变量的命令, 你应该输入Lua脚本, &lt;i&gt;而不是&lt;/i&gt; 在下面的编辑区输入命令. 输入编辑区的内容会原封不动地发送到游戏服务器. &lt;/p&gt;&lt;p&gt;你可以同时使用此区域 &lt;i&gt;和&lt;/i&gt; Lua脚本, 此区域中的内容会在Lua脚本运行 &lt;b&gt;之前&lt;/b&gt; 发送. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="283"/>
