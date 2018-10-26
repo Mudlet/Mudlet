@@ -2734,7 +2734,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
       <source>Light cyan:</source>
-      <translation>淡青色:</translation>
+      <translation>浅青色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
@@ -2747,7 +2747,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation type="unfinished"/>
+      <translation>新闻和信息编写器</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
@@ -2757,7 +2757,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;保存 (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -2815,12 +2815,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2336"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>加载最新配置文件</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>加载最早的配置文件</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2364"/>
@@ -2835,12 +2835,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2394"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>人物名字</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2431"/>
       <source>Connect automatically</source>
-      <translation type="unfinished"/>
+      <translation>自动连接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2441"/>
