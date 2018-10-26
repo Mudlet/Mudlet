@@ -2946,7 +2946,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.</source>
-      <translation type="unfinished"/>
+      <translation>选择一个出口会立即从房间中心绘制出第一条线段.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
