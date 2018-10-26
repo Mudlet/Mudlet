@@ -1638,9 +1638,9 @@ int TLuaInterpreter::getSelection(lua_State* L)
     auto& host = getHostFromLua(L);
 
     QString windowName;
-    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+    if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getSelection: bad argument #%1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "getSelection: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, 1));
