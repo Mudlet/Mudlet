@@ -2577,25 +2577,26 @@ or your nameservers are not working properly.</source>
       <source>[ WARN ] - Invalid characters in outgoing data, one or more characters cannot
 be encoded into the range that is acceptable for the character
 encoding that is currently set {&quot;%1&quot;} for the game server.It may not understand what is sent to it.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 即将发送的数据中包含无效字符, 一个或多个字符的编码
+超出了针对当前游戏服务器设置的字符集 {&quot;%1&quot;} 可以接受的范围, 服务器可能无法理解发送给它的这些字符.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="986"/>
       <location filename="../src/ctelnet.cpp" line="1207"/>
       <source>&lt;The server wants to upgrade the GUI to new version &apos;%1&apos;. Uninstalling old version &apos;%2&apos;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;服务器想把GUI升级到新版本 &apos;%1&apos;. 正在删除旧版本 &apos;%2&apos;&gt;</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1356"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>错误</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1368"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1379"/>
@@ -2625,24 +2626,27 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1601"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 正在加载重播文件:
+&quot;%1&quot;。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1619"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 不能执行重播, 另一个重播可能已经在进行中，
+请等它完成后再次尝试.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1630"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[错误] - 无法读取文件 &quot;%1&quot;,
+错误信息是： &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1658"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[好] - 重播已结束.</translation>
     </message>
   </context>
   <context>
@@ -2655,7 +2659,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
       <source>choose color to trigger on</source>
-      <translation type="unfinished"/>
+      <translation>选择要触发的颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
@@ -2690,7 +2694,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>白色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
@@ -2700,42 +2704,42 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>浅黑色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>浅红色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>浅绿色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>淡黄色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>浅蓝色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>浅洋红色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>淡青色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>浅白色:</translation>
     </message>
   </context>
   <context>
