@@ -2845,7 +2845,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2441"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>启用Discord整合 (不被游戏支持)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2370"/>
@@ -2855,12 +2855,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2377"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>角色密码. 注意, 密码以明文存储存.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2425"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>激活后, Mudlet在启动时会自动加载此配置文件并连接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2479"/>
@@ -2875,7 +2875,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2550"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>游戏介绍</translation>
     </message>
   </context>
   <context>
@@ -2883,17 +2883,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="27"/>
       <source>Custom Line Properties [*]</source>
-      <translation type="unfinished"/>
+      <translation>自定义路径线属性 [*]</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>Select Style, Color and whether to end the line with an arrow head.</source>
-      <translation type="unfinished"/>
+      <translation>选择样式, 颜色和是否在一条路径线结尾显示箭头.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>路径线设置:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -2903,22 +2903,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="77"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>样式:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="105"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>以箭头结尾:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="138"/>
       <source>Exit Details:</source>
-      <translation type="unfinished"/>
+      <translation>出口细节:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="153"/>
       <source>Origin:</source>
-      <translation type="unfinished"/>
+      <translation>起点:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="194"/>
@@ -2936,12 +2936,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="14"/>
       <source>Custom Line selection</source>
-      <translation type="unfinished"/>
+      <translation>自定义路径线选区:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>选择路径线的格式, 颜色和箭头选项然后选择出口开始绘图</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
