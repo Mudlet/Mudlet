@@ -49,7 +49,7 @@
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
 				<string>^(?:Alas, )?[Yy]ou can(?:no|')t (?:go|move) .*$</string>
-				<string>^The .+ is closed.$</string>
+				<string>^The .+ (?:is|seems to be) closed.$</string>
 				<string>.+ (?:is not going to|will not) let you pass.$</string>
 				<string>^That exit is blocked.$</string>
 				<string>^You are blocked by .*$</string>
@@ -298,25 +298,14 @@ end</script>
 			<regex></regex>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Quick Start Alias</name>
-				<script>cecho(map.help.quick_start)</script>
+				<script>map.show_help("quick_start")</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map basics$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Help Alias</name>
-				<script>local cmd = matches[2]
-if cmd and cmd ~= "" then
-	if cmd:starts("map ") then cmd = cmd:sub(5) end
-	cmd = cmd:lower():gsub(" ","_")
-	if map.help[cmd] then
-		cecho(map.help[cmd])
-	else
-		map.echo("No help file on that command.")
-	end
-else
-	cecho(map.help[1])
-end</script>
+				<script>map.show_help(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map help(?: (.*))?$</regex>
@@ -344,7 +333,7 @@ end</script>
 			<regex></regex>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Me Alias</name>
-				<script>map.find_me()</script>
+				<script>map.find_me(nil, nil, nil, true)</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map me$</regex>
@@ -497,8 +486,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 10/24/2018
--- v2.0.10
+-- 10/27/2018
+-- v2.0.11
 --
 
     -- look into options for non-standard door usage for speedwalk
@@ -531,85 +520,85 @@ map.help = {[[
     &lt;cyan&gt;Fundamental Commands:&lt;reset&gt;
         These are commands used to get the mapper functional on a basic level
 
-        &lt;yellow&gt;map show&lt;reset&gt; - Displays or hides a map window
-        &lt;yellow&gt;map basics&lt;reset&gt; - Shows a quick-start guide with some basic information to
+        &lt;link: show&gt;map show&lt;/link&gt; - Displays or hides a map window
+        &lt;link: quick start&gt;map basics&lt;/link&gt; - Shows a quick-start guide with some basic information to
             help get the script working
-        &lt;yellow&gt;map help &lt;optional command name&gt;&lt;reset&gt; - Shows either this help file or the
+        &lt;link: 1&gt;map help &lt;optional command name&gt;&lt;/link&gt; - Shows either this help file or the
             help file for the command given
-        &lt;yellow&gt;find prompt&lt;reset&gt; - Instructs the script to look for a prompt that matches
+        &lt;link: find prompt&gt;find prompt&lt;/link&gt; - Instructs the script to look for a prompt that matches
             a known pattern
-        &lt;yellow&gt;map prompt&lt;reset&gt; - Provides a specific pattern to the script that matches
+        &lt;link: prompt&gt;map prompt&lt;/link&gt; - Provides a specific pattern to the script that matches
             your prompt, uses Lua string-library patterns
-        &lt;yellow&gt;map ignore&lt;reset&gt; - Provides a specific pattern for the script to ignore,
+        &lt;link: ignore&gt;map ignore&lt;/link&gt; - Provides a specific pattern for the script to ignore,
             uses Lua string-library patterns
-        &lt;yellow&gt;map debug&lt;reset&gt; - Toggles on debug mode, in which extra messages are shown
+        &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown
             with the intent of assisting in troubleshooting getting the
             script setup
-        &lt;yellow&gt;map me&lt;reset&gt; - Locates the user on the map, if possible
-        &lt;yellow&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;reset&gt; - Finds a walking path to
+        &lt;link: me&gt;map me&lt;/link&gt; - Locates the user on the map, if possible
+        &lt;link: path&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;/link&gt; - Finds a walking path to
             the named room, in the named area if specified
-        &lt;yellow&gt;map character &lt;name&gt;&lt;reset&gt; - Sets a given name as the current character for
+        &lt;link: character&gt;map character &lt;name&gt;&lt;/link&gt; - Sets a given name as the current character for
             the purposes of the script, used for different prompt patterns
             and recall locations
-        &lt;yellow&gt;map recall&lt;reset&gt; - Sets the current room as the recall location of the
+        &lt;link: recall&gt;map recall&lt;/link&gt; - Sets the current room as the recall location of the
             current character
-        &lt;yellow&gt;map config &lt;configuration&gt; &lt;optional value&gt;&lt;reset&gt; - Sets or toggles the
+        &lt;link: config&gt;map config &lt;configuration&gt; &lt;optional value&gt;&lt;/link&gt; - Sets or toggles the
             given configuration either turning it on or off, if no value is
             given, or sets it to the given value
-        &lt;yellow&gt;map window &lt;configuration&gt; &lt;value&gt;&lt;reset&gt; - Sets the given configuration for
+        &lt;link: window&gt;map window &lt;configuration&gt; &lt;value&gt;&lt;/link&gt; - Sets the given configuration for
             the map window to the given value
-        &lt;yellow&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;
-            &lt;translated short direction&gt;&lt;reset&gt; - Sets the provided translations for
+        &lt;link: translate&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;&lt;/link&gt;
+            &lt;link: translate&gt;&lt;translated short direction&gt;&lt;/link&gt; - Sets the provided translations for
             the given english direction word.
 
     &lt;cyan&gt;Mapping Commands:&lt;reset&gt;
         These are commands used in the process of actually creating a map
 
-        &lt;yellow&gt;start mapping &lt;optional area name&gt;&lt;reset&gt; - Starts adding content to the
+        &lt;link: start mapping&gt;start mapping &lt;optional area name&gt;&lt;/link&gt; - Starts adding content to the
             map, using either the area of the room the user is currently in,
             or the area name provided
-        &lt;yellow&gt;stop mapping&lt;reset&gt; - Stops adding content to the map
-        &lt;yellow&gt;set area &lt;area name&gt;&lt;reset&gt; - Moves the current room to the named area
-        &lt;yellow&gt;map mode &lt;simple, normal, or complex&gt;&lt;reset&gt; - Sets the mapping mode
-        &lt;yellow&gt;add door &lt;direction&gt; &lt;optional door status&gt; &lt;optional one way&gt;&lt;reset&gt; -
+        &lt;link: stop mapping&gt;stop mapping&lt;/link&gt; - Stops adding content to the map
+        &lt;link: set area&gt;set area &lt;area name&gt;&lt;/link&gt; - Moves the current room to the named area
+        &lt;link: mode&gt;map mode &lt;simple, normal, or complex&gt;&lt;/link&gt; - Sets the mapping mode
+        &lt;link: add door&gt;add door &lt;direction&gt; &lt;optional door status&gt; &lt;optional one way&gt;&lt;/link&gt; -
             Creates a door in the given direction, with the given status
             (default closed), in both directions, unless a one-direction door
             is specified
-        &lt;yellow&gt;add portal &lt;entry command&gt;&lt;reset&gt; - Creates a portal in the current room,
+        &lt;link: add portal&gt;add portal &lt;entry command&gt;&lt;/link&gt; - Creates a portal in the current room,
             using the given command for entry
-        &lt;yellow&gt;shift &lt;direction&gt;&lt;reset&gt; - Moves the current room on the map in the given
+        &lt;link: shift&gt;shift &lt;direction&gt;&lt;/link&gt; - Moves the current room on the map in the given
             direction
-        &lt;yellow&gt;merge rooms&lt;reset&gt; - Combines overlapping rooms that have the same name into
+        &lt;link: merge rooms&gt;merge rooms&lt;/link&gt; - Combines overlapping rooms that have the same name into
             a single room
-        &lt;yellow&gt;clear moves&lt;reset&gt; - Clears the list of movement commands maintained by the
+        &lt;link: clear moves&gt;clear moves&lt;/link&gt; - Clears the list of movement commands maintained by the
             script
-        &lt;yellow&gt;set exit &lt;direction&gt; &lt;roomID&gt;&lt;reset&gt; - Creates a one-way exit in the given
+        &lt;link: set exit&gt;set exit &lt;direction&gt; &lt;roomID&gt;&lt;/link&gt; - Creates a one-way exit in the given
             direction to the room with the specified roomID, can also be used
             with portals
-        &lt;yellow&gt;map areas&lt;reset&gt; - Shows a list of all area, with links to show a list of
+        &lt;link: areas&gt;map areas&lt;/link&gt; - Shows a list of all area, with links to show a list of
             rooms in the area
-        &lt;yellow&gt;map rooms &lt;area name&gt;&lt;reset&gt; - Shows a list of rooms in the named area
+        &lt;link: rooms&gt;map rooms &lt;area name&gt;&lt;/link&gt; - Shows a list of rooms in the named area
 
     &lt;cyan&gt;Sharing and Backup Commands:&lt;reset&gt;
 
-        &lt;yellow&gt;map save&lt;reset&gt; - Creates a backup of the map
-        &lt;yellow&gt;map load &lt;remote address&gt;&lt;reset&gt; - Loads a map backup, or a map file from a
+        &lt;link: save&gt;map save&lt;/link&gt; - Creates a backup of the map
+        &lt;link: load&gt;map load &lt;remote address&gt;&lt;/link&gt; - Loads a map backup, or a map file from a
             remote address
-        &lt;yellow&gt;map export &lt;area name&gt;&lt;reset&gt; - Creates a file from the named area that can
+        &lt;link: export&gt;map export &lt;area name&gt;&lt;/link&gt; - Creates a file from the named area that can
             be shared
-        &lt;yellow&gt;map import &lt;area name&gt;&lt;reset&gt; - Loads an area from a file
+        &lt;link: import&gt;map import &lt;area name&gt;&lt;/link&gt; - Loads an area from a file
 
     &lt;cyan&gt;Mapping Events:&lt;reset&gt;
         These events are used by triggers to direct the script's behavior
 
-        &lt;yellow&gt;onNewRoom&lt;reset&gt; - Signals that a room has been detected, optional exits
+        &lt;link: onNewRoom&gt;onNewRoom&lt;/link&gt; - Signals that a room has been detected, optional exits
             argument
-        &lt;yellow&gt;onMoveFail&lt;reset&gt; - Signals that an attempted move failed
-        &lt;yellow&gt;onForcedMove&lt;reset&gt; - Signals that the character moved without a command
+        &lt;link: onMoveFail&gt;onMoveFail&lt;/link&gt; - Signals that an attempted move failed
+        &lt;link: onForcedMove&gt;onForcedMove&lt;/link&gt; - Signals that the character moved without a command
             being entered, required direction argument
-        &lt;yellow&gt;onRandomMove&lt;reset&gt; - Signals that the character moved in an unknown
+        &lt;link: onRandomMove&gt;onRandomMove&lt;/link&gt; - Signals that the character moved in an unknown
             direction without a command being entered
-        &lt;yellow&gt;onVisionFail&lt;reset&gt; - Signals that the character moved but some or all of
+        &lt;link: onVisionFail&gt;onVisionFail&lt;/link&gt; - Signals that the character moved but some or all of
             the room information was not able to be gathered
 
     &lt;cyan&gt;Key Variables:&lt;reset&gt;
@@ -654,6 +643,14 @@ map.help.load = [[
         map is downloaded from that location and loaded to replace the current
         map. If no filename is given with the download address, the script tries
         to download map.dat. If a filename is given it MUST end with .dat.
+]]
+map.help.show = [[
+    &lt;cyan&gt;Map Show&lt;reset&gt;
+        syntax: &lt;yellow&gt;map show&lt;reset&gt;
+
+        This command shows a map window, as specified by the window configs set
+        via the &lt;link: window&gt;map window command&lt;/link&gt;. It isn't necessary to use this method to
+        show a map window to use this script, any map window will work.
 ]]
 map.help.export = [[
     &lt;cyan&gt;Map Export&lt;reset&gt;
@@ -1004,7 +1001,7 @@ map.help.config = [[
             corresponding to the movement. As an example: us = {'upsouth',
             'downnorth', 0, -1, 1}
 
-        &lt;yellow&gt;use_lang_dirs&lt;reset&gt; - When this is set, the lang_dirs table is used to
+        &lt;yellow&gt;use_translation&lt;reset&gt; - When this is set, the lang_dirs table is used to
             translate movement commands in some other language into the
             English used by the script. This may be true or false.
 
@@ -1057,26 +1054,26 @@ map.help.quick_start = [[
     To see this again: &lt;yellow&gt;map basics&lt;reset&gt;
 
     Quick Commands:
-    1. &lt;yellow&gt;map help&lt;reset&gt;
+    1. &lt;link: 1&gt;map help&lt;/link&gt;
        This will bring up a more detailed help file, starting with the available
        help topics.
-    2. &lt;yellow&gt;map show&lt;reset&gt;
+    2. &lt;link: show&gt;map show&lt;/link&gt;
        This will toggle the map window. If you don't see the map window, type
        this command first.
-    3. &lt;yellow&gt;find prompt&lt;reset&gt;
+    3. &lt;link: find prompt&gt;find prompt&lt;/link&gt;
        This will make the script start looking for a prompt using several standard
        prompt patterns. If a prompt is found, you will be notified, if not, you
        will need to set a prompt pattern yourself.
-    4. &lt;yellow&gt;map prompt&lt;reset&gt;
+    4. &lt;link: prompt&gt;map prompt&lt;/link&gt;
        This sets the prompt pattern you specify, using Lua String Library type
        patterns.
-    5. &lt;yellow&gt;map ignore&lt;reset&gt;
+    5. &lt;link: ignore&gt;map ignore&lt;/link&gt;
        This creates a pattern for text to ignore when the script is looking for
        the room name. This should include anything that might appear between
        the sent movement command or the prompt preceeding the room description,
        and the room name itself. This can also be used to remove extra text
        on the same line as the room name that should not be included.
-    6. &lt;yellow&gt;map debug&lt;reset&gt;
+    6. &lt;link: debug&gt;map debug&lt;/link&gt;
        This toggles debug mode. When on, messages will be displayed showing what
        information is captured and a few additional error messages that can help
        with getting the script fully functional.
@@ -1130,11 +1127,11 @@ map.defaults = {
     prompt_test_patterns = {"^%[?%a*%]?&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]", "^[Hh][Pp]:.*&gt;"},
     custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
                         -- ex: { us = {"upsouth", "downnorth", 0, -1, 1}, dn = {"downnorth", "upsouth", 0, 1, -1} }
-    use_lang_dirs = false,
+    use_translation = false,
     lang_dirs = {n = 'n', ne = 'ne', nw = 'nw', e = 'e', w = 'w', s = 's', se = 'se', sw = 'sw',
         u = 'u', d = 'd', ["in"] = 'in', out = 'out', north = 'north', northeast = 'northeast',
         east = 'east', west = 'west', south = 'south', southeast = 'southeast', southwest = 'southwest',
-        up = 'up', down = 'down',
+        northwest = 'northwest', up = 'up', down = 'down',
     },
     debug = false,
     download_path = "http://dslpnp.altervista.org",
@@ -1187,7 +1184,7 @@ local function config()
         end
     setmetatable(map, mt)
     map.set("mode", configs.mode)
-    map.set("version", "2.0.10")
+    map.set("version", "2.0.11")
 
     local saves = {}
     if io.exists(path.."/map_save.dat") then
@@ -1240,8 +1237,38 @@ local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): 
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
 
+function map.show_help(cmd)
+    if cmd and cmd ~= "" then
+        if cmd:starts("map ") then cmd = cmd:sub(5) end
+        cmd = cmd:lower():gsub(" ","_")
+        if not map.help[cmd] then
+            map.echo("No help file on that command.")
+        end
+    else
+        cmd = 1
+    end
+
+    for w in map.help[cmd]:gmatch("[^\n]*\n") do
+        local target = w:match("&lt;link: ([^&gt;]+)&gt;")
+        if target then
+            local before, link, after = w:match("(.*)&lt;link: [^&gt;]+&gt;(.*)&lt;/link&gt;(.*)")
+            cecho(before)
+            link = "&lt;yellow&gt;"..link.."&lt;reset&gt;"
+            if target ~= "1" then
+                cechoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
+            else
+                cechoLink(link,[[map.show_help()]],"View: map help",true)
+            end
+            cecho(after)
+        else
+            cecho(w)
+        end
+    end
+    echo("\n")
+end
+
 local bool_configs = {'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
-    'clear_lines_on_send', 'debug', 'use_lang_dirs'}
+    'clear_lines_on_send', 'debug', 'use_translation'}
 -- function intended to be used by an alias to change config values and save them to a file for later
 function map.setConfigs(key, val, sub_key)
     if val == "off" or val == "false" then
@@ -1269,6 +1296,10 @@ function map.setConfigs(key, val, sub_key)
                 map.configs.lang_dirs[sub_key] = long_dir
                 map.configs.lang_dirs[short[sub_key]] = short_dir
                 map.echo(string.format("Direction %s, abbreviated as %s, now interpreted as %s.", long_dir, short_dir, sub_key))
+                map.configs.translate = {}
+                for k, v in pairs(map.configs.lang_dirs) do
+                    map.configs.translate[v] = k
+                end
             else
                 map.echo("Invalid direction.", false, true)
             end
@@ -1711,8 +1742,8 @@ local function capture_move_cmd(dir,priority)
     dir = string.lower(dir)
     if dir == "/" then dir = "recall" end
     if dir == "l" then dir = "look" end
-    if configs.use_lang_dirs then
-        dir = configs.lang_dirs[dir] or dir
+    if configs.use_translation then
+        dir = configs.translate[dir] or dir
     end
     local door = string.match(dir,"open (%a+)")
     if map.mapping and door and (exitmap[door] or short[door]) then
@@ -1755,14 +1786,18 @@ local function capture_room_info(name, exits)
         map.set("prevExits", map.currentExits)
         name = string.trim(name)
         map.set("currentName", name)
-        exits = string.gsub(string.lower(exits)," and "," ")
         if exits:ends(".") then exits = exits:sub(1,#exits-1) end
-        if map.configs.use_lang_dirs then
-            exits = exits:gsub("%a+",map.configs.lang_dirs)
+        if not map.configs.use_translation then
+            exits = string.gsub(string.lower(exits)," and "," ")
         end
         map.set("currentExits", {})
         for w in string.gmatch(exits,"%a+") do
-            table.insert(map.currentExits,w)
+            if map.configs.use_translation then
+                local dir = map.configs.translate[w]
+                if dir then table.insert(map.currentExits,dir) end
+            else
+                table.insert(map.currentExits,w)
+            end
         end
         move_map()
     elseif vision_fail then
@@ -2010,7 +2045,7 @@ end
 function map.start_mapping(area_name)
     -- starts mapping, and sets the current area to the given one, or uses the current one
     if not map.currentName then
-        show_err("Start Mapping Error: No room detected!")
+        show_err("Room detection not yet working, see &lt;yellow&gt;map basics&lt;reset&gt; for guidance.")
     end
     local rooms
     move_queue = {}
@@ -2020,7 +2055,7 @@ function map.start_mapping(area_name)
         area_name = areas[map.currentArea]
     end
     if not area_name then
-        show_err("Start Mapping Error: No area set!")
+        show_err("No current area name, set one like this: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
     end
     map.echo("Now mapping in area: " .. area_name)
     map.set("mapping", true)
@@ -2107,7 +2142,7 @@ function map.shift_room(dir)
     if map.mapping then
         dir = exitmap[dir] or (table.contains(exitmap,dir) and dir)
         if not dir then
-            show_err("Shift Room: Exit Not Found")
+            show_err("Shift Room: Exit not found")
         end
         local x,y,z = getRoomCoordinates(map.currentRoom)
         dir = stubmap[dir]
@@ -2145,7 +2180,7 @@ local function check_link(firstID, secondID, dir)
     return checkID and check_room(checkID,name,exits)
 end
 
-function map.find_me(name, exits, dir)
+function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
     if move ~= "recall" then move_queue = {} end
@@ -2153,7 +2188,7 @@ function map.find_me(name, exits, dir)
     name = name or map.currentName
     exits = exits or map.currentExits
     if not name and not exits then
-        map.echo("Room not found, complete room name and exit data not available.",false,true)
+        show_err("Room not found, complete room name and exit data not available.")
     end
     local rooms = find_room(name)
     local match_IDs = {}
@@ -2201,7 +2236,11 @@ function map.find_me(name, exits, dir)
         end
         find_portal = false
     elseif table.is_empty(match_IDs) then
-        map.echo("Room not found", true, true)
+        if not manual then
+            map.echo("Room not found", true, true)
+        else
+            map.echo("Room not found", false, true)
+        end
     end
 end
 
@@ -2442,7 +2481,7 @@ local function grab_line()
             raiseEvent("onNewRoom")
         end
         print_wait_echoes()
-        map.echo("Prompt Captured",true)
+        map.echo("Prompt captured",true)
     end
     if find_prompt then
         for k,v in ipairs(map.configs.prompt_test_patterns) do
@@ -2450,7 +2489,7 @@ local function grab_line()
                 map.save.prompt_pattern[map.character] = v
                 table.save(profilePath .. "/map downloads/map_save.dat",map.save)
                 find_prompt = false
-                map.echo("Prompt Found")
+                map.echo("Prompt found")
                 break
             end
         end
@@ -2567,7 +2606,11 @@ function map.speedwalk(roomID, walkPath, walkDirs)
         end
         k = k + 1
     until k &gt; #walkDirs
-
+    if map.configs.use_translation then
+        for k, v in ipairs(walkDirs) do
+            walkDirs[k] = map.lang_dirs[v]
+        end
+    end
     -- perform walk
     walking = true
     if map.configs.speedwalk_wait or map.configs.speedwalk_delay &gt; 0 then
