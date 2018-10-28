@@ -75,7 +75,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mCustomLinesRoomFrom()
 , mCustomLinesRoomTo()
 , mpCurrentLineStyle()
-, mCurrentLineStyle(QStringLiteral(tr("solid line")))
+, mCurrentLineStyle(tr("solid line"))
 , mpCurrentLineColor()
 , mCurrentLineColor(Qt::red)
 , mpCurrentLineArrow()
@@ -2156,7 +2156,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
     // N/U:     QRectF selectedRegion = labelRectangle;
     TMapLabel label;
     QFont font;
-    QString text = QLatin1String(tr("no text", "Default text if a label is created in mapper with no text"));
+    QString text = tr("no text", "Default text if a label is created in mapper with no text");
     QString imagePath;
 
     mHelpMsg.clear();
