@@ -1814,91 +1814,93 @@ inline QString TTextEdit::htmlCenter(const QString& text)
 // that some entries do not work like this and we cannot just display a short
 // bit of text to indicate them in the analysis of the on-screen content- the
 // language directional controls may be like that:
-inline QString TTextEdit::convertWhiteSpaceToVisual(const QChar& first, const QChar& second)
+inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QChar& second)
 {
     // clang-format off
     if (second.isNull()) {
         // The code point is on the BMP
         switch (first.unicode()) {
-        case QChar::Tabulation:         return htmlCenter(tr("{tab}"));     break;
-        case QChar::LineFeed:           return htmlCenter(tr("{lf}"));      break; // Not likely to be seen as it gets filtered out
-        case QChar::CarriageReturn:     return htmlCenter(tr("{cr}"));      break; // Not likely to be seen as it gets filtered out
-        case QChar::Space:              return htmlCenter(tr("{sp}"));      break;
-        case QChar::Nbsp:               return htmlCenter(tr("{nbsp}"));    break;
-        case QChar::SoftHyphen:         return htmlCenter(tr("{shyp}"));    break;
-        case 0x034F:                    return htmlCenter(tr("{cgj}"));     break; // Combining Grapheme Joiner (badly named apparently)
-        case 0x1680:                    return htmlCenter(tr("{osp}"));     break; // Ogham space mark
-        case 0x2000:                    return htmlCenter(tr("{enqd}"));    break; // En quad
-        case 0x2001:                    return htmlCenter(tr("{emqd}"));    break; // Em quad
-        case 0x2002:                    return htmlCenter(tr("{ensp}"));    break; // En space
-        case 0x2003:                    return htmlCenter(tr("{emsp}"));    break; // Em space
-        case 0x2004:                    return htmlCenter(tr("{m3sp}"));    break; // Three-per-em (Thick) space
-        case 0x2005:                    return htmlCenter(tr("{m4sp}"));    break; // Four-per-em (Mid) space
-        case 0x2006:                    return htmlCenter(tr("{m6sp}"));    break; // Six-per-em (sometime same as Thin) space
-        case 0x2007:                    return htmlCenter(tr("{fgsp}"));    break; // Figure (Digit) space
-        case 0x2008:                    return htmlCenter(tr("{pnsp}"));    break; // Punctuation space
-        case 0x2009:                    return htmlCenter(tr("{m5sp}"));    break; // Five-per-em (or sometimes six, Thin) space
-        case 0x200A:                    return htmlCenter(tr("{hrsp}"));    break; // Hair (Thinnest) space
-        case 0x200B:                    return htmlCenter(tr("{zwsp}"));    break; // Zero width space
-        case 0x200C:                    return htmlCenter(tr("{zwnj}"));    break; // Zero width non-joiner
-        case 0x200D:                    return htmlCenter(tr("{zwj}"));     break; // Zero width joiner
-        case 0x200E:                    return htmlCenter(tr("{lrm}"));     break; // Left-to-Right mark
-        case 0x200F:                    return htmlCenter(tr("{rlm}"));     break; // Right-to-Left mark
-        case QChar::LineSeparator:      return htmlCenter(tr("{ls}"));      break;
-        case QChar::ParagraphSeparator: return htmlCenter(tr("{ps}"));      break;
-        case 0x202A:                    return htmlCenter(tr("{lre}"));     break; // Left-to-Right embedding
-        case 0x202B:                    return htmlCenter(tr("{rle}"));     break; // Right-to-Left embedding
-        case 0x202C:                    return htmlCenter(tr("{pdf}"));     break; // Pop directional formatting
-        case 0x202D:                    return htmlCenter(tr("{lro}"));     break; // Left-to-Right override
-        case 0x202E:                    return htmlCenter(tr("{rlo}"));     break; // Right-to-Left override
-        case 0x202F:                    return htmlCenter(tr("{nnbsp}"));   break; // Narrow no break space
-        case 0x205F:                    return htmlCenter(tr("{mmsp}"));    break; // Medium mathematical space (4/18 = 2/9 em space)
-        case 0x2060:                    return htmlCenter(tr("{wj}"));      break; // Zero width non-breaking space
-        case 0x2061:                    return htmlCenter(tr("{fnct}"));    break; // Function application
-        case 0x2062:                    return htmlCenter(tr("{inv*}"));    break; // Invisible times
-        case 0x2063:                    return htmlCenter(tr("{inv,}"));    break; // Invisible separator or comma
-        case 0x2064:                    return htmlCenter(tr("{inv+}"));    break; // Invisible plus
-        case 0x2066:                    return htmlCenter(tr("{lri}"));     break; // Left-to-Right isolate
-        case 0x2067:                    return htmlCenter(tr("{rli}"));     break; // Right-to-Right isolate
-        case 0x2068:                    return htmlCenter(tr("{1iso}"));    break; // First strong isolate
-        case 0x2069:                    return htmlCenter(tr("{pdi}"));     break; // Pop directional isolate
-        case 0x206A:                    return htmlCenter(tr("{inhss}"));   break; // Inhibit symmetrical swapping
-        case 0x206B:                    return htmlCenter(tr("{actss}"));   break; // Activate symmetrical swapping
-        case 0x206C:                    return htmlCenter(tr("{inafs}"));   break; // Inhibit Arabic Form Shaping
-        case 0x206D:                    return htmlCenter(tr("{inafs}"));   break; // Activate Arabic Form Shaping
-        case 0x206E:                    return htmlCenter(tr("{natds}"));   break; // National Digit shapes
-        case 0x206F:                    return htmlCenter(tr("{nomds}"));   break; // Nominal Digit shapes
-        case 0x3000:                    return htmlCenter(tr("{isp}"));     break; // Ideaographic (CJK Wide) space
-        case 0xFE00:                    return htmlCenter(tr("{vs1}"));     break; // Variation selector 1
-        case 0xFE01:                    return htmlCenter(tr("{vs2}"));     break; // Variation selector 2
-        case 0xFE02:                    return htmlCenter(tr("{vs3}"));     break; // Variation selector 3
-        case 0xFE03:                    return htmlCenter(tr("{vs4}"));     break; // Variation selector 4
-        case 0xFE04:                    return htmlCenter(tr("{vs5}"));     break; // Variation selector 5
-        case 0xFE05:                    return htmlCenter(tr("{vs6}"));     break; // Variation selector 6
-        case 0xFE06:                    return htmlCenter(tr("{vs7}"));     break; // Variation selector 7
-        case 0xFE07:                    return htmlCenter(tr("{vs8}"));     break; // Variation selector 8
-        case 0xFE08:                    return htmlCenter(tr("{vs9}"));     break; // Variation selector 9
-        case 0xFE09:                    return htmlCenter(tr("{vs10}"));    break; // Variation selector 10
-        case 0xFE0A:                    return htmlCenter(tr("{vs11}"));    break; // Variation selector 11
-        case 0xFE0B:                    return htmlCenter(tr("{vs12}"));    break; // Variation selector 12
-        case 0xFE0C:                    return htmlCenter(tr("{vs13}"));    break; // Variation selector 13
-        case 0xFE0D:                    return htmlCenter(tr("{vs14}"));    break; // Variation selector 14
-        case 0xFE0E:                    return htmlCenter(tr("{vs15}"));    break; // Variation selector 15 - After an Emoji codepoint forces the textual black and white rendition
-        case 0xFE0F:                    return htmlCenter(tr("{vs16}"));    break; // Variation selector 16 - After an Emoji codepoint forces the proper coloured "Emoji" rendition
-        case 0xFFF9:                    return htmlCenter(tr("{iaa}"));     break; // Interlinear Annotation Anchor
-        case 0xFEFA:                    return htmlCenter(tr("{ias}"));     break; // Interlinear Annotation Separator
-        case 0xFEFB:                    return htmlCenter(tr("{iat}"));     break; // Interlinear Annotation Terminator
-        case 0xFEFF:                    return htmlCenter(tr("{zwnbs}"));   break; // Zero Width No-Break Space (also BOM at start of text!)
+        case 0x003c:                    return htmlCenter(QStringLiteral("&lt;")); break; // As '<' gets interpreted as an opening HTML tag we have to handle it specially
+        case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symetry it is probably best to also handle it in the same way
+        case QChar::Tabulation:         return htmlCenter(tr("{tab}", "{Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case QChar::LineFeed:           return htmlCenter(tr("{lf}", "Line feed, not likely to be seen as it gets filtered out. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case QChar::CarriageReturn:     return htmlCenter(tr("{cr}", "Carriage return, not likely to be seen as it gets filtered out. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case QChar::Space:              return htmlCenter(tr("{sp}", "Space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case QChar::Nbsp:               return htmlCenter(tr("{nbsp}", "Non-breaking space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case QChar::SoftHyphen:         return htmlCenter(tr("{shyp}", "Soft hyphen. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x034F:                    return htmlCenter(tr("{cgj}", "Combining Grapheme Joiner (badly named apparently - see Wikipedia!). {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x1680:                    return htmlCenter(tr("{osp}", "Ogham space mark. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2000:                    return htmlCenter(tr("{enqd}", "En ('n') quad. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2001:                    return htmlCenter(tr("{emqd}", "Em ('m') quad. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2002:                    return htmlCenter(tr("{ensp}", "En ('n') wide space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2003:                    return htmlCenter(tr("{emsp}", "Em ('m') wide space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2004:                    return htmlCenter(tr("{m3sp}", "Three-per-em ('m') wide (thick) space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2005:                    return htmlCenter(tr("{m4sp}", "Four-per-em ('m') wide (Middle) space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2006:                    return htmlCenter(tr("{m6sp}", "Six-per-em ('m') wide (Sometimes the same as a Thin) space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2007:                    return htmlCenter(tr("{fgsp}", "Figure (digit) wide space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2008:                    return htmlCenter(tr("{pnsp}", "Punctuation wide space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2009:                    return htmlCenter(tr("{m5sp}", "Five-per-em ('m') wide space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x200A:                    return htmlCenter(tr("{hrsp}", "Hair width (Thinnest) space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x200B:                    return htmlCenter(tr("{zwsp}", "Zero width space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x200C:                    return htmlCenter(tr("{zwnj}", "Zero width non-joiner. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x200D:                    return htmlCenter(tr("{zwj}", "Zero width joiner. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x200E:                    return htmlCenter(tr("{lrm}", "Left-to-right mark. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x200F:                    return htmlCenter(tr("{rlm}", "Right-to-left mark. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case QChar::LineSeparator:      return htmlCenter(tr("{ls}", "Line separator. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case QChar::ParagraphSeparator: return htmlCenter(tr("{ps}", "Paragraph separator. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x202A:                    return htmlCenter(tr("{lre}", "Left-to-right embedding. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x202B:                    return htmlCenter(tr("{rle}", "Right-to-left embedding. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x202C:                    return htmlCenter(tr("{pdf}", "Pop (undo last) directional formatting. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x202D:                    return htmlCenter(tr("{lro}", "Left-to-right override. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x202E:                    return htmlCenter(tr("{rlo}", "Right-to-left override. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x202F:                    return htmlCenter(tr("{nnbsp}", "Narrow width no-break space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x205F:                    return htmlCenter(tr("{mmsp}", "Medium width mathematical (4/18 = 2/9 em space) space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2060:                    return htmlCenter(tr("{zwnbsp}", "Zero width non-breaking space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2061:                    return htmlCenter(tr("{fnct}", "Function application (whatever that means!) {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2062:                    return htmlCenter(tr("{inv*}", "Invisible times. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2063:                    return htmlCenter(tr("{inv,}", "Invisible separator or comma. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2064:                    return htmlCenter(tr("{inv+}", "Invisible plus. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2066:                    return htmlCenter(tr("{lri}", "Left-to-right isolate. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2067:                    return htmlCenter(tr("{rli}", "Right-to-left isolate. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2068:                    return htmlCenter(tr("{1iso}", "First strong isolate. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x2069:                    return htmlCenter(tr("{pdi}", "Pop (undo last) directional isolate. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x206A:                    return htmlCenter(tr("{inhss}", "Inhibit symmetrical swapping. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x206B:                    return htmlCenter(tr("{actss}", "Activate symmetrical swapping. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x206C:                    return htmlCenter(tr("{inafs}", "Inhibit Arabic form-shaping. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x206D:                    return htmlCenter(tr("{actafs}", "Activate Arabic form-shaping. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x206E:                    return htmlCenter(tr("{natds}", "National digit shapes. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x206F:                    return htmlCenter(tr("{nomds}", "Nominal Digit shapes. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x3000:                    return htmlCenter(tr("{isp}", "Ideaographic (CJK Wide) space. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE00:                    return htmlCenter(tr("{vs1}", "Variation selector 1. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE01:                    return htmlCenter(tr("{vs2}", "Variation selector 2. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE02:                    return htmlCenter(tr("{vs3}", "Variation selector 3. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE03:                    return htmlCenter(tr("{vs4}", "Variation selector 4. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE04:                    return htmlCenter(tr("{vs5}", "Variation selector 5. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE05:                    return htmlCenter(tr("{vs6}", "Variation selector 6. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE06:                    return htmlCenter(tr("{vs7}", "Variation selector 7. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE07:                    return htmlCenter(tr("{vs8}", "Variation selector 8. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE08:                    return htmlCenter(tr("{vs9}", "Variation selector 9. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE09:                    return htmlCenter(tr("{vs10}", "Variation selector 10. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE0A:                    return htmlCenter(tr("{vs11}", "Variation selector 11. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE0B:                    return htmlCenter(tr("{vs12}", "Variation selector 12. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE0C:                    return htmlCenter(tr("{vs13}", "Variation selector 13. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE0D:                    return htmlCenter(tr("{vs14}", "Variation selector 14. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE0E:                    return htmlCenter(tr("{vs15}", "Variation selector 15 - After an Emoji codepoint forces the textual (black & white) rendition. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFE0F:                    return htmlCenter(tr("{vs16}", "Variation selector 16 - After an Emoji codepoint forces the proper coloured 'Emoji' rendition. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFFF9:                    return htmlCenter(tr("{iaa}", "Interlinear Annotation Anchor. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFEFA:                    return htmlCenter(tr("{ias}", "Interlinear Annotation Separator. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFEFB:                    return htmlCenter(tr("{iat}", "Interlinear Annotation Terminator. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0xFEFF:                    return htmlCenter(tr("{zwnbs}", "Zero Width No-Break Space (also known as the BOM at start of text!). {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
         default:                        return htmlCenter(first);
         }
     } else {
         // The code point is NOT on the BMP
         switch (QChar::surrogateToUcs4(first, second)) {
-        case 0x1F3FB:                   return htmlCenter(tr("{fpm12}"));   break; // FitzPatrick modifier 1-2
-        case 0x1F3FC:                   return htmlCenter(tr("{fpm3}"));   break; // FitzPatrick modifier 3
-        case 0x1F3FD:                   return htmlCenter(tr("{fpm4}"));   break; // FitzPatrick modifier 4
-        case 0x1F3FE:                   return htmlCenter(tr("{fpm5}"));   break; // FitzPatrick modifier 5
-        case 0x1F3FF:                   return htmlCenter(tr("{fpm6}"));   break; // FitzPatrick modifier 6
+        case 0x1F3FB:                   return htmlCenter(tr("{fpm12}", "FitzPatrick modifier (Emoji Human skin-tone) 1-2. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x1F3FC:                   return htmlCenter(tr("{fpm3}", "FitzPatrick modifier (Emoji Human skin-tone) 3. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x1F3FD:                   return htmlCenter(tr("{fpm4}", "FitzPatrick modifier (Emoji Human skin-tone) 4. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x1F3FE:                   return htmlCenter(tr("{fpm5}", "FitzPatrick modifier (Emoji Human skin-tone) 5. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
+        case 0x1F3FF:                   return htmlCenter(tr("{fpm6}", "FitzPatrick modifier (Emoji Human skin-tone) 6. {Group of translations message: only provide translations for this group for languages where a textual form is generally shorter or the same length as the source code form, e.g. Chineses.}")); break;
         default:                        return htmlCenter(first % second);
         }
     }
@@ -1912,6 +1914,11 @@ inline QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
     } else if (static_cast<quint8>(*byte) < 0x20 || static_cast<quint8>(*byte) >= 0x7f) {
         // Control character or not ASCII
         return QStringLiteral("\\%1").arg(static_cast<quint8>(*byte), 3, 10, QLatin1Char('0'));
+    } else if (static_cast<quint8>(*byte) == 0x3C) {
+        // less-then - which is noticed by the Qt library code and taken as an
+        // HTML/Rich-text formatting opening tag and has to be converted to
+        // "&lt;":
+        return QStringLiteral("&lt;");
     } else {
         return QStringLiteral("%1").arg(*byte);
     }
@@ -2015,7 +2022,7 @@ void TTextEdit::slot_analyseSelection()
                 // Note the addition to the index here to jump over the low-surrogate:
                 elements.append(QStringLiteral("<td colspan=\"%1\">%2</td>")
                                 .arg(QString::number(columnsToUse))
-                                .arg(convertWhiteSpaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
+                                .arg(convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
                                                                mpBuffer->lineBuffer.at(line).at(index+1))));
             }
 
@@ -2095,7 +2102,7 @@ void TTextEdit::slot_analyseSelection()
                             .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, QChar('0')).toUpper());
 
                 elements.append(QStringLiteral("<td colspan=\"%1\">%2</td>")
-                                .arg(QString::number(columnsToUse), convertWhiteSpaceToVisual(mpBuffer->lineBuffer.at(line).at(index))));
+                                .arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index))));
             }
 
             switch (utf8Width) {
