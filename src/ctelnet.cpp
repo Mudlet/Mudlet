@@ -292,7 +292,7 @@ void cTelnet::connectIt(const QString& address, int port)
 
     hostName = address;
     hostPort = port;
-    QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
+    QString server = tr("[ INFO ]  - Looking up the IP address of server:") + address + ":" + QString::number(port) + " ...";
     postMessage(server);
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
@@ -305,7 +305,7 @@ void cTelnet::disconnect()
 
 void cTelnet::handle_socket_signal_error()
 {
-    QString err = "[ ERROR ] - TCP/IP socket ERROR:" % socket.errorString();
+    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
     postMessage(err);
 }
 
@@ -325,7 +325,7 @@ void cTelnet::handle_socket_signal_connected()
 
     setKeepAlive(socket.socketDescriptor());
 
-    QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
+    QString msg = tr("[ INFO ]  - A connection has been established successfully.") + "\n    \n    ";
     postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
@@ -357,10 +357,10 @@ void cTelnet::handle_socket_signal_disconnected()
 
     QString msg;
     QTime timeDiff(0, 0, 0, 0);
-    msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
+    msg = QString(tr("[ INFO ]  - Connection time: %1\n    ")).arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
     reset();
-    QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
+    QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % socket.errorString();
     QString spacer = "    ";
     if (!mpHost->mIsGoingDown) {
         postMessage(spacer);
@@ -378,7 +378,10 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        postMessage(tr("[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly."));
+        postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
+                       "Connection cannot be established.\n"
+                       "The server name is not correct, not working properly,\n"
+                       "or your nameservers are not working properly."));
         return;
     }
 }
@@ -982,8 +985,9 @@ void cTelnet::processTelnetCommand(const string& command)
                 version = version.section(' ', 0, 0);
 
                 int newVersion = version.toInt();
+                QString _smsg;
                 if (mpHost->mServerGUI_Package_version != newVersion) {
-                    QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
+                    _smsg = tr("[ INFO ] - The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'.")
                                             .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
                     mpHost->mpConsole->print(_smsg.toLatin1().data());
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
@@ -999,20 +1003,17 @@ void cTelnet::processTelnetCommand(const string& command)
                 packageName.replace('/', "");
                 packageName.replace('\\', "");
                 packageName.replace('.', "");
-                mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
-                mpHost->mpConsole->print(url);
-                mpHost->mpConsole->print("') (package='");
-                mpHost->mpConsole->print(packageName);
-                mpHost->mpConsole->print("')>\n");
+                _smsg = tr("[ INFO ] - Server offers downloadable GUI (url='%1') (package='%2')\n").arg(url, packageName);
+                postMessage(_smsg)
                 if (mpHost->mInstalledPackages.contains(packageName)) {
-                    mpHost->mpConsole->print("<package is already installed>\n");
+                    postMessage(tr("[ INFO ] - package is already installed.\n"));
                     return;
                 }
 
                 mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
-                mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
+                mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel"), 0, 4000000, mpHost->mpConsole);
                 connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
             }
@@ -1203,8 +1204,9 @@ void cTelnet::setGMCPVariables(const QString& msg)
         version = version.section(' ', 0, 0);
 
         int newVersion = version.toInt();
+        QString _smsg;
         if (mpHost->mServerGUI_Package_version != newVersion) {
-            QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
+            _smsg = tr("[ INFO ] - The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'.")
                                     .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
             mpHost->mpConsole->print(_smsg.toLatin1().data());
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
@@ -1220,20 +1222,17 @@ void cTelnet::setGMCPVariables(const QString& msg)
         packageName.replace('/', "");
         packageName.replace('\\', "");
         packageName.replace('.', "");
-        mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
-        mpHost->mpConsole->print(url);
-        mpHost->mpConsole->print("') (package='");
-        mpHost->mpConsole->print(packageName);
-        mpHost->mpConsole->print("')>\n");
+        _smsg = tr("[ INFO ] - Server offers downloadable GUI (url='%1') (package='%2')\n").arg(url, packageName);
+        postMessage(_smsg)
         if (mpHost->mInstalledPackages.contains(packageName)) {
-            mpHost->mpConsole->print("<package is already installed>\n");
+            postMessage(tr("[ INFO ] - package is already installed.\n"));
             return;
         }
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
-        mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
+        mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel"), 0, 4000000, mpHost->mpConsole);
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
@@ -1617,17 +1616,17 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         } else {
             loadingReplay = false;
             if (pErrMsg) {
-                *pErrMsg = QStringLiteral("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
+                *pErrMsg = tr("Cannot perform replay, another one may already be in progress. Try again when it has finished.");
             } else {
-                postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
-                               "try again when it has finished."));
+                postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress.\n"
+                               "Try again when it has finished."));
             }
             return false;
         }
     } else {
         if (pErrMsg) {
             // Call from lua case:
-            *pErrMsg = QStringLiteral("cannot read file \"%1\", error message was: \"%2\".")
+            *pErrMsg = tr("Cannot read file \"%1\", error message was: \"%2\".")
                     .arg(name, replayFile.errorString());
         } else {
             postMessage(tr("[ ERROR ] - Cannot read file \"%1\",\n"

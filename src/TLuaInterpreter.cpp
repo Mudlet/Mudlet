@@ -124,7 +124,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
 {
     Host* pHost = mpHost;
     if (!pHost) {
-        qWarning() << "TLuaInterpreter::slot_replyFinished(...) ERROR: NULL Host pointer!";
+        qWarning() << QStringLiteral("TLuaInterpreter::slot_replyFinished(...) ERROR: NULL Host pointer!");
         return; // Uh, oh!
     }
 
@@ -152,11 +152,11 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("unableToOpenLocalFileForWriting", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("unableToOpenLocalFileForWriting");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
@@ -169,11 +169,11 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
         if (bytesWritten == -1) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("unableToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("unableToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
@@ -194,7 +194,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
         } else {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -310,40 +310,40 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
     if (lua_isstring(L, position)) {
         dir = lua_tostring(L, position);
         dir = dir.toLower();
-        if (dir == "n" || dir == "north") {
+        if (dir == QStringLiteral("n") || dir == QStringLiteral("north")) {
             return 1;
         }
-        if (dir == "ne" || dir == "northeast") {
+        if (dir == QStringLiteral("ne" || dir == QStringLiteral("northeast")) {
             return 2;
         }
-        if (dir == "nw" || dir == "northwest") {
+        if (dir == QStringLiteral("nw" || dir == QStringLiteral("northwest")) {
             return 3;
         }
-        if (dir == "e" || dir == "east") {
+        if (dir == QStringLiteral("e") || dir == QStringLiteral("east")) {
             return 4;
         }
-        if (dir == "w" || dir == "west") {
+        if (dir == QStringLiteral("w") || dir == QStringLiteral("west")) {
             return 5;
         }
-        if (dir == "s" || dir == "south") {
+        if (dir == QStringLiteral("s") || dir == QStringLiteral("south")) {
             return 6;
         }
-        if (dir == "se" || dir == "southeast") {
+        if (dir == QStringLiteral("se") || dir == QStringLiteral("southeast")) {
             return 7;
         }
-        if (dir == "sw" || dir == "southwest") {
+        if (dir == QStringLiteral("sw") || dir == QStringLiteral("southwest")) {
             return 8;
         }
-        if (dir == "u" || dir == "up") {
+        if (dir == QStringLiteral("u") || dir == QStringLiteral("up")) {
             return 9;
         }
-        if (dir == "d" || dir == "down") {
+        if (dir == QStringLiteral("d") || dir == QStringLiteral("down")) {
             return 10;
         }
-        if (dir == "in") {
+        if (dir == QStringLiteral("in")) {
             return 11;
         }
-        if (dir == "out") {
+        if (dir == QStringLiteral("out")) {
             return 12;
         }
     }
@@ -13493,98 +13493,98 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module rex_pcre.\n"
-                      "Some functions may not be available.\n";
+        QString msg = tr("[ ERROR ] - Cannot find Lua module rex_pcre.\n"
+                         "Some functions may not be available.\n");
         msg.append(e.c_str());
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module rex_pcre loaded.";
+        QString msg = tr("[  OK  ]  - Lua module rex_pcre loaded.");
         mpHost->postMessage(msg);
     }
 
     error = luaL_dostring(pGlobalLua, "require \"zip\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module zip.\n";
+        QString msg = tr("[ ERROR ] - Cannot find Lua module zip.\n");
         msg.append(e.c_str());
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module zip loaded.";
+        QString msg = tr("[  OK  ]  - Lua module zip loaded.");
         mpHost->postMessage(msg);
     }
 
     error = luaL_dostring(pGlobalLua, "require \"lfs\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
-                      "Probably will not be able to access Mudlet Lua code.\n";
+        QString msg = tr("[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
+                         "Probably will not be able to access Mudlet Lua code.\n");
         msg.append(e.c_str());
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module lfs loaded.";
+        QString msg = tr("[  OK  ]  - Lua module lfs loaded.");
         mpHost->postMessage(msg);
     }
 
     error = luaL_dostring(pGlobalLua, "luasql = require \"luasql.sqlite3\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
-                      "Database support will not be available.\n";
+        QString msg = tr("[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
+                         "Database support will not be available.\n");
         msg.append(e.c_str());
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module sqlite3 loaded.";
+        QString msg = tr("[  OK  ]  - Lua module sqlite3 loaded.");
         mpHost->postMessage(msg);
     }
 
 
     error = luaL_dostring(pGlobalLua, R"(utf8 = require "lua-utf8")");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module utf8.\n"
-                      "utf8.* Lua functions won't be available.\n";
+        QString msg = tr("[ ERROR ] - Cannot find Lua module utf8.\n"
+                         "utf8.* Lua functions won't be available.\n");
         msg.append(e.c_str());
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module utf8 loaded.";
+        QString msg = tr("[  OK  ]  - Lua module utf8 loaded.");
         mpHost->postMessage(msg);
     }
 
 
     error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module yajl.\n"
-                      "yajl.* Lua functions won't be available.\n";
+        QString msg = tr("[ ERROR ] - Cannot find Lua module yajl.\n"
+                         "yajl.* Lua functions won't be available.\n");
         msg.append(e.c_str());
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module yajl loaded.";
+        QString msg = tr("[  OK  ]  - Lua module yajl loaded.");
         mpHost->postMessage(msg);
     }
 
@@ -13669,16 +13669,16 @@ void TLuaInterpreter::initIndenterGlobals()
       get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pIndenterState, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pIndenterState, -1);
         }
-        QString msg = QStringLiteral("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n%1")
-                      .arg(QString::fromStdString(e));
+        QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n")
+        msg.append(e.c_str());
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua code formatter loaded.";
+        QString msg = tr("[  OK  ]  - Lua code formatter loaded.");
         mpHost->postMessage(msg);
     }
 
@@ -13711,11 +13711,11 @@ void TLuaInterpreter::loadGlobal()
         }
         error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
         if (error == 0) {
-            mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+            mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
         }
     } else {
-        mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
         return;
     }
 
@@ -13723,15 +13723,15 @@ void TLuaInterpreter::loadGlobal()
     path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
     error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
     if (error != 0) {
-        string e = "no error message available from Lua";
+        string e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                "Error from Lua: ";
+            e = tr("[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                   "Error from Lua: ");
             e += lua_tostring(pGlobalLua, -1);
         }
         mpHost->postMessage(e.c_str());
     } else {
-        mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
         return;
     }
 }
