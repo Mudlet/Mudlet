@@ -75,7 +75,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mCustomLinesRoomFrom()
 , mCustomLinesRoomTo()
 , mpCurrentLineStyle()
-, mCurrentLineStyle(QStringLiteral("solid line"))
+, mCurrentLineStyle(QStringLiteral(tr("solid line")))
 , mpCurrentLineColor()
 , mCurrentLineColor(Qt::red)
 , mpCurrentLineArrow()
@@ -707,7 +707,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 continue;
             }
             if (mapLabel.text.length() < 1) {
-                mpMap->mapLabels[mAreaID][it.key()].text = "no text";
+                mpMap->mapLabels[mAreaID][it.key()].text = tr("no text", "Default text if a label is created in mapper with no text");
             }
             QPointF labelPosition;
             int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
@@ -1025,13 +1025,13 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     customLinePen.setCapStyle(Qt::RoundCap);
                     customLinePen.setJoinStyle(Qt::RoundJoin);
 
-                    if (_style == "solid line") {
+                    if (_style == tr("solid line")) {
                         customLinePen.setStyle(Qt::SolidLine);
-                    } else if (_style == "dot line") {
+                    } else if (_style == tr("dot line")) {
                         customLinePen.setStyle(Qt::DotLine);
-                    } else if (_style == "dash line") {
+                    } else if (_style == tr("dash line")) {
                         customLinePen.setStyle(Qt::DashLine);
-                    } else if (_style == "dash dot line") {
+                    } else if (_style == tr("dash dot line")) {
                         customLinePen.setStyle(Qt::DashDotLine);
                     } else {
                         customLinePen.setStyle(Qt::DashDotDotLine);
@@ -1462,7 +1462,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
                         mpHost->startSpeedWalk();
                     } else {
-                        QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                        QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
                         mpHost->mpConsole->printSystemMessage(msg);
                     }
                 }
@@ -1810,7 +1810,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
                             mpHost->startSpeedWalk();
                         } else {
-                            QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                            QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
                             mpHost->mpConsole->printSystemMessage(msg);
                         }
                     }
@@ -1851,7 +1851,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
                             mpMap->mpHost->startSpeedWalk();
                         } else {
-                            QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                            QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
                             mpHost->mpConsole->printSystemMessage(msg);
                         }
                     }
@@ -1871,7 +1871,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 continue;
             }
             if (label.text.length() < 1) {
-                mpMap->mapLabels[mAreaID][labelID].text = "no text";
+                mpMap->mapLabels[mAreaID][labelID].text = tr("no text", "Default text if a label is created in mapper with no text");
             }
             QPointF labelPosition;
             int labelX = label.pos.x() * mRoomWidth + mRX;
@@ -2156,7 +2156,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
     // N/U:     QRectF selectedRegion = labelRectangle;
     TMapLabel label;
     QFont font;
-    QString text = QLatin1String("no text");
+    QString text = QLatin1String(tr("no text", "Default text if a label is created in mapper with no text"));
     QString imagePath;
 
     mHelpMsg.clear();
@@ -2168,15 +2168,15 @@ void T2DMap::createLabel(QRectF labelRectangle)
     textOrImageDialog.setStandardButtons(QMessageBox::Cancel);
     textOrImageDialog.exec();
     if (textOrImageDialog.clickedButton() == textButton) {
-        QString title = "Enter label text.";
+        QString title = tr("Enter label text.");
         font = QFontDialog::getFont(nullptr);
         text = QInputDialog::getText(nullptr, title, title);
         if (text.length() < 1) {
-            text = "no text";
+            text = tr("no text", "Default text if a label is created in mapper with no text");
         }
         label.text = text;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, "Background color");
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, "Foreground color");
+        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color"));
+        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color"));
     } else if (textOrImageDialog.clickedButton() == imageButton) {
        label.bgColor = QColor(50, 50, 150, 100);
         label.fgColor = QColor(255, 255, 50, 255);
@@ -2594,7 +2594,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (room) {
-                QAction* action = new QAction("undo", this);
+                QAction* action = new QAction(tr("Undo", "Menu option to undo the last point in the mapper"), this);
                 action->setToolTip(tr("Undo last point"));
                 if (room->customLines.value(mCustomLinesRoomExit).count() > 1) {
                     connect(action, &QAction::triggered, this, &T2DMap::slot_undoCustomLineLastPoint);
@@ -2602,12 +2602,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     action->setEnabled(false);
                 }
 
-                QAction* action2 = new QAction("properties", this);
-                action2->setText("properties...");
+                QAction* action2 = new QAction(tr("Properties...", "Menu option to change properties of a line in the mapper"), this);
                 action2->setToolTip(tr("Change the properties of this line"));
                 connect(action2, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
-                QAction* action3 = new QAction("finish", this);
+                QAction* action3 = new QAction(tr("Finish", "Menu option to finish drawing a line in the mapper"), this);
                 action3->setToolTip(tr("Finish drawing this line"));
                 connect(action3, &QAction::triggered, this, &T2DMap::slot_doneCustomLine);
 
@@ -2629,10 +2628,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
 
             if (!playerRoom || !pArea) {
-                auto createMap = new QAction(tr("create new map"), this);
+                auto createMap = new QAction(tr("Create new map"), this);
                 connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
 
-                auto loadMap = new QAction(tr("load map"), this);
+                auto loadMap = new QAction(tr("Load map"), this);
                 connect(loadMap, &QAction::triggered, this, &T2DMap::slot_loadMap);
 
                 mPopupMenu = true;
@@ -2645,61 +2644,61 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
 
             if (mMultiSelectionSet.isEmpty()) {
-                mpCreateRoomAction = new QAction(tr("create room", "Menu option to create a new room in the mapper"), this);
+                mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
                 mpCreateRoomAction->setToolTip(tr("Create a new room here"));
                 connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
                 popup->addAction(mpCreateRoomAction);
             }
 
-            auto moveRoom = new QAction("move", this);
+            auto moveRoom = new QAction(tr("Move", "Menu option to move a room in the mapper"), this);
             moveRoom->setToolTip(tr("Move room"));
             connect(moveRoom, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
 
-            auto deleteRoom = new QAction("delete", this);
+            auto deleteRoom = new QAction(tr("Delete", "Menu option to delete a room in the mapper"), this);
             deleteRoom->setToolTip(tr("Delete room"));
             connect(deleteRoom, SIGNAL(triggered()), this, SLOT(slot_deleteRoom()));
 
-            auto recolorRoom = new QAction("color", this);
+            auto recolorRoom = new QAction(tr("Color", "Menu option to change a room color in the mapper"), this);
             recolorRoom->setToolTip(tr("Change room color"));
             connect(recolorRoom, SIGNAL(triggered()), this, SLOT(slot_changeColor()));
 
-            auto spreadRooms = new QAction("spread", this);
+            auto spreadRooms = new QAction(tr("Spread", "Menu option to space out rooms in the mapper"), this);
             spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms"));
             connect(spreadRooms, SIGNAL(triggered()), this, SLOT(slot_spread()));
 
-            auto shrinkRooms = new QAction("shrink", this);
+            auto shrinkRooms = new QAction(tr("Shrink", "Menu option to move rooms closer in the mapper"), this);
             shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms"));
             connect(shrinkRooms, SIGNAL(triggered()), this, SLOT(slot_shrink()));
 
-            auto lockRoom = new QAction("lock", this);
+            auto lockRoom = new QAction(tr("Lock", "Menu option to lock a room for speed walks in the mapper"), this);
             lockRoom->setToolTip(tr("Lock room for speed walks"));
             connect(lockRoom, SIGNAL(triggered()), this, SLOT(slot_lockRoom()));
 
-            auto unlockRoom = new QAction("unlock", this);
+            auto unlockRoom = new QAction(tr("Unlock", "Menu option to unlock a room for speed walks in the mapper"), this);
             unlockRoom->setToolTip(tr("Unlock room for speed walks"));
             connect(unlockRoom, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
 
-            auto weightRoom = new QAction("weight", this);
+            auto weightRoom = new QAction(tr("Weight", "Menu option to set a room wight in the mapper"), this);
             weightRoom->setToolTip(tr("Set room weight"));
             connect(weightRoom, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
 
-            auto roomExits = new QAction("exits", this);
+            auto roomExits = new QAction(tr("Exits", "Menu option to set exits for a room in the mapper"), this);
             roomExits->setToolTip(tr("Set room exits"));
             connect(roomExits, SIGNAL(triggered()), this, SLOT(slot_setExits()));
 
-            auto roomSymbol = new QAction("symbol", this);
+            auto roomSymbol = new QAction(tr("Symbol", "Menu option to set symbol(s) to mark rooms in the mapper"), this);
             roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms"));
             connect(roomSymbol, SIGNAL(triggered()), this, SLOT(slot_setSymbol()));
 
-            auto moveRoomXY = new QAction("move to", this);
+            auto moveRoomXY = new QAction(tr("Move to", "Menu option to move rooms elsewhere in the mapper"), this);
             moveRoomXY->setToolTip(tr("Move selected group to a given position"));
             connect(moveRoomXY, SIGNAL(triggered()), this, SLOT(slot_movePosition()));
 
-            auto roomArea = new QAction("area", this);
+            auto roomArea = new QAction(tr("Area", "Menu option to set the area ID of a room in the mapper"), this);
             roomArea->setToolTip(tr("Set room area ID"));
             connect(roomArea, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
-            auto customExitLine = new QAction("custom exit lines", this);
+            auto customExitLine = new QAction(tr("Custom exit lines", "Menu option to create custom exit lines in the mapper"), this);
             if (!pArea) {
                 return;
             }
@@ -2713,11 +2712,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 connect(customExitLine, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
             }
 
-            auto createLabel = new QAction("create Label", this);
+            auto createLabel = new QAction(tr("Create label", "Menu option to add text or image to the mapper"), this);
             createLabel->setToolTip(tr("Create labels to show text or images."));
             connect(createLabel, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
 
-            auto setPlayerLocation = new QAction("set location", this);
+            auto setPlayerLocation = new QAction(tr("Set location", "Menu option to assign player location in the mapper"), this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
                 setPlayerLocation->setToolTip(tr("Set player current location to here"));
                 connect(setPlayerLocation, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
@@ -2750,10 +2749,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             popup->popup(mapToGlobal(event->pos()));
         } else if (mLabelHighlighted) {
-            auto moveLabel = new QAction("move", this);
+            auto moveLabel = new QAction(tr("Move", "Menu option to move a label in the mapper"), this);
             moveLabel->setToolTip(tr("Move label"));
             connect(moveLabel, SIGNAL(triggered()), this, SLOT(slot_moveLabel()));
-            auto deleteLabel = new QAction("delete", this);
+            auto deleteLabel = new QAction(tr("Delete", "Menu option to delete a label in the mapper"), this);
             deleteLabel->setToolTip(tr("Delete label"));
             connect(deleteLabel, SIGNAL(triggered()), this, SLOT(slot_deleteLabel()));
             mPopupMenu = true;
@@ -2770,7 +2769,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (mCustomLineSelectedRoom > 0) {
                 TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
                 if (room) {
-                    auto addPoint = new QAction("add point", this);
+                    auto addPoint = new QAction(tr("Add point", "Menu option to add a point to a custom line in the mapper"), this);
                     if (mCustomLineSelectedPoint > -1)
                     // The first user manipulable point IS zero - line is
                     // drawn to it from a point around room symbol dependent
@@ -2783,7 +2782,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         addPoint->setToolTip(tr("Select a point first, then add a new point mid-way along the segment towards room"));
                     }
 
-                    auto removePoint = new QAction("remove point", this);
+                    auto removePoint = new QAction(tr("Remove point", "Menu option to remove a room in the mapper"), this);
                     // Permit this to be enabled if the current point is 0 or
                     // greater, but not if there is no others
                     if (mCustomLineSelectedPoint > -1) {
@@ -2803,12 +2802,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         removePoint->setToolTip(tr("Select a point first, then remove it"));
                     }
 
-                    auto lineProperties = new QAction("properties", this);
-                    lineProperties->setText("properties...");
+                    auto lineProperties = new QAction(tr("Properties...", "Menu option to adjust a custom line in the mapper"), this);
                     lineProperties->setToolTip(tr("Change the properties of this custom line"));
                     connect(lineProperties, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
-                    auto deleteLine = new QAction("delete line", this);
+                    auto deleteLine = new QAction(tr("Delete line", "Menu option to delete a custom line in the mapper"), this);
                     deleteLine->setToolTip(tr("Delete all of this custom line"));
                     connect(deleteLine, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
 
@@ -3002,11 +3000,11 @@ void T2DMap::slot_customLineProperties()
             }
 
             QStringList lineStyles;
-            lineStyles << "solid line"
-                        << "dot line"
-                        << "dash line"
-                        << "dash dot line"
-                        << "dash dot dot line";
+            lineStyles << tr("solid line")
+                        << tr("dot line")
+                        << tr("dash line")
+                        << tr("dash dot line")
+                        << tr("dash dot dot line");
             mpCurrentLineStyle->addItems(lineStyles);
             QString lineStyle = room->customLinesStyle.value(exit);
             mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findText(lineStyle));
@@ -3297,12 +3295,12 @@ void T2DMap::slot_movePosition()
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
 
     auto pB_ok = new QPushButton(pButtonBar);
-    pB_ok->setText("Ok");
+    pB_ok->setText(tr("OK"));
     boxLayout->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), dialog, SLOT(accept()));
 
     auto pB_abort = new QPushButton(pButtonBar);
-    pB_abort->setText("Cancel");
+    pB_abort->setText(tr("Cancel"));
     connect(pB_abort, SIGNAL(clicked()), dialog, SLOT(reject()));
     boxLayout->addWidget(pB_abort);
     gridLayout->addWidget(pButtonBar, 4, 0, 1, 2, Qt::AlignCenter);
@@ -3525,7 +3523,7 @@ void T2DMap::slot_changeColor()
     pButtonBar->setLayout(hboxLayout);
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
     auto pB_newColor = new QPushButton(pButtonBar);
-    pB_newColor->setText("define new color");
+    pB_newColor->setText(tr("Define new color"));
 
     connect(pB_newColor, SIGNAL(clicked()), dialog, SLOT(reject()));
     connect(pB_newColor, SIGNAL(clicked()), this, SLOT(slot_defineNewColor()));
@@ -3533,12 +3531,12 @@ void T2DMap::slot_changeColor()
     hboxLayout->addWidget(pB_newColor);
 
     auto pB_ok = new QPushButton(pButtonBar);
-    pB_ok->setText("ok");
+    pB_ok->setText(tr("OK"));
     hboxLayout->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), dialog, SLOT(accept()));
 
     auto pB_abort = new QPushButton(pButtonBar);
-    pB_abort->setText("abort");
+    pB_abort->setText(tr("Cancel"));
     connect(pB_abort, SIGNAL(clicked()), dialog, SLOT(reject()));
     hboxLayout->addWidget(pB_abort);
     vboxLayout->addWidget(pButtonBar);
@@ -4583,11 +4581,11 @@ void T2DMap::slot_setCustomLine()
     connect(dialog, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
 
     QStringList lineStyles;
-    lineStyles << "solid line"
-                << "dot line"
-                << "dash line"
-                << "dash dot line"
-                << "dash dot dot line";
+    lineStyles << tr("solid line")
+                << tr("dot line")
+                << tr("dash line")
+                << tr("dash dot line")
+                << tr("dash dot dot line");
     mpCurrentLineStyle->addItems(lineStyles);
     mpCurrentLineStyle->setCurrentText(mCurrentLineStyle);
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
