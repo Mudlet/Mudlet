@@ -2782,7 +2782,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         addPoint->setToolTip(tr("Select a point first, then add a new point mid-way along the segment towards room"));
                     }
 
-                    auto removePoint = new QAction(tr("Remove point", "Menu option to remove a room in the mapper"), this);
+                    auto removePoint = new QAction(tr("Remove point", "Menu option to remove a point of a custom line in the mapper"), this);
                     // Permit this to be enabled if the current point is 0 or
                     // greater, but not if there is no others
                     if (mCustomLineSelectedPoint > -1) {
