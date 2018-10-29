@@ -13500,7 +13500,7 @@ void TLuaInterpreter::initLuaGlobals()
         }
         QString msg = tr("[ ERROR ] - Cannot find Lua module rex_pcre.\n"
                          "Some functions may not be available.\n");
-        msg.append(e.c_str());
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
         QString msg = tr("[  OK  ]  - Lua module rex_pcre loaded.");
@@ -13515,7 +13515,7 @@ void TLuaInterpreter::initLuaGlobals()
             e += lua_tostring(pGlobalLua, -1);
         }
         QString msg = tr("[ ERROR ] - Cannot find Lua module zip.\n");
-        msg.append(e.c_str());
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
         QString msg = tr("[  OK  ]  - Lua module zip loaded.");
@@ -13531,7 +13531,7 @@ void TLuaInterpreter::initLuaGlobals()
         }
         QString msg = tr("[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
                          "Probably will not be able to access Mudlet Lua code.\n");
-        msg.append(e.c_str());
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
         QString msg = tr("[  OK  ]  - Lua module lfs loaded.");
@@ -13547,7 +13547,7 @@ void TLuaInterpreter::initLuaGlobals()
         }
         QString msg = tr("[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
                          "Database support will not be available.\n");
-        msg.append(e.c_str());
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
         QString msg = tr("[  OK  ]  - Lua module sqlite3 loaded.");
@@ -13564,7 +13564,7 @@ void TLuaInterpreter::initLuaGlobals()
         }
         QString msg = tr("[ ERROR ] - Cannot find Lua module utf8.\n"
                          "utf8.* Lua functions won't be available.\n");
-        msg.append(e.c_str());
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
         QString msg = tr("[  OK  ]  - Lua module utf8 loaded.");
@@ -13581,7 +13581,7 @@ void TLuaInterpreter::initLuaGlobals()
         }
         QString msg = tr("[ ERROR ] - Cannot find Lua module yajl.\n"
                          "yajl.* Lua functions won't be available.\n");
-        msg.append(e.c_str());
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
         QString msg = tr("[  OK  ]  - Lua module yajl loaded.");
@@ -13675,7 +13675,7 @@ void TLuaInterpreter::initIndenterGlobals()
             e += lua_tostring(pIndenterState, -1);
         }
         QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n")
-        msg.append(e.c_str());
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
         QString msg = tr("[  OK  ]  - Lua code formatter loaded.");
@@ -13729,7 +13729,7 @@ void TLuaInterpreter::loadGlobal()
                    "Error from Lua: ");
             e += lua_tostring(pGlobalLua, -1);
         }
-        mpHost->postMessage(e.c_str());
+        mpHost->postMessage(e);
     } else {
         mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
         return;
