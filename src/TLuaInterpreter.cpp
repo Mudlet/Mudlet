@@ -313,10 +313,10 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
         if (dir == QStringLiteral("n") || dir == QStringLiteral("north")) {
             return 1;
         }
-        if (dir == QStringLiteral("ne" || dir == QStringLiteral("northeast")) {
+        if (dir == QStringLiteral("ne") || dir == QStringLiteral("northeast")) {
             return 2;
         }
-        if (dir == QStringLiteral("nw" || dir == QStringLiteral("northwest")) {
+        if (dir == QStringLiteral("nw") || dir == QStringLiteral("northwest")) {
             return 3;
         }
         if (dir == QStringLiteral("e") || dir == QStringLiteral("east")) {
@@ -13493,7 +13493,7 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
@@ -13509,7 +13509,7 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, "require \"zip\"");
     if (error != 0) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
@@ -13524,7 +13524,7 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, "require \"lfs\"");
     if (error != 0) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
@@ -13540,7 +13540,7 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, "luasql = require \"luasql.sqlite3\"");
     if (error != 0) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
@@ -13557,7 +13557,7 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, R"(utf8 = require "lua-utf8")");
     if (error != 0) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
@@ -13574,7 +13574,7 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
     if (error != 0) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
@@ -13669,7 +13669,7 @@ void TLuaInterpreter::initIndenterGlobals()
       get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pIndenterState, -1)) {
             e = tr("Lua error:");
             e += lua_tostring(pIndenterState, -1);
@@ -13723,7 +13723,7 @@ void TLuaInterpreter::loadGlobal()
     path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
     error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
     if (error != 0) {
-        string e = tr("no error message available from Lua");
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
                    "Error from Lua: ");
