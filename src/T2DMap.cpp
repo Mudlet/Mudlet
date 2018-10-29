@@ -75,7 +75,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mCustomLinesRoomFrom()
 , mCustomLinesRoomTo()
 , mpCurrentLineStyle()
-, mCurrentLineStyle(tr("solid line"))
+, mCurrentLineStyle(QStringLiteral("solid line"))
 , mpCurrentLineColor()
 , mCurrentLineColor(Qt::red)
 , mpCurrentLineArrow()
@@ -1025,13 +1025,13 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     customLinePen.setCapStyle(Qt::RoundCap);
                     customLinePen.setJoinStyle(Qt::RoundJoin);
 
-                    if (_style == tr("solid line")) {
+                    if (_style == QStringLiteral("solid line")) {
                         customLinePen.setStyle(Qt::SolidLine);
-                    } else if (_style == tr("dot line")) {
+                    } else if (_style == QStringLiteral("dot line")) {
                         customLinePen.setStyle(Qt::DotLine);
-                    } else if (_style == tr("dash line")) {
+                    } else if (_style == QStringLiteral("dash line")) {
                         customLinePen.setStyle(Qt::DashLine);
-                    } else if (_style == tr("dash dot line")) {
+                    } else if (_style == QStringLiteral("dash dot line")) {
                         customLinePen.setStyle(Qt::DashDotLine);
                     } else {
                         customLinePen.setStyle(Qt::DashDotDotLine);
@@ -3000,11 +3000,11 @@ void T2DMap::slot_customLineProperties()
             }
 
             QStringList lineStyles;
-            lineStyles << tr("solid line")
-                        << tr("dot line")
-                        << tr("dash line")
-                        << tr("dash dot line")
-                        << tr("dash dot dot line");
+            lineStyles << QStringLiteral("solid line")
+                        << QStringLiteral("dot line")
+                        << QStringLiteral("dash line")
+                        << QStringLiteral("dash dot line")
+                        << QStringLiteral("dash dot dot line");
             mpCurrentLineStyle->addItems(lineStyles);
             QString lineStyle = room->customLinesStyle.value(exit);
             mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findText(lineStyle));
@@ -4581,11 +4581,11 @@ void T2DMap::slot_setCustomLine()
     connect(dialog, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
 
     QStringList lineStyles;
-    lineStyles << tr("solid line")
-                << tr("dot line")
-                << tr("dash line")
-                << tr("dash dot line")
-                << tr("dash dot dot line");
+    lineStyles << QStringLiteral("solid line")
+                << QStringLiteral("dot line")
+                << QStringLiteral("dash line")
+                << QStringLiteral("dash dot line")
+                << QStringLiteral("dash dot dot line");
     mpCurrentLineStyle->addItems(lineStyles);
     mpCurrentLineStyle->setCurrentText(mCurrentLineStyle);
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
