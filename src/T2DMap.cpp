@@ -2594,7 +2594,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (room) {
-                QAction* action = new QAction(tr("Undo", "Menu option to undo the last point in the mapper"), this);
+                QAction* action = new QAction(tr("Undo", "Menu option to undo drawing the last segment of a line in the mapper"), this);
                 action->setToolTip(tr("Undo last point"));
                 if (room->customLines.value(mCustomLinesRoomExit).count() > 1) {
                     connect(action, &QAction::triggered, this, &T2DMap::slot_undoCustomLineLastPoint);
