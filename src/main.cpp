@@ -289,7 +289,7 @@ int main(int argc, char* argv[])
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: ") APP_VERSION APP_BUILD);
+        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: ") + APP_VERSION APP_BUILD);
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -349,13 +349,13 @@ int main(int argc, char* argv[])
 
     QString splash_message;
     if (show_splash) {
-        splash_message.append(QCoreApplication::translate("main", ""
-                              "\n\nMudlet comes with\n"
+        splash_message.append(QCoreApplication::translate("main", "\n\n"
+                              "Mudlet comes with\n"
                               "ABSOLUTELY NO WARRANTY!\n"
                               "This is free software, and you are\n"
                               "welcome to redistribute it under\n"
                               "certain conditions; select the\n"
-                              "'About' item for details.\n\n");
+                              "'About' item for details.\n\n"));
         splash_message.append(QCoreApplication::translate("main", "Locating profiles... "));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
