@@ -2678,7 +2678,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             unlockRoom->setToolTip(tr("Unlock room for speed walks"));
             connect(unlockRoom, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
 
-            auto weightRoom = new QAction(tr("Weight", "Menu option to set a room wight in the mapper"), this);
+            auto weightRoom = new QAction(tr("Weight", "Menu option to set a room weight in the mapper"), this);
             weightRoom->setToolTip(tr("Set room weight"));
             connect(weightRoom, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
 
