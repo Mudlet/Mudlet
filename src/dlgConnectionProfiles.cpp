@@ -1790,18 +1790,17 @@ bool dlgConnectionProfiles::validateProfile()
         port_ssl_tsl->setEnabled(false);
         port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
         if (port_ssl_tsl->isChecked()) {
-            //notificationAreaIconLabelError->show();
-            //notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.\n\n")));
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.\n\n")));
+            port_ssl_tsl->setEnabled(true);
             validPort = false;
             valid = false;
         }
 #else
         if (!QSslSocket::supportsSsl()) {
-            port_ssl_tsl->setEnabled(false);
-            port_ssl_tsl->setToolTip(tr("Mudlet can not load support for secure connections."));
             if (port_ssl_tsl->isChecked()) {
-                //notificationAreaIconLabelError->show();
-                //notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.\n\n")));
+                notificationAreaIconLabelError->show();
+                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.\n\n")));
                 validPort = false;
                 valid = false;
             }
