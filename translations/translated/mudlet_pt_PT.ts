@@ -1135,27 +1135,27 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2386"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(2) no relatório %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
       <source>System message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Mensagem de sistema: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pedido de recarregamento do mapa recebido pelo sistema...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - ... Pedido de recarregamento do Sistema de Mapa completo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2806"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - ... Pedido de recarregamento do Sistema de Mapa falhou.</translation>
     </message>
   </context>
   <context>
@@ -1166,24 +1166,24 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="197"/>
       <source>failureToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>failureToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="159"/>
       <source>unableToOpenLocalFileForWriting</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToOpenLocalFileForWriting</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="176"/>
       <source>unableToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9113"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Comando Lua setAreaUserData() usado - está atualmente marcado como experimental!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9114"/>
@@ -1194,17 +1194,18 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - De forma a ser completamente funcional o comando acima pede uma revisão do formato do ficheiro do mapa e apesar disso estar programado, NÃO está ativo por isso os efeitos desta funcionalidade NÃO persistirão entre sessões e os dados relevantes NÃO SERÃO GRAVADOS.
+Para evitar encher o ecrã com mensagens repetidas, este é o único aviso sobre este comando...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9174"/>
       <source>[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Comando Lua setMapUserData() usado - está atualmente marcado como experimental!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
   </context>
   <context>
@@ -1212,12 +1213,12 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="211"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>RoomID=%1 não existe, impossível definir AreaID=%2 de um espaço inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="222"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 não existe, impossível definir RoomID=%1 de uma área inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
