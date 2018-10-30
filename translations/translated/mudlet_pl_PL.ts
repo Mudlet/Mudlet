@@ -1198,7 +1198,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Gra w %1</translation>
     </message>
   </context>
   <context>
@@ -2481,13 +2481,13 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1382"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>OSTRZEŻENIE</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1393"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>UWAGA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1404"/>
@@ -3387,12 +3387,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="64"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliasy</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="65"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Liczniki czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="66"/>
@@ -3402,12 +3402,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="67"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Klawisze</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="68"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Przyciski</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="32"/>
@@ -3466,7 +3466,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="119"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>plik dziennika</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="159"/>
@@ -4252,7 +4252,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="321"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5852"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Przyciski</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="322"/>
@@ -4262,7 +4262,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="326"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliasy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="327"/>
@@ -4273,7 +4273,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="331"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5669"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Liczniki czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="332"/>
@@ -4294,7 +4294,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Klawisze</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
@@ -4305,7 +4305,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="343"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5986"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Zmienne</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="344"/>
@@ -4867,12 +4867,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Nie udało się zapisać profilu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Przepraszamy, nie udało się zapisać profilu - otrzymano następujący błąd: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
@@ -5715,7 +5715,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="290"/>
       <location filename="../src/mudlet.cpp" line="460"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliasy</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="291"/>
@@ -5726,7 +5726,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="296"/>
       <location filename="../src/mudlet.cpp" line="461"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Liczniki czasu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="297"/>
@@ -5736,7 +5736,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="302"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Przyciski</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="303"/>
@@ -5758,7 +5758,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="314"/>
       <location filename="../src/mudlet.cpp" line="464"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Klawisze</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="315"/>
@@ -5768,7 +5768,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>Zmienne</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
@@ -6461,12 +6461,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1275"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Pierwszy plan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1298"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Tło:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1318"/>
@@ -7248,7 +7248,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
