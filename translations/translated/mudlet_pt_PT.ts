@@ -1248,84 +1248,84 @@ Para evitar encher o ecrã com mensagens repetidas, este é o único aviso sobre
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Auditoria do mapa completa (%1s). Aproveite o jogo...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mapa carregado com sucesso (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>cima</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>baixo</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1010"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>dentro</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1011"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>fora</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1030"/>
