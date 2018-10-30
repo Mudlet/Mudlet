@@ -269,6 +269,10 @@ private:
     bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
+    // Used to prevent more than one warning being shown in the event of a bad
+    // (user wants to use characters that cannot be encoded in the Server
+    // Encoding) - gets reset when the encoding is changed:
+    bool mEncodingWarningIssued;
 };
 
 #endif // MUDLET_CTELNET_H

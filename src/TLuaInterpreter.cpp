@@ -5540,14 +5540,14 @@ int TLuaInterpreter::sendATCP(lua_State* L)
 
     if (!host.mTelnet.isATCPEnabled()) {
         lua_pushnil(L);
-        lua_pushstring(L, "ATCP is not currently enabled by negotiation with the server");
+        lua_pushstring(L, "ATCP is not currently enabled");
         return 2;
     }
 
     // output is in Mud Server Encoding form here:
     if (! host.mTelnet.socketOutRaw(output)) {
         lua_pushnil(L);
-        lua_pushstring(L, "unable to send some or all of the ATCP message as there was a problem with the connection to the server");
+        lua_pushstring(L, "unable to send all of the ATCP message");
         return 2;
     }
 
@@ -5591,14 +5591,14 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 
     if (!host.mTelnet.isGMCPEnabled()) {
         lua_pushnil(L);
-        lua_pushstring(L, "GMCP is not currently enabled by negotiation with the server");
+        lua_pushstring(L, "GMCP is not currently enabled");
         return 2;
     }
 
     // output is in Mud Server Encoding form here:
     if (! host.mTelnet.socketOutRaw(output)) {
         lua_pushnil(L);
-        lua_pushstring(L, "unable to send some or all of the GMCP message as there was a problem with the connection to the server");
+        lua_pushstring(L, "unable to send all of the GMCP message");
         return 2;
     }
 

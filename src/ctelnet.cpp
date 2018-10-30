@@ -82,6 +82,7 @@ cTelnet::cTelnet(Host* pH)
 , enableChannel102(false)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
+, mEncodingWarningIssued(false)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -189,6 +190,7 @@ void cTelnet::encodingChanged(const QString& encoding)
 
     if (mEncoding != encoding) {
         mEncoding = encoding;
+        mEncodingWarningIssued = false;
         // Not currently used as we do it by hand as we have to extract the data
         // from the telnet protocol and all the out-of-band stuff.  It might be
         // possible to use this in the future for non-UTF-8 traffic though.
@@ -413,24 +415,30 @@ bool cTelnet::sendData(QString& data)
     if (mpHost->mAllowToSendCommand) {
         string outData;
         if (!mEncoding.isEmpty()) {
-            if (! outgoingDataCodec->canEncode(data)) {
-                QString errorMsg = tr("[ WARN ] - Invalid characters in outgoing data, one or more characters cannot\n"
+            if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
+                QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
                                       "be encoded into the range that is acceptable for the character\n"
-                                      "encoding that is currently set {\"%1\"} for the game server."
-                                      "It may not understand what is sent to it.").arg(mEncoding);
+                                      "encoding that is currently set {\"%1\"} for the game server.\n"
+                                      "It may not understand what is sent to it.\n"
+                                      "Note: this warning will only be issued once, even if this happens again, until\n"
+                                      "the Encoding is changed.").arg(mEncoding);
                 postMessage(errorMsg);
+                mEncodingWarningIssued = true;
             }
             // Even if there are bad characters - try to send it anyway...
             outData = outgoingDataEncoder->fromUnicode(data).constData();
         } else {
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
-                if (data.at(i).row() || data.at(i).cell() > 127){
-                    QString errorMsg = tr("[ WARN ] - Invalid characters in outgoing data, one or more characters cannot\n"
+                if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
+                    QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
                                           "be encoded into the range that is acceptable for the character\n"
-                                          "encoding that is currently set {\"ASCII\"} for the MUD Server."
-                                          "It may not understand what is sent to it.");
+                                          "encoding that is currently set {\"ASCII\"} for the MUD Server.\n"
+                                          "It may not understand what is sent to it.\n"
+                                          "Note: this warning will only be issued once, even if this happens again, until\n"
+                                          "the Encoding is changed.");
                     postMessage(errorMsg);
+                    mEncodingWarningIssued = true;
                     break;
                 }
             }
@@ -477,7 +485,7 @@ bool cTelnet::socketOutRaw(string& data)
         qint64 chunkWritten = socket.write(data.substr(written).data(), (dataLength - written));
 
         if (chunkWritten < 0) {
-            // -1 is the sentinal (error) value but any other negative value
+            // -1 is the sentinel (error) value but any other negative value
             // would not make sense and it would break the cast to the
             // (unsigned) std::size_t type in the next code fragement!
             return false;
@@ -737,7 +745,7 @@ void cTelnet::processTelnetCommand(const string& command)
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
-            
+
             if (mudlet::self()->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
                 output = TN_IAC;
                 output += TN_SB;
@@ -2161,16 +2169,10 @@ void cTelnet::setKeepAlive(int socketHandle)
 // to the UTF-16BE encoding used for QString and then back to a series of bytes
 // as a QByteArray - note that it does NOT retain states between calls as it
 // assumes each call is a complete separate chunk of text - should this not
-// prove to be the case in practice it will be necessary to fork-off seperate
+// prove to be the case in practice it will be necessary to fork-off separate
 // instances of this method for each OOB protocol that uses this DECODER:
 QByteArray cTelnet::decodeBytes(const char* bytes)
 {
-    // Check this each packet
-    QString usedEncoding = mpHost->mTelnet.getEncoding();
-    if (mEncoding != usedEncoding) {
-        encodingChanged(usedEncoding);
-    }
-
     if (mpOutOfBandDataIncomingCodec) {
         // (QString) QTextCodec::toUnicode(const char *chars) const converts
         // from given encoding to the QString UTF-16BE Unicode form:
@@ -2192,12 +2194,6 @@ QByteArray cTelnet::decodeBytes(const char* bytes)
 // '<nbsp>' {U+00A0 Non-breaking space}            ==> CP-850
 std::string cTelnet::encodeAndCookBytes(const std::string& data)
 {
-    // Check this each packet
-    QString usedEncoding = mpHost->mTelnet.getEncoding();
-    if (mEncoding != usedEncoding) {
-        encodingChanged(usedEncoding);
-    }
-
     if (mpOutOfBandDataIncomingCodec) {
         // QTextCodec::fromUnicode(...) converts from QString in UTF16BE
         // encoding to the required Mud Server encoding as a QByteArray,
