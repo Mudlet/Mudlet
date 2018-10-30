@@ -1223,7 +1223,7 @@ Para evitar encher o ecrã com mensagens repetidas, este é o único aviso sobre
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Auditoria de um mapa carregado/importado/baixado começando...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
