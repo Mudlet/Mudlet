@@ -3473,7 +3473,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="119"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>logfile</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="159"/>
@@ -3533,7 +3533,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="634"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="645"/>
@@ -3563,7 +3563,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1616"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1631"/>
@@ -3763,7 +3763,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1618"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa Mudlet (*.dat);;Dados do mapa xml (*.xml);;Qualquer ficheiro (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2761"/>
@@ -4184,7 +4184,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>cima</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
@@ -4199,7 +4199,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>baixo</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
@@ -4219,12 +4219,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>dentro</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1730"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>fora</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1808"/>
@@ -4874,12 +4874,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível guardar o perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Desculpe, não foi possível guardar o perfil - retornou o seguinte erro: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
@@ -6003,7 +6003,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2856"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(3) no relatório %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2928"/>
@@ -6468,12 +6468,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1275"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1298"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1318"/>
