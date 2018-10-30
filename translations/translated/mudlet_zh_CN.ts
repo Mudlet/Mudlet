@@ -2951,22 +2951,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...</source>
-      <translation type="unfinished"/>
+      <translation>选择样式, 颜色以及是否在线条结尾前显示箭头, 然后选择退出以绘制线条...</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>路径线设置:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>以箭头结尾:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>样式:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
