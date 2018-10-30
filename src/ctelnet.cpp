@@ -327,8 +327,9 @@ void cTelnet::connectIt(const QString& address, int port)
 
 void cTelnet::disconnect()
 {
-    socket.disconnectFromHost();
     mDontReconnect = true;
+    socket.disconnectFromHost();
+
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -381,21 +382,20 @@ void cTelnet::handle_socket_signal_connected()
 
 void cTelnet::handle_socket_signal_disconnected()
 {
+    QString msg;
+    TEvent event;
     QString reason;
     QString spacer = "    ";
     bool sslerr = false;
-
 
     postData();
 
     emit signal_disconnected(mpHost);
 
-    TEvent event;
     event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
-    QString msg;
     QTime timeDiff(0, 0, 0, 0);
     msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
@@ -405,24 +405,37 @@ void cTelnet::handle_socket_signal_disconnected()
         postMessage(spacer);
 
 #if !defined(QT_NO_SSL)
-        QString errlist = "";
-        QList<QSslError> sslErrors = getSslErrors();
 
-        sslerr = ((sslErrors.count() > 1 && !mpHost->mSslIgnoreAll) || ((sslErrors.at(0) == QSslError::CertificateExpired) && !mpHost->mSslIgnoreExpired)
-                  || ((sslErrors.at(0) == QSslError::SelfSignedCertificate) && !mpHost->mSslIgnoreSelfSigned));
+        QList<QSslError> sslErrors = getSslErrors();
+        QSslCertificate cert = socket.peerCertificate();
+
+        if (mpHost->mSslIgnoreExpired) {
+            sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
+        }
+
+        if (mpHost->mSslIgnoreSelfSigned) {
+            sslErrors.removeAll(QSslError(QSslError::SelfSignedCertificate, cert));
+        }
+
+        sslerr = (sslErrors.count() > 0 && !mpHost->mSslIgnoreAll && mpHost->mSslTsl);
 
         if (sslerr) {
             mDontReconnect = true;
 
             for (int a = 0; a < sslErrors.count(); a++) {
-                errlist.append(QString("        %1\n").arg(QString(sslErrors.at(a).errorString())));
+                reason.append(QString("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
-            QString err = "[ ALERT ] - Socket got disconnected.\nReason: \n" % errlist;
+            QString err = "[ ALERT ] - Socket got disconnected.\nReason: \n" % reason;
             postMessage(err);
         } else
 #endif
         {
-            QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
+            if (mDontReconnect) {
+                reason = "User Disconnected";
+            } else {
+                reason = socket.errorString();
+            }
+            QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % reason;
             postMessage(err);
         }
         postMessage(msg);
@@ -437,12 +450,13 @@ void cTelnet::handle_socket_signal_disconnected()
     if (mAutoReconnect && !mDontReconnect) {
         connectIt(hostName, hostPort);
     }
+    mDontReconnect = false;
 }
 
 #if !defined(QT_NO_SSL)
 void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
 {
-    auto cert = socket.peerCertificate();
+    QSslCertificate cert = socket.peerCertificate();
     QList<QSslError> ignoreErrorList;
 
     if (mpHost->mSslIgnoreExpired) {
