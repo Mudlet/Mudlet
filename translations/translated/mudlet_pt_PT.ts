@@ -1006,75 +1006,76 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="978"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log da sessão começado a &apos;hh:mm:ss&apos; de &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="999"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log da sessão começado a &apos;hh:mm:ss&apos; de &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1008"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>Sessão de log terminada a %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1009"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss&apos; a &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="377"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Marcas Temporais.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Gravar uma repetição.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Começar a registar a saída do jogo num ficheiro log.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="410"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; é a latência do servidor do jogo e da rede (aka ping, em segundos), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; é o tempo de processamento do sistema - quanto tempo os triggers demoraram a processar a(s) ultima(s) linha(s).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="448"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation type="unfinished"/>
+      <translation>Interrupção de emergência. Para todos os timers e triggers.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Pesquisar no buffer.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de pesquisa anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de pesquisa posterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1004"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Parar de registar a saída do jogo para um ficheiro log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1022"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Começar a registar a saída do jogo para um ficheiro log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
@@ -1084,17 +1085,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1627"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(1) no relatório %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1650"/>
       <source>loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: NULL Host pointer {in TConsole::importMap(...)} - alguma coisa está errada!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1663"/>
       <source>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - alguma coisa está errada!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1671"/>
@@ -1105,24 +1106,26 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1694"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Ficheiro de mapa não encontrado, caminho e nome usados foram:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1700"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (nome de ficheiro usado: &quot;%1&quot; não foi encontrado).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1709"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ficheiro de mapa localizado e aberto, a analisar agora...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (filename used:
+&quot;%1&quot; impossível abrir para leitura).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2376"/>
