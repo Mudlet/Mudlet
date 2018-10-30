@@ -1228,22 +1228,22 @@ Para evitar encher o ecrã com mensagens repetidas, este é o único aviso sobre
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - CONVERTENDO: etiqueta convencional, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Convertendo ID de etiqueta convencional: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERTENDO: impossível converter etiqueta convencional na área com id: %1,  label id is: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="477"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERTENDO: impossível converter etiqueta convencional com id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
