@@ -6050,7 +6050,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2856"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(3) в %1 отчет</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2928"/>
