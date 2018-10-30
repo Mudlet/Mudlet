@@ -3880,7 +3880,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1618"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet 地图 (*.dat);;Xml 地图数据 (*.xml);;所有文件 (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2761"/>
@@ -4713,7 +4713,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1963"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1968"/>
       <source>Pattern</source>
-      <translation type="unfinished"/>
+      <translation>匹配</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1371"/>
@@ -4992,12 +4992,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>无法保存用户配置文件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
@@ -6116,12 +6116,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2846"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>加载地图前 (3) 的报告</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2856"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>加载地图中 (3) 的报告，时间：%1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2928"/>
@@ -6192,7 +6192,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="3903"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 不能执行重播, 另一个重播可能已经在进行中，
+请等它完成后再次尝试.</translation>
     </message>
   </context>
   <context>
@@ -6784,7 +6785,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1428"/>
       <location filename="../src/ui/profile_preferences.ui" line="2110"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>浅黑色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1435"/>
@@ -6806,7 +6807,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1468"/>
       <location filename="../src/ui/profile_preferences.ui" line="2144"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>浅红色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1475"/>
@@ -6828,7 +6829,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1508"/>
       <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>浅绿色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1515"/>
@@ -6850,7 +6851,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1548"/>
       <location filename="../src/ui/profile_preferences.ui" line="2212"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>淡黄色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1555"/>
@@ -6872,7 +6873,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1588"/>
       <location filename="../src/ui/profile_preferences.ui" line="2246"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>浅蓝色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1595"/>
@@ -6894,7 +6895,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1628"/>
       <location filename="../src/ui/profile_preferences.ui" line="2280"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>浅洋红色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1635"/>
@@ -6916,7 +6917,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1668"/>
       <location filename="../src/ui/profile_preferences.ui" line="2314"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>浅青色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1675"/>
@@ -6927,7 +6928,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1688"/>
       <location filename="../src/ui/profile_preferences.ui" line="2331"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>白色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1695"/>
@@ -6938,7 +6939,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1708"/>
       <location filename="../src/ui/profile_preferences.ui" line="2348"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>浅白色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1715"/>
@@ -7061,7 +7062,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1888"/>
       <location filename="../src/ui/profile_preferences.ui" line="1892"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {default version}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1903"/>
