@@ -5651,19 +5651,19 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="134"/>
       <source>English [American]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Английский [Американский] (English, American)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="135"/>
       <source>English [British]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Английский [Британский] (English, British)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="136"/>
       <source>Chinese [Simplified]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Китайский [упрощенный] (Chinese, Simplified)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>
@@ -5723,7 +5723,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="146"/>
       <source>Portuguese</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Португальский (Portuguese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="173"/>
