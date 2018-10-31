@@ -131,10 +131,10 @@ mudlet* mudlet::self()
 void mudlet::loadLanguagesMap()
 {
     mLanguageCodeMap = {
-            {"en_US", make_pair(tr("English", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
-            {"en_GB", make_pair(tr("English (British)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_CN", make_pair(tr("Chinese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_TW", make_pair(tr("Chinese (Traditional)", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"en_US", make_pair(tr("English [American]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
+            {"en_GB", make_pair(tr("English [British]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_CN", make_pair(tr("Chinese [Simplified]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"zh_TW", make_pair(tr("Chinese [Traditional]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"nl_NL", make_pair(tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"fr_FR", make_pair(tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"de_DE", make_pair(tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
@@ -143,6 +143,7 @@ void mudlet::loadLanguagesMap()
             {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
             {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"pt_PT", make_pair(tr("Portuguese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
     };
 
     QFile file(QStringLiteral(":/translation-stats.json"));
@@ -992,7 +993,7 @@ void mudlet::slot_package_exporter()
 
 void mudlet::slot_close_profile_requested(int tab)
 {
-    QString name = mpTabBar->tabText(tab);
+    QString name = mpTabBar->tabData(tab).toString();
     Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
@@ -1146,7 +1147,7 @@ void mudlet::slot_close_profile()
 
 void mudlet::slot_tab_changed(int tabID)
 {
-    if ((!mTabMap.contains(mpTabBar->tabText(tabID))) && (tabID != -1)) {
+    if ((tabID != -1) && (!mTabMap.contains(mpTabBar->tabData(tabID).toString()))) {
         mpCurrentActiveHost = nullptr;
         return;
     }
@@ -1159,7 +1160,7 @@ void mudlet::slot_tab_changed(int tabID)
 
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         mpCurrentActiveHost->mpConsole->hide();
-        QString host = mpTabBar->tabText(tabID);
+        QString host = mpTabBar->tabData(tabID).toString();
         if (mTabMap.contains(host)) {
             mpCurrentActiveHost = mTabMap[host]->mpHost;
         } else {
@@ -1216,7 +1217,24 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
     mConsoleMap[pH] = pConsole;
-    int newTabID = mpTabBar->addTab(pH->getName());
+    QString tabName = pH->getName();
+    int newTabID = mpTabBar->addTab(tabName);
+    /*
+     * There is a sneaky feature on some OSes (I found it on FreeBSD but
+     * it is notable switched OFF by default on MacOs) where Qt adds an
+     * automatically generated accelarator to the text on the tab which - at
+     * least on FreeBSD - causes the Text to be CHANGED from what is set (an
+     * underscore is added to a suitably unique letter but that, being a text
+     * accelerator is converted to an additional '&' in the text when it is
+     * read) - this messes up identifying the tab by it's name - so we now get
+     * around it by also storing the text in the tab's data - see:
+     * + void qt_set_sequence_auto_mnemonic(bool) in 'QKeySequence' documentation
+     * + "Detailed Description" in 'QShortCut' documentation
+     * + "QTabBar creates automatic mnemonic keys in the manner of
+     *    QAbstractButton; e.g. if a tab's label is '&Graphics', Alt+G becomes
+     *    a shortcut key for switching to that tab." in 'QTabBar' documentation"
+     */
+    mpTabBar->setTabData(newTabID, tabName);
     mTabMap[pH->getName()] = pConsole;
     if (mConsoleMap.size() > 1) {
         mpTabBar->show();
@@ -3965,6 +3983,26 @@ void mudlet::setShowMapAuditErrors(const bool state)
         emit signal_showMapAuditErrorsChanged(state);
     }
 
+}
+
+void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
+{
+    if (mShowIconsOnMenuCheckedState != state) {
+        mShowIconsOnMenuCheckedState = state;
+
+        switch (state) {
+        case Qt::Unchecked:
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, true);
+            break;
+        case Qt::Checked:
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+            break;
+        case Qt::PartiallyChecked:
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mShowIconsOnMenuOriginally);
+        }
+
+        emit signal_showIconsOnMenusChanged(state);
+    }
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)

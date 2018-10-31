@@ -1064,25 +1064,27 @@ void cTelnet::processTelnetCommand(const string& command)
                 // encoding is wrong.
                 QString msg = decodeBytes(payload);
                 QString version = msg.section(QChar::LineFeed, 0);
-                version.remove(QLatin1String("Client.GUI "));
+                version.remove(QStringLiteral("Client.GUI "));
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
                 int newVersion = version.toInt();
                 if (mpHost->mServerGUI_Package_version != newVersion) {
-                    QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
-                                            .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
-                    mpHost->mpConsole->print(_smsg);
+                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                                   "Uninstalling old version '%2'")
+                                .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version)));
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
                     mpHost->mServerGUI_Package_version = newVersion;
                 }
                 QString url = msg.section(QChar::LineFeed, 1);
                 QString packageName = url.section(QLatin1Char('/'), -1);
                 QString fileName = packageName;
-                packageName.remove(QLatin1String(".zip"));
-                packageName.remove(QLatin1String(".trigger"));
-                packageName.remove(QLatin1String(".xml"));
-                packageName.remove(QLatin1String(".mpackage"));
+                // As this is a file name it must be handled case insensitively to allow
+                // for platforms which may not be case sensitive (MacOs!):
+                packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
+                packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
+                packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
+                packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
                 packageName.remove(QLatin1Char('/'));
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
@@ -1096,7 +1098,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
-                mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
+                mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Abort", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
             }
@@ -1318,10 +1320,16 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
     QString packageMessage;
     QString data;
-    packageMessage = transcodedMsg.section(QChar::Space, 0, 0);
-    data = transcodedMsg.section(QChar::Space, 1);
 
-    if (data.isEmpty()) {
+    int firstNewline = transcodedMsg.indexOf(QChar::LineFeed);
+    int firstSpace = transcodedMsg.indexOf(QChar::Space);
+
+    // if we see a space before a newline, or no newlines at all,
+    // then that's the separator for message and data
+    if (Q_LIKELY((firstSpace != -1 && firstSpace < firstNewline) || firstNewline == -1)) {
+        packageMessage = transcodedMsg.section(QChar::Space, 0, 0);
+        data = transcodedMsg.section(QChar::Space, 1);
+    } else {
         packageMessage = transcodedMsg.section(QChar::LineFeed, 0, 0);
         data = transcodedMsg.section(QChar::LineFeed, 1);
     }
@@ -1332,28 +1340,32 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         }
 
         QString version = transcodedMsg.section(QChar::LineFeed, 0);
+        // Cannot use QLatin1String(...) as that is only introduced in Qt 5.11:
         version.remove(QStringLiteral("Client.GUI "));
         version.replace(QChar::LineFeed, QChar::Space);
         version = version.section(QChar::Space, 0, 0);
 
         int newVersion = version.toInt();
         if (mpHost->mServerGUI_Package_version != newVersion) {
-            QString _smsg = tr("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>")
-                                    .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version));
-            mpHost->mpConsole->print(_smsg.toLatin1().data());
+            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                           "Uninstalling old version '%2'")
+                        .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version)));
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;
         }
         QString url = transcodedMsg.section(QChar::LineFeed, 1);
         QString packageName = url.section(QLatin1Char('/'), -1);
         QString fileName = packageName;
-        packageName.remove(QLatin1String(".zip"));
-        packageName.remove(QLatin1String(".trigger"));
-        packageName.remove(QLatin1String(".xml"));
-        packageName.remove(QLatin1String(".mpackage"));
+        // As this is a file name it must be handled case insensitively to allow
+        // for platforms which may not be case sensitive (MacOs!):
+        packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
+        packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
+        packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
+        packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
         packageName.remove(QLatin1Char('/'));
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
+
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
             postMessage(tr("[  OK  ] - Package is already installed."));
@@ -1363,20 +1375,23 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
-        mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
+        mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Abort", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
-    } else if (packageMessage.startsWith(QStringLiteral("Client.Map"))) {
+    } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"))) {
         mpHost->setMmpMapLocation(data);
     }
     data.remove(QChar::LineFeed);
+    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
+    // trying a different way of specifying the escape character
+    data.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar::CarriageReturn);
 
-    if (packageMessage.startsWith(QStringLiteral("External.Discord.Status"))
-        || packageMessage.startsWith(QStringLiteral("External.Discord.Info"))) {
-        mpHost->processDiscordGMCP(packageMessage, data);
+    if (transcodedMsg.startsWith(QLatin1String("External.Discord.Status"))
+        || transcodedMsg.startsWith(QLatin1String("External.Discord.Info"))) {
+        mpHost->processDiscordGMCP(transcodedMsg, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
