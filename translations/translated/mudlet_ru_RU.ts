@@ -3332,7 +3332,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="371"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Связь с %1 установлена.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="372"/>
@@ -3342,7 +3342,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="377"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Установка связи с %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="382"/>
@@ -4892,7 +4892,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить копию профиля</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
@@ -5006,7 +5006,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="25"/>
       <source>Mudlet IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet IRC-клиент</translation>
     </message>
   </context>
   <context>
@@ -6389,7 +6389,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="690"/>
       <source>Display Border</source>
-      <translation type="unfinished"/>
+      <translation>Граница дисплея</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="711"/>
@@ -7096,7 +7096,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2426"/>
       <source>Force MXP negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Отключить MXP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2460"/>
