@@ -154,6 +154,15 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
+
+    // Set the tooltip on the containing widget so both the label and the
+    // control have the same tool-tip:
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer will a short interval will quickly fill up the <i>Central Debug Console</i> "
+                                                          "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
+                                                          "control adjusts a threshold that will hide those messages in just that window for those timers which "
+                                                          "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
+                                                          "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
+
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
                                                                  "map and whether they can be drawn using just the specifed font, any other "
                                                                  "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
@@ -195,6 +204,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
                                              "propogate everywhere until Mudlet is restarted.</i></p>"));
+
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -265,6 +275,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
+    widget_timerDebugOutputMinimumInterval->setEnabled(false);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -341,6 +352,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
+    widget_timerDebugOutputMinimumInterval->setEnabled(true);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(true);
@@ -705,6 +717,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
+    timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
     bool socketErrorHandled = false;
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -2261,6 +2274,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mThemePreviewType = data.first;
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
+
+        pHost->mTimerDebugOutputSuppressionInterval = timeEdit_timerDebugOutputMinimumInterval->time();
 
         auto hideSmallIcon = false, hideSmallIconText = false;
         if (comboBox_discordSmallIconPrivacy->currentIndex() == 0) {

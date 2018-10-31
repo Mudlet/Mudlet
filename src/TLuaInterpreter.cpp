@@ -12456,7 +12456,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::call(const QString& function, const QString& mName)
+// Third argument hides the "LUA OK" type message if it true which may be used
+// to cut down on spammy output if things are okay.
+bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
     lua_State* L = pGlobalLua;
     if (!L) {
@@ -12476,21 +12478,18 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
                 e += lua_tostring(L, i);
                 logError(e, mName, function);
                 if (mudlet::debugMode) {
-                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> 0;
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running script " << mName << " (" << function << "),\nreason: " << e.c_str() << "\n" >> 0;
                 }
             }
         }
     } else {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
+        if (mudlet::debugMode && !muteDebugOutput) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK: script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
     lua_pop(L, lua_gettop(L));
-    if (error == 0) {
-        return true;
-    } else {
-        return false;
-    }
+
+    return (error);
 }
 
 // No documentation available in wiki - internal function
