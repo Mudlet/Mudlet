@@ -5782,25 +5782,25 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="134"/>
       <source>English [American]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch [Amerikanisch]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="135"/>
       <source>English [British]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch [Britisch]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="136"/>
       <source>Chinese [Simplified]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Chinesisch [vereinfacht]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>
       <source>Chinese [Traditional]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Chinesisch [traditionell]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="138"/>
@@ -5854,7 +5854,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="146"/>
       <source>Portuguese</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Portugiesisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="173"/>
