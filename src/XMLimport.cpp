@@ -829,6 +829,12 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mSearchEngineName = QString("Google");
     }
 
+    if (attributes().hasAttribute(QLatin1String("mTimerSupressionInterval"))) {
+        pHost->mTimerDebugOutputSuppressionInterval = QTime::fromString(attributes().value(QLatin1String("mTimerSupressionInterval")).toString(), QLatin1String("hh:mm:ss.zzz"));
+    } else {
+        pHost->mTimerDebugOutputSuppressionInterval = QTime();
+    }
+  
     if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }

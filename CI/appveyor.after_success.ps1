@@ -67,27 +67,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   $session.Close()
   $session.Dispose()
   $DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
-
- <#
-  This is the shell version:
-  # add ssh-key to ssh-agent for deployment
-  # shellcheck disable=2154
-  # the two "undefined" variables are defined by travis
-  openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${TRAVIS_BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
-  eval "$(ssh-agent -s)"
-  chmod 600 /tmp/mudlet-deploy-key
-  ssh-add /tmp/mudlet-deploy-key
-
-  bash make-installer.sh -r "${VERSION}"
-
-  chmod +x "Mudlet.AppImage"
-
-  tar -czvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
-
-  scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
-  DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
-  fi #>
-
+  npm install -g dblsqd-cli
+  dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
+  dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
 }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {

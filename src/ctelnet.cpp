@@ -1184,10 +1184,16 @@ void cTelnet::setGMCPVariables(const QString& msg)
 {
     QString packageMessage;
     QString data;
-    packageMessage = msg.section(QChar::Space, 0, 0);
-    data = msg.section(QChar::Space, 1);
 
-    if (data.isEmpty()) {
+    int firstNewline = msg.indexOf(QChar::LineFeed);
+    int firstSpace = msg.indexOf(QChar::Space);
+
+    // if we see a space before a newline, or no newlines at all,
+    // then that's the separator for message and data
+    if (Q_LIKELY((firstSpace != -1 && firstSpace < firstNewline) || firstNewline == -1)) {
+        packageMessage = msg.section(QChar::Space, 0, 0);
+        data = msg.section(QChar::Space, 1);
+    } else {
         packageMessage = msg.section(QChar::LineFeed, 0, 0);
         data = msg.section(QChar::LineFeed, 1);
     }
@@ -1241,6 +1247,9 @@ void cTelnet::setGMCPVariables(const QString& msg)
         mpHost->setMmpMapLocation(data);
     }
     data.remove('\n');
+    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
+    // trying a different way of specifying the escape character
+    data.replace(QStringLiteral("\u001B"), QStringLiteral("\\u001B"));
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar('\r'));
 

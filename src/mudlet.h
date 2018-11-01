@@ -50,6 +50,8 @@
 #include <QTime>
 #include <QTimer>
 #include "edbee/models/textautocompleteprovider.h"
+#include <QShortcut>
+#include <QKeySequence>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -271,6 +273,7 @@ public:
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
+    void setShowIconsOnMenu(const Qt::CheckState);
 
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
@@ -437,6 +440,7 @@ signals:
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
+    void signal_showIconsOnMenusChanged(const Qt::CheckState);
 
 private slots:
     void slot_close_profile();
@@ -451,6 +455,7 @@ private slots:
     void show_key_dialog();
     void show_variable_dialog();
     void show_options_dialog();
+    void slot_update_shortcuts();
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -490,6 +495,29 @@ private:
     QPointer<QLabel> mpLabelReplayTime;
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
+
+    QPointer<QShortcut> triggersShortcut;
+    QPointer<QShortcut> showMapShortcut;
+    QPointer<QShortcut> inputLineShortcut;
+    QPointer<QShortcut> optionsShortcut;
+    QPointer<QShortcut> notepadShortcut;
+    QPointer<QShortcut> packagesShortcut;
+    QPointer<QShortcut> modulesShortcut;
+    QPointer<QShortcut> multiViewShortcut;
+    QPointer<QShortcut> connectShortcut;
+    QPointer<QShortcut> disconnectShortcut;
+    QPointer<QShortcut> reconnectShortcut;
+    QKeySequence triggersKeySequence;
+    QKeySequence showMapKeySequence;
+    QKeySequence inputLineKeySequence;
+    QKeySequence optionsKeySequence;
+    QKeySequence notepadKeySequence;
+    QKeySequence packagesKeySequence;
+    QKeySequence modulesKeySequence;
+    QKeySequence multiViewKeySequence;
+    QKeySequence connectKeySequence;
+    QKeySequence disconnectKeySequence;
+    QKeySequence reconnectKeySequence;
 
     void check_for_mappingscript();
 
