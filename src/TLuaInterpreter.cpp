@@ -1018,11 +1018,10 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
     QString windowName;
     int s = 0;
 
-    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+    if (lua_gettop(L) > 0) { // Have more than one argument so first must be a console name
         if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L, "getLineNumber: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -1032,8 +1031,18 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
         lua_pushnumber(L, host.mpConsole->getLineNumber());
         return 1;
     } else {
-        lua_pushnumber(L, mudlet::self()->getLineNumber(&host, windowName));
-        return 1;
+        bool success;
+        int lineNumber;
+        std::tie(success, lineNumber) = mudlet::self()->getLineNumber(&host, windowName);
+
+        if (success) {
+            lua_pushnumber(L, lineNumber);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
 }
 
