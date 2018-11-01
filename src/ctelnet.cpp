@@ -1091,7 +1091,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
                 postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
-                    postMessage(tr("[  OK  ] - Package is already installed."));
+                    postMessage(tr("[  OK  ]  - Package is already installed."));
                     return;
                 }
 
@@ -1368,7 +1368,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
-            postMessage(tr("[  OK  ] - Package is already installed."));
+            postMessage(tr("[  OK  ]  - Package is already installed."));
             return;
         }
 
