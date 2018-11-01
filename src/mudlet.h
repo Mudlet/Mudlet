@@ -144,7 +144,7 @@ public:
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
     void deleteLine(Host*, const QString& name);
-    void insertText(Host*, const QString& name, const QString&);
+    bool insertText(Host*, const QString& windowName, const QString&);
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
     int selectSection(Host*, const QString& name, int, int);

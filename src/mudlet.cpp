@@ -2129,11 +2129,15 @@ void mudlet::deleteLine(Host* pHost, const QString& name)
     }
 }
 
-void mudlet::insertText(Host* pHost, const QString& name, const QString& text)
+bool mudlet::insertText(Host* pHost, const QString& windowName, const QString& text)
 {
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
-        dockWindowConsoleMap[name]->insertText(text);
+    const auto window = dockWindowConsoleMap.constFind(windowName);
+    if (window != dockWindowConsoleMap.cend()) {
+        window.value()->insertText(text);
+        return true;
+    } else {
+        return false;
     }
 }
 

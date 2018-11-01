@@ -9941,7 +9941,7 @@ int TLuaInterpreter::insertText(lua_State* L)
 
     QString text;
     if (!lua_isstring(L, ++s)) {
-        lua_pushfstring(L, "insertText: bad argument #%d type (name as string expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "insertText: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         text = QString::fromUtf8(lua_tostring(L, s));
@@ -9949,10 +9949,18 @@ int TLuaInterpreter::insertText(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         host.mpConsole->insertText(text);
+        lua_pushboolean(L, true);
+        return 1;
     } else {
-        mudlet::self()->insertText(&host, windowName, text);
+        if (mudlet::self()->insertText(&host, windowName, text)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 // Documentation: ? - public function missing documentation in wiki
