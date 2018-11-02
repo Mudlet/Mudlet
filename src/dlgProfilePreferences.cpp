@@ -2110,7 +2110,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             dlgIRC::writeIrcNickName(pHost, newIrcNick);
 
             // if the client is active, update our client nickname.
-            if (pMudlet->mpIrcClientMap[pHost]) {
+            if (pMudlet->mpIrcClientMap.contains(pHost)) {
                 pMudlet->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
             }
         }
@@ -2130,7 +2130,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pMudlet->mpIrcClientMap[pHost]) {
+        if (restartIrcClient && pMudlet->mpIrcClientMap.contains(pHost)) {
             pMudlet->mpIrcClientMap[pHost]->ircRestart();
         }
 
