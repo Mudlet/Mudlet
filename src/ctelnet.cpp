@@ -424,7 +424,7 @@ bool cTelnet::sendData(QString& data)
                                       "encoding that is currently set {\"%1\"} for the game server.\n"
                                       "It may not understand what is sent to it.\n"
                                       "Note: this warning will only be issued once, even if this happens again, until\n"
-                                      "the Encoding is changed.").arg(mEncoding);
+                                      "the encoding is changed.").arg(mEncoding);
                 postMessage(errorMsg);
                 mEncodingWarningIssued = true;
             }
@@ -439,7 +439,7 @@ bool cTelnet::sendData(QString& data)
                                           "encoding that is currently set {\"ASCII\"} for the MUD Server.\n"
                                           "It may not understand what is sent to it.\n"
                                           "Note: this warning will only be issued once, even if this happens again, until\n"
-                                          "the Encoding is changed.");
+                                          "the encoding is changed.");
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
