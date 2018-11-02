@@ -2602,7 +2602,9 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     action->setEnabled(false);
                 }
 
-                QAction* action2 = new QAction(tr("Properties...", "Menu option to change properties of a line in the mapper"), this);
+                QAction* action2 = new QAction(tr("Properties", "Menu option to change properties of a line in the mapper"), this);
+                action2->setText("Properties...");  // Changed seperately, because the constructor silently copies the text elsewhere
+                                                    // (tool-tip and/or object name IIRC) whereas the ellipsis is meant only for display
                 action2->setToolTip(tr("Change the properties of this line"));
                 connect(action2, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
