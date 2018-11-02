@@ -2976,37 +2976,37 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
       <source>Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.</source>
-      <translation type="unfinished"/>
+      <translation>选择一个出口开始为它绘制一条路径, 如果这些出口已经有这样的自定义路径了, 按钮会显示为按下状态, 如果该方向没有出口, 按钮会显示为不可用状态.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>普通出口:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
       <source>NW</source>
-      <translation type="unfinished"/>
+      <translation>西北</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="235"/>
       <source>N</source>
-      <translation type="unfinished"/>
+      <translation>北</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="258"/>
       <source>NE</source>
-      <translation type="unfinished"/>
+      <translation>东北</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="297"/>
       <source>UP</source>
-      <translation type="unfinished"/>
+      <translation>上</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="336"/>
       <source>W</source>
-      <translation type="unfinished"/>
+      <translation>西</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="346"/>
