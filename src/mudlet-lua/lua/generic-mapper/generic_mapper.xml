@@ -2,7 +2,7 @@
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
 	<TriggerPackage>
-		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+		<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 			<name>Exits Trigger</name>
 			<script>raiseEvent("onNewRoom",matches[2] or "")</script>
 			<triggerType>0</triggerType>
@@ -486,8 +486,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 10/27/2018
--- v2.0.11
+-- 11/03/2018
+-- v2.0.12
 --
 
     -- look into options for non-standard door usage for speedwalk
@@ -1184,7 +1184,7 @@ local function config()
         end
     setmetatable(map, mt)
     map.set("mode", configs.mode)
-    map.set("version", "2.0.11")
+    map.set("version", "2.0.12")
 
     local saves = {}
     if io.exists(path.."/map_save.dat") then
@@ -1611,7 +1611,7 @@ local function create_room(name, exits, dir, coords)
             local x,y,z = unpack(coords)
             local dx,dy,dz,rooms
             for k,v in ipairs(exits) do
-                if v ~= dir then
+                if stubmap[v] then
                     dx,dy,dz = unpack(coordmap[stubmap[v]])
                     rooms = getRoomsByPosition(map.currentArea,x+dx,y+dy,z+dz)
                     if table.size(rooms) == 1 then
@@ -2643,7 +2643,7 @@ local function check_version()
         map.echo(string.format("The Generic Mapping Script is currently &lt;red&gt;%d&lt;reset&gt; versions behind.",#versions - pos))
         map.echo("To update now, please type: &lt;yellow&gt;map update&lt;reset&gt;")
     end
-    map.update_timer = tempTimer(3600, [[map.checkVersions()]])
+    map.update_timer = tempTimer(3600, [[map.checkVersion()]])
 end
 
 function map.checkVersion()
