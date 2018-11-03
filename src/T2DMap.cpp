@@ -2804,7 +2804,9 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         removePoint->setToolTip(tr("Select a point first, then remove it"));
                     }
 
-                    auto lineProperties = new QAction(tr("Properties...", "Menu option to adjust a custom line in the mapper"), this);
+                    auto lineProperties = new QAction(tr("Properties", "Menu option to adjust a custom line in the mapper"), this);
+                    lineProperties->setText("Properties...");  // Changed seperately, because the constructor silently copies the text elsewhere
+                                                               // (tool-tip and/or object name IIRC) whereas the ellipsis is meant only for display
                     lineProperties->setToolTip(tr("Change the properties of this custom line"));
                     connect(lineProperties, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
@@ -2909,7 +2911,7 @@ void T2DMap::slot_createRoom()
     }
 }
 
-// Used both by "properties..." context menu item for existing lines AND
+// Used both by "Properties..." context menu item for existing lines AND
 // during drawing new ones.
 void T2DMap::slot_customLineProperties()
 {
