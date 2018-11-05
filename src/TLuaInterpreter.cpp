@@ -9926,36 +9926,41 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
 int TLuaInterpreter::insertText(lua_State* L)
 {
-    string a1;
-    string a2;
-    int n = lua_gettop(L);
-    int s = 1;
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "insertText: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        a1 = lua_tostring(L, s);
-        s++;
-    }
-    QString _name(a1.c_str());
+    auto& host = getHostFromLua(L);
+    QString windowName;
+    int s = 0;
 
-    if (n > 1) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "insertText: wrong argument type");
-            lua_error(L);
-            return 1;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "insertText: bad argument #%d type (name as string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         } else {
-            a2 = lua_tostring(L, s);
+            windowName = QString::fromUtf8(lua_tostring(L, s));
         }
     }
-    Host& host = getHostFromLua(L);
-    if (n == 1) {
-        host.mpConsole->insertText(QString(a1.c_str()));
+
+    QString text;
+    if (!lua_isstring(L, ++s)) {
+        lua_pushfstring(L, "insertText: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     } else {
-        mudlet::self()->insertText(&host, _name, QString(a2.c_str()));
+        text = QString::fromUtf8(lua_tostring(L, s));
     }
-    return 0;
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        host.mpConsole->insertText(text);
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        if (mudlet::self()->insertText(&host, windowName, text)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
+    }
 }
 
 // Documentation: ? - public function missing documentation in wiki
