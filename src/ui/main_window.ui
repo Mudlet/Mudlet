@@ -100,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -160,10 +160,7 @@
     <string>Play</string>
    </property>
    <property name="statusTip">
-    <string>configure connection details of, and make a connection to, MUD servers</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+C</string>
+    <string>configure connection details of, and make a connection to, game servers</string>
    </property>
   </action>
   <action name="dactionDisconnect">
@@ -171,10 +168,7 @@
     <string>Disconnect</string>
    </property>
    <property name="statusTip">
-    <string>disconnect from the current MUD server</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+D</string>
+    <string>disconnect from the current game server</string>
    </property>
   </action>
   <action name="dactionReconnect">
@@ -182,10 +176,7 @@
     <string>Reconnect</string>
    </property>
    <property name="statusTip">
-    <string>disconnect and then reconnect to the current MUD server</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+R</string>
+    <string>disconnect and then reconnect to the current game server</string>
    </property>
   </action>
   <action name="dactionOptions">
@@ -194,9 +185,6 @@
    </property>
    <property name="statusTip">
     <string>configure setting for the Mudlet application globally and for the current profile</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+P</string>
    </property>
   </action>
   <action name="dactionScriptEditor">
@@ -209,9 +197,6 @@
    <property name="statusTip">
     <string>opens the Editor for the different types of things that can be scripted by the user</string>
    </property>
-   <property name="shortcut">
-    <string>Alt+E</string>
-   </property>
   </action>
   <action name="dactionNotepad">
    <property name="text">
@@ -219,9 +204,6 @@
    </property>
    <property name="statusTip">
     <string>opens a free form text editor window for the active profile that is saved between sessions</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+N</string>
    </property>
   </action>
   <action name="dactionHelp">
@@ -266,7 +248,7 @@
     <string>Load replay</string>
    </property>
    <property name="statusTip">
-    <string>load a previous saved MUD session that can be used to test Mudlet lua systems (off-line!)</string>
+    <string>load a previous saved game session that can be used to test Mudlet lua systems (off-line!)</string>
    </property>
   </action>
   <action name="dactionForum">
@@ -303,10 +285,7 @@
     <string>Show map</string>
    </property>
    <property name="statusTip">
-    <string>show or hide the MUD Map</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+M</string>
+    <string>show or hide the game map</string>
    </property>
   </action>
   <action name="actionPackage_manager">
@@ -315,9 +294,6 @@
    </property>
    <property name="statusTip">
     <string>install and remove collections of Mudlet lua items (packages)</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+O</string>
    </property>
   </action>
   <action name="actionTest1">
@@ -353,16 +329,10 @@
    <property name="statusTip">
     <string>share the screen area between multiple open profiles</string>
    </property>
-   <property name="shortcut">
-    <string>Alt+V</string>
-   </property>
   </action>
   <action name="dactionInputLine">
    <property name="text">
     <string>Compact input line</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+L</string>
    </property>
   </action>
  </widget>

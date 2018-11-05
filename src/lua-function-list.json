@@ -316,6 +316,7 @@
   "connectExitStub": "connectExitStub(fromID, direction or toID[, optional direction])",
   "setUnderline": "setUnderline(windowName, bool)",
   "getRoomIDbyHash": "roomID = getRoomIDbyHash(hash)",
+  "getRoomHashByID": "hash = getRoomHashByID(roomId)",
   "setMergeTables": "setMergeTables(module)",
   "getLastLineNumber": "getLastLineNumber(window)",
   "addSupportedTelnetOption": "addSupportedTelnetOption(option)",
