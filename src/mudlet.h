@@ -212,6 +212,7 @@ public:
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
+    QString getLuaTranslation(const QString &sourceText);
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -580,6 +581,23 @@ private:
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
     void loadLanguagesMap();
+
+    // translations for the Lua tr() function
+    const QHash<QString, QString> mLuaTranslations = {
+        {"nw", QT_TRANSLATE_NOOP("Exit direction shortcode", "nw")},
+        {"n", QT_TRANSLATE_NOOP("Exit direction shortcode", "n")},
+        {"ne", QT_TRANSLATE_NOOP("Exit direction shortcode", "ne")},
+        {"up", QT_TRANSLATE_NOOP("Exit direction shortcode", "up")},
+        {"w", QT_TRANSLATE_NOOP("Exit direction shortcode", "w")},
+        {"e", QT_TRANSLATE_NOOP("Exit direction shortcode", "e")},
+        {"down", QT_TRANSLATE_NOOP("Exit direction shortcode", "down")},
+        {"sw", QT_TRANSLATE_NOOP("Exit direction shortcode", "sw")},
+        {"s", QT_TRANSLATE_NOOP("Exit direction shortcode", "s")},
+        {"se", QT_TRANSLATE_NOOP("Exit direction shortcode", "se")},
+        {"in", QT_TRANSLATE_NOOP("Exit direction shortcode", "in")},
+        {"out", QT_TRANSLATE_NOOP("Exit direction shortcode", "out")},
+    };
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

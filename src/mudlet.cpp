@@ -4048,6 +4048,16 @@ QStringList mudlet::getAvailableFonts()
     return database.families(QFontDatabase::Any);
 }
 
+QString mudlet::getLuaTranslation(const QString& sourceText)
+{
+    const auto translation = mLuaTranslations.constFind(sourceText);
+    if (translation != mLuaTranslations.cend()) {
+        return translation.value();
+    } else {
+        return sourceText;
+    }
+}
+
 std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
 {
     size_t pos = 0;

@@ -13504,6 +13504,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setDiscordParty", TLuaInterpreter::setDiscordParty);
     lua_register(pGlobalLua, "getDiscordParty", TLuaInterpreter::getDiscordParty);
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
+    lua_register(pGlobalLua, "tr", TLuaInterpreter::tr);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -14265,6 +14266,33 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     }
 
     lua_pushnumber(L, columns);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tr
+int TLuaInterpreter::tr(lua_State* L)
+{
+    QString sourceText;
+    int pluralCount = -1;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "tr: bad argument #1 type (text to translate as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        sourceText = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    int argumentsCount = lua_gettop(L);
+    if (argumentsCount > 1) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "tr: bad argument #2 type (plural count as number expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            pluralCount = lua_tonumber(L, 2);
+        }
+    }
+
+    lua_pushstring(L, mudlet::self()->getLuaTranslation(sourceText).toUtf8().constData());
     return 1;
 }
 
