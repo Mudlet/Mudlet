@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>632</width>
-    <height>436</height>
+    <height>481</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -57,7 +57,7 @@
          </sizepolicy>
         </property>
         <property name="toolTip">
-         <string>Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="title">
          <string>Line Settings:</string>
@@ -184,7 +184,7 @@
          </sizepolicy>
         </property>
         <property name="toolTip">
-         <string>Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="title">
          <string>Normal Exits:</string>
@@ -441,7 +441,7 @@
          </size>
         </property>
         <property name="toolTip">
-         <string>Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="title">
          <string>Special Exits:</string>
@@ -514,7 +514,7 @@ custom line?</string>
              <string>The room this special exit leads to.</string>
             </property>
             <property name="textAlignment">
-             <set>AlignRight|AlignVCenter</set>
+             <set>AlignTrailing|AlignVCenter</set>
             </property>
            </column>
            <column>
@@ -558,8 +558,7 @@ custom line?</string>
          </size>
         </property>
         <property name="toolTip">
-         <string>To remove a custom line, cancel this dialog,
-select the line and right-click to obtain a &quot;delete&quot; option.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="layoutDirection">
          <enum>Qt::RightToLeft</enum>

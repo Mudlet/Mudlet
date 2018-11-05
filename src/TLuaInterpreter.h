@@ -107,7 +107,7 @@ public:
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
-    static QString dirToString(lua_State*, int);
+    static QString dirToString(lua_State*, int, bool isForCustomExits = false);
     static int dirToNumber(lua_State*, int);
 
 

@@ -34,6 +34,32 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
+// Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
+// in Qt5 - the compilation errors that result in not having this are really
+// confusing!
+QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
+{
+    int temporary;
+    ds >> temporary;
+    switch(temporary) {
+    case Qt::DotLine:
+        [[clang::fallthrough]];
+    case Qt::DashLine:
+        [[clang::fallthrough]];
+    case Qt::DashDotLine:
+        [[clang::fallthrough]];
+    case Qt::DashDotDotLine:
+        value = static_cast<Qt::PenStyle>(temporary);
+        break;
+    case Qt::SolidLine:
+        [[clang::fallthrough]];
+    default:
+    // Force anything else to be a solidline
+        value = Qt::SolidLine;
+    }
+    return ds;
+}
+
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)
 , y(0)
@@ -293,7 +319,7 @@ bool TRoom::setExit(int to, int direction)
     return true;
 }
 
-bool TRoom::hasExit(int direction)
+bool TRoom::hasExit(int direction) const
 {
     switch (direction) {
     case DIR_NORTH:     if (north     != -1) { return true; } break;
@@ -310,6 +336,86 @@ bool TRoom::hasExit(int direction)
     case DIR_OUT:       if (out       != -1) { return true; } break;
     }
     return false;
+}
+
+// Confirms whether the text identifies a valid exit - this is a bit of a dog's
+// dinner because different parts of this class represent exit directions in
+// different ways...!
+bool TRoom::hasExitOrSpecialExit(const QString & text, const bool isForCustomExitLines = false) const
+{
+    // First check the special exits:
+    QMapIterator<int, QString> itSpecialExit(other);
+    while (itSpecialExit.hasNext()) {
+        itSpecialExit.next();
+        QString exitCmd = itSpecialExit.value();
+        if (exitCmd.startsWith(QLatin1Char('0')) || exitCmd.startsWith(QLatin1Char('1'))) {
+            exitCmd.remove(0, 1);
+        }
+
+        if (exitCmd == text) {
+            // We have a special exit which matches the given text
+            return true;
+        }
+    }
+
+    // Now check the normal ones:
+    if (isForCustomExitLines) {
+        if (text == QLatin1String("N")) {
+            return hasExit(DIR_NORTH);
+        } else if (text == QLatin1String("NE")) {
+            return hasExit(DIR_NORTHEAST);
+        } else if (text == QLatin1String("E")) {
+            return hasExit(DIR_EAST);
+        } else if (text == QLatin1String("SE")) {
+            return hasExit(DIR_SOUTHEAST);
+        } else if (text == QLatin1String("S")) {
+            return hasExit(DIR_SOUTH);
+        } else if (text == QLatin1String("SW")) {
+            return hasExit(DIR_SOUTHWEST);
+        } else if (text == QLatin1String("W")) {
+            return hasExit(DIR_WEST);
+        } else if (text == QLatin1String("NW")) {
+            return hasExit(DIR_NORTHWEST);
+        } else if (text == QLatin1String("UP")) {
+            return hasExit(DIR_UP);
+        } else if (text == QLatin1String("DOWN")) {
+            return hasExit(DIR_DOWN);
+        } else if (text == QLatin1String("IN")) {
+            return hasExit(DIR_IN);
+        } else if (text == QLatin1String("OUT")) {
+            return hasExit(DIR_OUT);
+        } else {
+            return false;
+        }
+    } else {
+        if (text == QLatin1String("n")) {
+            return hasExit(DIR_NORTH);
+        } else if (text == QLatin1String("ne")) {
+            return hasExit(DIR_NORTHEAST);
+        } else if (text == QLatin1String("e")) {
+            return hasExit(DIR_EAST);
+        } else if (text == QLatin1String("se")) {
+            return hasExit(DIR_SOUTHEAST);
+        } else if (text == QLatin1String("s")) {
+            return hasExit(DIR_SOUTH);
+        } else if (text == QLatin1String("sw")) {
+            return hasExit(DIR_SOUTHWEST);
+        } else if (text == QLatin1String("w")) {
+            return hasExit(DIR_WEST);
+        } else if (text == QLatin1String("nw")) {
+            return hasExit(DIR_NORTHWEST);
+        } else if (text == QLatin1String("up")) {
+            return hasExit(DIR_UP);
+        } else if (text == QLatin1String("down")) {
+            return hasExit(DIR_DOWN);
+        } else if (text == QLatin1String("in")) {
+            return hasExit(DIR_IN);
+        } else if (text == QLatin1String("out")) {
+            return hasExit(DIR_OUT);
+        } else {
+            return false;
+        }
+    }
 }
 
 int TRoom::getExit(int direction)
@@ -720,7 +826,28 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         ifs >> customLines;
         ifs >> customLinesArrow;
         ifs >> customLinesColor;
-        ifs >> customLinesStyle;
+        if (version >= 20) {
+            // In version 20 we stopped storing a QString form for the line style
+            ifs >> customLinesStyle;
+        } else {
+            QMap<QString, QString> oldLineStyleData;
+            ifs >> oldLineStyleData;
+            QMapIterator<QString, QString> itCustomLineInstanceStyle(oldLineStyleData);
+            while (itCustomLineInstanceStyle.hasNext()) {
+                itCustomLineInstanceStyle.next();
+                if (itCustomLineInstanceStyle.value() == QLatin1String("dot line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DotLine);
+                } else if (itCustomLineInstanceStyle.value() == QLatin1String("dash line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DashLine);
+                } else if (itCustomLineInstanceStyle.value() == QLatin1String("dash dot line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DashDotLine);
+                } else if (itCustomLineInstanceStyle.value() == QLatin1String("dash dot dot line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DashDotDotLine);
+                } else {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::SolidLine);
+                }
+            }
+        }
         ifs >> exitLocks;
     }
     if (version >= 13) {
@@ -754,7 +881,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
     QMap<QString, QList<int>> customLinesColorCopy = customLinesColor;
-    QMap<QString, QString> customLinesStyleCopy = customLinesStyle;
+    QMap<QString, Qt::PenStyle> customLinesStyleCopy = customLinesStyle;
     QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
 
     exitWeightsCopy.detach(); // Make deep copies now, this will happen anyhow once we start to remove valid members
@@ -1268,7 +1395,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
         // Custom Lines - styles
         if (!customLinesStyleCopy.isEmpty()) {
-            QMapIterator<QString, QString> itSpareCustomLine(customLinesStyleCopy);
+            QMapIterator<QString, Qt::PenStyle> itSpareCustomLine(customLinesStyleCopy);
             while (itSpareCustomLine.hasNext()) {
                 itSpareCustomLine.next();
                 customLinesStyle.remove(itSpareCustomLine.key());
@@ -1320,7 +1447,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, int>& doorsPool,
                       QMap<QString, QList<QPointF>>& customLinesPool,
                       QMap<QString, QList<int>>& customLinesColorPool,
-                      QMap<QString, QString>& customLinesStylePool,
+                      QMap<QString, Qt::PenStyle>& customLinesStylePool,
                       QMap<QString, bool>& customLinesArrowPool,
                       const QHash<int, int> roomRemapping)
 {

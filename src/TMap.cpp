@@ -57,7 +57,7 @@ TMap::TMap(Host* pH)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(19)
+, mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
@@ -1066,7 +1066,7 @@ bool TMap::serialize(QDataStream& ofs)
         }
         ofs << mUserData;
         if (mSaveVersion >= 19) {
-            // Save the data directly in supported format versions
+            // Save the data directly in supported format versions (19 and above)
             ofs << mMapSymbolFont;
             ofs << mMapSymbolFontFudgeFactor;
             ofs << mIsOnlyMapSymbolFontToBeUsed;
@@ -1257,7 +1257,35 @@ bool TMap::serialize(QDataStream& ofs)
         ofs << pR->customLines;
         ofs << pR->customLinesArrow;
         ofs << pR->customLinesColor;
-        ofs << pR->customLinesStyle;
+        if (mSaveVersion >= 20) {
+            // Before version 20 stored the style as an Latin1 string:
+            ofs << pR->customLinesStyle;
+        } else {
+            QMap<QString, QString> oldCustomLineStyleMap;
+            QMapIterator<QString, Qt::PenStyle> itCustomLineStyle(pR->customLinesStyle);
+            while (itCustomLineStyle.hasNext()) {
+                itCustomLineStyle.next();
+                switch (itCustomLineStyle.value()) {
+                case Qt::DotLine:
+                    oldCustomLineStyleMap.insert(itCustomLineStyle.key(), QLatin1String("dot line"));
+                    break;
+                case Qt::DashLine:
+                    oldCustomLineStyleMap.insert(itCustomLineStyle.key(), QLatin1String("dash line"));
+                    break;
+                case Qt::DashDotLine:
+                    oldCustomLineStyleMap.insert(itCustomLineStyle.key(), QLatin1String("dash dot line"));
+                    break;
+                case Qt::DashDotDotLine:
+                    oldCustomLineStyleMap.insert(itCustomLineStyle.key(), QLatin1String("dash dot dot line"));
+                    break;
+                case Qt::SolidLine:
+                    [[clang::fallthrough]];
+                default:
+                    oldCustomLineStyleMap.insert(itCustomLineStyle.key(), QLatin1String("solid line"));
+                }
+            }
+            ofs << oldCustomLineStyleMap;
+        }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
         ofs << pR->getExitWeights();

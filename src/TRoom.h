@@ -64,7 +64,7 @@ public:
     bool setExit(int to, int direction);
     int getExit(int direction);
     QHash<int, int> getExits();
-    bool hasExit(int direction);
+    bool hasExit(int direction) const;
     void setWeight(int);
     void setExitLock(int, bool);
     void setSpecialExitLock(int to, const QString& cmd, bool doLock);
@@ -127,10 +127,11 @@ public:
                    QMap<QString, int>&,
                    QMap<QString, QList<QPointF>>&,
                    QMap<QString, QList<int>>&,
-                   QMap<QString, QString>&,
+                   QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
                    QHash<int, int>);
     const QString dirCodeToDisplayName(int dirCode);
+    bool hasExitOrSpecialExit(const QString&, const bool) const;
 
 
     int x;
@@ -151,7 +152,7 @@ public:
     QList<int> exitLocks;
     QMap<QString, QList<QPointF>> customLines;
     QMap<QString, QList<int>> customLinesColor;
-    QMap<QString, QString> customLinesStyle;
+    QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
     bool highlight;
     QColor highlightColor;
@@ -180,6 +181,8 @@ private:
     int out;
 
     // FIXME: This should be a map of String->room id because there can be multiple special exits to the same room
+    // Also, move the special exit being locked OUT of being a prefix on the
+    // QString part:
     QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
                                    //verbotene exits werden mit 0 geprefixed, offene mit 1
 

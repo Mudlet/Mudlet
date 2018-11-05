@@ -11,7 +11,7 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>206</height>
+    <height>258</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -40,7 +40,7 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Select Style, Color and whether to end the line with an arrow head.</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="title">
       <string>Line Settings:</string>

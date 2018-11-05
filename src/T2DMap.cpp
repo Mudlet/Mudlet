@@ -75,7 +75,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mCustomLinesRoomFrom()
 , mCustomLinesRoomTo()
 , mpCurrentLineStyle()
-, mCurrentLineStyle(QStringLiteral("solid line"))
+, mCurrentLineStyle(Qt::SolidLine)
 , mpCurrentLineColor()
 , mCurrentLineColor(Qt::red)
 , mpCurrentLineArrow()
@@ -982,92 +982,66 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 QMapIterator<QString, QList<QPointF>> itk(room->customLines);
                 while (itk.hasNext()) {
                     itk.next();
-                    QColor _color;
+                    QColor customLineColor;
                     if (_id == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
-                        _color.setRed(255);
-                        _color.setGreen(155);
-                        _color.setBlue(55);
-                    } else if (room->customLinesColor[itk.key()].size() == 3) {
-                        _color.setRed(room->customLinesColor[itk.key()][0]);
-                        _color.setGreen(room->customLinesColor[itk.key()][1]);
-                        _color.setBlue(room->customLinesColor[itk.key()][2]);
+                        customLineColor = QColor(255, 155, 55);
+                    } else if (room->customLinesColor.value(itk.key()).size() == 3) {
+                        customLineColor = QColor(room->customLinesColor.value(itk.key()).at(0),
+                                                 room->customLinesColor.value(itk.key()).at(1),
+                                                 room->customLinesColor.value(itk.key()).at(2));
                     } else {
-                        _color = QColor(Qt::red);
+                        customLineColor = QColor(Qt::red);
                     }
-                    bool _arrow = room->customLinesArrow[itk.key()];
-                    QString _style = room->customLinesStyle[itk.key()];
-                    QPointF _cstartP;
+
                     float ex = room->x * mRoomWidth + mRX;
                     float ey = room->y * mRoomHeight * -1 + mRY;
-                    if (itk.key() == "N") {
-                        _cstartP = QPoint(ex, ey - mRoomHeight / 2.0);
-                    } else if (itk.key() == "NW") {
-                        _cstartP = QPoint(ex - mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
-                    } else if (itk.key() == "NE") {
-                        _cstartP = QPoint(ex + mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
-                    } else if (itk.key() == "S") {
-                        _cstartP = QPoint(ex, ey + mRoomHeight / 2.0);
-                    } else if (itk.key() == "SW") {
-                        _cstartP = QPoint(ex - mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
+                    QPointF origin = QPointF(ex, ey);
+                    // The following sets a point offset from the room center
+                    // that depends on the exit direction that the custom line
+                    // heads to from the room center - it forms a fixed segment
+                    // that cannot be moved:
+                    QPointF fixedOffsetPoint;
+                    if (itk.key() == QLatin1String("N")) {
+                        fixedOffsetPoint = QPointF(ex, ey - mRoomHeight / 2.0);
+                    } else if (itk.key() == QLatin1String("NW")) {
+                        fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
+                    } else if (itk.key() == QLatin1String("NE")) {
+                        fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
+                    } else if (itk.key() == QLatin1String("S")) {
+                        fixedOffsetPoint = QPointF(ex, ey + mRoomHeight / 2.0);
+                    } else if (itk.key() == QLatin1String("SW")) {
+                        fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
                     } else if (itk.key() == "SE") {
-                        _cstartP = QPoint(ex + mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
-                    } else if (itk.key() == "W") {
-                        _cstartP = QPoint(ex - mRoomWidth / 2.0, ey);
-                    } else if (itk.key() == "E") {
-                        _cstartP = QPoint(ex + mRoomWidth / 2.0, ey);
+                        fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
+                    } else if (itk.key() == QLatin1String("W")) {
+                        fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey);
+                    } else if (itk.key() == QLatin1String("E")) {
+                        fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey);
                     } else {
-                        _cstartP = QPointF(ex, ey);
+                        fixedOffsetPoint = QPointF(ex, ey);
                     }
-                    QPointF ursprung = QPointF(ex, ey);
                     QPen customLinePen = painter.pen();
                     customLinePen.setCosmetic(mMapperUseAntiAlias);
-                    customLinePen.setColor(_color);
+                    customLinePen.setWidthF(exitWidth);
+                    customLinePen.setColor(customLineColor);
                     customLinePen.setCapStyle(Qt::RoundCap);
                     customLinePen.setJoinStyle(Qt::RoundJoin);
+                    customLinePen.setStyle(room->customLinesStyle.value(itk.key()));
 
-                    if (_style == "solid line") {
-                        customLinePen.setStyle(Qt::SolidLine);
-                    } else if (_style == "dot line") {
-                        customLinePen.setStyle(Qt::DotLine);
-                    } else if (_style == "dash line") {
-                        customLinePen.setStyle(Qt::DashLine);
-                    } else if (_style == "dash dot line") {
-                        customLinePen.setStyle(Qt::DashDotLine);
-                    } else {
-                        customLinePen.setStyle(Qt::DashDotDotLine);
-                    }
-
-                    QList<QPointF> _pL = itk.value();
-                    if (!_pL.empty()) {
+                    QVector<QPointF> polyLinePoints;
+                    QList<QPointF> customLinePoints = itk.value();
+                    if (!customLinePoints.empty()) {
                         painter.setPen(customLinePen);
-                        painter.drawLine(ursprung, _cstartP);
-                    }
-                    for (int pk = 0; pk < _pL.size(); pk++) {
-                        QPointF _cendP;
-                        _cendP.setX(_pL[pk].x() * mRoomWidth + mRX);
-                        _cendP.setY(_pL[pk].y() * mRoomHeight * -1 + mRY);
-                        painter.drawLine(_cstartP, _cendP);
-
-                        if (_id == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
-                            QPen _savedPen = painter.pen();
-                            QPen _pen;
-                            QBrush _brush = painter.brush();
-                            if (pk == mCustomLineSelectedPoint) {
-                                // Draw the selected point in yellow not orange.
-                                _pen = QPen(QColor(255, 255, 55), _savedPen.width(), Qt::SolidLine, Qt::FlatCap, _savedPen.joinStyle());
-                            } else {
-                                _pen = QPen(_savedPen.color(), _savedPen.width(), Qt::SolidLine, Qt::FlatCap, _savedPen.joinStyle());
-                            }
-                            // Draw hollow circles not default filled ones!
-                            painter.setBrush(Qt::NoBrush);
-                            painter.setPen(_pen);
-                            painter.drawEllipse(_cendP, mRoomWidth / 4.0, mRoomWidth / 4.0);
-                            painter.setPen(_savedPen);
-                            painter.setBrush(_brush);
+                        polyLinePoints << origin;
+                        polyLinePoints << fixedOffsetPoint;
+                        for (int pk = 0, total = customLinePoints.size(); pk < total; ++pk) {
+                            polyLinePoints << QPointF(customLinePoints.at(pk).x() * mRoomWidth + mRX,
+                                                      customLinePoints.at(pk).y() * mRoomHeight * -1 + mRY);
                         }
+                        painter.drawPolyline(polyLinePoints.data(), polyLinePoints.size());
 
-                        if (pk == _pL.size() - 1 && _arrow) {
-                            QLineF l0 = QLineF(_cendP, _cstartP);
+                        if (room->customLinesArrow.value(itk.key())) {
+                            QLineF l0 = QLineF(polyLinePoints.last(), polyLinePoints.at(polyLinePoints.size()-2));
                             l0.setLength(exitWidth * 5.0);
                             QPointF _p1 = l0.p1();
                             QPointF _p2 = l0.p2();
@@ -1085,7 +1059,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                             _poly.append(_p3);
                             _poly.append(_p4);
                             QBrush brush = painter.brush();
-                            brush.setColor(_color);
+                            brush.setColor(customLineColor);
                             brush.setStyle(Qt::SolidPattern);
                             QPen arrowPen = painter.pen();
                             arrowPen.setCosmetic(mMapperUseAntiAlias);
@@ -1094,7 +1068,29 @@ void T2DMap::paintEvent(QPaintEvent* e)
                             painter.setBrush(brush);
                             painter.drawPolygon(_poly);
                         }
-                        _cstartP = _cendP;
+
+                        if (_id == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
+                            QPen _savedPen = painter.pen();
+                            QPen _pen;
+                            QBrush _brush = painter.brush();
+                            painter.setBrush(Qt::NoBrush);
+                            // The first two points in the polyLinePoints are
+                            // fixed for all exit directions and do not get
+                            // circular "handles":
+                            for (int pk = 2, total = polyLinePoints.size(); pk < total; ++pk) {
+                                if (pk == (mCustomLineSelectedPoint + 2)) {
+                                    // Draw the selected point in yellow not orange.
+                                    _pen = QPen(QColor(255, 255, 55), _savedPen.width(), Qt::SolidLine, Qt::FlatCap, _savedPen.joinStyle());
+                                } else {
+                                    _pen = QPen(_savedPen.color(), _savedPen.width(), Qt::SolidLine, Qt::FlatCap, _savedPen.joinStyle());
+                                }
+                                // Draw hollow circles not default filled ones!
+                                painter.setPen(_pen);
+                                painter.drawEllipse(polyLinePoints.at(pk), mRoomWidth / 4.0, mRoomWidth / 4.0);
+                            }
+                            painter.setPen(_savedPen);
+                            painter.setBrush(_brush);
+                        }
                     }
                 }
                 painter.setPen(oldPen);
@@ -3001,29 +2997,28 @@ void T2DMap::slot_customLineProperties()
                 }
             }
 
-            QStringList lineStyles;
-            lineStyles << "solid line"
-                        << "dot line"
-                        << "dash line"
-                        << "dash dot line"
-                        << "dash dot dot line";
-            mpCurrentLineStyle->addItems(lineStyles);
-            QString lineStyle = room->customLinesStyle.value(exit);
-            mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findText(lineStyle));
+            mpCurrentLineStyle->setIconSize(QSize(48, 24));
+            mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/solid-line.png"))), tr("Solid line"), static_cast<int>(Qt::SolidLine));
+            mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dot-line.png"))), tr("Dot line"), static_cast<int>(Qt::DotLine));
+            mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dash-line.png"))), tr("Dash line"), static_cast<int>(Qt::DashLine));
+            mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dash-dot-line.png"))), tr("Dash-dot line"), static_cast<int>(Qt::DashDotLine));
+            mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dash-dot-dot-line.png"))), tr("Dash-dot-dot line"), static_cast<int>(Qt::DashDotDotLine));
+            Qt::PenStyle lineStyle = room->customLinesStyle.value(exit);
+            mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(lineStyle)));
 
             mpCurrentLineArrow->setChecked(room->customLinesArrow.value(exit));
             mCurrentLineColor.setRed(room->customLinesColor.value(exit).at(0));
             mCurrentLineColor.setGreen(room->customLinesColor.value(exit).at(1));
             mCurrentLineColor.setBlue(room->customLinesColor.value(exit).at(2));
 
-            QString styleSheet = QString("background-color:" + mCurrentLineColor.name());
-            mpCurrentLineColor->setStyleSheet(styleSheet);
+            mpCurrentLineColor->setStyleSheet(QStringLiteral("background-color: %1").arg(mCurrentLineColor.name()));
             connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
+            dialog->adjustSize();
 
             if (dialog->exec() == QDialog::Accepted) {
                 // Make the changes
-                room->customLinesStyle[exit] = mpCurrentLineStyle->currentText();
-                mCurrentLineStyle = mpCurrentLineStyle->currentText();
+                mCurrentLineStyle = static_cast<Qt::PenStyle>(mpCurrentLineStyle->currentData().toInt());
+                room->customLinesStyle[exit] = mCurrentLineStyle;
 
                 room->customLinesColor[exit][0] = mCurrentLineColor.red();
                 room->customLinesColor[exit][1] = mCurrentLineColor.green();
@@ -4582,18 +4577,19 @@ void T2DMap::slot_setCustomLine()
     connect(button, SIGNAL(clicked()), dialog, SLOT(reject()));
     connect(dialog, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
 
-    QStringList lineStyles;
-    lineStyles << "solid line"
-                << "dot line"
-                << "dash line"
-                << "dash dot line"
-                << "dash dot dot line";
-    mpCurrentLineStyle->addItems(lineStyles);
-    mpCurrentLineStyle->setCurrentText(mCurrentLineStyle);
+    mpCurrentLineStyle->setIconSize(QSize(48, 24));
+    mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/solid-line.png"))), tr("Solid line"), static_cast<int>(Qt::SolidLine));
+    mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dot-line.png"))), tr("Dot line"), static_cast<int>(Qt::DotLine));
+    mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dash-line.png"))), tr("Dash line"), static_cast<int>(Qt::DashLine));
+    mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dash-dot-line.png"))), tr("Dash-dot line"), static_cast<int>(Qt::DashDotLine));
+    mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/dash-dot-dot-line.png"))), tr("Dash-dot-dot line"), static_cast<int>(Qt::DashDotDotLine));
+    mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(mCurrentLineStyle)));
+
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
-    mpCurrentLineColor->setStyleSheet("background-color:" + mCurrentLineColor.name());
+    mpCurrentLineColor->setStyleSheet(QStringLiteral("background-color: %1").arg(mCurrentLineColor.name()));
     connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
     connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
+    dialog->adjustSize();
     mpCustomLinesDialog = dialog; // Don't assign the pointer value to the class member until ready to go
     mpCustomLinesDialog->show();
     mpCustomLinesDialog->raise();
@@ -4687,13 +4683,13 @@ void T2DMap::slot_setCustomLine2()
     colorList << mCurrentLineColor.red() << mCurrentLineColor.green() << mCurrentLineColor.blue();
     room->customLinesColor[exit] = colorList;
     /*
-	 *    qDebug("   COLOR(r,g,b): %i,%i,%i",
-	 *            mCurrentLineColor.red(),
-	 *            mCurrentLineColor.green(),
-	 *            mCurrentLineColor.blue() );
-	 */
+     *    qDebug("   COLOR(r,g,b): %i,%i,%i",
+     *            mCurrentLineColor.red(),
+     *            mCurrentLineColor.green(),
+     *            mCurrentLineColor.blue() );
+     */
     room->customLinesStyle[exit] = mCurrentLineStyle;
-    //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
+    //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
 
@@ -4724,13 +4720,13 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     //    qDebug("T2DMap::slot_setCustomLine2B() SPECIAL EXIT: %s", qPrintable(exit));
     room->customLinesColor[exit] = _colorList;
     /*
-	 *     qDebug("   COLOR(r,g,b): %i,%i,%i",
-	 *            mCurrentLineColor.red(),
-	 *            mCurrentLineColor.green(),
-	 *            mCurrentLineColor.blue() );
-	 */
+     *     qDebug("   COLOR(r,g,b): %i,%i,%i",
+     *            mCurrentLineColor.red(),
+     *            mCurrentLineColor.green(),
+     *            mCurrentLineColor.blue() );
+     */
     room->customLinesStyle[exit] = mCurrentLineStyle;
-    //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
+    //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
