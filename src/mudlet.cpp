@@ -2084,15 +2084,16 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& fu
     }
 }
 
-int mudlet::getLineNumber(Host* pHost, QString& name)
+std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)
 {
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if (dockWindowConsoleMap.contains(name)) {
-        return dockWindowConsoleMap[name]->getLineNumber();
+    const auto window = dockWindowConsoleMap.constFind(windowName);
+    if (window != dockWindowConsoleMap.cend()) {
+        return make_pair(true, window.value()->getLineNumber());
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+        return make_pair(false, -1);
     }
-    return -1;
 }
 
 int mudlet::getColumnNumber(Host* pHost, QString& name)
