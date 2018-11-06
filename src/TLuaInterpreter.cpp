@@ -8239,16 +8239,18 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             int area_to = pR_to->getArea();
             if (area != area_to) {
                 lua_pushnil(L);
-                lua_pushfstring(L, "target room is in a different area \"%s\" (id: %d) than the one \"%s\" (id: %d) that has the room to which this custom line is to be added",
-                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to).toUtf8().constData(), area_to,
-                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area).toUtf8().constData(), area);
+                lua_pushfstring(L,
+                                "target room is in area \"%s\" (id: %d) which is not the one \"%s\" (id: %d) in which this custom line is to be drawn",
+                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to).toUtf8().constData(),
+                                area_to,
+                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area).toUtf8().constData(),
+                                area);
                 return 2;
             }
 
             x.append(static_cast<qreal>(pR_to->x));
             y.append(static_cast<qreal>(pR_to->y));
             z.append(pR->z);
-
         }
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
@@ -8256,48 +8258,55 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         while (lua_next(L, 2) != 0) {
             ++i;
             if (lua_type(L, -1) != LUA_TTABLE) {
-                lua_pushfstring(L, "addCustomLine: bad argument #2 table inner table %d type {coordinate list must be a table containing sets (tables) with three coordinates, indicated inner table is a %s!)",
-                                i, luaL_typename(L, -1));
+                lua_pushfstring(
+                        L,
+                        "addCustomLine: bad argument #2 table item index #%d type (coordinate list must be a table containing tables of three coordinates, got %s as indicated item!)",
+                        i,
+                        luaL_typename(L, -1));
                 return lua_error(L);
             }
             lua_pushnil(L);
             int j = 0; // Indexes items (individual coordinates) in current inner table:
             while (lua_next(L, -2) != 0) {
                 ++j;
-                if (lua_type(L, -1) != LUA_TNUMBER) {
-                    QString coordinate;
-                    switch (j) {
-                    case 1:
-                        coordinate = QStringLiteral("x");
-                        break;
-                    case 2:
-                        coordinate = QStringLiteral("y");
-                        break;
-                    case 3:
-                        coordinate = QStringLiteral("z");
-                        break;
-                    default:
-                        coordinate = QStringLiteral("unused");
-                    }
-                    lua_pushfstring(L, "addCustomLine: bad argument #2 table inner table %d item %d (%s coordinate as number expected, got %s!)",
-                                    i, j, coordinate.toLatin1().constData(), luaL_typename(L, -1));
-                    return lua_error(L);
-                } else {
-                    switch (j) {
-                    case 1:
-                        x.append(lua_tonumber(L, -1));
-                        break;
-                    case 2:
-                        y.append(lua_tonumber(L, -1));
-                        break;
-                    case 3:
-                        z.append(lua_tonumber(L, -1));
-                        break;
-                    default:
-                        ; // No-op
+                if (j <=3) {
+                    if (lua_type(L, -1) != LUA_TNUMBER) {
+                        char coordinate = '\0';
+                        switch (j) {
+                        case 1:
+                            coordinate = 'x';
+                            break;
+                        case 2:
+                            coordinate = 'y';
+                            break;
+                        case 3:
+                            coordinate = 'z';
+                            break;
+                        default:
+                            Q_UNREACHABLE();
+                        }
+                        lua_pushfstring(L,
+                                        "addCustomLine: bad argument #2 table item index #%d inner table item #%d type (coordinates list as table containing tables of three numbers (x, y and z coordinates} expected, but got a %s as the %c-coordinate at that index!)",
+                                        i,
+                                        j,
+                                        luaL_typename(L, -1),
+                                        coordinate);
+                        return lua_error(L);
+                    } else {
+                        switch (j) {
+                        case 1:
+                            x.append(lua_tonumber(L, -1));
+                            break;
+                        case 2:
+                            y.append(lua_tonumber(L, -1));
+                            break;
+                        case 3:
+                            z.append(lua_tonumber(L, -1));
+                            break;
+                        default:; // No-op
+                        }
                     }
                 }
-
                 lua_pop(L, 1);
             }
             lua_pop(L, 1);
@@ -8306,62 +8315,63 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
     direction = dirToString(L, 3, true);
     if (direction.isEmpty()) {
-        lua_pushfstring(L, "addCustomLine: bad argument #3 type (direction as string or number (between 1 and 12 inclusive) expected, got %s!)",
-                        luaL_typename(L, 3));
+        lua_pushfstring(L, "addCustomLine: bad argument #3 type (direction as string or number (between 1 and 12 inclusive) expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     } else {
         if (!pR->hasExitOrSpecialExit(direction, true)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "room id %d does not have an exit that can be identified as \"%s\"",
-                            id_from, lua_tostring(L, 3));
+            lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", id_from, lua_tostring(L, 3));
             return 2;
         }
     }
 
     if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "addCustomLine: bad argument #4 type (line style as string expected, got %s!)",
-                        luaL_typename(L, 4));
+        lua_pushfstring(L, "addCustomLine: bad argument #4 type (line style as string expected, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     } else {
         QString lineStyleString = QString::fromUtf8(lua_tostring(L, 4));
-        if (! lineStyleString.compare(QLatin1String("solid line"))) {
+        if (!lineStyleString.compare(QLatin1String("solid line"))) {
             line_style = Qt::SolidLine;
-        } else if (! lineStyleString.compare(QLatin1String("dot line"))) {
+        } else if (!lineStyleString.compare(QLatin1String("dot line"))) {
             line_style = Qt::DotLine;
-        } else if (! lineStyleString.compare(QLatin1String("dash line"))) {
+        } else if (!lineStyleString.compare(QLatin1String("dash line"))) {
             line_style = Qt::DashLine;
-        } else if (! lineStyleString.compare(QLatin1String("dash dot line"))) {
+        } else if (!lineStyleString.compare(QLatin1String("dash dot line"))) {
             line_style = Qt::DashDotLine;
-        } else if (! lineStyleString.compare(QLatin1String("dash dot dot line"))) {
+        } else if (!lineStyleString.compare(QLatin1String("dash dot dot line"))) {
             line_style = Qt::DashDotDotLine;
         } else {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid line style \"%s\", use only one of: \"solid line\", \"dot line\", \"dash line\", \"dash dot line\" or \"dash dot dot line\"",
-                            lineStyleString.toUtf8().constData());
+            lua_pushfstring(
+                    L, "invalid line style \"%s\", only use one of: \"solid line\", \"dot line\", \"dash line\", \"dash dot line\" or \"dash dot dot line\"", lineStyleString.toUtf8().constData());
             return 2;
         }
     }
 
     if (!lua_istable(L, 5)) {
-        lua_pushfstring(L, "addCustomLine: bad argument #5 type (RGB color components as a table expected, got %s!)",
-                        luaL_typename(L, 4));
+        lua_pushfstring(L, "addCustomLine: bad argument #5 type (RGB color components as a table expected, got %s!)", luaL_typename(L, 4));
     } else {
         lua_pushnil(L);
         int tind = 0;
         while (lua_next(L, 5) != 0) {
             if (++tind <= 3) {
                 if (lua_type(L, -1) != LUA_TNUMBER) {
-                    lua_pushfstring(L, "addCustomLine: bad argument #4 inner color table item %d type (%s color component as a number between 0 and 255 expected, got %s!)",
-                                    tind, (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), luaL_typename(L, -1));
+                    lua_pushfstring(L,
+                                    "addCustomLine: bad argument #4 table item #%d type (%s color component as a number between 0 and 255 expected, got %s!)",
+                                    tind,
+                                    (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")),
+                                    luaL_typename(L, -1));
                     lua_error(L);
                     return 1;
                 }
 
                 qint64 component = lua_tonumber(L, -1);
-                if (component < 0 || component > 255)  {
+                if (component < 0 || component > 255) {
                     lua_pushnil(L);
-                    lua_pushfstring(L, "%s color component in the table of the fourth argument is %d which is out of the valid range (0 to 255)",
-                                    (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), component);
+                    lua_pushfstring(L,
+                                    "%s color component in the table of the fourth argument is %d which is out of the valid range (0 to 255)",
+                                    (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")),
+                                    component);
                     return 2;
                 } else {
                     switch (tind) {
@@ -8384,8 +8394,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     }
 
     if (!lua_isboolean(L, 6)) {
-        lua_pushfstring(L, "addCustomLine: bad argument #6 type (end with arrow as boolean expected, got %s!)",
-                        luaL_typename(L, 6));
+        lua_pushfstring(L, "addCustomLine: bad argument #6 type (end with arrow as boolean expected, got %s!)", luaL_typename(L, 6));
         return lua_error(L);
     } else {
         arrow = lua_toboolean(L, 6);
@@ -8398,7 +8407,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     for (int i = 1, total = z.size(); i < total; ++i) {
         if (lz != z.at(i)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "the z values are not all on the same level (first wrong value is at index %d)", i+1);
+            lua_pushfstring(L, "the z values are not all on the same level (first wrong value is %d at index %d)", z.at(i), i + 1);
             return 2;
         }
         points.append(QPointF(x.at(i), y.at(i)));
@@ -8414,14 +8423,13 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     pR->customLinesStyle[direction] = line_style;
     pR->customLinesColor[direction] = colors;
 
-    lua_pushboolean(L, true);
     // Better refresh the 2D map to show the new line:
-    if (host.mpMap->mpMapper) {
-        if (host.mpMap->mpMapper->mp2dMap) {
-            host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
-            host.mpMap->mpMapper->mp2dMap->update();
-        }
+    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
+        host.mpMap->mpMapper->mp2dMap->update();
     }
+
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -8430,9 +8438,8 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
 {
     int roomID;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getCustomLines: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "getCustomLines: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         roomID = lua_tointeger(L, 1);
     }
@@ -8500,10 +8507,12 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_settable(L, -3); //customLines[direction][points]
             lua_settable(L, -3); //customLines[direction]
         }
+        return 1;
     } else {
         lua_pushnil(L); //if the room doesnt exist return nil
+        lua_pushfstring(L, "room %d doesn't exist", roomID);
+        return 2;
     }
-    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
