@@ -2,7 +2,7 @@
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
 	<TriggerPackage>
-		<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 			<name>Exits Trigger</name>
 			<script>raiseEvent("onNewRoom",matches[2] or "")</script>
 			<triggerType>0</triggerType>
@@ -16,7 +16,7 @@
 			<colorTriggerFgColor>#000000</colorTriggerFgColor>
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
-				<string>^\s*\[\s*[Ee]xits:\s*(.*)\]</string>
+				<string>^\s*\[\s*(?:[Ee]xits|Выходы):\s*(.*)\]</string>
 				<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
 				<string>^\[?\s*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
 				<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>
@@ -31,6 +31,26 @@
 				<integer>1</integer>
 				<integer>1</integer>
 				<integer>2</integer>
+				<integer>1</integer>
+			</regexCodePropertyList>
+		</Trigger>
+		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Russian Exits Trigger</name>
+			<script>raiseEvent("onNewRoom",matches[2] or "")</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList>
+				<string>^\s*\[\s*Выходы:\s*(.*)\]</string>
+			</regexCodeList>
+			<regexCodePropertyList>
 				<integer>1</integer>
 			</regexCodePropertyList>
 		</Trigger>
@@ -486,9 +506,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 11/03/2018
--- v2.0.12
---
+-- 11/06/2018
+local version = "2.0.13"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -497,7 +516,6 @@ mudlet = mudlet or {}
 mudlet.mapper_script = true
 map = map or {}
 
--- rewrap help to 80 characters
 map.help = {[[
     &lt;cyan&gt;Generic Map Script&lt;reset&gt;
 
@@ -1115,7 +1133,7 @@ map.defaults = {
     speedwalk_delay = 1,
     speedwalk_wait = true,
     speedwalk_random = true,
-    max_search_distance = 0,
+    max_search_distance = 1,
     clear_lines_on_send = true,
     map_window = {x = 0,
         y = 0,
@@ -1184,7 +1202,7 @@ local function config()
         end
     setmetatable(map, mt)
     map.set("mode", configs.mode)
-    map.set("version", "2.0.12")
+    map.set("version", version)
 
     local saves = {}
     if io.exists(path.."/map_save.dat") then
@@ -1794,6 +1812,7 @@ local function capture_room_info(name, exits)
         for w in string.gmatch(exits,"%a+") do
             if map.configs.use_translation then
                 local dir = map.configs.translate[w]
+                map.echo(string.format("%s translated as %s.", w, dir), true)
                 if dir then table.insert(map.currentExits,dir) end
             else
                 table.insert(map.currentExits,w)
