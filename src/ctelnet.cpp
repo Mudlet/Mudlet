@@ -1158,25 +1158,27 @@ void cTelnet::processTelnetCommand(const string& command)
                     if (myOptionState[i]) {
                         cmd += TN_WILL;
                         cmd += i;
-                        if (i == TN_SB) {
-                            // Handle corner case where byte value is TN_SB
+                        if (i == static_cast<unsigned char>(TN_SE)) {
+                            // Handle corner case where sub-option value is the same as TN_SE (240)
                             cmd += i;
                         }
                     }
                     if (hisOptionState[i]) {
                         cmd += TN_DO;
                         cmd += i;
-                        if (i == TN_SB) {
-                            // Handle corner case where byte value is TN_SB
+                        if (i == static_cast<unsigned char>(TN_SE)) {
+                            // Handle corner case where byte value is TN_SE
                             cmd += i;
                         }
                     }
                 }
                 cmd += TN_IAC;
                 cmd += TN_SE;
-                // This assumes that handling the status is exempt from the
-                // need to escape values that would themselves be
-                // interpreted as Telnet protocol bytes themselves -
+                // This works as handling the status is exempt from the need to
+                // escape values that would themselves be interpreted as Telnet
+                // protocol bytes themselves - except for the corner case when
+                // the sub-option is 240 as described in: RFC 859
+                // https://tools.ietf.org/html/rfc859 :
                 socketOutRaw(cmd);
             }
             break;
