@@ -634,8 +634,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 11/06/2018
-local version = "2.0.14"
+-- 11/07/2018
+local version = "2.0.15"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1280,7 +1280,7 @@ map.defaults = {
         northwest = 'northwest', up = 'up', down = 'down',
     },
     debug = false,
-    download_path = "https://github.com/JorMox/Mudlet/blob/development/src/mudlet-lua/lua/generic-mapper",
+    download_path = "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
 }
 
 local move_queue, lines = {}, {}
@@ -2910,7 +2910,7 @@ function map.eventHandler(event,...)
         config()
     elseif event == "mapOpenEvent" then
         if not map.save.prompt_pattern[map.character or ""] then
-            cecho(map.help.quick_start)
+            map.show_help("quick_start")
         end
     elseif event == "mapStop" then
         map.set("mapping", false)
