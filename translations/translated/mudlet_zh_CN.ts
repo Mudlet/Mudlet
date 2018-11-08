@@ -3083,7 +3083,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>The command or LUA script that goes to the given room.</source>
-      <translation type="unfinished"/>
+      <translation>通往指定房间的命令或LUA脚本.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
