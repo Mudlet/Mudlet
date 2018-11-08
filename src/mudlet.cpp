@@ -454,55 +454,35 @@ mudlet::mudlet()
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
 
-    QAction* mactionConnect = new QAction(tr("Connect"), this);
-    QAction* mactionAlias = new QAction(tr("Aliases"), this);
-    QAction* mactionTimers = new QAction(tr("Timers"), this);
-    QAction* mactionButtons = new QAction(tr("Actions"), this);
-    QAction* mactionScripts = new QAction(tr("Scripts"), this);
-    QAction* mactionKeys = new QAction(tr("Keys"), this);
-    QAction* mactionMapper = new QAction(tr("Map"), this);
-    QAction* mactionHelp = new QAction(tr("Help"), this);
-    QAction* mactionOptions = new QAction(tr("Preferences"), this);
-    QAction* mactionMultiView = new QAction(tr("MultiView"), this);
-    QAction* mactionAbout = new QAction(tr("About"), this);
-    QAction* mactionCloseProfile = new QAction(tr("Close"), this);
+    // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
+    // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
 
-    connect(mactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
-    connect(mactionHelp, &QAction::triggered, this, &mudlet::show_help_dialog);
     connect(dactionHelp, &QAction::triggered, this, &mudlet::show_help_dialog);
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(actionLive_Help_Chat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
 #if !defined(INCLUDE_UPDATER)
     dactionUpdate->setVisible(false);
 #endif
-    connect(actionPackage_manager, &QAction::triggered, this, &mudlet::slot_package_manager);
-    connect(actionPackage_Exporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
-    connect(actionModule_manager, &QAction::triggered, this, &mudlet::slot_module_manager);
+    connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
+    connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
+    connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(mactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
-    connect(mactionMapper, &QAction::triggered, this, &mudlet::slot_mapper);
-    connect(actionShow_Map, &QAction::triggered, this, &mudlet::slot_mapper);
-    connect(mactionTimers, &QAction::triggered, this, &mudlet::show_timer_dialog);
-    connect(mactionAlias, &QAction::triggered, this, &mudlet::show_alias_dialog);
-    connect(mactionScripts, &QAction::triggered, this, &mudlet::show_script_dialog);
-    connect(mactionKeys, &QAction::triggered, this, &mudlet::show_key_dialog);
-    connect(mactionButtons, &QAction::triggered, this, &mudlet::show_action_dialog);
-    connect(mactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
+    connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
-    connect(mactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
-    connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
+    // PLACEMARKER: Save for later restoration (2 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
+    // connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
@@ -2827,7 +2807,7 @@ void mudlet::slot_update_shortcuts()
 
         showMapShortcut = new QShortcut(showMapKeySequence, this);
         connect(showMapShortcut.data(), &QShortcut::activated, this, &mudlet::slot_mapper);
-        actionShow_Map->setShortcut(QKeySequence());
+        dactionShowMap->setShortcut(QKeySequence());
 
         inputLineShortcut = new QShortcut(inputLineKeySequence, this);
         connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_compact_input_line);
@@ -2843,11 +2823,11 @@ void mudlet::slot_update_shortcuts()
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
         connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::show_options_dialog);
-        actionPackage_manager->setShortcut(QKeySequence());
+        dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);
         connect(modulesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_module_manager);
-        actionModule_manager->setShortcut(QKeySequence());
+        dactionModuleManager->setShortcut(QKeySequence());
 
         multiViewShortcut = new QShortcut(multiViewKeySequence, this);
         connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_multi_view);
@@ -2869,7 +2849,7 @@ void mudlet::slot_update_shortcuts()
         dactionScriptEditor->setShortcut(triggersKeySequence);
 
         showMapShortcut.clear();
-        actionShow_Map->setShortcut(showMapKeySequence);
+        dactionShowMap->setShortcut(showMapKeySequence);
 
         inputLineShortcut.clear();
         dactionInputLine->setShortcut(inputLineKeySequence);
@@ -2881,10 +2861,10 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(notepadKeySequence);
 
         packagesShortcut.clear();
-        actionPackage_manager->setShortcut(packagesKeySequence);
+        dactionPackageManager->setShortcut(packagesKeySequence);
 
         modulesShortcut.clear();
-        actionModule_manager->setShortcut(modulesKeySequence);
+        dactionModuleManager->setShortcut(modulesKeySequence);
 
         multiViewShortcut.clear();
         dactionMultiView->setShortcut(multiViewKeySequence);
