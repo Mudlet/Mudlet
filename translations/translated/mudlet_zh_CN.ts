@@ -3046,7 +3046,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.</source>
-      <translation type="unfinished"/>
+      <translation>选择一个特殊的出口开始绘制一条路径, 如果一个出口已经拥有了这样一条自定义路径, 第一列会显示为勾选状态.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -3057,12 +3057,13 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
       <source>Has
 custom line?</source>
-      <translation type="unfinished"/>
+      <translation>已有
+自定义路径?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.</source>
-      <translation type="unfinished"/>
+      <translation>显示了该特殊出口是否已经拥有一条自定义路径, 选择该出口后自定义路径会被替换.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
@@ -3072,7 +3073,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>The room this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>该自定义出口通向的房间.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
