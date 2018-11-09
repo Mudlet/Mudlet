@@ -2283,6 +2283,17 @@ int mudlet::selectSection(Host* pHost, const QString& name, int f, int t)
     }
 }
 
+std::tuple<bool, QString, int, int> mudlet::getSelection(Host* pHost, const QString& windowName)
+{
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    const auto window = dockWindowConsoleMap.constFind(windowName);
+    if (window != dockWindowConsoleMap.cend()) {
+        return window.value()->getSelection();
+    } else {
+        return make_tuple(false, QStringLiteral(R"(window "%s" not found)").arg(windowName.toUtf8().constData()), 0, 0);
+    }
+}
+
 // Added a return value to indicate whether the given windows name was found
 bool mudlet::deselect(Host* pHost, const QString& name)
 {

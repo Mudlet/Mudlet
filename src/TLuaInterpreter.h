@@ -243,6 +243,7 @@ public:
     static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
     static int getMainConsoleWidth(lua_State* L);
     static int selectSection(lua_State* L);
+    static int getSelection(lua_State* L);
     static int replace(lua_State* L);
     static int deselect(lua_State* L);
     static int getRoomExits(lua_State* L);

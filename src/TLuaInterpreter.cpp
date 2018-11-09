@@ -1647,6 +1647,42 @@ int TLuaInterpreter::selectSection(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSelection
+int TLuaInterpreter::getSelection(lua_State* L)
+{
+    bool valid;
+    QString text;
+    int start, length;
+
+    auto& host = getHostFromLua(L);
+
+    QString windowName;
+    if (lua_gettop(L) > 0) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getSelection: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        std::tie(valid, text, start, length) = host.mpConsole->getSelection();
+    } else {
+        std::tie(valid, text, start, length) = mudlet::self()->getSelection(&host, windowName);
+    }
+
+    if (!valid) {
+        lua_pushnil(L);
+        lua_pushstring(L, text.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushstring(L, text.toUtf8().constData());
+    lua_pushnumber(L, start);
+    lua_pushnumber(L, length);
+    return 3;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursor
 int TLuaInterpreter::moveCursor(lua_State* L)
 {
@@ -1779,7 +1815,6 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     mudlet::self()->setScrollBarVisible(&host, windowName, false);
     return 0;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#replace
 int TLuaInterpreter::replace(lua_State* L)
@@ -13528,6 +13563,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setDiscordParty", TLuaInterpreter::setDiscordParty);
     lua_register(pGlobalLua, "getDiscordParty", TLuaInterpreter::getDiscordParty);
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
+    lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
