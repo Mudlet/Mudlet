@@ -52,6 +52,8 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
+#include <limits>
+
 // Provides the lua zip module for MacOs platform that does not have an easy way
 // to provide it as a prebuilt library module (unlike Windows/Linux) - was
 // called luazip.c and it is an amalgum of both such files that came from
@@ -248,103 +250,86 @@ int TLuaInterpreter::Wait(lua_State* L)
     return 0;
 }
 
-// Documentation: PRIVATE function with no documentation in wiki, converts an
-// exit direction number (in range 1 to 12) to corresponding text string used
-// as the key from them in room exit weight and custom exit line members of the
-// TRoom class. Note that a previous incarnation of this function returned the
-// complete lower case words in all cases which would break should those numbers
-// have been used - at present the Wiki does NOT mention the numbers which is
-// deliberate IIRC to prevent that borkage from showing... SlySven Nov 2018
-QString TLuaInterpreter::dirToString(lua_State* L, int position, bool isForCustomExits)
+// Documentation: PRIVATE function with no documentation in wiki.
+// dirToString wiil now catch and validate pretty much any string that could
+// be a normal direction in a case insensitive manner and convert it to a
+// standard value (one of: "n", "ne", ..., "nw", "up", "down", "in" or
+// "out") but leave anything else as entered; OR convert a direction code as
+// a number from 1 to 12 to those same standard direction strings.
+// This is intended as a temporary step until a uniform means of specifying
+// both "normal" and "special" exits for all lua commands that take exit
+// directions as arguments in an unambiguous manner can be formulated - though
+// to maintain backwards compatibility the current functions will remain even
+// if they get marked out as being deprecated.
+QString TLuaInterpreter::dirToString(lua_State* L, int position)
 {
-    QString dir;
-    int dirNum;
     if (lua_isnumber(L, position)) {
-        dirNum = lua_tonumber(L, position);
+        qint64 dirNum = lua_tonumber(L, position);
         switch (dirNum) {
         // breaks not needed - all handled cases end in a return!
         case 1:
-            if (isForCustomExits) {
-                return QStringLiteral("N");
-            } else {
-                return QStringLiteral("n");
-            }
+            return QStringLiteral("n");
         case 2:
-            if (isForCustomExits) {
-                return QStringLiteral("NE");
-            } else {
-                return QStringLiteral("ne");
-            }
+            return QStringLiteral("ne");
         case 3:
-            if (isForCustomExits) {
-                return QStringLiteral("NW");
-            } else {
-                return QStringLiteral("nw");
-            }
+            return QStringLiteral("nw");
         case 4:
-            if (isForCustomExits) {
-                return QStringLiteral("E");
-            } else {
-                return QStringLiteral("e");
-            }
+            return QStringLiteral("e");
         case 5:
-            if (isForCustomExits) {
-                return QStringLiteral("W");
-            } else {
-                return QStringLiteral("w");
-            }
+            return QStringLiteral("w");
         case 6:
-            if (isForCustomExits) {
-                return QStringLiteral("S");
-            } else {
-                return QStringLiteral("s");
-            }
+            return QStringLiteral("s");
         case 7:
-            if (isForCustomExits) {
-                return QStringLiteral("SE");
-            } else {
-                return QStringLiteral("se");
-            }
+            return QStringLiteral("se");
         case 8:
-            if (isForCustomExits) {
-                return QStringLiteral("SW");
-            } else {
-                return QStringLiteral("sw");
-            }
+            return QStringLiteral("sw");
         case 9:
-            if (isForCustomExits) {
-                return QStringLiteral("UP");
-            } else {
-                return QStringLiteral("up");
-            }
+            return QStringLiteral("up");
         case 10:
-            if (isForCustomExits) {
-                return QStringLiteral("DOWN");
-            } else {
-                return QStringLiteral("down");
-            }
+            return QStringLiteral("down");
         case 11:
-            if (isForCustomExits) {
-                return QStringLiteral("IN");
-            } else {
-                return QStringLiteral("in");
-            }
+            return QStringLiteral("in");
         case 12:
-            if (isForCustomExits) {
-                return QStringLiteral("OUT");
-            } else {
-                return QStringLiteral("out");
-            }
+            return QStringLiteral("out");
         default:
             return QString();
         }
 
     } else if (lua_isstring(L, position)) {
-        dir = QString::fromUtf8(lua_tostring(L, position));
-        return dir;
+        QString direction(QString::fromUtf8(lua_tostring(L, position)));
+        if (!direction.compare(QLatin1String("n"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("north"), Qt::CaseInsensitive)) {
+            return QLatin1String("n");
+        } else if (!direction.compare(QLatin1String("e"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("east"), Qt::CaseInsensitive)) {
+            return QLatin1String("e");
+        } else if (!direction.compare(QLatin1String("s"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("south"), Qt::CaseInsensitive)) {
+            return QLatin1String("s");
+        } else if (!direction.compare(QLatin1String("w"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("west"), Qt::CaseInsensitive)) {
+            return QLatin1String("w");
+        } else if (!direction.compare(QLatin1String("u"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("up"), Qt::CaseInsensitive)) {
+            return QLatin1String("up");
+        } else if (!direction.compare(QLatin1String("d"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("down"), Qt::CaseInsensitive)) {
+            return QLatin1String("down");
+        } else if (!direction.compare(QLatin1String("ne"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northeast"), Qt::CaseInsensitive)
+                   || !direction.compare(QLatin1String("north-east"), Qt::CaseInsensitive)) {
+            return QLatin1String("ne");
+        } else if (!direction.compare(QLatin1String("se"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("southeast"), Qt::CaseInsensitive)
+                   || !direction.compare(QLatin1String("south-east"), Qt::CaseInsensitive)) {
+            return QLatin1String("se");
+        } else if (!direction.compare(QLatin1String("sw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("southwest"), Qt::CaseInsensitive)
+                   || !direction.compare(QLatin1String("south-west"), Qt::CaseInsensitive)) {
+            return QLatin1String("sw");
+        } else if (!direction.compare(QLatin1String("nw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northeast"), Qt::CaseInsensitive)
+                   || !direction.compare(QLatin1String("north-west"), Qt::CaseInsensitive)) {
+            return QLatin1String("nw");
+        } else if (!direction.compare(QLatin1String("i"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("in"), Qt::CaseInsensitive)) {
+            return QLatin1String("in");
+        } else if (!direction.compare(QLatin1String("o"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("out"), Qt::CaseInsensitive)) {
+            return QLatin1String("out");
+        } else {
+            return direction;
+        }
 
     } else {
-
         return QString();
     }
 }
@@ -8158,39 +8143,51 @@ int TLuaInterpreter::getDoors(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeight
 int TLuaInterpreter::setExitWeight(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
+
     int roomID;
-    int weight;
-    QString text;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setExitWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setExitWeight: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         roomID = lua_tointeger(L, 1);
     }
 
-    text = dirToString(L, 2, false);
-    if (text.isEmpty()) {
-        lua_pushstring(L, "setExitWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room id %d does not exist", roomID);
+        return 2;
     }
 
+    QString direction(dirToString(L, 2));
+    if (direction.isEmpty()) {
+        lua_pushfstring(L, "setExitWeight: bad argument #2 type (direction as string or number {between 1 and 12 inclusive} expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        if (!pR->hasExitOrSpecialExit(direction)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", roomID, lua_tostring(L, 2));
+            return 2;
+        }
+    }
+
+    qint64 weight;
     if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setExitWeight: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setExitWeight: bad argument #3 type (exit weight as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
     } else {
         weight = lua_tonumber(L, 3);
+        if (weight < 0 || weight > std::numeric_limits<int>::max()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "weight %d is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %d", weight, std::numeric_limits<int>::max());
+            return 2;
+        }
     }
 
-    text = text.toLower();
-    Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
-    if (pR) {
-        pR->setExitWeight(text, weight);
-    }
-    return 0;
+    pR->setExitWeight(direction, weight);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCustomLine
@@ -8258,18 +8255,17 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         while (lua_next(L, 2) != 0) {
             ++i;
             if (lua_type(L, -1) != LUA_TTABLE) {
-                lua_pushfstring(
-                        L,
-                        "addCustomLine: bad argument #2 table item index #%d type (coordinate list must be a table containing tables of three coordinates, got %s as indicated item!)",
-                        i,
-                        luaL_typename(L, -1));
+                lua_pushfstring(L,
+                                "addCustomLine: bad argument #2 table item index #%d type (coordinate list must be a table containing tables of three coordinates, got %s as indicated item!)",
+                                i,
+                                luaL_typename(L, -1));
                 return lua_error(L);
             }
             lua_pushnil(L);
             int j = 0; // Indexes items (individual coordinates) in current inner table:
             while (lua_next(L, -2) != 0) {
                 ++j;
-                if (j <=3) {
+                if (j <= 3) {
                     if (lua_type(L, -1) != LUA_TNUMBER) {
                         char coordinate = '\0';
                         switch (j) {
@@ -8286,7 +8282,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                             Q_UNREACHABLE();
                         }
                         lua_pushfstring(L,
-                                        "addCustomLine: bad argument #2 table item index #%d inner table item #%d type (coordinates list as table containing tables of three numbers (x, y and z coordinates} expected, but got a %s as the %c-coordinate at that index!)",
+                                        "addCustomLine: bad argument #2 table item index #%d inner table item #%d type (coordinates list as table containing tables of three numbers (x, y and z "
+                                        "coordinates} expected, but got a %s as the %c-coordinate at that index!)",
                                         i,
                                         j,
                                         luaL_typename(L, -1),
@@ -8313,12 +8310,12 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         }
     }
 
-    direction = dirToString(L, 3, true);
+    direction = dirToString(L, 3);
     if (direction.isEmpty()) {
         lua_pushfstring(L, "addCustomLine: bad argument #3 type (direction as string or number (between 1 and 12 inclusive) expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     } else {
-        if (!pR->hasExitOrSpecialExit(direction, true)) {
+        if (!pR->hasExitOrSpecialExit(direction)) {
             lua_pushnil(L);
             lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", id_from, lua_tostring(L, 3));
             return 2;
@@ -8413,15 +8410,16 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         points.append(QPointF(x.at(i), y.at(i)));
     }
 
-    QList<int> colors;
-    colors.append(r);
-    colors.append(g);
-    colors.append(b);
     //Heiko: direction/line relationship must be unique
     pR->customLines[direction] = points;
     pR->customLinesArrow[direction] = arrow;
     pR->customLinesStyle[direction] = line_style;
-    pR->customLinesColor[direction] = colors;
+    pR->customLinesColor[direction] = QColor(r, g, b);
+
+    // Need to update the TRoom {min|max}_{x|y} settings as they are used during
+    // the painting process - and not doing that here causes the new line to not
+    // show up properly:
+    pR->calcRoomDimensions();
 
     // Better refresh the 2D map to show the new line:
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
@@ -8431,6 +8429,58 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCustomLine
+int TLuaInterpreter::removeCustomLine(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    //args: room_id, direction
+    int roomId = 0;
+    QString direction;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "removeCustomLine: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        roomId = lua_tointeger(L, 1);
+    }
+
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room id %d does not exist", roomId);
+        return 2;
+    }
+
+    direction = dirToString(L, 2);
+    if (direction.isEmpty()) {
+        lua_pushfstring(L, "removeCustomLine: bad argument #2 type (direction as string or number (between 1 and 12 inclusive) expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        if (!pR->hasExitOrSpecialExit(direction)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", roomId, lua_tostring(L, 2));
+            return 2;
+        }
+    }
+
+    if ((pR->customLines.remove(direction) + pR->customLinesArrow.remove(direction) + pR->customLinesStyle.remove(direction) + pR->customLinesColor.remove(direction)) > 0) {
+        // Need to update the TRoom {min|max}_{x|y} settings as they are used during
+        // the painting process:
+        pR->calcRoomDimensions();
+        // Better refresh the 2D map to show the new line:
+        if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+            host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
+            host.mpMap->mpMapper->mp2dMap->update();
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room id %d does not appear to have a custom exit line for the exit indentifed from  \"%s\"", roomId, lua_tostring(L, 2));
+        return 2;
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
@@ -8480,13 +8530,13 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_pushstring(L, "color");
             lua_newtable(L);
             lua_pushstring(L, "r");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).at(0));
+            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
             lua_settable(L, -3);
             lua_pushstring(L, "g");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).at(1));
+            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
             lua_settable(L, -3);
             lua_pushstring(L, "b");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).at(2));
+            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
             lua_settable(L, -3);
             lua_settable(L, -3); //color
             lua_settable(L, -3); //attributes
@@ -13650,6 +13700,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "sendMSDP", TLuaInterpreter::sendMSDP);
     lua_register(pGlobalLua, "handleWindowResizeEvent", TLuaInterpreter::noop);
     lua_register(pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine);
+    lua_register(pGlobalLua, "removeCustomLine", TLuaInterpreter::removeCustomLine);
     lua_register(pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines);
     lua_register(pGlobalLua, "getMudletVersion", TLuaInterpreter::getMudletVersion);
     lua_register(pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);

@@ -107,7 +107,7 @@ public:
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
-    static QString dirToString(lua_State*, int, bool isForCustomExits = false);
+    static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
 
 
@@ -131,6 +131,7 @@ public:
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
+    static int removeCustomLine(lua_State*);
     static int noop(lua_State*);
     static int sendMSDP(lua_State*);
     static int auditAreas(lua_State*);

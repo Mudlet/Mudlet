@@ -120,18 +120,17 @@ public:
                    int,
                    QString,
                    QString,
-                   QString,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QSet<int>&,
                    QMap<QString, int>&,
                    QMap<QString, QList<QPointF>>&,
-                   QMap<QString, QList<int>>&,
+                   QMap<QString, QColor>&,
                    QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
                    QHash<int, int>);
     const QString dirCodeToDisplayName(int dirCode);
-    bool hasExitOrSpecialExit(const QString&, const bool) const;
+    bool hasExitOrSpecialExit(const QString&) const;
 
 
     int x;
@@ -151,7 +150,7 @@ public:
     QMap<QString, QString> userData;
     QList<int> exitLocks;
     QMap<QString, QList<QPointF>> customLines;
-    QMap<QString, QList<int>> customLinesColor;
+    QMap<QString, QColor> customLinesColor;
     QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
     bool highlight;
