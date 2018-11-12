@@ -3499,7 +3499,16 @@ void T2DMap::slot_defineNewColor()
 {
     auto color = QColorDialog::getColor(mpHost->mRed, this);
     if (color.isValid()) {
-        mpMap->customEnvColors[mpMap->customEnvColors.size() + 257 + 16] = color;
+        auto environmentId = mpMap->customEnvColors.size() + 257 + 16;
+        if (mpMap->customEnvColors.contains(environmentId)) {
+            // find a new environment ID to use, starting with the latest
+            // 'safe' number so the new environment is last in the dialog
+            do {
+                environmentId++;
+            } while (mpMap->customEnvColors.contains(environmentId));
+        }
+
+        mpMap->customEnvColors[environmentId] = color;
         slot_changeColor();
     }
     repaint();
