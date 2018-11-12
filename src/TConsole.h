@@ -108,6 +108,7 @@ public:
     void echo(const QString&);
     bool moveCursor(int x, int y);
     int select(const QString&, int numOfMatch = 1);
+    std::tuple<bool, QString, int, int> getSelection();
     void deselect();
     bool selectSection(int, int);
     void skipLine();

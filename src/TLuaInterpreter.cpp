@@ -124,7 +124,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
 {
     Host* pHost = mpHost;
     if (!pHost) {
-        qWarning() << "TLuaInterpreter::slot_replyFinished(...) ERROR: NULL Host pointer!";
+        qWarning() << QStringLiteral("TLuaInterpreter::slot_replyFinished(...) ERROR: NULL Host pointer!");
         return; // Uh, oh!
     }
 
@@ -152,11 +152,11 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("unableToOpenLocalFileForWriting", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("unableToOpenLocalFileForWriting");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
@@ -169,11 +169,11 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
         if (bytesWritten == -1) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("unableToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("unableToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
@@ -194,7 +194,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
         } else {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -310,40 +310,40 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
     if (lua_isstring(L, position)) {
         dir = lua_tostring(L, position);
         dir = dir.toLower();
-        if (dir == "n" || dir == "north") {
+        if (dir == QStringLiteral("n") || dir == QStringLiteral("north")) {
             return 1;
         }
-        if (dir == "ne" || dir == "northeast") {
+        if (dir == QStringLiteral("ne") || dir == QStringLiteral("northeast")) {
             return 2;
         }
-        if (dir == "nw" || dir == "northwest") {
+        if (dir == QStringLiteral("nw") || dir == QStringLiteral("northwest")) {
             return 3;
         }
-        if (dir == "e" || dir == "east") {
+        if (dir == QStringLiteral("e") || dir == QStringLiteral("east")) {
             return 4;
         }
-        if (dir == "w" || dir == "west") {
+        if (dir == QStringLiteral("w") || dir == QStringLiteral("west")) {
             return 5;
         }
-        if (dir == "s" || dir == "south") {
+        if (dir == QStringLiteral("s") || dir == QStringLiteral("south")) {
             return 6;
         }
-        if (dir == "se" || dir == "southeast") {
+        if (dir == QStringLiteral("se") || dir == QStringLiteral("southeast")) {
             return 7;
         }
-        if (dir == "sw" || dir == "southwest") {
+        if (dir == QStringLiteral("sw") || dir == QStringLiteral("southwest")) {
             return 8;
         }
-        if (dir == "u" || dir == "up") {
+        if (dir == QStringLiteral("u") || dir == QStringLiteral("up")) {
             return 9;
         }
-        if (dir == "d" || dir == "down") {
+        if (dir == QStringLiteral("d") || dir == QStringLiteral("down")) {
             return 10;
         }
-        if (dir == "in") {
+        if (dir == QStringLiteral("in")) {
             return 11;
         }
-        if (dir == "out") {
+        if (dir == QStringLiteral("out")) {
             return 12;
         }
     }
@@ -1015,16 +1015,35 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 int TLuaInterpreter::getLineNumber(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (lua_isstring(L, 1)) {
-        string window = lua_tostring(L, 1);
-        QString _window = window.c_str();
-        lua_pushnumber(L, mudlet::self()->getLineNumber(&host, _window));
-        return 1;
-    } else {
+    QString windowName;
+    int s = 0;
+
+    if (lua_gettop(L) > 0) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "getLineNumber: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, s));
+        }
+    }
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         lua_pushnumber(L, host.mpConsole->getLineNumber());
         return 1;
+    } else {
+        bool success;
+        int lineNumber;
+        std::tie(success, lineNumber) = mudlet::self()->getLineNumber(&host, windowName);
+
+        if (success) {
+            lua_pushnumber(L, lineNumber);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
     }
-    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMap
@@ -1309,6 +1328,28 @@ int TLuaInterpreter::centerview(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPlayerRoom
+int TLuaInterpreter::getPlayerRoom(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+        lua_pushnil(L);
+        lua_pushstring(L, "you haven't opened a map yet");
+        return 2;
+    }
+
+    auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
+    if (roomID == -1) {
+        lua_pushnil(L);
+        lua_pushstring(L, "the player does not have a valid room id set");
+        return 2;
+    } else {
+        lua_pushnumber(L, roomID);
+        return 1;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
@@ -1564,49 +1605,82 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectSection
 int TLuaInterpreter::selectSection(lua_State* L)
 {
+    int from;
+    int to;
     int s = 1;
-    int n = lua_gettop(L);
-    string a1;
-    if (n > 2) {
+    int argumentsCount = lua_gettop(L);
+    QString windowName;
+
+    if (argumentsCount > 2) {
         if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "selectSection: wrong argument type");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "selectSection: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         } else {
-            a1 = lua_tostring(L, s);
+            windowName = QString::fromUtf8(lua_tostring(L, s));
             s++;
         }
     }
-    int luaFrom;
     if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "selectSection: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "selectSection: bad argument #%d type (from position as number expected, got %s!)", s, luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaFrom = lua_tointeger(L, s);
+        from = lua_tointeger(L, s);
         s++;
     }
 
-    int luaTo;
     if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "selectSection: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "selectSection: bad argument #%d type (length as number expected, got %s!)", s, luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaTo = lua_tointeger(L, s);
+        to = lua_tointeger(L, s);
     }
 
     Host& host = getHostFromLua(L);
 
-    bool ret;
-    if (n > 2) {
-        QString _name = a1.c_str();
-        ret = mudlet::self()->selectSection(&host, _name, luaFrom, luaTo);
+    int ret;
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        ret = host.mpConsole->selectSection(from, to);
     } else {
-        ret = host.mpConsole->selectSection(luaFrom, luaTo);
+        ret = mudlet::self()->selectSection(&host, windowName, from, to);
     }
-    lua_pushboolean(L, ret);
+    lua_pushboolean(L, ret == -1 ? false : true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSelection
+int TLuaInterpreter::getSelection(lua_State* L)
+{
+    bool valid;
+    QString text;
+    int start, length;
+
+    auto& host = getHostFromLua(L);
+
+    QString windowName;
+    if (lua_gettop(L) > 0) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getSelection: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        std::tie(valid, text, start, length) = host.mpConsole->getSelection();
+    } else {
+        std::tie(valid, text, start, length) = mudlet::self()->getSelection(&host, windowName);
+    }
+
+    if (!valid) {
+        lua_pushnil(L);
+        lua_pushstring(L, text.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushstring(L, text.toUtf8().constData());
+    lua_pushnumber(L, start);
+    lua_pushnumber(L, length);
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursor
@@ -1741,7 +1815,6 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     mudlet::self()->setScrollBarVisible(&host, windowName, false);
     return 0;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#replace
 int TLuaInterpreter::replace(lua_State* L)
@@ -2860,7 +2933,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 {
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "hideUserWindow: wrong argument type");
+        lua_pushstring(L, "hideWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -3640,7 +3713,7 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
 {
     string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "showUserWindow: wrong argument type");
+        lua_pushstring(L, "showWindow: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -5059,7 +5132,7 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, host.getName()));
+    QString nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -5488,112 +5561,135 @@ int TLuaInterpreter::showToolBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendATCP
 int TLuaInterpreter::sendATCP(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendATCP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        return lua_error(L);
     } else {
-        msg = lua_tostring(L, 1);
+        msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
     string what;
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "sendATCP: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        what = lua_tostring(L, 2);
+    if (lua_gettop(L) > 1) {
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            return lua_error(L);
+        } else {
+            what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
+        }
     }
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += static_cast<char>(200);
-    _h += msg;
-    if (!what.empty()) {
-        _h += " ";
-        _h += what;
-    }
-    _h += TN_IAC;
-    _h += TN_SE;
 
-    Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
-    return 0;
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_ATCP;
+    output += msg;
+    if (!what.empty()) {
+        output += " ";
+        output += what;
+    }
+    output += TN_IAC;
+    output += TN_SE;
+
+    if (!host.mTelnet.isATCPEnabled()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "ATCP is not currently enabled");
+        return 2;
+    }
+
+    // output is in Mud Server Encoding form here:
+    if (! host.mTelnet.socketOutRaw(output)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "unable to send all of the ATCP message");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendGMCP
 int TLuaInterpreter::sendGMCP(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendGMCP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        return lua_error(L);
     } else {
-        msg = lua_tostring(L, 1);
+        msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
     string what;
-    if (lua_isstring(L, 2)) {
-        what = lua_tostring(L, 2);
+    if (lua_gettop(L) > 1) {
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            return lua_error(L);
+        } else {
+            what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
+        }
     }
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += GMCP;
-    _h += msg;
-    if (!what.empty()) {
-        _h += " ";
-        _h += what;
-    }
-    _h += TN_IAC;
-    _h += TN_SE;
 
-    Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
-    return 0;
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_GMCP;
+    output += msg;
+    if (!what.empty()) {
+        output += " ";
+        output += what;
+    }
+    output += TN_IAC;
+    output += TN_SE;
+
+    if (!host.mTelnet.isGMCPEnabled()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "GMCP is not currently enabled");
+        return 2;
+    }
+
+    // output is in Mud Server Encoding form here:
+    if (! host.mTelnet.socketOutRaw(output)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "unable to send all of the GMCP message");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
-#define MSDP_VAR 1
-#define MSDP_VAL 2
-#define MSDP_TABLE_OPEN 3
-#define MSDP_TABLE_CLOSE 4
-#define MSDP_ARRAY_OPEN 5
-#define MSDP_ARRAY_CLOSE 6
-#define IAC 255
-#define SB 250
-#define SE 240
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendMSDP
 int TLuaInterpreter::sendMSDP(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     string variable;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendMSDP: what do you want to send?");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendMSDP: bad argument #1 type (variable name as string expected, got %1!)", luaL_typename(L,1));
+        return lua_error(L);
     } else {
-        variable = lua_tostring(L, 1);
+        variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += MSDP;
-    _h += MSDP_VAR;
-    _h += variable;
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_MSDP;
+    output += MSDP_VAR;
+    output += variable;
 
     int n = lua_gettop(L);
-    for (int i = 2; i <= n; i++) {
-        _h += MSDP_VAL;
-        _h += lua_tostring(L, i);
+    for (int i = 2; i <= n; ++i) {
+        output += MSDP_VAL;
+        output += host.mTelnet.encodeAndCookBytes(lua_tostring(L, i));
     }
 
-    _h += TN_IAC;
-    _h += TN_SE;
+    output += TN_IAC;
+    output += TN_SE;
 
-    Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
+    // output is in Mud Server Encoding form here:
+    host.mTelnet.socketOutRaw(output);
     return 0;
 }
 
@@ -5602,23 +5698,45 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 {
     string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendTelnetChannel102: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendTelnetChannel102: bad argument #1 type (message bytes {2 characters} as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         msg = lua_tostring(L, 1);
+        if (msg.length() != 2) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid message of length %d supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)",
+                            msg.length());
+            return 2;
+        }
     }
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += 102;
-    _h += msg;
-    _h += TN_IAC;
-    _h += TN_SE;
+
+    string output;
+    output += TN_IAC;
+    output += TN_SB;
+    output += OPT_102;
+    output += msg;
+    output += TN_IAC;
+    output += TN_SE;
 
     Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(_h);
-    return 0;
+    if (host.mTelnet.isChannel102Enabled()) {
+        // We have already validated output to contain a 2 byte payload so we
+        // should not need to worry about the "encoding" in this use of
+        // socketOutRaw(...) - with the exception of handling any occurance of
+        // 0xFF as either of the bytes to send - however Aardwolf does not use
+        // *THAT* value so, though it is probably okay to not worry about the
+        // need to "escape" it to get it through the telnet protocol unscathed
+        // it is trival to fix:
+        output = mudlet::replaceString(output, "\xff", "\xff\xff");
+        host.mTelnet.socketOutRaw(output);
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unable to send message as the 102 subchannel support has not been enabled by the MUD Server");
+        return 2;
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getButtonState
@@ -9907,36 +10025,41 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
 int TLuaInterpreter::insertText(lua_State* L)
 {
-    string a1;
-    string a2;
-    int n = lua_gettop(L);
-    int s = 1;
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "insertText: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        a1 = lua_tostring(L, s);
-        s++;
-    }
-    QString _name(a1.c_str());
+    auto& host = getHostFromLua(L);
+    QString windowName;
+    int s = 0;
 
-    if (n > 1) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "insertText: wrong argument type");
-            lua_error(L);
-            return 1;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "insertText: bad argument #%d type (name as string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         } else {
-            a2 = lua_tostring(L, s);
+            windowName = QString::fromUtf8(lua_tostring(L, s));
         }
     }
-    Host& host = getHostFromLua(L);
-    if (n == 1) {
-        host.mpConsole->insertText(QString(a1.c_str()));
+
+    QString text;
+    if (!lua_isstring(L, ++s)) {
+        lua_pushfstring(L, "insertText: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     } else {
-        mudlet::self()->insertText(&host, _name, QString(a2.c_str()));
+        text = QString::fromUtf8(lua_tostring(L, s));
     }
-    return 0;
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        host.mpConsole->insertText(text);
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        if (mudlet::self()->insertText(&host, windowName, text)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+            return 2;
+        }
+    }
 }
 
 // Documentation: ? - public function missing documentation in wiki
@@ -10427,11 +10550,565 @@ int TLuaInterpreter::openWebPage(lua_State* L)
     if (lua_isstring(L, 1)) {
         QString url = lua_tostring(L, 1);
         lua_pushboolean(L, mudlet::self()->openWebPage(url));
+        return 1;
     } else {
         lua_pushfstring(L, "openWebPage: bad argument #%d (string expected, got %s)", 1, luaL_typename(L, 1));
-        lua_error(L);
+        return lua_error(L);
     }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordApplicationID
+int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    }
+
+    if (lua_gettop(L)) {
+        if (lua_isstring(L, 1)) {
+            // Treat it as a UTF-8 string because although it is likely to be an
+            // unsigned long long integer (0 to 18446744073709551615) we want to
+            // be able to handle any input so we can report bad input strings back:
+            QString inputText = QString::fromUtf8(lua_tostring(L, 1)).trimmed();
+            if (!inputText.isEmpty()) {
+                bool isOk = false;
+                quint64 numericEquivalent = inputText.toULongLong(&isOk);
+                if (numericEquivalent && isOk) {
+                    QString appID = QString::number(numericEquivalent);
+                    if (pMudlet->mDiscord.setApplicationID(&host, appID)) {
+                        lua_pushboolean(L, true);
+                        return 1;
+                    } else {
+                        lua_pushnil(L);
+                        lua_pushfstring(L, "%s does not appear to be a valid Discord application id", inputText.toUtf8().constData());
+                        return 2;
+                    }
+                } else {
+                    lua_pushnil(L);
+                    lua_pushfstring(L, "%s can not be converted to the expected numeric Discord application id", inputText.toUtf8().constData());
+                    return 2;
+                }
+            } else {
+                // Empty string input - to reset to default the same as the no
+                // argument case:
+                pMudlet->mDiscord.setApplicationID(&host, QString());
+                // This must always succeed
+                lua_pushboolean(L, true);
+                return 1;
+            }
+        } else {
+            lua_pushfstring(L, "setDiscordApplicationID: bad argument #1 type (id as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+    } else {
+        pMudlet->mDiscord.setApplicationID(&host, QString());
+        lua_pushboolean(L, true);
+        return 1;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
+int TLuaInterpreter::usingMudletsDiscordID(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, pMudlet->mDiscord.usingMudletsDiscordID(&host));
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIcon
+int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        pMudlet->mDiscord.setLargeImage(&host, QString::fromUtf8(lua_tostring(L, 1)).toLower());
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordLargeIcon: bad argument #1 type (key as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIcon
+int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
+        return 2;
+    }
+
+    lua_pushfstring(L, pMudlet->mDiscord.getLargeImage(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIconText
+int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon text is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        pMudlet->mDiscord.setLargeImageText(&host, QString::fromUtf8(lua_tostring(L, 1)));
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordLargeIconText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIconText
+int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon text is disabled in settings for privacy");
+        return 2;
+    }
+
+    lua_pushfstring(L, pMudlet->mDiscord.getLargeImageText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIcon
+int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord small icon is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        pMudlet->mDiscord.setSmallImage(&host, QString::fromUtf8(lua_tostring(L, 1)).toLower());
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordSmallIcon: bad argument #%d type (key as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIcon
+int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord small icon is disabled in settings for privacy");
+        return 2;
+    }
+
+    lua_pushfstring(L, pMudlet->mDiscord.getSmallImage(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIconText
+int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord small icon text is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        pMudlet->mDiscord.setSmallImageText(&host, QString::fromUtf8(lua_tostring(L, 1)));
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordSmallIconText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIconText
+int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord small icon text is disabled in settings for privacy");
+        return 2;
+    }
+
+    lua_pushfstring(L, pMudlet->mDiscord.getSmallImageText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordDetail
+int TLuaInterpreter::setDiscordDetail(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        pMudlet->mDiscord.setDetailText(&host, QString::fromUtf8(lua_tostring(L, 1)));
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordDetail: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordDetail
+int TLuaInterpreter::getDiscordDetail(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
+        return 2;
+    }
+
+    lua_pushfstring(L, pMudlet->mDiscord.getDetailText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGame
+int TLuaInterpreter::setDiscordGame(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        auto gamename = QString::fromUtf8(lua_tostring(L, 1));
+        pMudlet->mDiscord.setDetailText(&host, tr("Playing %1").arg(gamename));
+        pMudlet->mDiscord.setLargeImage(&host, gamename.toLower());
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordGame: bad argument #%d type (game name as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordState
+int TLuaInterpreter::setDiscordState(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord state is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isstring(L, 1)) {
+        mudlet::self()->mDiscord.setStateText(&host, QString::fromUtf8(lua_tostring(L, 1)));
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushfstring(L, "setDiscordState: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordState
+int TLuaInterpreter::getDiscordState(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord state is disabled in settings for privacy");
+        return 2;
+    }
+
+    lua_pushfstring(L, pMudlet->mDiscord.getStateText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordElapsedStartTime
+int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isnumber(L, 1)) {
+        int64_t timeStamp = lua_tointeger(L, 1);
+        if (timeStamp >= 0) {
+            pMudlet->mDiscord.setStartTimeStamp(&host, timeStamp);
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "the timestamp must be zero to clear the \"elapsed:\" time or an epoch time value from the recent past");
+            return 2;
+        }
+    } else {
+        lua_pushfstring(L, "setDiscordElapsedStartTime: bad argument #%d type (epoch time as number, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordRemainingEndTime
+int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
+        return 2;
+    }
+
+    if (lua_isnumber(L, 1)) {
+        int64_t timeStamp = lua_tointeger(L, 1);
+        if (timeStamp >= 0) {
+            pMudlet->mDiscord.setEndTimeStamp(&host, timeStamp);
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "the timestamp must be zero to clear the \"remaining:\" time or an epoch time value in the recent future");
+            return 2;
+        }
+    } else {
+        lua_pushfstring(L, "setDiscordRemainingEndTime: bad argument #%d type (epoch time as number, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordTimeStamps
+int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
+        return 2;
+    }
+
+    QPair<int64_t, int64_t> timeStamps = mudlet::self()->mDiscord.getTimeStamps(&host);
+    lua_pushnumber(L, timeStamps.first);
+    lua_pushnumber(L, timeStamps.second);
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordParty
+int TLuaInterpreter::setDiscordParty(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord party info is disabled in settings for privacy");
+        return 2;
+    }
+
+    int64_t partySize = -1;
+    int64_t partyMax = -1;
+    if (lua_isnumber(L, 1)) {
+        partySize = lua_tointeger(L, 1);
+        if (partySize < 0) {
+            lua_pushnil(L);
+            lua_pushstring(L, "the current party size must be zero or more");
+            return 2;
+        }
+    } else {
+        lua_pushfstring(L, "setDiscordParty: bad argument #%d type (current party size as number expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    if (lua_gettop(L) > 1) {
+        partyMax = lua_tointeger(L, 2);
+        if (partyMax < 0) {
+            lua_pushnil(L);
+            lua_pushstring(L, "the optional party maximum size must be zero (to remove the party details) or more (to set the maximum)");
+            return 2;
+        }
+
+        pMudlet->mDiscord.setParty(&host, static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partySize)), static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partyMax)));
+    } else {
+        // Only got the partySize now
+        pMudlet->mDiscord.setParty(&host, static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partySize)));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordParty
+int TLuaInterpreter::getDiscordParty(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Access to Discord party info is disabled in settings for privacy");
+        return 2;
+    }
+
+    QPair<int, int> partyValues = pMudlet->mDiscord.getParty(&host);
+    lua_pushnumber(L, partyValues.first);
+    lua_pushnumber(L, partyValues.second);
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTime
@@ -10723,25 +11400,33 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#expandAlias
 int TLuaInterpreter::expandAlias(lua_State* L)
 {
-    string luaSendText;
+    QString payload;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "expandAlias: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "expandAlias: bad argument #1 type (text to parse as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        payload = QString::fromUtf8(lua_tostring(L, 1));
     }
+
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
         // check if the 2nd argument is a 'false', but don't match if it is 'nil'
         // because expandAlias("command") should be the same as expandAlias("command", nil)
-        if (lua_isboolean(L, 2) && !lua_toboolean(L, 2)) {
+        if (lua_isnil(L, 2)) {
             wantPrint = false;
+        } else if (!lua_toboolean(L, 2)) {
+            lua_pushfstring(L, "expandAlias: bad argument #2 type (echo as boolean is optional, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            wantPrint = lua_toboolean(L, 2);
         }
     }
     Host& host = getHostFromLua(L);
-    host.send(QString(luaSendText.c_str()), wantPrint, false);
-    return 0;
+    // Host::send will encode the UTF encoded data here in the wanted Server
+    // encoding:
+    host.send(payload, wantPrint, false);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine
@@ -10772,45 +11457,53 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send -- not #sendRaw - compare initLuaGlobals()
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send
+// Note this is registered as send NOT sendRaw - see initLuaGlobals()
+// It converts the bytes in the command (the first argument) from Utf-8 to be
+// encoded in the required Mud Server encoding.
 int TLuaInterpreter::sendRaw(lua_State* L)
 {
-    string luaSendText;
+    QString text;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendRaw: bad argument #1 (string expected, got %s)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "send: bad argument #1 type (command as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        text = QString::fromUtf8(lua_tostring(L, 1));
     }
+
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "sendRaw: bad argument #2 (boolean expected, got %s)", luaL_typename(L, 2));
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "send: bad argument #2 type (showOnScreen as boolean expected, got %s)", luaL_typename(L, 2));
+            return lua_error(L);
         } else {
             wantPrint = lua_toboolean(L, 2);
         }
     }
     Host& host = getHostFromLua(L);
-    host.send(QString(luaSendText.c_str()), wantPrint, true);
-    return 0;
+    // Host::send will encode the UTF encoded data here in the wanted Server
+    // encoding:
+    host.send(text, wantPrint, true);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendSocket
+// The data can, theoretically, contain embedded ASCII NUL characters:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
-    string luaSendText;
+    string data;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendSocket: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "sendSocket: bad argument #1 type (data as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        data = lua_tostring(L, 1);
     }
+
     Host& host = getHostFromLua(L);
-    host.mTelnet.socketOutRaw(luaSendText);
+    // msg is not in an encoded form here it is a literal set of bytes, which
+    // is what this usage needs:
+    host.mTelnet.socketOutRaw(data);
     return 0;
 }
 
@@ -11339,6 +12032,26 @@ bool TLuaInterpreter::validLuaCode(const QString &code)
     return error == 0;
 }
 
+std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool writeAccess)
+{
+    mudlet* pMudlet = mudlet::self();
+
+    if (!pMudlet->mDiscord.libraryLoaded()) {
+        return make_pair(false, QStringLiteral("Discord API is not available"));
+    }
+
+    auto& host = getHostFromLua(L);
+    if (!(host.mDiscordAccessFlags & Host::DiscordLuaAccessEnabled)) {
+        return make_pair(false, QStringLiteral("Discord API is disabled in settings for privacy"));
+    }
+
+    if (writeAccess && !pMudlet->mDiscord.discordUserIdMatch(&host)) {
+        return make_pair(false, QStringLiteral("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile"));
+    }
+
+    return make_pair(true, QString());
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList)
 {
@@ -11440,7 +12153,7 @@ void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
             return;
         }
     }
-    parseJSON(key, string_data, "gmcp");
+    parseJSON(key, string_data, QLatin1String("gmcp"));
 }
 
 // No documentation available in wiki - internal function
@@ -11458,7 +12171,7 @@ void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
         }
     }
 
-    parseJSON(key, string_data, "msdp");
+    parseJSON(key, string_data, QLatin1String("msdp"));
 }
 
 // No documentation available in wiki - internal function
@@ -11466,7 +12179,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     lua_State* L = pGlobalLua;
-    QStringList tokenList = key.split(".");
+    QStringList tokenList = key.split(QLatin1Char('.'));
     if (!lua_checkstack(L, tokenList.size() + 5)) {
         return;
     }
@@ -11484,9 +12197,10 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
     bool __needMerge = false;
     lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
+    Host& host = getHostFromLua(L);
     if (lua_istable(L, -1)) {
         // only merge tables (instead of replacing them) if the key has been registered as a need to merge key by the user default is Char.Status only
-        if (mpHost->mGMCP_merge_table_keys.contains(key)) {
+        if (host.mGMCP_merge_table_keys.contains(key)) {
             __needMerge = true;
         }
     }
@@ -11545,10 +12259,10 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     // with the actual key given as parameter e.g. event=gmcp.foo, param="gmcp.foo.bar"
 
     QString token = protocol;
-    if (protocol == "msdp") {
-        key.prepend("msdp.");
+    if (protocol == QLatin1String("msdp")) {
+        key.prepend(QLatin1String("msdp."));
     } else {
-        key.prepend("gmcp.");
+        key.prepend(QLatin1String("gmcp."));
     }
 
     for (int k = 0, total = tokenList.size(); k < total; ++k) {
@@ -11559,11 +12273,8 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(key);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        Host& host = getHostFromLua(L);
         if (mudlet::debugMode) {
-            QString msg = QString("\n%1 event <").arg(protocol);
-            msg.append(token);
-            msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
+            QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
             host.mpConsole->printSystemMessage(msg);
         }
         host.raiseEvent(event);
@@ -11592,71 +12303,72 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
 }
 
 // No documentation available in wiki - internal function
-#define BUFFER_SIZE 20000
-void TLuaInterpreter::msdp2Lua(char* src, int srclen)
+// src is in Mud Server encoding and may need transcoding
+void TLuaInterpreter::msdp2Lua(const char* src)
 {
-    qDebug() << "<MSDP><" << src << ">";
+    Host& host = getHostFromLua(pGlobalLua);
+    QByteArray transcodedSrc = host.mTelnet.decodeBytes(src);
+    qDebug().nospace().noquote() << "<MSDP><" << transcodedSrc << ">";
     QStringList varList;
-    QString lastVar;
-    int i, nest, last;
-    nest = last = 0;
-    i = 0;
-    QString script; // = "{";
-    // N/U:     bool isSet = false;
+    QByteArray lastVar;
+    int textLength = transcodedSrc.length();
+    int nest = 0;
+    quint8 last = 0;
+
+    QByteArray script;
     bool no_array_marker_bug = false;
-    while (i < srclen) {
-        switch (src[i]) {
+    for (int i = 0; i < textLength; ++i) {
+        switch (transcodedSrc.at(i)) {
         case MSDP_TABLE_OPEN:
-            script.append(QLatin1Char('{'));
-            nest++;
+            script.append('{');
+            ++nest;
             last = MSDP_TABLE_OPEN;
             break;
         case MSDP_TABLE_CLOSE:
             if (last == MSDP_VAL || last == MSDP_VAR) {
-                script.append(QLatin1Char('"'));
+                script.append('\"');
             }
             if (nest) {
-                nest--;
+                --nest;
             }
-            script.append(QLatin1Char('}'));
+            script.append('}');
             last = MSDP_TABLE_CLOSE;
             break;
         case MSDP_ARRAY_OPEN:
-            script.append(QLatin1Char('['));
-            nest++;
+            script.append('[');
+            ++nest;
             last = MSDP_ARRAY_OPEN;
             break;
         case MSDP_ARRAY_CLOSE:
             if (last == MSDP_VAL || last == MSDP_VAR) {
-                script.append(QLatin1Char('"'));
+                script.append('\"');
             }
             if (nest) {
-                nest--;
+                --nest;
             }
-            script.append(QLatin1Char(']'));
+            script.append(']');
             last = MSDP_ARRAY_CLOSE;
             break;
         case MSDP_VAR:
             if (nest) {
                 if (last == MSDP_VAL || last == MSDP_VAR) {
-                    script.append(QLatin1Char('"'));
+                    script.append('\"');
                 }
                 if (last == MSDP_VAL || last == MSDP_VAR || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
-                    script.append(QLatin1Char(','));
+                    script.append(',');
                 }
-                script.append(QLatin1Char('"'));
+                script.append('\"');
             } else {
-                script.append(QLatin1Char('"'));
+                script.append('\"');
 
                 if (!varList.empty()) {
-                    script = script.replace(0, varList.front().size() + 3, QString());
                     QString token = varList.front();
-                    token = token.replace(QLatin1Char('"'), QString());
-                    //qDebug()<<"[SET]<Token><"<<token<<"><JSON><"<<script<<">";
-                    setMSDPTable(token, script);
+                    token = token.remove(QLatin1Char('\"'));
+                    script = script.replace(0, varList.front().toUtf8().size() + 3, QByteArray());
+                    mpHost->processDiscordMSDP(token, script);
+                    setMSDPTable(token, QString::fromUtf8(script));
                     varList.clear();
                     script.clear();
-                    // N/U:                       isSet = true;
                 }
             }
             last = MSDP_VAR;
@@ -11665,54 +12377,50 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
 
         case MSDP_VAL:
             if (last == MSDP_VAR) {
-                script.append(QLatin1String(R"(":)"));
+                script.append("\":");
             }
             if (last == MSDP_VAL) {
                 no_array_marker_bug = true;
-                script.append(QLatin1Char('"'));
+                script.append('\"');
             }
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
-                script.append(QLatin1Char(','));
+                script.append(',');
             }
-            if (src[i + 1] != MSDP_TABLE_OPEN && src[i + 1] != MSDP_ARRAY_OPEN) {
-                script.append(QLatin1Char('"'));
+            if (transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) {
+                script.append('\"');
             }
-            varList.append(lastVar);
+            varList.append(QString::fromUtf8(lastVar));
             last = MSDP_VAL;
             break;
         case '\\':
-            script.append(QLatin1String(R"(\\)"));
+            script.append('\\');
             break;
-        case '"':
-            script.append(QLatin1String(R"(\")"));
+        case '\"':
+            script.append('\"');
             break;
         default:
-            script.append(src[i]);
-            lastVar.append(src[i]);
+            script.append(transcodedSrc.at(i));
+            lastVar.append(transcodedSrc.at(i));
             break;
         }
-        i++;
     }
     if (last != MSDP_ARRAY_CLOSE && last != MSDP_TABLE_CLOSE) {
-        script.append(QLatin1Char('"'));
-        if (!script.startsWith(QLatin1Char('"'))) {
-            script.prepend(QLatin1Char('"'));
+        script.append('\"');
+        if (!script.startsWith('\"')) {
+            script.prepend('\"');
         }
     }
     if (!varList.empty()) {
-        //qDebug()<<"<script>"<<script;
-        // N/U:         int startVal = script.indexOf(":")+1;
         QString token = varList.front();
-        token = token.replace(QLatin1Char('"'), QString());
-        script = script.replace(0, token.size() + 3, "");
+        token = token.remove(QLatin1Char('\"'));
+        script = script.replace(0, token.toUtf8().size() + 3, QByteArray());
         if (no_array_marker_bug) {
-            if (!script.startsWith(QLatin1Char('['))) {
-                script.prepend(QLatin1Char('['));
-                script.append(QLatin1Char(']'));
+            if (!script.startsWith('[')) {
+                script.prepend('[');
+                script.append(']');
             }
         }
-        //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
-        setMSDPTable(token, script);
+        setMSDPTable(token, QString::fromUtf8(script));
     }
 }
 
@@ -11861,7 +12569,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::call(const QString& function, const QString& mName)
+// Third argument hides the "LUA OK" type message if it true which may be used
+// to cut down on spammy output if things are okay.
+bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
     lua_State* L = pGlobalLua;
     if (!L) {
@@ -11881,21 +12591,18 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName)
                 e += lua_tostring(L, i);
                 logError(e, mName, function);
                 if (mudlet::debugMode) {
-                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> 0;
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running script " << mName << " (" << function << "),\nreason: " << e.c_str() << "\n" >> 0;
                 }
             }
         }
     } else {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
+        if (mudlet::debugMode && !muteDebugOutput) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK: script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
     lua_pop(L, lua_gettop(L));
-    if (error == 0) {
-        return true;
-    } else {
-        return false;
-    }
+
+    return (error);
 }
 
 // No documentation available in wiki - internal function
@@ -12417,17 +13124,20 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
 }
 
 // No documentation available in wiki - internal function
-QString TLuaInterpreter::get_lua_string(const QString& stringName)
+QString TLuaInterpreter::getLuaString(const QString& stringName)
 {
     lua_State* L = pGlobalLua;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return QString("LUA CRITICAL ERROR");
+        return QStringLiteral("LUA CRITICAL ERROR");
     }
 
-    lua_getglobal(L, stringName.toUtf8().constData());
-    lua_getfield(L, LUA_GLOBALSINDEX, stringName.toUtf8().constData());
-    return QString(lua_tostring(L, 1));
+    int error = luaL_dostring(L, QStringLiteral("return %1").arg(stringName).toUtf8().constData());
+    if (!error) {
+        return QString::fromUtf8(lua_tostring(L, 1));
+    } else {
+        return QString();
+    }
 }
 
 // check for <whitespace><no_valid_representation> as output
@@ -12832,11 +13542,29 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
+    lua_register(pGlobalLua, "setDiscordApplicationID", TLuaInterpreter::setDiscordApplicationID);
+    lua_register(pGlobalLua, "usingMudletsDiscordID", TLuaInterpreter::usingMudletsDiscordID);
+    lua_register(pGlobalLua, "setDiscordState", TLuaInterpreter::setDiscordState);
+    lua_register(pGlobalLua, "setDiscordGame", TLuaInterpreter::setDiscordGame);
+    lua_register(pGlobalLua, "setDiscordDetail", TLuaInterpreter::setDiscordDetail);
+    lua_register(pGlobalLua, "setDiscordLargeIcon", TLuaInterpreter::setDiscordLargeIcon);
+    lua_register(pGlobalLua, "setDiscordLargeIconText", TLuaInterpreter::setDiscordLargeIconText);
+    lua_register(pGlobalLua, "setDiscordSmallIcon", TLuaInterpreter::setDiscordSmallIcon);
+    lua_register(pGlobalLua, "setDiscordSmallIconText", TLuaInterpreter::setDiscordSmallIconText);
+    lua_register(pGlobalLua, "getDiscordState", TLuaInterpreter::getDiscordState);
+    lua_register(pGlobalLua, "getDiscordDetail", TLuaInterpreter::getDiscordDetail);
+    lua_register(pGlobalLua, "getDiscordLargeIcon", TLuaInterpreter::getDiscordLargeIcon);
+    lua_register(pGlobalLua, "getDiscordLargeIconText", TLuaInterpreter::getDiscordLargeIconText);
+    lua_register(pGlobalLua, "getDiscordSmallIcon", TLuaInterpreter::getDiscordSmallIcon);
+    lua_register(pGlobalLua, "getDiscordSmallIconText", TLuaInterpreter::getDiscordSmallIconText);
+    lua_register(pGlobalLua, "setDiscordRemainingEndTime", TLuaInterpreter::setDiscordRemainingEndTime);
+    lua_register(pGlobalLua, "setDiscordElapsedStartTime", TLuaInterpreter::setDiscordElapsedStartTime);
+    lua_register(pGlobalLua, "getDiscordTimeStamps", TLuaInterpreter::getDiscordTimeStamps);
+    lua_register(pGlobalLua, "setDiscordParty", TLuaInterpreter::setDiscordParty);
+    lua_register(pGlobalLua, "getDiscordParty", TLuaInterpreter::getDiscordParty);
+    lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
+    lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
     // PLACEMARKER: End of main Lua interpreter functions registration
-
-
-    luaopen_yajl(pGlobalLua);
-    lua_setglobal(pGlobalLua, "yajl");
 
     // prepend profile path to package.path and package.cpath
     // with a singleShot Timer to avoid crash on startup.
@@ -12879,81 +13607,98 @@ void TLuaInterpreter::initLuaGlobals()
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module rex_pcre.\n"
-                      "Some functions may not be available.\n";
-        msg.append(e.c_str());
+        QString msg = tr("[ ERROR ] - Cannot find Lua module rex_pcre.\n"
+                         "Some functions may not be available.\n");
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module rex_pcre loaded.";
+        QString msg = tr("[  OK  ]  - Lua module rex_pcre loaded.");
         mpHost->postMessage(msg);
     }
 
     error = luaL_dostring(pGlobalLua, "require \"zip\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module zip.\n";
-        msg.append(e.c_str());
+        QString msg = tr("[ ERROR ] - Cannot find Lua module zip.\n");
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module zip loaded.";
+        QString msg = tr("[  OK  ]  - Lua module zip loaded.");
         mpHost->postMessage(msg);
     }
 
     error = luaL_dostring(pGlobalLua, "require \"lfs\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
-                      "Probably will not be able to access Mudlet Lua code.\n";
-        msg.append(e.c_str());
+        QString msg = tr("[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
+                         "Probably will not be able to access Mudlet Lua code.\n");
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module lfs loaded.";
+        QString msg = tr("[  OK  ]  - Lua module lfs loaded.");
         mpHost->postMessage(msg);
     }
 
     error = luaL_dostring(pGlobalLua, "luasql = require \"luasql.sqlite3\"");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
-                      "Database support will not be available.\n";
-        msg.append(e.c_str());
+        QString msg = tr("[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
+                         "Database support will not be available.\n");
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module sqlite3 loaded.";
+        QString msg = tr("[  OK  ]  - Lua module sqlite3 loaded.");
         mpHost->postMessage(msg);
     }
 
 
     error = luaL_dostring(pGlobalLua, R"(utf8 = require "lua-utf8")");
     if (error != 0) {
-        string e = "no error message available from Lua";
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module utf8.\n"
-                      "utf8.* Lua functions won't be available.\n";
-        msg.append(e.c_str());
+        QString msg = tr("[ ERROR ] - Cannot find Lua module utf8.\n"
+                         "utf8.* Lua functions won't be available.\n");
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua module utf8 loaded.";
+        QString msg = tr("[  OK  ]  - Lua module utf8 loaded.");
+        mpHost->postMessage(msg);
+    }
+
+
+    error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
+    if (error != 0) {
+        QString e = tr("no error message available from Lua");
+        if (lua_isstring(pGlobalLua, -1)) {
+            e = tr("Lua error:");
+            e += lua_tostring(pGlobalLua, -1);
+        }
+        QString msg = tr("[ ERROR ] - Cannot find Lua module yajl.\n"
+                         "yajl.* Lua functions won't be available.\n");
+        msg.append(e);
+        mpHost->postMessage(msg);
+    } else {
+        QString msg = tr("[  OK  ]  - Lua module yajl loaded.");
         mpHost->postMessage(msg);
     }
 
@@ -12997,9 +13742,6 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_register(pIndenterState, "debugc", TLuaInterpreter::debug);
     // PLACEMARKER: End of indenter Lua interpreter functions registration
 
-    luaopen_yajl(pIndenterState);
-    lua_setglobal(pIndenterState, "yajl");
-
 
 
 #if defined(Q_OS_MACOS)
@@ -13041,16 +13783,16 @@ void TLuaInterpreter::initIndenterGlobals()
       get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
-        string e = "no error message available from Lua";
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pIndenterState, -1)) {
-            e = "Lua error:";
+            e = tr("Lua error:");
             e += lua_tostring(pIndenterState, -1);
         }
-        QString msg = QStringLiteral("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n%1")
-                      .arg(QString::fromStdString(e));
+        QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n");
+        msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = "[  OK  ]  - Lua code formatter loaded.";
+        QString msg = tr("[  OK  ]  - Lua code formatter loaded.");
         mpHost->postMessage(msg);
     }
 
@@ -13083,11 +13825,11 @@ void TLuaInterpreter::loadGlobal()
         }
         error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
         if (error == 0) {
-            mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+            mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
         }
     } else {
-        mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
         return;
     }
 
@@ -13095,15 +13837,15 @@ void TLuaInterpreter::loadGlobal()
     path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
     error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
     if (error != 0) {
-        string e = "no error message available from Lua";
+        QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                "Error from Lua: ";
+            e = tr("[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                   "Error from Lua: ");
             e += lua_tostring(pGlobalLua, -1);
         }
-        mpHost->postMessage(e.c_str());
+        mpHost->postMessage(e);
     } else {
-        mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
         return;
     }
 }

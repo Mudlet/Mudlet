@@ -37,6 +37,7 @@
 #include <QScrollBar>
 #include <QToolTip>
 #include <QTextBoundaryFinder>
+#include <chrono>
 #include "post_guard.h"
 
 
@@ -392,7 +393,7 @@ void TTextEdit::scrollDown(int lines)
     }
 }
 
-inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, const QColor& bgColor)
+inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, const QColor& bgColor) const
 {
     QRect bR = rect;
     painter.fillRect(bR.x(), bR.y(), bR.width(), bR.height(), bgColor);
@@ -523,13 +524,12 @@ void TTextEdit::drawFrame(QPainter& p, const QRect& rect)
 
 void TTextEdit::updateLastLine()
 {
-    qDebug() << "--->ACHTUNG: error: updateLastLine() called";
     QRect r(0, (mScreenHeight - 1) * mFontHeight, mScreenWidth * mFontWidth, mScreenHeight * mFontHeight);
     mForceUpdate = true;
     update(r);
 }
 
-inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
+inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
 {
     if (str.isEmpty()) {
         return 0;
@@ -550,10 +550,11 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
     }
 }
 
-void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
+void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
 {
+
     QPoint cursor(0, lineOfScreen);
-    QString lineText = mpBuffer->lineBuffer[lineNumber];
+    QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
 
     if (mShowTimeStamps) {
@@ -591,7 +592,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen)
  * @param charStyle
  * @return Return the display width of the grapheme
  */
-int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle)
+int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle) const
 {
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
@@ -738,11 +739,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScreenMap = pixmap.copy();
     }
     mScrollVector = 0;
-    // Only place this value is changed (apart from initialisation to 0):
     mLastRenderBottom = lineOffset;
     mForceUpdate = false;
 }
-
 
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
@@ -1241,6 +1240,10 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         QAction* action2 = new QAction(tr("Copy HTML"), this);
         action2->setToolTip(QString());
         connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
+
+        auto* actionCopyImage = new QAction(tr("Copy as image"), this);
+        connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
+
         QAction* action3 = new QAction(tr("Select All"), this);
         action3->setToolTip(QString());
         connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
@@ -1259,6 +1262,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addAction(actionCopyImage);
         popup->addSeparator();
         popup->addAction(action3);
         popup->addSeparator();
@@ -1389,7 +1393,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.blue()));
     text.append(");}\n");
-    text.append("        span { white-space: pre; } -->\n");
+    text.append("        span { white-space: pre-wrap; } -->\n");
     text.append("  </style>\n");
     text.append("  </head>\n");
     text.append("  <body><div>");
@@ -1419,6 +1423,115 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
     return;
+}
+
+void TTextEdit::slot_copySelectionToClipboardImage()
+{
+    mCopyImageStartTime = std::chrono::high_resolution_clock::now();
+
+    // mPA QPoint where selection started
+    // mPB QPoint where selection ended
+
+    // if selection was made backwards swap
+    // right to left
+    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
+        swap(mPA, mPB);
+    }
+    // down to up
+    if (mPA.y() > mPB.y()) {
+        swap(mPA, mPB);
+    }
+
+    if (mFontWidth <= 0 || mFontHeight <= 0) {
+        return;
+    }
+
+    if (mSelectedRegion == QRegion(0, 0, 0, 0)) {
+        return;
+    }
+
+    if (mScreenHeight <= 0 || mScreenWidth <= 0) {
+        mScreenHeight = height() / mFontHeight;
+        mScreenWidth = 100;
+        if (mScreenHeight <= 0 || mScreenWidth <= 0) {
+            return;
+        }
+    }
+
+    // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
+    auto heightpx = qMin(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
+    auto lineOffset = mPA.y();
+
+    // find the biggest width of text we need to work with
+    int characterWidth = 0;
+    for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
+        const auto lineWidth = static_cast<int>(mpBuffer->buffer.at(y).size());
+        characterWidth = qMax(lineWidth, characterWidth);
+    }
+
+    auto widthpx = qMin(65500, characterWidth * mFontWidth);
+
+    auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
+
+    auto pixmap = QPixmap(widthpx, heightpx);
+    pixmap.fill(palette().base().color());
+
+    QPainter painter(&pixmap);
+    if (!painter.isActive()) {
+        return;
+    }
+
+    auto oldMpa = mPA;
+    auto oldMpb = mPB;
+
+    // deselect to prevent inverted colours in image
+    unHighlight();
+    mSelectedRegion = QRegion(0, 0, 0, 0);
+
+    auto result = drawTextForClipboard(painter, rect, lineOffset);
+
+    mPA = oldMpa;
+    mPB = oldMpb;
+    highlight();
+
+    // if we cut didn't finish painting the complete picture, trim the bottom of the image
+    if (!result.first) {
+        const auto& smallerPixmap = pixmap.scaled(QSize(widthpx, result.second * mFontHeight), Qt::KeepAspectRatio);
+        QApplication::clipboard()->setImage(smallerPixmap.toImage());
+        return;
+    }
+
+    QApplication::clipboard()->setImage(pixmap.toImage());
+}
+
+// a stateless version of drawForeground that doesn't do any caching
+// (and thus doesn't mess up any of the caches)
+std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
+{
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    if (!mIsDebugConsole && !mIsMiniConsole) {
+        painter.setFont(mpHost->mDisplayFont);
+        painter.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
+    } else {
+        painter.setFont(mDisplayFont);
+        painter.setRenderHint(QPainter::TextAntialiasing, false);
+    }
+
+    int lineCount = rectangle.height() / mFontHeight;
+    int linesDrawn = 0;
+    auto timeout = mudlet::self()->mCopyAsImageTimeout;
+    for (int i = 0; i <= lineCount; i++, linesDrawn++) {
+        if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
+            break;
+        }
+        drawLine(painter, i + lineOffset, i);
+
+        if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
+            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
+            return std::make_pair(false, linesDrawn);
+        }
+    }
+    return std::make_pair(true, linesDrawn);
 }
 
 void TTextEdit::searchSelectionOnline()
@@ -1566,7 +1679,7 @@ int TTextEdit::imageTopLine()
     }
 
     if (mCursorY > mScreenHeight) {
-        // mIsTailMode is alway true for lower pane and true for upper one when
+        // mIsTailMode is always true for lower pane and true for upper one when
         // it is scrolled to the bottom and new text is to be appended and the
         // older text is to scroll up:
         if (mIsTailMode && (mpBuffer->lineBuffer.at(mpBuffer->getLastLineNumber()).isEmpty())) {

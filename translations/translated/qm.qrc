@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/lang">
+        <file>mudlet_de_DE.qm</file>
+        <file>mudlet_ru_RU.qm</file>
+        <file>mudlet_es_ES.qm</file>
+        <file>mudlet_en_GB.qm</file>
+        <file>mudlet_it_IT.qm</file>
+        <file>mudlet_zh_CN.qm</file>
+        <file>mudlet_pl_PL.qm</file>
+        <file>mudlet_nl_NL.qm</file>
+        <file>mudlet_fr_FR.qm</file>
+        <file>mudlet_zh_TW.qm</file>
+        <file>mudlet_en_US.qm</file>
+        <file>mudlet_el_GR.qm</file>
+        <file>mudlet_pt_PT.qm</file>
+    </qresource>
+</RCC>

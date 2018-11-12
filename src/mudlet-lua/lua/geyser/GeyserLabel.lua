@@ -44,7 +44,7 @@ function Geyser.Label:echo(message, color, format)
       message = "<i>" .. message .. "</i>"
     end
     if string.find(format, "c") then
-      message = "<center>" .. message .. "</i>"
+      message = "<center>" .. message .. "</center>"
     end
     if string.find(format, "u") then
       message = "<u>" .. message .. "</u>"

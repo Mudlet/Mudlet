@@ -145,6 +145,8 @@ private slots:
     void slot_setTreeWidgetIconSize(const int);
     void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeShowIconsOnMenus(const Qt::CheckState);
+    void slot_changeGuiLanguage(const QString &language);
 
 private:
     void setColors();
@@ -166,6 +168,7 @@ private:
     void clearHostDetails();
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
+    void generateDiscordTooltips();
 
     int mFontSize;
     QPointer<Host> mpHost;

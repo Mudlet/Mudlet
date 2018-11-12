@@ -946,7 +946,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                       << mpHost->mFgColor.red() << "," << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue()
                       << "); background-color:rgb("
                       << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
-            logStream << "        span { white-space: pre; } -->\n";
+            logStream << "        span { white-space: pre-wrap; } -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
             bool isAtBody = false;
@@ -1355,12 +1355,15 @@ void TConsole::hideEvent(QHideEvent* event)
 void TConsole::reset()
 {
     deselect();
-    mFormatCurrent.bgR = mStandardFormat.bgR;
-    mFormatCurrent.bgG = mStandardFormat.bgG;
-    mFormatCurrent.bgB = mStandardFormat.bgB;
-    mFormatCurrent.fgR = mStandardFormat.fgR;
-    mFormatCurrent.fgG = mStandardFormat.fgG;
-    mFormatCurrent.fgB = mStandardFormat.fgB;
+    auto& mBgColor = mpHost->mBgColor;
+    auto& mFgColor = mpHost->mFgColor;
+
+    mFormatCurrent.bgR = mBgColor.red();
+    mFormatCurrent.bgG = mBgColor.green();
+    mFormatCurrent.bgB = mBgColor.blue();
+    mFormatCurrent.fgR = mFgColor.red();
+    mFormatCurrent.fgG = mFgColor.green();
+    mFormatCurrent.fgB = mFgColor.blue();
     mFormatCurrent.flags &= ~(TCHAR_BOLD);
     mFormatCurrent.flags &= ~(TCHAR_ITALICS);
     mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
@@ -1644,7 +1647,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
         // in later software versions and is a weak pointer until used
         // (I think - Slysven ?)
         if (errMsg) {
-            *errMsg = tr("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
+            *errMsg = QStringLiteral("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
         }
         return false;
     }
@@ -1657,7 +1660,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
         // And that failed so give up
         if (errMsg) {
-            *errMsg = tr("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
+            *errMsg = QStringLiteral("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
         }
         return false;
     }
@@ -2086,6 +2089,25 @@ bool TConsole::selectSection(int from, int to)
                 >> 0;
     }
     return true;
+}
+
+// returns whenever the selection is valid, the selection text,
+// start position, and the length of the seletion
+std::tuple<bool, QString, int, int> TConsole::getSelection()
+{
+    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+    }
+
+    const auto start = P_begin.x();
+    const auto length = P_end.x() - P_begin.x();
+    const auto line = buffer.line(mUserCursor.y());
+    if (line.size() < start) {
+        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+    }
+
+    const auto text = line.mid(start, length);
+    return make_tuple(true, text, start, length);
 }
 
 void TConsole::setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint)
@@ -2570,16 +2592,16 @@ void TConsole::printSystemMessage(const QString& msg)
         bgColor = mpHost->mBgColor;
     }
 
-    QString txt = QString("System Message: ") + msg;
+    QString txt = tr("System message: %1").arg(msg);
     buffer.append(txt,
                   0,
                   txt.size(),
                   mSystemMessageFgColor.red(),
                   mSystemMessageFgColor.green(),
                   mSystemMessageFgColor.blue(),
-                  mSystemMessageBgColor.red(),
-                  mSystemMessageBgColor.green(),
-                  mSystemMessageBgColor.blue(),
+                  bgColor.red(),
+                  bgColor.green(),
+                  bgColor.blue(),
                   false,
                   false,
                   false,
@@ -2728,7 +2750,7 @@ void TConsole::slot_searchBufferUp()
             return;
         }
     }
-    print("No search results, sorry!\n");
+    print(tr("No search results, sorry!\n"));
 }
 
 void TConsole::slot_searchBufferDown()
@@ -2767,7 +2789,7 @@ void TConsole::slot_searchBufferDown()
             return;
         }
     }
-    print("No search results, sorry!\n");
+    print(tr("No search results, sorry!\n"));
 }
 
 QSize TConsole::getMainWindowSize() const
