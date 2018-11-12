@@ -99,7 +99,7 @@ public:
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
-    int getLineNumber(Host* pHost, QString& name);
+    std::pair<bool, int> getLineNumber(Host* pHost, QString& windowName);
     void printSystemMessage(Host* pH, const QString& s);
     void print(Host*, const QString&);
     void addConsoleForNewHost(Host* pH);
@@ -146,10 +146,11 @@ public:
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
     void deleteLine(Host*, const QString& name);
-    void insertText(Host*, const QString& name, const QString&);
+    bool insertText(Host*, const QString& windowName, const QString&);
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
     int selectSection(Host*, const QString& name, int, int);
+    std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
     void setBold(Host*, const QString& name, bool);
     void setLink(Host* pHost, const QString& name, const QString& linkText, QStringList& linkFunction, QStringList&);
     void setItalics(Host*, const QString& name, bool);
