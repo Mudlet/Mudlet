@@ -6,7 +6,9 @@ fi
 
 set +e
 shopt -s expand_aliases
-BREWS="boost cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+#Change to first item is a temporary workaroud to prevent trying to upgrade to
+#boost version 1.68.0 which has not been bottled yet...
+BREWS="boost@1.67.0 cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 for i in $BREWS; do
   if [ "${i}" = "cmake" ]; then
     continue
@@ -54,7 +56,7 @@ done
 gem update cocoapods
 
 # create an alias to avoid the need to list the lua dir all the time
-# we want to expand the subshell only once (it's only tmeporary anyways)
+# we want to expand the subshell only once (it's only temporary anyways)
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
