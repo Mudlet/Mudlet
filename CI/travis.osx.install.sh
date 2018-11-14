@@ -6,9 +6,9 @@ fi
 
 set +e
 shopt -s expand_aliases
-#Change to first item is a temporary workaroud to prevent trying to upgrade to
-#boost version 1.68.0 which has not been bottled yet...
-BREWS="boost@1.67.0 cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+#Removed boost as first item as a temporary workaroud to prevent trying to
+#upgrade to boost version 1.68.0 which has not been bottled yet...
+BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 for i in $BREWS; do
   if [ "${i}" = "cmake" ]; then
     continue

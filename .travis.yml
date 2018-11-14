@@ -9,7 +9,7 @@ addons:
     - sourceline: 'ppa:beineri/opt-qt571-trusty'
     - sourceline: 'ppa:beineri/opt-qt593-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
-    - sourceline: 'ppa:jonathonf/php7'
+    - sourceline: 'ppa:ondrej/php'
     packages: &common-packages
     - libhunspell-dev
     - lua5.1
