@@ -41,13 +41,13 @@ git:
 matrix:
   include:
   - os: osx
-    osx_image: xcode8
+    osx_image: xcode9.2
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
 
   - os: osx
-    osx_image: xcode8
+    osx_image: xcode9.2
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
