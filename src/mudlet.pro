@@ -78,7 +78,7 @@ CONFIG += c++14
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.11
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
 
 QT += network opengl uitools multimedia gui concurrent
 qtHaveModule(gamepad): QT += gamepad
