@@ -1946,10 +1946,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     }
                     _tn = _tn.toUpper();
                     if (_tn == "VERSION") {
-                        mpHost->sendRaw(QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
+                        QString payload = QStringLiteral("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=%1%2>\n").arg(APP_VERSION, APP_BUILD);
+                        mpHost->mTelnet.sendData(payload);
                     } else if (_tn == QLatin1String("SUPPORT")) {
                         auto response = processSupportsRequest(currentToken.c_str());
-                        mpHost->sendRaw(QStringLiteral("\n\x1b[1z<SUPPORTS %1>\n").arg(response));
+                        QString payload = QStringLiteral("\n\x1b[1z<SUPPORTS %1>\n").arg(response);
+                        mpHost->mTelnet.sendData(payload);
                     }
                     if (_tn == "BR") {
                         ch = '\n';

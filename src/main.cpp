@@ -221,15 +221,17 @@ int main(int argc, char* argv[])
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
         texts << QCoreApplication::translate("main", "       --dograb        ignore any implicit or explicit -nograb.\n"
                                                      "                       --dograb wins over --nograb even when --nograb is last on\n"
-                                                     "                       the command line.\n"
-                                                     "       --nograb        the application should never grab the mouse or the\n"
+                                                     "                       the command line.\n");
 #if defined(Q_OS_LINUX)
+        // Need to split these into actually seperate strings, as Crowdin translation would not split strings on #if otherwise.
+        texts << QCoreApplication::translate("main", "       --nograb        the application should never grab the mouse or the\n"
                                                      "                       keyboard. This option is set by default when Mudlet is\n"
-                                                     "                       running in the gdb debugger under Linux.\n"
+                                                     "                       running in the gdb debugger under Linux.\n");
 #else // ! defined(Q_OS_LINUX)
-                                                     "                       keyboard.\n"
+        texts << QCoreApplication::translate("main", "       --nograb        the application should never grab the mouse or the\n"
+                                                     "                       keyboard.\n");
 #endif // ! defined(Q_OS_LINUX)
-                                                     "       --reverse       sets the application's layout direction to right to left.\n"
+        texts << QCoreApplication::translate("main", "       --reverse       sets the application's layout direction to right to left.\n"
                                                      "       --style= style  sets the application GUI style. Possible values depend on\n"
                                                      "                       your system configuration. If Qt was compiled with\n"
                                                      "                       additional styles or has additional styles as plugins\n"
@@ -242,23 +244,23 @@ int main(int argc, char* argv[])
                                                      "                       The value must be a path to a file that contains the\n"
                                                      "                       Style Sheet. Note: Relative URLs in the Style Sheet file\n"
                                                      "                       are relative to the Style Sheet file's path.\n"
-                                                     "       --stylesheet stylesheet  is the same as listed above.\n"
+                                                     "       --stylesheet stylesheet  is the same as listed above.\n");
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
-                                                     "       --sync          forces the X server to perform each X client request\n"
+        texts << QCoreApplication::translate("main", "       --sync          forces the X server to perform each X client request\n"
                                                      "                       immediately and not use buffer optimization. It makes the\n"
                                                      "                       program easier to debug and often much slower. The --sync\n"
-                                                     "                       option is only valid for the X11 version of Qt.\n"
+                                                     "                       option is only valid for the X11 version of Qt.\n");
 #endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
-                                                     "       --widgetcount   prints debug message at the end about number of widgets\n"
+        texts << QCoreApplication::translate("main", "       --widgetcount   prints debug message at the end about number of widgets\n"
                                                      "                       left undestroyed and maximum number of widgets existing\n"
                                                      "                       at the same time.\n"
                                                      "       --qmljsdebugger=1234[,block]  activates the QML/JS debugger with a\n"
                                                      "                       specified port. The number is the port value and block is\n"
                                                      "                       optional and will make the application wait until a\n"
                                                      "                       debugger connects to it.\n\n");
-        texts << QCoreApplication::translate("main", "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>.\n");
-        texts << QCoreApplication::translate("main", "Project home page: <http://www.mudlet.org/>.\n");
+        texts << QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues.\n");
+        texts << QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/.\n");
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
@@ -287,7 +289,7 @@ int main(int argc, char* argv[])
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " APP_VERSION APP_BUILD);
+        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: ") + APP_VERSION APP_BUILD);
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -347,13 +349,14 @@ int main(int argc, char* argv[])
 
     QString splash_message;
     if (show_splash) {
-        splash_message.append("\n\nMudlet comes with\n"
+        splash_message.append(QCoreApplication::translate("main", "\n\n"
+                              "Mudlet comes with\n"
                               "ABSOLUTELY NO WARRANTY!\n"
                               "This is free software, and you are\n"
                               "welcome to redistribute it under\n"
                               "certain conditions; select the\n"
-                              "'About' item for details.\n\n");
-        splash_message.append("Locating profiles... ");
+                              "'About' item for details.\n\n"));
+        splash_message.append(QCoreApplication::translate("main", "Locating profiles... "));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
@@ -378,7 +381,7 @@ int main(int argc, char* argv[])
     }
 
     if (show_splash) {
-        splash_message.append("Done.\n\nLoading font files... ");
+        splash_message.append(QCoreApplication::translate("main", "Done.\n\nLoading font files... "));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
@@ -445,9 +448,9 @@ int main(int argc, char* argv[])
     mudlet::debugMode = false;
 
     if (show_splash) {
-        splash_message.append("Done.\n\n"
+        splash_message.append(QCoreApplication::translate("main", "Done.\n\n"
                               "All data has been loaded successfully.\n\n"
-                              "Starting... Have fun!\n\n");
+                              "Starting... Have fun!\n\n"));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }

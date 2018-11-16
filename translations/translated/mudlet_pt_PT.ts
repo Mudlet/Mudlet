@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="en-US" sourcelanguage="en">
+<TS version="2.1" language="pt-PT" sourcelanguage="en">
   <context>
     <name>Discord</name>
     <message>
       <location filename="../src/discord.cpp" line="134"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>pelo Mudlet</translation>
     </message>
   </context>
   <context>
@@ -16,31 +16,35 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando módulo:
+&quot;%1&quot;
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="883"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando pacote:
+&quot;%1&quot;
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="887"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1418"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1420"/>
       <location filename="../src/Host.cpp" line="1426"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 em %2:%3</translation>
     </message>
   </context>
   <context>
@@ -48,245 +52,245 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation type="unfinished"/>
+      <translation>! %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 está fora (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation type="unfinished"/>
+      <translation>! %1 está de volta</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! convidou %1 para %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation type="unfinished"/>
+      <translation>! %2 convidou para %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
       <source>! You have joined %1 as %2</source>
-      <translation type="unfinished"/>
+      <translation>! Juntou-se a %1 como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="160"/>
       <source>! %1 has joined %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 juntou-se a %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 expulsou %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
       <source>! %1 mode is %2 %3</source>
-      <translation type="unfinished"/>
+      <translation>! O modo de %1 é %2 %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
       <source>! %1 sets mode %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>! %1 definiu os modos %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
       <source>[MOTD] %1%2</source>
-      <translation type="unfinished"/>
+      <translation>[MOTD] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
       <source>! %1 has %2 users: %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 tem %2 utilizadores: %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation type="unfinished"/>
+      <translation>! %1 tem %2 utilizadores</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
       <source>! %1 has changed nick to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 alterou o nick para %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 respondeu no %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
       <location filename="../src/ircmessageformatter.cpp" line="271"/>
       <source>! %1 time is %2</source>
-      <translation type="unfinished"/>
+      <translation>! O tempo de %1 é %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
       <location filename="../src/ircmessageformatter.cpp" line="268"/>
       <source>! %1 version is %2</source>
-      <translation type="unfinished"/>
+      <translation>! A versão de %1 é %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
       <location filename="../src/ircmessageformatter.cpp" line="314"/>
       <source>[ERROR] %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
       <source>[Channel URL] %1</source>
-      <translation type="unfinished"/>
+      <translation>[URL do canal] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 abandonou %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
       <source>! %1 has left %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 abandonou %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1 respondeu em %2 segundos</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
       <source>* %1 %2</source>
-      <translation type="unfinished"/>
+      <translation>* %1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>! %1 abandonou</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 abandonou (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! nenhum tópico</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
       <source>[TOPIC] %1</source>
-      <translation type="unfinished"/>
+      <translation>[TOPIC] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 limpou o tópico</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
       <source>! %2 changed topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 alterou o tópico</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
       <source>[WHOIS] %1 is %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 é %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[WHOIS] %1 is connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado através de %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="394"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado desde %2 (inativo %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está fora: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
       <source>[WHOIS] %1 is logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
       <source>[WHOIS] %1 is connected from %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado a partir de %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
       <source>[WHOIS] %1 is using a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está a usar uma ligação segura</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="404"/>
       <source>[WHOIS] %1 is on %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está em %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="411"/>
       <source>[WHOWAS] %1 was %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 estava %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="412"/>
       <source>[WHOWAS] %1 was connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 estava conectado pelo %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="414"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 estava logado como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
       <source>[WHO] %1 (%2)</source>
-      <translation type="unfinished"/>
+      <translation>[WHO] %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - ausente</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
@@ -296,27 +300,27 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 dia(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 hora(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 minuto(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 segundo(s)</translation>
     </message>
   </context>
   <context>
@@ -324,297 +328,305 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome do Espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum mapa ou nenhuma posição válida.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
       <source>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </source>
-      <translation type="unfinished"/>
+      <translation>Área: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2021"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nome do Espaço: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2035"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço: %1 Posição (Atual) no Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2044"/>
       <source>Room ID: %1 (Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço: %1 Posição (Selecionada) no Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2053"/>
       <source>Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>ID do Espaço: %1 Posição (%5 Selecionada) no Mapa: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2066"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
-      <translation type="unfinished"/>
+      <translation>tempo de renderização: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2165"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>Tipo de etiqueta?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2166"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2167"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="107"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection. Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Clique numa linha para selecionar ou desselecionar esse número de espaço (com o nome dado, se os espaços estiverem nomeados) para adicionar ou remover o espaço da seleção. Clique no cabeçalho relevante para ordenar por esse método. Note que a coluna de nome apenas aparecerá se pelo menos um dos espaços tiver um nome.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2184"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>Selecione a Imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
       <source>Draw label as background or on top of everything?</source>
-      <translation type="unfinished"/>
+      <translation>Apresentar a etiqueta no plano de fundo ou à frente de tudo?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2192"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2193"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2439"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
-      <translation type="unfinished"/>
+      <translation>Arraste para selecionar múltiplos espaços ou etiquetas, solte para terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2598"/>
       <source>Undo last point</source>
-      <translation type="unfinished"/>
+      <translation>Desfazer o último ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2607"/>
       <source>Change the properties of this line</source>
-      <translation type="unfinished"/>
+      <translation>Mudar as propriedades desta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2611"/>
       <source>Finish drawing this line</source>
-      <translation type="unfinished"/>
+      <translation>Acabar de desenhar esta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2632"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>criar um novo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2635"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>carregar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>criar espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Criar um novo espaço aqui</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
       <source>Move room</source>
-      <translation type="unfinished"/>
+      <translation>Mover espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2659"/>
       <source>Delete room</source>
-      <translation type="unfinished"/>
+      <translation>Remover espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2663"/>
       <source>Change room color</source>
-      <translation type="unfinished"/>
+      <translation>Mudar cor do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2667"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Aumentar o espaçamento X-Y do mapa para os grupos de espaços selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2671"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
-      <translation type="unfinished"/>
+      <translation>Diminuir o espaçamento X-Y do mapa para os grupos de quartos selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2675"/>
       <source>Lock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Bloquear o espaço para "speed walks"</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2679"/>
       <source>Unlock room for speed walks</source>
-      <translation type="unfinished"/>
+      <translation>Desbloquear o espaço para "speed walks"</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2683"/>
       <source>Set room weight</source>
-      <translation type="unfinished"/>
+      <translation>Definir peso do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2687"/>
       <source>Set room exits</source>
-      <translation type="unfinished"/>
+      <translation>Definir saídas do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2691"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Definir um ou mais símbolos ou letras para marcar espaços especiais</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2695"/>
       <source>Move selected group to a given position</source>
-      <translation type="unfinished"/>
+      <translation>Mover grupo selecionado para determinada posição</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Set room area ID</source>
-      <translation type="unfinished"/>
+      <translation>Definir o ID da área do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2709"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Linhas de saída personalizadas não são mostradas e não são editáveis em modo de grelha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Substitua uma linha de saída com uma linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2717"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Criar etiquetas para mostrar texto ou imagens.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Set player current location to here</source>
-      <translation type="unfinished"/>
+      <translation>Definir aqui a posição atual do jogador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2726"/>
       <source>Cannot set location when not exactly one room selected</source>
-      <translation type="unfinished"/>
+      <translation>Impossível definir a localização quando não se encontra exatamente um espaço selecionado</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
       <source>Move label</source>
-      <translation type="unfinished"/>
+      <translation>Mover Etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2757"/>
       <source>Delete label</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2780"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Divida o segmento adicionando um novo ponto a meio do caminho</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2783"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro selecione um ponto, de seguida adicione um novo ponto a meio do segmento em direção ao espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Junte um par de segmentos removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2795"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Remova o último segmento removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2803"/>
       <source>Select a point first, then remove it</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro selecione um ponto, de seguida remova-o</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Mudar as propriedades desta linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Remover tudo desta linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3281"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>Mover a seleção, centrada no espaço destacado (%1) para:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3283"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada x (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3284"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada y (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3285"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada z (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3389"/>
       <location filename="../src/T2DMap.cpp" line="3398"/>
       <location filename="../src/T2DMap.cpp" line="3437"/>
       <source>Enter room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Introduza o símbolo do espaço</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3390"/>
       <source>Enter the symbol to use 
 for this/these room(s):</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Introduza o símbolo a usar para este espaço:</numerusform>
+        <numerusform>Introduza o símbolo a usar para este(s) espaço(s):</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3400"/>
@@ -622,20 +634,20 @@ for this/these room(s):</source>
 more of the selected rooms, delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
-      <translation type="unfinished"/>
+      <translation>O único símbolo usado é &quot;%1&quot; num ou mais dos espaços selecionados, remova isso para o limpar de todos os espaços selecionados ou substitua com um novo símbolo a usar em todos os espaços:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3405"/>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
-      <translation type="unfinished"/>
+      <translation>No espaço selecionado o símbolo e &quot;%1&quot;, remova isso para limpar o símbolo ou substitua-o com um novo símbolo para este espaço:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3430"/>
       <location filename="../src/T2DMap.cpp" line="3834"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3438"/>
@@ -646,12 +658,12 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Escolha um símbolo existente da lista (ordenada por os mais comuns primeiro) ou introduza um ou mais grafemas novos (&quot;caracteres visíveis&quot;), a definir; ou um espaço branco para limpar; todos os espaços selecionados:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3592"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Espalhar espaços</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3593"/>
@@ -660,12 +672,12 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Aumentar o espaçamento dos espaços selecionados, centrado no espaço destacado por um fator de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3654"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Encolher os espaços</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3655"/>
@@ -674,14 +686,14 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Diminuir o espaçamento dos quartos selecionados, centrado no espaço destacado por um fator de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3785"/>
       <location filename="../src/T2DMap.cpp" line="3798"/>
       <location filename="../src/T2DMap.cpp" line="3843"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Introduza o peso do espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3786"/>
@@ -689,7 +701,7 @@ factor of:</source>
 (= travel time), minimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Introduza um novo peso do espaço (= tempo de viagem), o mínimo (e padrão) é 1:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3799"/>
@@ -700,12 +712,12 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Introduza um novo peso do espaço (= tempo de viagem) para todos os espaços selecionados, o mínimo (e padrão) é 1 e o único valor atualmente utilizado é:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3832"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2, padrão}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3840"/>
@@ -723,29 +735,29 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Escolha um peso de espaço (= tempo de viagem) existente da lista (ordenada pelo mais comum primeiro) ou introduza um valor inteiro (positivo) novo para todos os espaços selecionados:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3892"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3894"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa Mudlet (*.dat);;Dados do mapa xml (*.xml);;Qualquer ficheiro (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4700"/>
       <location filename="../src/T2DMap.cpp" line="4736"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
-      <translation type="unfinished"/>
+      <translation>Clique com o botão esquerdo para adicionar um ponto, ou com o botão direito para desfazer/alterar/terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4747"/>
       <source>Left-click and drag a square for the size and position of your label</source>
-      <translation type="unfinished"/>
+      <translation>Clique e arraste com o botão esquerdo um retângulo para o tamanho e a posição da sua etiqueta</translation>
     </message>
   </context>
   <context>
@@ -753,7 +765,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation type="unfinished"/>
+      <translation>roomID=%1 não existe, impossível definir propriedade de um espaço não existente!</translation>
     </message>
   </context>
   <context>
@@ -762,170 +774,170 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="66"/>
       <source>ISO 8859-2 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-2 (Europa Central/Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="85"/>
       <location filename="../src/TBuffer.cpp" line="370"/>
       <source>ISO 8859-3 (South European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-3 (Europa do Sul/South European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="104"/>
       <source>ISO 8859-4 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-4 (Báltico/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="123"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-5 (Cirílico/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="142"/>
       <source>ISO 8859-6 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-6 (Árabe/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="161"/>
       <source>ISO 8859-7 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-7 (Grego/Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="180"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-8 (Hebraico Visual/Hebrew Visual)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="199"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-9 (Turco/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="218"/>
       <source>ISO 8859-10 (Nordic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-10 (Nordico/Nordic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="237"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-11 (Latim/Tailandês/Latin/Thai)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="256"/>
       <source>ISO 8859-13 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-13 (Báltico/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="275"/>
       <source>ISO 8859-14 (Celtic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-14 (Celta/Celtic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="294"/>
       <source>ISO 8859-15 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-15 (Ocidental/Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="313"/>
       <source>ISO 8859-16 (Romanian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-16 (Romeno/Romanian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="332"/>
       <source>CP850 (Western Europe)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP850 (Europa Ocidental/Western Europe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="351"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP866 (Cirílico/Russo/Cyrillic/Russian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="389"/>
       <source>KOI8-R (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-R (Cirílico/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="408"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-U (Cirílico/Ucraniano/Cyrillic/Ukrainian)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="427"/>
       <source>MACINTOSH</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>MACINTOSH</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="446"/>
       <source>WINDOWS-1250 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1250 (Europa Central/Central European)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="465"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1251 (Cirílico/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="484"/>
       <source>WINDOWS-1252 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1252 (Ocidental/Western)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="503"/>
       <source>WINDOWS-1253 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1253 (Grego/Greek)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="522"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1254 (Turco/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="541"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1255 (Hebraico/Hebrew)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="560"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1256 (Árabe/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="579"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1257 (Báltico/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="598"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (Vietnamita/Vietnamese)</translation>
     </message>
   </context>
   <context>
@@ -933,134 +945,137 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="108"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Consola de Depuração</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="124"/>
       <source>Non Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Consola de Não-Depuração</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Guardar o perfil?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Deseja guardar o perfil %1?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="777"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível guardar o perfil</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="777"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Desculpe, não foi possível guardar o perfil - retornou o seguinte erro: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="850"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>logfile</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="885"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Registo de logs iniciado. O ficheiro de registo é %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="895"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>O registo de logs for parado. O ficheiro de registo é %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="940"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Versão do cliente MUD, Mudlet: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="942"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, log do perfil %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="978"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log da sessão começado a &apos;hh:mm:ss&apos; de &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="999"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log da sessão começado a &apos;hh:mm:ss&apos; de &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1008"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>Sessão de log terminada a %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1009"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss&apos; a &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="377"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Marcas Temporais.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Gravar uma repetição.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="399"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Começar a registar a saída do jogo num ficheiro log.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="410"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; é a latência do servidor do jogo e da rede (aka ping, em segundos), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; é o tempo de processamento do sistema - quanto tempo os triggers demoraram a processar a(s) ultima(s) linha(s).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="448"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation type="unfinished"/>
+      <translation>Interrupção de emergência. Para todos os timers e triggers.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Pesquisar no buffer.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de pesquisa anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="484"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de pesquisa posterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1004"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Parar de registar a saída do jogo para um ficheiro log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1022"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Começar a registar a saída do jogo para um ficheiro log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
@@ -1070,17 +1085,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1627"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(1) no relatório %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1650"/>
       <source>loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: NULL Host pointer {in TConsole::importMap(...)} - alguma coisa está errada!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1663"/>
       <source>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - alguma coisa está errada!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1671"/>
@@ -1091,24 +1106,26 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1694"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Ficheiro de mapa não encontrado, caminho e nome usados foram:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1700"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (nome de ficheiro usado: &quot;%1&quot; não foi encontrado).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1709"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ficheiro de mapa localizado e aberto, a analisar agora...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (filename used:
+&quot;%1&quot; impossível abrir para leitura).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2376"/>
@@ -1118,27 +1135,27 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2386"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(2) no relatório %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
       <source>System message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Mensagem de sistema: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pedido de recarregamento do mapa recebido pelo sistema...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - ... Pedido de recarregamento do Sistema de Mapa completo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2806"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - ... Pedido de recarregamento do Sistema de Mapa falhou.</translation>
     </message>
   </context>
   <context>
@@ -1149,24 +1166,24 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="197"/>
       <source>failureToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>failureToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="159"/>
       <source>unableToOpenLocalFileForWriting</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToOpenLocalFileForWriting</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="176"/>
       <source>unableToWriteLocalFile</source>
       <comment>This string might not need to be translated!</comment>
-      <translation type="unfinished"/>
+      <translation>unableToWriteLocalFile</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9113"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Comando Lua setAreaUserData() usado - está atualmente marcado como experimental!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9114"/>
@@ -1177,17 +1194,18 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - De forma a ser completamente funcional o comando acima pede uma revisão do formato do ficheiro do mapa e apesar disso estar programado, NÃO está ativo por isso os efeitos desta funcionalidade NÃO persistirão entre sessões e os dados relevantes NÃO SERÃO GRAVADOS.
+Para evitar encher o ecrã com mensagens repetidas, este é o único aviso sobre este comando...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9174"/>
       <source>[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Comando Lua setMapUserData() usado - está atualmente marcado como experimental!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
   </context>
   <context>
@@ -1195,119 +1213,119 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="211"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>RoomID=%1 não existe, impossível definir AreaID=%2 de um espaço inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="222"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 não existe, impossível definir RoomID=%1 de uma área inexistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Auditoria de um mapa carregado/importado/baixado começando...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - CONVERTENDO: etiqueta convencional, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Convertendo ID de etiqueta convencional: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERTENDO: impossível converter etiqueta convencional na área com id: %1,  label id is: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="477"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERTENDO: impossível converter etiqueta convencional com id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Auditoria do mapa completa (%1s). Aproveite o jogo...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mapa carregado com sucesso (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>cima</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1009"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>baixo</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1010"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>dentro</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1011"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>fora</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1030"/>
@@ -1708,7 +1726,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1153"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {none}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1156"/>
@@ -1728,7 +1746,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {invalid}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1169"/>
@@ -3455,7 +3473,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="119"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>logfile</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="159"/>
@@ -3515,7 +3533,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="634"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="645"/>
@@ -3545,7 +3563,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1616"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1631"/>
@@ -3745,7 +3763,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1618"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa Mudlet (*.dat);;Dados do mapa xml (*.xml);;Qualquer ficheiro (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2761"/>
@@ -4166,7 +4184,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1722"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>cima</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1723"/>
@@ -4181,7 +4199,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1725"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>baixo</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1726"/>
@@ -4201,12 +4219,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1729"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>dentro</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1730"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>fora</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1808"/>
@@ -4856,12 +4874,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível guardar o perfil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Desculpe, não foi possível guardar o perfil - retornou o seguinte erro: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
@@ -5985,7 +6003,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="2856"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(3) no relatório %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2928"/>
@@ -6450,12 +6468,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1275"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1298"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1318"/>

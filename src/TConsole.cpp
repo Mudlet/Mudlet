@@ -1647,7 +1647,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
         // in later software versions and is a weak pointer until used
         // (I think - Slysven ?)
         if (errMsg) {
-            *errMsg = tr("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
+            *errMsg = QStringLiteral("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
         }
         return false;
     }
@@ -1660,7 +1660,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
         // And that failed so give up
         if (errMsg) {
-            *errMsg = tr("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
+            *errMsg = QStringLiteral("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
         }
         return false;
     }
@@ -2089,6 +2089,25 @@ bool TConsole::selectSection(int from, int to)
                 >> 0;
     }
     return true;
+}
+
+// returns whenever the selection is valid, the selection text,
+// start position, and the length of the seletion
+std::tuple<bool, QString, int, int> TConsole::getSelection()
+{
+    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+    }
+
+    const auto start = P_begin.x();
+    const auto length = P_end.x() - P_begin.x();
+    const auto line = buffer.line(mUserCursor.y());
+    if (line.size() < start) {
+        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+    }
+
+    const auto text = line.mid(start, length);
+    return make_tuple(true, text, start, length);
 }
 
 void TConsole::setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint)
@@ -2731,7 +2750,7 @@ void TConsole::slot_searchBufferUp()
             return;
         }
     }
-    print("No search results, sorry!\n");
+    print(tr("No search results, sorry!\n"));
 }
 
 void TConsole::slot_searchBufferDown()
@@ -2770,7 +2789,7 @@ void TConsole::slot_searchBufferDown()
             return;
         }
     }
-    print("No search results, sorry!\n");
+    print(tr("No search results, sorry!\n"));
 }
 
 QSize TConsole::getMainWindowSize() const

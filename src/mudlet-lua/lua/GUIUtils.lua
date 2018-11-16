@@ -544,39 +544,6 @@ end
 
 
 
---- Suffixes text at the end of the current line when used in a trigger.
----
---- @see prefix
-function suffix(what, func, fg, bg, window)
-  local length = string.len(line)
-  moveCursor(window or "main", length - 1, getLineNumber())
-  if func and (func == cecho or func == decho or func == hecho) then
-    func(what, fg, bg, true, window)
-  else
-    insertText(what)
-  end
-end
-
-
-
---- Prefixes text at the beginning of the current line when used in a trigger.
----
---- @usage Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that.
----   <pre>
----   prefix(os.date("%H:%M:%S "))
----   </pre>
----
---- @see suffix
-function prefix(what, func, fg, bg, window)
-  moveCursor(window or "main", 0, getLineNumber());
-  if func and (func == cecho or func == decho or func == hecho) then
-    func(what, fg, bg, true, window)
-  else
-    insertText(what)
-  end
-end
-
-
 
 --- Function will gag the whole line. <b>Use deleteLine() instead.</b>
 function gagLine()
@@ -715,9 +682,9 @@ end
 
 
 
---- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3
+--- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 4
 ---
---- @usage Print list in 3 columns by default.
+--- @usage Print list in 4 columns by default.
 ---   <pre>
 ---   showColors()
 ---   </pre>
@@ -727,66 +694,49 @@ end
 ---   </pre>
 ---
 --- @see color_table
+local function calc_lumosity(r,g,b)
+  r = r < 11 and r / (255 * 12.92) or ((0.055 + r / 255) / 1.055) ^ 2.4
+  g = g < 11 and g / (255 * 12.92) or ((0.055 + g / 255) / 1.055) ^ 2.4
+  b = b < 11 and b / (255 * 12.92) or ((0.055 + b / 255) / 1.055) ^ 2.4
+  return (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
+end
+
 function showColors(...)
-  local args = { ... }
-  local n = #args
-  local cols, search
-  if n > 1 then
-    cols, search = args[1], args[2]
-  elseif n == 1 and type(args[1]) == "string" then
-    search = args[1]
-  elseif n == 1 and type(args[1]) == "number" then
-    cols = args[1]
-  elseif n == 0 then
-    cols = 4
-    search = ""
-  else
-    error("showColors: Improper usage. Use showColors(columns, search)")
+  local cols, search, sort = 4, "", false
+  for _, val in ipairs(arg) do
+    if type(val) == "string" then
+      search = val:lower()
+    elseif type(val) == "number" then
+      cols = val
+    elseif type(val) == "boolean" then
+      sort = val
+    end
   end
-  cols = cols or 4
-  search = search and search:lower() or ""
-  local i = 1
+
+  local colors = {}
   for k, v in pairs(color_table) do
+    table.insert(colors,k)
+  end
+  if sort then table.sort(colors) end
+
+  local i = 1
+  for _, k in ipairs(colors) do
     if k:lower():find(search) then
-      local fgc
-      local red, green, blue
-      -- local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
-      -- The above formula was wrong, according to https://www.w3.org/TR/WCAG20/#relativeluminancedef
-      -- it should be:
-      if v[1] < 11 then
-        red = v[1] / (255 * 12.92)
-      else
-        red = ((0.055 + v[1] / 255) / 1.055) ^ 2.4
-      end
-      if v[2] < 11 then
-        green = v[2] / (255 * 12.92)
-      else
-        green = ((0.055 + v[2] / 255) / 1.055) ^ 2.4
-      end
-      if v[3] < 11 then
-        blue = v[3] / (255 * 12.92)
-      else
-        blue = ((0.055 + v[3] / 255) / 1.055) ^ 2.4
-      end
-      local luminosity = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue)
-      if luminosity > 0.5 then
+      local v = color_table[k]
+      local fgc = "white"
+      if calc_lumosity(v[1],v[2],v[3]) > 0.5 then
         fgc = "black"
-      else
-        fgc = "white"
       end
-      fg(fgc)
-      bg(k)
-      echoLink(k .. string.rep(" ", 23 - k:len()), [[printCmdLine("]] .. k .. [[")]], v[1] .. ", " .. v[2] .. ", " .. v[3], true)
-      resetFormat()
-      echo("  ")
+      cechoLink(string.format('<%s:%s>%-23s<reset>  ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
       if i == cols then
-        echo "\n"
+        echo("\n")
         i = 1
       else
         i = i + 1
       end
     end
   end
+  if i ~= 1 then echo("\n") end
 end
 
 
@@ -992,7 +942,7 @@ if rex then
             out(win, v) else out(v)
           end
           if func == 'insertText' then
-            moveCursor(window or "main", getColumnNumber() + string.len(v), getLineNumber())
+            moveCursor(win or "main", getColumnNumber() + string.len(v), getLineNumber())
           end
         else
           -- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
@@ -1488,4 +1438,41 @@ function setHexBgColor(windowName, colorString)
   else
     setBgColor(colTable.r, colTable.g, colTable.b)
   end
+end
+
+
+
+local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinsertText, [hecho] = hinsertText}
+--- Suffixes text at the end of the current line when used in a trigger.
+---
+--- @see prefix
+function suffix(what, func, fgc, bgc, window)
+  window = window or "main"
+  func = insertFuncs[func] or func or insertText
+  local length = utf8.len(getCurrentLine(window))
+  moveCursor(window, length - 1, getLineNumber(window))
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  func(window,what)
+  resetFormat(window)
+end
+
+
+
+--- Prefixes text at the beginning of the current line when used in a trigger.
+---
+--- @usage Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that.
+---   <pre>
+---   prefix(os.date("%H:%M:%S "))
+---   </pre>
+---
+--- @see suffix
+function prefix(what, func, fgc, bgc, window)
+  window = window or "main"
+  func = insertFuncs[func] or func or insertText
+  moveCursor(window, 0, getLineNumber(window))
+  if fgc then fg(window,fgc) end
+  if bgc then bg(window,bgc) end
+  func(window,what)
+  resetFormat(window)
 end
