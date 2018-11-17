@@ -318,7 +318,7 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
         } else if (!direction.compare(QLatin1String("sw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("southwest"), Qt::CaseInsensitive)
                    || !direction.compare(QLatin1String("south-west"), Qt::CaseInsensitive)) {
             return QLatin1String("sw");
-        } else if (!direction.compare(QLatin1String("nw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northeast"), Qt::CaseInsensitive)
+        } else if (!direction.compare(QLatin1String("nw"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("northwest"), Qt::CaseInsensitive)
                    || !direction.compare(QLatin1String("north-west"), Qt::CaseInsensitive)) {
             return QLatin1String("nw");
         } else if (!direction.compare(QLatin1String("i"), Qt::CaseInsensitive) || !direction.compare(QLatin1String("in"), Qt::CaseInsensitive)) {
