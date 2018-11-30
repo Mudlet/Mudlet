@@ -3509,7 +3509,16 @@ void T2DMap::slot_defineNewColor()
 {
     auto color = QColorDialog::getColor(mpHost->mRed, this);
     if (color.isValid()) {
-        mpMap->customEnvColors[mpMap->customEnvColors.size() + 257 + 16] = color;
+        auto environmentId = mpMap->customEnvColors.size() + 257 + 16;
+        if (mpMap->customEnvColors.contains(environmentId)) {
+            // find a new environment ID to use, starting with the latest
+            // 'safe' number so the new environment is last in the dialog
+            do {
+                environmentId++;
+            } while (mpMap->customEnvColors.contains(environmentId));
+        }
+
+        mpMap->customEnvColors[environmentId] = color;
         slot_changeColor();
     }
     repaint();
@@ -3524,9 +3533,23 @@ void T2DMap::slot_changeColor()
     dialog->setContentsMargins(0, 0, 0, 0);
     auto listWidget = new QListWidget(dialog);
     listWidget->setViewMode(QListView::IconMode);
+    listWidget->setResizeMode(QListView::Adjust);
 
-    connect(listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), dialog, SLOT(accept()));
-    connect(listWidget, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_selectRoomColor(QListWidgetItem*)));
+    connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
+    connect(listWidget, &QListWidget::itemClicked, this, &T2DMap::slot_selectRoomColor);
+    listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
+        QMenu menu;
+        menu.addAction(tr("Delete color", "Deletes an environment colour"), this, [=]() {
+            auto selectedItem = listWidget->takeItem(listWidget->currentRow());
+            auto colour = selectedItem->text();
+
+            mpMap->customEnvColors.remove(colour.toInt());
+            repaint();
+        });
+
+        menu.exec(QCursor::pos());
+    });
 
     vboxLayout->addWidget(listWidget);
     auto pButtonBar = new QWidget(dialog);
@@ -3537,19 +3560,19 @@ void T2DMap::slot_changeColor()
     auto pB_newColor = new QPushButton(pButtonBar);
     pB_newColor->setText(tr("Define new color"));
 
-    connect(pB_newColor, SIGNAL(clicked()), dialog, SLOT(reject()));
-    connect(pB_newColor, SIGNAL(clicked()), this, SLOT(slot_defineNewColor()));
+    connect(pB_newColor, &QAbstractButton::clicked, dialog, &QDialog::reject);
+    connect(pB_newColor, &QAbstractButton::clicked, this, &T2DMap::slot_defineNewColor);
 
     hboxLayout->addWidget(pB_newColor);
 
     auto pB_ok = new QPushButton(pButtonBar);
     pB_ok->setText(tr("OK"));
     hboxLayout->addWidget(pB_ok);
-    connect(pB_ok, SIGNAL(clicked()), dialog, SLOT(accept()));
+    connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
 
     auto pB_abort = new QPushButton(pButtonBar);
     pB_abort->setText(tr("Cancel"));
-    connect(pB_abort, SIGNAL(clicked()), dialog, SLOT(reject()));
+    connect(pB_abort, &QAbstractButton::clicked, dialog, &QDialog::reject);
     hboxLayout->addWidget(pB_abort);
     vboxLayout->addWidget(pButtonBar);
 
@@ -3566,9 +3589,10 @@ void T2DMap::slot_changeColor()
         pI->setText(QString::number(it.key()));
         listWidget->addItem(pI);
     }
+    listWidget->sortItems();
 
     if (dialog->exec() == QDialog::Accepted && mpMap->customEnvColors.contains(mChosenRoomColor)) {
-        // Only proceed if OK - "abort" now prevents change AND check for a valid
+        // Only proceed if OK - "Cancel" now prevents change AND check for a valid
         // color here rather than inside the room change loop as before (only test
         // once rather than for each room)
         mMultiRect = QRect(0, 0, 0, 0);
