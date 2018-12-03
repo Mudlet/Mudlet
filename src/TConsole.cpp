@@ -2091,6 +2091,25 @@ bool TConsole::selectSection(int from, int to)
     return true;
 }
 
+// returns whenever the selection is valid, the selection text,
+// start position, and the length of the seletion
+std::tuple<bool, QString, int, int> TConsole::getSelection()
+{
+    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+    }
+
+    const auto start = P_begin.x();
+    const auto length = P_end.x() - P_begin.x();
+    const auto line = buffer.line(mUserCursor.y());
+    if (line.size() < start) {
+        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+    }
+
+    const auto text = line.mid(start, length);
+    return make_tuple(true, text, start, length);
+}
+
 void TConsole::setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint)
 {
     buffer.applyLink(P_begin, P_end, linkText, linkFunction, linkHint);
