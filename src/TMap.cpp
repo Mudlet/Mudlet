@@ -57,7 +57,7 @@ TMap::TMap(Host* pH)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(19)
+, mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
@@ -1066,7 +1066,7 @@ bool TMap::serialize(QDataStream& ofs)
         }
         ofs << mUserData;
         if (mSaveVersion >= 19) {
-            // Save the data directly in supported format versions
+            // Save the data directly in supported format versions (19 and above)
             ofs << mMapSymbolFont;
             ofs << mMapSymbolFontFudgeFactor;
             ofs << mIsOnlyMapSymbolFontToBeUsed;
@@ -1254,10 +1254,113 @@ bool TMap::serialize(QDataStream& ofs)
             ofs << oldCharacterCode;
         }
         ofs << pR->userData;
-        ofs << pR->customLines;
-        ofs << pR->customLinesArrow;
-        ofs << pR->customLinesColor;
-        ofs << pR->customLinesStyle;
+        if (mSaveVersion >= 20) {
+            // Before version 20 stored the style as an Latin1 string, the color
+            // as a QList<int> for the RGB components and used UPPER case for
+            // the NORMAL exit direction keys...
+            ofs << pR->customLines;
+            ofs << pR->customLinesArrow;
+            ofs << pR->customLinesColor;
+            ofs << pR->customLinesStyle;
+        } else {
+            QMap<QString, QList<QPointF>> oldLinesData;
+            QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+            while (itCustomLine.hasNext()) {
+                itCustomLine.next();
+                QString direction(itCustomLine.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesData.insert(itCustomLine.key().toUpper(), itCustomLine.value());
+                } else {
+                    oldLinesData.insert(itCustomLine.key(), itCustomLine.value());
+                }
+            }
+            ofs << oldLinesData;
+
+            QMap<QString, bool> oldLinesArrowData;
+            QMapIterator<QString, bool> itCustomLineArrow(pR->customLinesArrow);
+            while (itCustomLineArrow.hasNext()) {
+                itCustomLineArrow.next();
+                QString direction(itCustomLineArrow.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesArrowData.insert(itCustomLineArrow.key().toUpper(), itCustomLineArrow.value());
+                } else {
+                    oldLinesArrowData.insert(itCustomLineArrow.key(), itCustomLineArrow.value());
+                }
+            }
+            ofs << oldLinesArrowData;
+
+            QMap<QString, QList<int>> oldLinesColorData;
+            QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
+            while (itCustomLine.hasNext()) {
+                itCustomLineColor.next();
+                QString direction(itCustomLineColor.key());
+                QList<int> colorComponents;
+                colorComponents << itCustomLineColor.value().red() << itCustomLineColor.value().green() << itCustomLineColor.value().blue();
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesColorData.insert(itCustomLineColor.key().toUpper(), colorComponents);
+                } else {
+                    oldLinesColorData.insert(itCustomLineColor.key(), colorComponents);
+                }
+            }
+            ofs << oldLinesColorData;
+
+            QMap<QString, QString> oldLineStyleData;
+            QMapIterator<QString, Qt::PenStyle> itCustomLineStyle(pR->customLinesStyle);
+            while (itCustomLineStyle.hasNext()) {
+                itCustomLineStyle.next();
+                QString direction(itCustomLineStyle.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    direction = direction.toUpper();
+                }
+                switch (itCustomLineStyle.value()) {
+                case Qt::DotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dot line"));
+                    break;
+                case Qt::DashLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash line"));
+                    break;
+                case Qt::DashDotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash dot line"));
+                    break;
+                case Qt::DashDotDotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash dot dot line"));
+                    break;
+                case Qt::SolidLine:
+                    [[clang::fallthrough]];
+                default:
+                    oldLineStyleData.insert(direction, QLatin1String("solid line"));
+                }
+            }
+            ofs << oldLineStyleData;
+        }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
         ofs << pR->getExitWeights();

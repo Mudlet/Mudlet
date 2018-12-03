@@ -33,6 +33,9 @@
         <file>icons/bookmarks.png</file>
         <file>icons/chronometer.png</file>
         <file>icons/configure.png</file>
+        <file>icons/dash-dot-dot-line.png</file>
+        <file>icons/dash-dot-line.png</file>
+        <file>icons/dash-line.png</file>
         <file>icons/dialog-cancel.png</file>
         <file>icons/dialog-close.png</file>
         <file>icons/dialog-error.png</file>
@@ -53,6 +56,7 @@
         <file>icons/document-save-all.png</file>
         <file>icons/document-save-as.png</file>
         <file>icons/document-save.png</file>
+        <file>icons/dot-line.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
         <file>icons/edit-cut.png</file>
@@ -136,6 +140,7 @@
         <file>icons/searchOptions-none.png</file>
         <file>icons/searchOptions-unspecified.png</file>
         <file>icons/Slothmud.png</file>
+        <file>icons/solid-line.png</file>
         <file>icons/stickmud_icon.jpg</file>
         <file>icons/system-restart.png</file>
         <file>icons/system-users.png</file>
