@@ -83,6 +83,14 @@ function Geyser.Gauge:setText (text)
   end
 end
 
+--- Sets the text on the gauge, overwrites inherited echo function.
+-- @param text The text to set.
+function Geyser.Gauge:echo (text)
+  if text then
+    self.text:echo(text)
+  end
+end
+
 -- Sets the style sheet for the gauge
 -- @param css Style sheet for the front label
 -- @param cssback Style sheet for the back label
