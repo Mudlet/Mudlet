@@ -2863,7 +2863,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation>Обычные выходы:</translation>
+      <translation>Выходы:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
