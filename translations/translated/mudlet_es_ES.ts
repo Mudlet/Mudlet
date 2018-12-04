@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="134"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>vía Mudlet</translation>
     </message>
   </context>
   <context>
@@ -37,14 +37,14 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/Host.cpp" line="1418"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>En juego %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1420"/>
       <location filename="../src/Host.cpp" line="1426"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 en %2:%3</translation>
     </message>
   </context>
   <context>
@@ -338,7 +338,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Ningún mapa o no posición válida.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
@@ -383,7 +383,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2165"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>¿Tipo de etiqueta?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2166"/>
@@ -403,7 +403,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2184"/>
       <source>Select image</source>
-      <translation type="unfinished"/>
+      <translation>Seleccionar imagen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2191"/>
@@ -985,12 +985,13 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="895"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Registro detenido. Archivo: %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="940"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Versión del cliente Mudlet: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="942"/>
