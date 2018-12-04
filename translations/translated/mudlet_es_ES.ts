@@ -1486,7 +1486,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2161"/>
       <source>Downloading XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Descargando el archivo XML del mapa para su uso en %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2161"/>
@@ -1502,7 +1502,8 @@ the file:
       <location filename="../src/TMap.cpp" line="2189"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: no se puede cargar el mapa, ya hay unos descargandose o siendo
+importado a petición del usuario.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2221"/>
@@ -6364,22 +6365,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="755"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>Anchura del borde izquierdo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="799"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>Altura del borde inferior:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="843"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>Anchura del borde derecho:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="884"/>
       <source>Word wrapping</source>
-      <translation type="unfinished"/>
+      <translation>Salto automatico de linea</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="908"/>
@@ -6410,7 +6411,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1005"/>
       <source>&apos;&quot;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;&quot;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1008"/>
