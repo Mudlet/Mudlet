@@ -156,8 +156,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mAliasUnit(this)
 , mActionUnit(this)
 , mKeyUnit(this)
-, mCodeCompletion(true)
-, mDisableAutoCompletion(false)
 , mHostID(id)
 , mHostName(hostname)
 , mIsClosingDown(false)
@@ -169,6 +167,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mHaveMapperScript(false)
 , mAutoAmbigousWidthGlyphsSetting(true)
 , mWideAmbigousWidthGlyphs(false)
+, mSColonOnlySCRColCodesHaveColSpace(false)
+, mServerMayRedefineColors(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));

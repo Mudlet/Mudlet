@@ -181,14 +181,46 @@ public:
     int speedAppend;
 
     int mCursorY;
+
+    /*
+     * The documentation at https://www.zuggsoft.com/zmud/mxp.htm says: "
+     * * 0 - OPEN LINE - initial default mode: only MXP commands in the 'open'
+     *     category are allowed.  When a newline is received from the MUD, the
+     *     mode reverts back to the Default mode.  OPEN mode starts as the
+     *     default mode until changes with one of the 'lock mode' tags listed
+     *     below.
+     * * 1 - SECURE LINE (until next newline) all tags and commands in MXP are
+     *     allowed within the line.  When a newline is received from the MUD,
+     *     the mode reverts back to the Default mode.
+     * * 2 - LOCKED LINE (until next newline) no MXP or HTML commands are
+     *     allowed in the line.  The line is not parsed for any tags at all.
+     *     This is useful for "verbatim" text output from the MUD.  When a
+     *     newline is received from the MUD, the mode reverts back to the
+     *     Default mode.
+     * The following additional modes were added to the v0.4 MXP spec:
+     * * 3 - RESET close all open tags.  Set mode to Open.  Set text color and
+     *     properties to default.
+     * * 4 - TEMP SECURE MODE set secure mode for the next tag only.  Must be
+     *     immediately followed by a < character to start a tag.  Remember to
+     *     set secure mode when closing the tag also.
+     * * 5 - LOCK OPEN MODE set open mode.  Mode remains in effect until
+     *     changed.  OPEN mode becomes the new default mode.
+     * * 6 - LOCK SECURE MODE set secure mode.  Mode remains in effect until
+     *     changed.  Secure mode becomes the new default mode.
+     * * 7 - LOCK LOCKED MODE set locked mode.  Mode remains in effect until
+     *     changed.  Locked mode becomes the new default mode."
+     */
+
+    // State of MXP systen:
     bool mMXP;
 
     bool mAssemblingToken;
     std::string currentToken;
     int openT;
     int closeT;
+
     QMap<QString, TMxpElement> mMXP_Elements;
-    TMxpElement mCurrentElement;
+
     bool mMXP_LINK_MODE;
     bool mIgnoreTag;
     std::string mSkip;
@@ -207,20 +239,27 @@ private:
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     QString processSupportsRequest(const QString &attributes);
+    void decodeSGR(const QString&);
+    void decodeSGR38(QStringList, bool isColonSeparated = true);
+    void decodeSGR48(QStringList, bool isColonSeparated = true);
+    void decodeOSC(const QString&);
+    void resetColors();
 
-    bool gotESC;
-    bool gotHeader;
-    QString code;
-    int codeRet;
-    std::string tempLine;
-    bool mWaitingForHighColorCode;
-    bool mWaitingForMillionsColorCode;
-    bool mIsHighOrMillionsColorMode;
-    bool mIsHighOrMillionsColorModeForeground;
-    bool mIsHighOrMillionsColorModeBackground;
+    // First stage in decoding SGR/OCS sequences - set true when we see the
+    // ASCII ESC character:
+    bool mGotESC;
+    // Second stage in decoding SGR sequences - set true when we see the ASCII
+    // ESC character followed by the '[' one:
+    bool mGotCSI;
+    // Second stage in decoding OSC sequences - set true when we see the ASCII
+    // ESC character followed by the ']' one:
+    bool mGotOSC;
+    // This was called code but has been renamed to mCode as that member had
+    // be refactored out and the name was available:
+    QString mCode;
     bool mIsDefaultColor;
     bool isUserScrollBack;
-    int currentFgColorProperty;
+
 
     QColor mBlack;
     int mBlackR;
@@ -286,17 +325,16 @@ private:
     int mWhiteR;
     int mWhiteG;
     int mWhiteB;
-    QColor mFgColor;
-    int fgColorR;
-    int fgColorLightR;
-    int fgColorG;
-    int fgColorLightG;
-    int fgColorB;
-    int fgColorLightB;
-    int bgColorR;
-    int bgColorG;
-    int bgColorB;
-    QColor mBgColor;
+
+    int mCurrentFgColorR;
+    int mCurrentFgColorG;
+    int mCurrentFgColorB;
+    int mCurrentFgColorLightR;
+    int mCurrentFgColorLightG;
+    int mCurrentFgColorLightB;
+    int mCurrentBgColorR;
+    int mCurrentBgColorG;
+    int mCurrentBgColorB;
 
     QPointer<Host> mpHost;
     int maxx;
@@ -311,19 +349,21 @@ private:
     bool mItalics;
     bool mUnderline;
     bool mStrikeOut;
-    bool mFgColorCode;
-    bool mBgColorCode;
-    int mFgColorR;
-    int mFgColorG;
-    int mFgColorB;
-    int mBgColorR;
-    int mBgColorG;
-    int mBgColorB;
+
+
+
+
+
+
+
+
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
-    int mCode[1024]; //FIXME: potential overflow bug
-    // Used to hold the incomplete bytes (1-3) that could be left at the end of
-    // a packet:
+    // Used to hold the unprocessed bytes that could be left at the end of a
+    // packet if we detect that there should be more - will be prepended to the
+    // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
+    // and is not generated locally {because both pass through
+    // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
 
     // keeps track of the previously logged buffer lines to ensure no log duplication

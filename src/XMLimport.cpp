@@ -763,7 +763,6 @@ void XMLimport::readHostPackage()
 void XMLimport::readHostPackage(Host* pHost)
 {
     pHost->mAutoClearCommandLineAfterSend = (attributes().value("autoClearCommandLineAfterSend") == "yes");
-    pHost->mDisableAutoCompletion = (attributes().value("disableAutoCompletion") == "yes");
     pHost->mPrintCommand = (attributes().value("printCommand") == "yes");
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes");
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = (attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes");
@@ -849,6 +848,18 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
     } else {
         pHost->mRequiredDiscordUserDiscriminator.clear();
+    }
+
+    if (attributes().hasAttribute(QLatin1String("SemiColonOnlySGRColorCodesHaveColorSpaceId"))) {
+        pHost->setHaveColorSpaceId(attributes().value(QLatin1String("SemiColonOnlySGRColorCodesHaveColorSpaceId")).toString() == QLatin1String("yes"));
+    } else {
+        pHost->setHaveColorSpaceId(false);
+    }
+
+    if (attributes().hasAttribute(QLatin1String("ServerMayRedefineColors"))) {
+        pHost->setMayRedefineColors(attributes().value(QLatin1String("ServerMayRedefineColors")).toString() == QLatin1String("yes"));
+    } else {
+        pHost->setMayRedefineColors(false);
     }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
