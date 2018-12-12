@@ -43,6 +43,10 @@
 // #define DEBUG_SGR_PROCESSING
 // Define this to get qDebug() messags about the decoding of ANSI OSC sequences:
 // #define DEBUG_OSC_PROCESSING
+// Define this to get qDebug() messags about the decoding of ANSI MXP sequences
+// although there is not much against this item at present {only an announcement
+// of the type (?) of an `\x1b[?z` received}:
+// #define DEBUG_MXP_PROCESSING
 
 
 // These tables have been regenerated from examination of the Qt source code
@@ -1307,7 +1311,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 case static_cast<quint8>('z'):
                     // We have a control sequence for MXP
+#if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
+#endif
                     if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                         mGotCSI = false;
 
