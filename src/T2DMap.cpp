@@ -3863,9 +3863,9 @@ void T2DMap::slot_setRoomWeight()
                     itWeightsUsed.next();
                     if (itWeightsUsed.value() == weightCountsList.at(i)) {
                         if (itWeightsUsed.key() == 1) { // Indicate the "default" value which is unity weight
-                            displayStrings.append(tr("%1 {count:%2, default}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
+                            displayStrings.append(tr("%1 {count:%2, default}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
                         } else {
-                            displayStrings.append(tr("%1 {count:%2}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
+                            displayStrings.append(tr("%1 {count:%2}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
                         }
                     }
                 }
