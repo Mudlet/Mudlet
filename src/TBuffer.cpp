@@ -1266,7 +1266,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 return;
             }
 
-            // Now we can take a peak at what the next character is, it could
+            // Now we can take a peek at what the next character is, it could
             // be an optional (and we are not expecting this) "intermediate
             // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
             // byte" which is what determines what on earth the CSI is for, it
@@ -1313,6 +1313,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                         bool isOk = false;
                         QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
+                        int dummy = code.toInt(&isOk);
+                        Q_UNUSED(dummy);
                         if (isOk) {
                             // we really do not handle these well...
 
@@ -1351,7 +1353,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     // Code above here is deliberately misaligned
                         } else {
                             // isOk is false here as toInt(...) failed
-                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-mumeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
+                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                         }
 
                     }

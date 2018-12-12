@@ -167,7 +167,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mHaveMapperScript(false)
 , mAutoAmbigousWidthGlyphsSetting(true)
 , mWideAmbigousWidthGlyphs(false)
-, mSColonOnlySCRColCodesHaveColSpace(false)
+, mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
