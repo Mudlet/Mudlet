@@ -2738,7 +2738,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2425"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet po uruchomieniu będzie automatycznie łączył się z tym profilem</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2479"/>
@@ -2753,7 +2753,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2550"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>Opis gry</translation>
     </message>
   </context>
   <context>
@@ -2766,12 +2766,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>Select Style, Color and whether to end the line with an arrow head.</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz styl, kolor oraz czy kończyć linię grotem strzałki.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Ustawienia linii:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -2786,27 +2786,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="105"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>Zakończona strzałką:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="138"/>
       <source>Exit Details:</source>
-      <translation type="unfinished"/>
+      <translation>Szczegóły wyjścia:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="153"/>
       <source>Origin:</source>
-      <translation type="unfinished"/>
+      <translation>Początek:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="194"/>
       <source>Destination:</source>
-      <translation type="unfinished"/>
+      <translation>Koniec:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="232"/>
       <source>    Direction/Command:</source>
-      <translation type="unfinished"/>
+      <translation>    Kierunek/Polecenie:</translation>
     </message>
   </context>
   <context>
@@ -2834,12 +2834,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Ustawienia linii:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>Zakończona strzałką:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
@@ -2854,12 +2854,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
       <source>Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz zwyczajne wyjście aby rozpocząć rysowanie linii dla niego. Przyciski są wciśnięte jeśli wyjście już posiada niestandardową linię oraz nieaktywne jeśli nie ma wyjścia z lokacji w danym kierunku.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>Wyjścia zwyczajne:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
