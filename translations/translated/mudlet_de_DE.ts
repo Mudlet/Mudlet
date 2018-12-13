@@ -6786,13 +6786,13 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1105"/>
       <source>Show &apos;LUA OK&apos; messages for Timers with minimum interval of (h:mm:ss.zzz):</source>
       <comment>The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!</comment>
-      <translation type="unfinished"/>
+      <translation>Zeige &apos;LUA OK&apos; Nachrichten für Timer mit Intervallen größer als (h:mm:ss.zzz):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1139"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1282"/>
