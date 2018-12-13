@@ -2924,7 +2924,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz specjalne wyjście aby rozpocząć rysowanie linii dla niego. Pierwsza kolumna ma zaznaczenie jeśli wyjście już posiada niestandardową linię.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -2986,17 +2986,19 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>Czy na pewno chcesz usunąć ten profil? Wszystko (aliasy, wyzwalacze, kopie zapasowe itp.) zostanie usunięte.
+
+Jeśli tak, wpisz nazwę profilu w celu potwierdzenia:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Skasuj</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Anuluj</translation>
     </message>
   </context>
   <context>
@@ -3004,7 +3006,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Status</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -3178,7 +3180,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="55"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Połącz</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="64"/>
@@ -3191,29 +3193,33 @@ Count</source>
       <source>Please enter the URL or IP address of the game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Proszę podaj adres serwera gry.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="319"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadź numer, żadne znaki poza cyframi nie są dozwolone.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="346"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>Numer portu musi być pomiędzy 0 a 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="376"/>
       <source>This character is not permitted. Use one of the following:
 &quot;%1&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Ten znak nie jest dozwolony. Użyj jednego z poniższych:
+&quot;%1&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="387"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa profilu jest już w użyciu.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="438"/>
@@ -3228,18 +3234,18 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="542"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>nazwa nowego profilu</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="639"/>
       <source>Deleting &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Kasowanie &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1072"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1086"/>
       <source>This profile is currently loaded - you will need to disconnect before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Ten profil jest aktualnie używany - należy rozłączyć się przed zmianą parametrów połączenia.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1104"/>
@@ -3259,7 +3265,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1748"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw poprawną nazwę profilu, adres serwera gry oraz numer portu zanim się połączysz.</translation>
     </message>
   </context>
   <context>
@@ -3384,7 +3390,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Wyzwalacze</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="64"/>
@@ -3439,17 +3445,17 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa pakietu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa pakietu:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
       <source>Where do you want to save the package?</source>
-      <translation type="unfinished"/>
+      <translation>Gdzie chcesz zapisać pakiet?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="144"/>
@@ -3498,12 +3504,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="557"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (np. 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="559"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (np. 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="560"/>
