@@ -3437,7 +3437,7 @@ void T2DMap::slot_setSymbol()
                 while (itSymbolUsed.hasNext()) {
                     itSymbolUsed.next();
                     if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                        displayStrings.append(tr("%1 {count:%2}")
+                        displayStrings.append(tr("%1 {count:%2}", "Everything after the first parameter will be removed by processing it as a QRegularExpression programmatically, ensure the text, including the space after the %1 is reproduced in other text associated with this: ROOM_SYMBOL_REGULAR_EXPRESSION.")
                                               .arg(itSymbolUsed.key())
                                               .arg(QString::number(itSymbolUsed.value())));
                     }
@@ -3458,6 +3458,19 @@ void T2DMap::slot_setSymbol()
                                               true,                                                             // bool editable = true
                                               &isOk,                                                            // bool * ok = 0
                                               Qt::Dialog);
+            if (isOk && displayStrings.contains(newSymbol)) {
+                // The user has selected one of the existing items in the form
+                // "XXXX {count:##}" and we need to chop off the stuff after the
+                // "XXXX" to get what is needed:
+
+                QRegularExpression countStripper(tr("^(.*) {count:\\d+}$", "This is a QReglarExpression pattern used programmatically, ensure the text, including the space after the '(.*)` will match the previous text associated with this: ROOM_SYMBOL_REGULAR_EXPRESSION. Seek assistance from Developers, with the proposed text for use in the other place if required as functionality will be broken if this is not correct!"));
+                QRegularExpressionMatch match = countStripper.match(newSymbol);
+                if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+                    // captured(0) is the whole string that matched, which is
+                    // not what we want:
+                    newSymbol = match.captured(1);
+                }
+            }
         }
 
         if (!isOk) {
