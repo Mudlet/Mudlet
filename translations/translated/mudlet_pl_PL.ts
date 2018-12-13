@@ -505,7 +505,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2691"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw jeden lub więcej symboli bądź liter aby oznaczyć specjalne lokacje</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2695"/>
