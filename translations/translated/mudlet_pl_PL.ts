@@ -646,7 +646,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3430"/>
       <location filename="../src/T2DMap.cpp" line="3834"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {ilość: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3438"/>
@@ -685,14 +685,14 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Zmniejsz odstępy pomiędzy wybranymi lokacjami, środkując na podświetlonej lokacji, o współczynnik:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3785"/>
       <location filename="../src/T2DMap.cpp" line="3798"/>
       <location filename="../src/T2DMap.cpp" line="3843"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Podaj wagę lokacji</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3786"/>
