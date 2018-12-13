@@ -3430,7 +3430,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="52"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>Miejsce eksportu:</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="65"/>
@@ -3440,7 +3440,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="78"/>
       <source>&amp;Export</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Eksportuj</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
@@ -3514,17 +3514,17 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="560"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (połącz dzienne logi, np. 1970-01-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="563"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (połącz miesięczne logi, np. 1970-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="564"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>Nazwany plik (dołączaj wszystkie logi do jednego pliku)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="596"/>
