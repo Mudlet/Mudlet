@@ -1048,12 +1048,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="448"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation type="unfinished"/>
+      <translation>Awaryjne zatrzymanie wszystkich liczników czasu oraz wyzwalaczy.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Bufor wyszukiwania.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="473"/>
@@ -1208,7 +1208,7 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="211"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>RoomID=%1 nie istnieje, nie można ustawić obszaru AreaID=%2 dla nieistniejącej lokacji!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="222"/>
@@ -1365,7 +1365,7 @@ Areas id affected: %1.</source>
     <message>
       <location filename="../src/TMap.cpp" line="1164"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1299"/>
@@ -1441,7 +1441,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Identyfikator obszaru: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
@@ -1451,7 +1451,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2043"/>
       <source>Room id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Identyfikator lokacji: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2053"/>
