@@ -2532,12 +2532,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="29"/>
       <source>cancel</source>
-      <translation type="unfinished"/>
+      <translation>anuluj</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
       <source>choose color to trigger on</source>
-      <translation type="unfinished"/>
+      <translation>wybierz na jaki kolor ma reagować wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
@@ -2562,17 +2562,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Purpurowy:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Turkusowy:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Biały:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
@@ -2630,7 +2630,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Anuluj</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -2640,7 +2640,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz</translation>
     </message>
   </context>
   <context>
@@ -2648,12 +2648,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz profil do połączenia</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2090"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Usuń</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2115"/>
@@ -2663,22 +2663,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2140"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Nowy</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2223"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>Wymagane</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2232"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa profilu:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2252"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Adres serwera:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2275"/>
@@ -2688,37 +2688,37 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2316"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>Historia profilu:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2336"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>wczytaj najnowszy profil</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>wczytaj najstarszy profil</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2364"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>Opcjonalne</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2387"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa postaci:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2394"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa postaci</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2431"/>
       <source>Connect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Łącz automatycznie</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2441"/>
@@ -2733,7 +2733,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2377"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Hasło postaci. Uwaga, hasła nie są zapisywane zaszyfrowane</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2425"/>
