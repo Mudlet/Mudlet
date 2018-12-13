@@ -140,7 +140,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
@@ -186,7 +186,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
@@ -286,7 +286,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - nieobecny</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
@@ -530,7 +530,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2717"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Stwórz etykiety aby wyświetlić tekst lub obrazy.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
@@ -560,38 +560,39 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2783"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz pierwszy punkt, następnie dodaj kolejny punkt w połowie drogi do lokacji</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Złącz parę odcinków usuwając ten punkt</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2795"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Usuń ostatni odcinek usuwając ten punkt</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2803"/>
       <source>Select a point first, then remove it</source>
-      <translation type="unfinished"/>
+      <translation>Najpierw wybierz punkt, potem go usuń</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Zmień właściwości tej linii</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
       <source>Delete all of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Usuń całą linię</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3281"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>Przesuń zaznaczenie, wyśrodkowane na
+podświetlonej lokacji (%1), do:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3283"/>
