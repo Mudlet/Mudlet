@@ -1997,12 +1997,10 @@ void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
-            if (!isOk) {
-                if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - missing color index parameter element (the third part) in a SGR...;38:5;...m sequence treating it as a zero!";
-                } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - missing color index parameter string (the third part) in a SGR...;38;5;;m sequence treating it as a zero!";
-                }
+            if (isColonSeparated) {
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - missing color index parameter element (the third part) in a SGR...;38:5;...m sequence treating it as a zero!";
+            } else {
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - missing color index parameter string (the third part) in a SGR...;38;5;;m sequence treating it as a zero!";
             }
 #endif
         }
@@ -2255,12 +2253,10 @@ void TBuffer::decodeSGR48(QStringList parameters, bool isColonSeparated)
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
-            if (!isOk) {
-                if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - missing color index parameter element (the third part) in a SGR...;48:5;...m sequence treating it as a zero!";
-                } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - missing color index parameter string (the third part) in a SGR...;48;5;;m sequence treating it as a zero!";
-                }
+            if (isColonSeparated) {
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - missing color index parameter element (the third part) in a SGR...;48:5;...m sequence treating it as a zero!";
+            } else {
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - missing color index parameter string (the third part) in a SGR...;48;5;;m sequence treating it as a zero!";
             }
 #endif
         }
