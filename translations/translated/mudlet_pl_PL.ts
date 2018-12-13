@@ -1849,17 +1849,17 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="37"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Nienazwany obszar</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Domyślny obszar</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="505"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Obszar o identyfikatorze %1 już istnieje!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="524"/>
@@ -1869,7 +1869,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="528"/>
       <source>An area called %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Obszar o nazwie %1 już istnieje!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="613"/>
@@ -2051,7 +2051,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1169"/>
       <source>&lt;nothing&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;nic&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1181"/>
@@ -2134,12 +2134,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1240"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>Skopiuj HTML</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Skopiuj jako obraz</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1247"/>
@@ -2154,7 +2154,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1272"/>
       <source>restore Main menu</source>
-      <translation type="unfinished"/>
+      <translation>przywrócić menu główne</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1275"/>
@@ -2164,7 +2164,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1277"/>
       <source>restore Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>przywróć główny pasek narzędzi</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1280"/>
@@ -2214,7 +2214,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/updater.cpp" line="310"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>Uruchom ponownie, aby zainstalować aktualizację</translation>
     </message>
   </context>
   <context>
@@ -2230,12 +2230,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="352"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>Przetwarzanie danych obszarów...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="356"/>
       <source>Parsing room data...</source>
-      <translation type="unfinished"/>
+      <translation>Przetwarzanie danych lokacji...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="360"/>
@@ -2245,7 +2245,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="368"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>Przypisywanie lokacji do ich obszarów...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="518"/>
