@@ -2281,17 +2281,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Imię:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz dobrą (najlepiej unikatową) nazwę dla przycisku, manu lub paska narzędziowego. Będzie ona wyświetlana w drzewie przycisków.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
       <source>Button Bar Properties</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości paska przycisków</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
@@ -2331,17 +2331,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
       <source>Button Properties</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości przycisku</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>Rotacja przycisku:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
       <source>no rotation</source>
-      <translation type="unfinished"/>
+      <translation>brak rotacji</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
