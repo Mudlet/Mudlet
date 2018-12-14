@@ -39,11 +39,11 @@
 // Define this to get qDebug() messages about the decoding of BIG5
 // data when it is not the single bytes of pure ASCII text:
 // #define DEBUG_BIG5_PROCESSING
-// Define this to get qDebug() messags about the decoding of ANSI SGR sequences:
+// Define this to get qDebug() messages about the decoding of ANSI SGR sequences:
 // #define DEBUG_SGR_PROCESSING
-// Define this to get qDebug() messags about the decoding of ANSI OSC sequences:
+// Define this to get qDebug() messages about the decoding of ANSI OSC sequences:
 // #define DEBUG_OSC_PROCESSING
-// Define this to get qDebug() messags about the decoding of ANSI MXP sequences
+// Define this to get qDebug() messages about the decoding of ANSI MXP sequences
 // although there is not much against this item at present {only an announcement
 // of the type (?) of an `\x1b[?z` received}:
 // #define DEBUG_MXP_PROCESSING
@@ -1385,7 +1385,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         if (mGotOSC) {
             // Lookahead and find end of sequence (the ST string terminator)
-            // DANGER, WILL ROBINSON! Should an OSC be recieved without a
+            // DANGER, WILL ROBINSON! Should an OSC be received without a
             // terminator then all data will just be swallowed into the buffer
 
             // Valid characters inside an OSC are: a "command string" or a
