@@ -124,7 +124,7 @@ please wait...</source>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
       <location filename="../src/ircmessageformatter.cpp" line="271"/>
       <source>! %1 time is %2</source>
-      <translation type="unfinished"/>
+      <translation>! czas %1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
@@ -676,7 +676,7 @@ factor of:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3654"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Zmniejsz odległości pomiędzy lokacjami</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3655"/>
@@ -1088,12 +1088,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1650"/>
       <source>loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: Wskaźnik do serwera jest pusty (NULL) {w TConsole::importMap(...)} - coś poszło nie tak!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1663"/>
       <source>loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: nie udało się zainicjować mapera {w TConsole::importMap(...)} - coś poszło nie tak!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1671"/>
@@ -1104,7 +1104,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1694"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Plik mapy nie odnaleziony, ścieżka i nazwa pliku: %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1700"/>
@@ -1136,22 +1136,22 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2576"/>
       <source>System message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Komunikat systemowy: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2799"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Żądanie przeładowania mapy otrzymane z systemu...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2804"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - ... żądanie ponownego wczytania mapy zakończone.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2806"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - ... żądanie ponownego wczytania mapy zakończone niepowodzeniem.</translation>
     </message>
   </context>
   <context>
@@ -1213,7 +1213,7 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="222"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 nie istnieje, nie można przypisać lokacji RoomID=%1 do nieistniejącego obszaru!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
