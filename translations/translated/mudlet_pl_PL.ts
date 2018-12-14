@@ -2562,12 +2562,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation>Purpurowy:</translation>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
       <source>Cyan:</source>
-      <translation>Turkusowy:</translation>
+      <translation>Cyjan:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
@@ -2587,27 +2587,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation>Jasnoczerwony:</translation>
+      <translation>Rozjaśniony czerwony:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation>Jasnozielony:</translation>
+      <translation>Rozjaśniony zielony:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation>Jasnożółty:</translation>
+      <translation>Rozjaśniony żółty:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation>Jasnoniebieski:</translation>
+      <translation>Rozjaśniony niebieski:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
       <source>Light magenta:</source>
-      <translation>Jasnopurpurowy:</translation>
+      <translation>Rozjaśniona magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
@@ -6767,7 +6767,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1608"/>
       <location filename="../src/ui/profile_preferences.ui" line="2263"/>
       <source>Magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1615"/>
@@ -6778,7 +6778,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1628"/>
       <location filename="../src/ui/profile_preferences.ui" line="2280"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniona magenta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1635"/>
@@ -6789,7 +6789,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1648"/>
       <location filename="../src/ui/profile_preferences.ui" line="2297"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Cyjan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1655"/>
@@ -6800,7 +6800,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1668"/>
       <location filename="../src/ui/profile_preferences.ui" line="2314"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony cyjan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1675"/>
@@ -6822,7 +6822,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1708"/>
       <location filename="../src/ui/profile_preferences.ui" line="2348"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony biały:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1715"/>
@@ -8001,12 +8001,12 @@ Without this option, the pattern matching will stop after the first successful m
       <location filename="../src/ui/triggers_main_area.ui" line="1467"/>
       <source>highlight the capture groups if there are any
 otherwise highlight the entire match</source>
-      <translation type="unfinished"/>
+      <translation>podświetl dopasowania cząstkowe jeśli są jakiekolwiek, w przeciwnym wypadku podświetl całe dopasowanie</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1471"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>podświetlenie</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1534"/>
