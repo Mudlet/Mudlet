@@ -2500,6 +2500,9 @@ void TBuffer::decodeSGR(const QString& sequence)
     for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
         QString allParameterElements = parameterStrings.at(paraIndex);
         if (allParameterElements.contains(QLatin1String(":"))) {
+            /******************************************************************
+             * Parameter string with colon separated Parameter (sub) elements *
+             ******************************************************************/
             // We have colon separated parameter elements, so we must have at least 2 members
             QStringList parameterElements(allParameterElements.split(QChar(':')));
             if (parameterElements.at(0) == QLatin1String("38")) {
@@ -2531,29 +2534,23 @@ void TBuffer::decodeSGR(const QString& sequence)
                     }
 
                     switch (sgr38_type) {
-                    case 5: // Needs one more number
+                    case 5: // Needs just one more number
                         if (paraIndex + 2 < total) {
                             // We have the parameter needed
                             madeElements << parameterStrings.at(paraIndex + 2);
                         }
                         decodeSGR38(madeElements, false);
-                        // Move the index to consume the used values less
-                        // the one that the for loop will handled - even if it
-                        // goes past end
-                        paraIndex += 1;
+                        // Move the index to consume the used values
+                        paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
                             // Uses four or five depending on whether there is
                             // the colour space id first
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
@@ -2593,9 +2590,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         }
 
                         decodeSGR38(madeElements, false);
-                        // Move the index to consume the used values less
-                        // the one that the for loop will handled - even if it
-                        // goes past end
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
@@ -2641,24 +2636,18 @@ void TBuffer::decodeSGR(const QString& sequence)
                             // We have the parameter needed
                             madeElements << parameterStrings.at(paraIndex + 2);
                         }
-                        // Move the index to consume the used values less
-                        // the one that the for loop will handled - even if it
-                        // goes past end
+                        // Move the index to consume the used values
                         decodeSGR48(madeElements, false);
-                        paraIndex += 1;
+                        paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
                             // Uses four or five depending on whether there is
                             // the colour space id first
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
@@ -2697,9 +2686,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                             }
                         }
 
-                        // Move the index to consume the used values less
-                        // the one that the for loop will handled - even if it
-                        // goes past end
+                        // Move the index to consume the used values
                         decodeSGR48(madeElements, false);
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
@@ -2734,8 +2721,8 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mUnderline = true;
                     break;
                 default: // Something unexpected
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
-                    mUnderline = true;
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a zero!";
+                    mUnderline = false;
                     break;
                 }
             } else if (parameterElements.at(0) == QLatin1String("3")) {
@@ -2758,14 +2745,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mUnderline = true;
                     break;
                 default: // Something unexpected
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
-                    mUnderline = true;
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1) << ";../m sequence treating it as a zero!";
+                    mUnderline = false;
                     break;
                 }
             } else {
                 qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - parameter string with an unexpected initial parameter element in a SGR...;" << parameterElements.at(0) << ":" << parameterElements.at(1) << "...;.../m sequence, ignoring it!";
             }
         } else {
+            /******************************************************************
+             *             Parameter string with no sub-elements              *
+             ******************************************************************/
             // We do not have a colon separated string so we must just have a
             // number:
             bool isOk = false;
@@ -2799,34 +2789,36 @@ void TBuffer::decodeSGR(const QString& sequence)
                     // emulator to use a (sub)parameter entry to
                     // destinguish between italics and slanted text by
                     // using ESC[...;3:1;...m and ESC[...;3:2;...m
-                    // respectively:
+                    // respectively - that is handled above in the colon
+                    // sub-string separated part:
                     mItalics = true;
                     break;
                 case 4:
-                    mUnderline = true;
                     // There is a implimention by some terminal
                     // emulators ("Kitty" and "VTE") to use a
                     // (sub)parameter entry of 3 for a wavy underline
                     // {presumably 2 would be a double underline and 1
                     // the normal single underline) by sending e.g.:
-                    // ESC[...;4:3;...m
+                    // ESC[...;4:3;...m - that is handled above in the colon
+                    // sub-string separated part:
+                    mUnderline = true;
                     break;
-                case 5:
-                    // TODO:
-                    break; //slow-blinking
-                case 6:
-                    // TODO:
-                    break; //fast blinking
-                case 7:
-                    // TODO:
-                    break; //inverse
+                // case 5:
+                // TODO:
+                //    break; //slow-blinking
+                // case 6:
+                // TODO:
+                //    break; //fast blinking
+                // case 7:
+                // TODO:
+                //    break; //inverse
                 // case 8: // Concealed characters (set foreground to be the same as background?)
                 //    break;
                 case 9:
                     mStrikeOut = true;
                     break; //strikethrough
-                case 10:
-                    break; //default font
+                // case 10:
+                //    break; //default font
                 // case 21: // Double underline according to specs
                 //    break;
                 case 22:
@@ -2840,9 +2832,9 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 25:
                     break; // blink off
-                case 27:
-                    // TODO:
-                    break; //inverse off
+                // case 27:
+                // TODO:
+                //    break; //inverse off
                 // case 28: // Revealed characters (undoes the effect of "8")
                 //    break;
                 case 29:
@@ -2948,24 +2940,18 @@ void TBuffer::decodeSGR(const QString& sequence)
                             // We have the parameter needed
                             madeElements << parameterStrings.at(paraIndex + 2);
                         }
-                        // Move the index to consume the used values less
-                        // the one that the for loop will handled - even if it
-                        // goes past end
+                        // Move the index to consume the used values
                         decodeSGR38(madeElements, false);
-                        paraIndex += 1;
+                        paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
                             // Uses four or five depending on whether there is
                             // the colour space id first
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
@@ -3091,24 +3077,18 @@ void TBuffer::decodeSGR(const QString& sequence)
                             // We have the parameter needed
                             madeElements << parameterStrings.at(paraIndex + 2);
                         }
-                        // Move the index to consume the used values less
-                        // the one that the for loop will handled - even if it
-                        // goes past end
+                        // Move the index to consume the used values
                         decodeSGR48(madeElements, false);
-                        paraIndex += 1;
+                        paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
                             // Uses four or five depending on whether there is
                             // the colour space id first
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values less
-                            // the one that the for loop will handled - even if it
-                            // goes past end
+                            // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
@@ -3147,9 +3127,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                             }
                         }
 
-                        // Move the index to consume the used values less
-                        // the one that the for loop will handled - even if it
-                        // goes past end
+                        // Move the index to consume the used values
                         decodeSGR48(madeElements, false);
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
@@ -3170,14 +3148,14 @@ void TBuffer::decodeSGR(const QString& sequence)
                 //    break;
                 // case 52: // Encircled
                 //    break;
-                case 53: // overline on
-                    // TODO:
-                    break;
+                // case 53: // overline on
+                // TODO:
+                //    break;
                 // case 54: // Not framed, not encircled
                 //    break;
-                case 55: // overline off
-                    // TODO:
-                    break;
+                // case 55: // overline off
+                // TODO:
+                //    break;
                 // 56 to 59 reserved for future standardization
                 // case 60: // ideogram underline or right side line
                 //    break;
