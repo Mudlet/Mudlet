@@ -1248,55 +1248,55 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Mapa wczytana pomyślnie (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>sw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>w</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
@@ -2582,7 +2582,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony czarny:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
@@ -2612,12 +2612,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony cyjan:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony biały:</translation>
     </message>
   </context>
   <context>
@@ -6668,7 +6668,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1428"/>
       <location filename="../src/ui/profile_preferences.ui" line="2110"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony czarny:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1435"/>
