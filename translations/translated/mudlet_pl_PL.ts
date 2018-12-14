@@ -2281,7 +2281,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
