@@ -1877,7 +1877,7 @@ it has not been possible to salvage this, it has been lost!</source>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - Problem z danymi powiązanymi z lokacją o ID %1 - dane te zostały utracone więc ID lokacji zostanie skasowane. To sugeruje poważne problemy z aktualnie uruchomioną wersją Mudleta - czy zaczyna brakować pamięci w systemie?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="621"/>
