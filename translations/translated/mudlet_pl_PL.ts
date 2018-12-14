@@ -3372,7 +3372,8 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="229"/>
       <source>Cannot find a path to this room.
 </source>
-      <translation type="unfinished"/>
+      <translation>Ścieżka do tej lokacji nie została odnaleziona.
+</translation>
     </message>
   </context>
   <context>
@@ -4418,13 +4419,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="419"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>Eksportuj</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7969"/>
       <source>Save Profile</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz profil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
@@ -4451,7 +4452,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
       <source>errors</source>
-      <translation type="unfinished"/>
+      <translation>błędy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
@@ -4499,7 +4500,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1869"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1904"/>
       <source>Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1184"/>
@@ -4540,7 +4541,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2321"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2326"/>
       <source>Command</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1224"/>
@@ -4596,7 +4597,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1963"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1968"/>
       <source>Pattern</source>
-      <translation type="unfinished"/>
+      <translation>Wzorzec</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1371"/>
@@ -4626,7 +4627,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2142"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2203"/>
       <source>Button</source>
-      <translation type="unfinished"/>
+      <translation>Przycisk</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1466"/>
@@ -4676,7 +4677,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2321"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2351"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>Klawisz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1769"/>
@@ -4727,12 +4728,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5419"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości menu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5429"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości przycisku</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5437"/>
@@ -4747,7 +4748,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5913"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Przypisania klawiszy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6973"/>
