@@ -944,12 +944,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="108"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Konsola debugowania</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="124"/>
       <source>Non Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Konsola</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
@@ -1218,32 +1218,32 @@ this command...!</source>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Audyt załadowanej/zaimportowanej/pobranej mapy...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - KONWERSJA: etykieta starego typu, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="469"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Konwersja etykiety starego typu, id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - KONWERSJA: Nie jest możliwe skonwertowanie etykiety starego typu w obszarze o id: %1, id etykiety: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="477"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - KONWERSJA: Nie jest możliwe skonwertowanie etykiety starego typu, id etykiety: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="506"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Audyt mapy zakończony (%1s). Miłej gry...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
