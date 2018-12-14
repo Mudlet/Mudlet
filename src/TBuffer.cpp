@@ -3211,6 +3211,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     bb = sequence.mid(6, 2).toUInt(&isOk, 16);
                 }
                 if (isOk) {
+                    bool isValid = true;
                     switch (colorNumber) {
                     case 0: // Black
                         pHost->mBlack = QColor(rr, gg, bb);
@@ -3260,7 +3261,18 @@ void TBuffer::decodeOSC(const QString& sequence)
                     case 15: // Light gray
                         pHost->mLightWhite = QColor(rr, gg, bb);
                         break;
+                    default:
+                        isValid = false;
                     }
+                    if (isValid) {
+                        // This will refresh the "main" console as it is only this
+                        // class instance associated with that one that is to be
+                        // changed by this method:
+                        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+                            mudlet::self()->mConsoleMap[pHost]->changeColors();
+                        }
+                    }
+
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
                     qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unable to parse this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
