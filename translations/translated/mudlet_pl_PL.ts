@@ -2562,7 +2562,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="78"/>
       <source>Magenta:</source>
-      <translation>Magenta:</translation>
+      <translation>Purpura:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="85"/>
@@ -2607,7 +2607,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
       <source>Light magenta:</source>
-      <translation>Rozjaśniona magenta:</translation>
+      <translation>Rozjaśniona purpura:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
@@ -6767,7 +6767,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1608"/>
       <location filename="../src/ui/profile_preferences.ui" line="2263"/>
       <source>Magenta:</source>
-      <translation>Magenta:</translation>
+      <translation>Purpura:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1615"/>
@@ -6778,7 +6778,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1628"/>
       <location filename="../src/ui/profile_preferences.ui" line="2280"/>
       <source>Light magenta:</source>
-      <translation>Rozjaśniona magenta:</translation>
+      <translation>Rozjaśniona purpura:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1635"/>
