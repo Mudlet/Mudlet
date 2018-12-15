@@ -2376,7 +2376,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="273"/>
       <source>Command (up):</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie (góra):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
@@ -2424,7 +2424,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
@@ -2960,7 +2960,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>The command or LUA script that goes to the given room.</source>
-      <translation type="unfinished"/>
+      <translation>Skrypt LUA lub polecenie wiodące do danej lokacji.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
@@ -3318,7 +3318,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="361"/>
       <source>[HELP] Available Commands: %1</source>
-      <translation type="unfinished"/>
+      <translation>[POMOC] Dostępne polecenia: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="363"/>
@@ -3353,7 +3353,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="446"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[BŁĄD] Nieznane polecenie: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="590"/>
@@ -4017,7 +4017,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="2300"/>
       <source>&lt;command or Lua script&gt;</source>
       <comment>This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;polecenie lub skrypt Lua&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="732"/>
@@ -6284,17 +6284,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="531"/>
       <source>Command separator:</source>
-      <translation type="unfinished"/>
+      <translation>Separator poleceń:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="541"/>
       <source>Enter text to separate commands with or leave blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadź tekst do oddzielania poleceń lub pozostaw puste aby wyłączyć oddzielanie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="548"/>
       <source>Command line minimum height in pixels:</source>
-      <translation type="unfinished"/>
+      <translation>Minimalna wysokość wiersza poleceń w pikselach:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="571"/>
@@ -6480,22 +6480,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1318"/>
       <source>Command line foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor linii wiersza poleceń:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1335"/>
       <source>Command line background:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor tła linii wiersza poleceń:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1352"/>
       <source>Command foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor poleceń:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1372"/>
       <source>Command background:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor tła poleceń:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="324"/>
@@ -7764,7 +7764,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="63"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="165"/>
@@ -7903,7 +7903,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="164"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
