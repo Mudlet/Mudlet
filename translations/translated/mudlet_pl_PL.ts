@@ -1726,17 +1726,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1156"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (otwarte)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1159"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (zamknięte)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1162"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (zamknięte na klucz)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
