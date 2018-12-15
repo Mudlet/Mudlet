@@ -135,12 +135,17 @@ public:
     int mCustomLinesRoomFrom;
     int mCustomLinesRoomTo;
     QString mCustomLinesRoomExit;
-    QComboBox* mpCurrentLineStyle;
-    QString mCurrentLineStyle;
-    QPushButton* mpCurrentLineColor;
+
+    // Pointers to controls that hold the settings
+    QPointer<QComboBox> mpCurrentLineStyle;
+    QPointer<QPushButton> mpCurrentLineColor;
+    QPointer<QCheckBox> mpCurrentLineArrow;
+
+    // Variables that hold the current or last used setting:
+    Qt::PenStyle mCurrentLineStyle;
     QColor mCurrentLineColor;
-    QCheckBox* mpCurrentLineArrow;
     bool mCurrentLineArrow;
+
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
     bool mLabelHighlighted;

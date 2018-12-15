@@ -34,7 +34,7 @@
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.1)
 if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11") # Qt 5.10 with which we build on OS X only supports 10.11 and up.
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
 endif()
 
 project(mudlet)
@@ -75,7 +75,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.14.0)
+set(APP_VERSION 3.15.0)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
