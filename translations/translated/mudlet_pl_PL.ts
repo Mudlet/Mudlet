@@ -2366,7 +2366,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadź jedno lub więcej poleceń które zostaną wysłane bezpośrednio do gry po wciśnięciu przycisku. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Jeśli jest to przełącznik wciskany, to polecenia zostaną wysłane tylko gry zmieni się stan przycisku z wyciśnięty na wciśnięty.&lt;/p&gt;&lt;p&gt;Aby wysłać bardziej skomplikowane polecenia, które np. mogą być zależne od stanu zmiennych, należy wpisać &lt;i&gt;w pole poniżej&lt;/i&gt; skrypt Lua który to obsłuży. Wszystko wpisane w to pole zostanie wysłane do serwera gry beż żadnych zmian..&lt;/p&gt;&lt;p&gt;Jest dopuszczalne równoczesne użycie obu pól - polecenia z tego zostaną wysłane &lt;b&gt;przed &lt;/b&gt; wykonaniem skryptu Lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="283"/>
