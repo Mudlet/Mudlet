@@ -1741,7 +1741,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {nieważne}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1169"/>
@@ -2209,7 +2209,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/updater.cpp" line="156"/>
       <location filename="../src/updater.cpp" line="218"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Aktualizuj</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="310"/>
@@ -2326,7 +2326,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
       <source>Floating Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Swobodny pasek narzędzi</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
@@ -2356,7 +2356,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
       <source>Push down button</source>
-      <translation type="unfinished"/>
+      <translation>Przycisk</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
@@ -4723,7 +4723,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5380"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7780"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5419"/>
@@ -4738,7 +4738,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5437"/>
       <source>Command (down);</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie (dół);</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5783"/>
@@ -4906,7 +4906,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7776"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie (dół):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
@@ -5013,7 +5013,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
