@@ -1005,7 +1005,7 @@
              <string>'&quot;</string>
             </property>
             <property name="placeholderText">
-             <string>&lt;characters to ignore in selection, for example ' or &quot;&gt;</string>
+             <string>(characters to ignore in selection, for example ' or &quot;)</string>
             </property>
            </widget>
           </item>

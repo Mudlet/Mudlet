@@ -1578,28 +1578,28 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="81"/>
       <location filename="../src/TRoom.cpp" line="771"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Norte</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="82"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Nordeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="83"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Noroeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="84"/>
       <location filename="../src/TRoom.cpp" line="816"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Sul</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="85"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Sudeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="86"/>
@@ -1645,17 +1645,17 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="93"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Outro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="95"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Desconhecido</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="227"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>Nenhuma área criada! Área solicitada ID=%1. Nota: os IDs de áreas devem ser maior que 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="249"/>
@@ -1665,22 +1665,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="786"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Nordeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="801"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Noroeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="831"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Sudeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="846"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Sudoeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="958"/>

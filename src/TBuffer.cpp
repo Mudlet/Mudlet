@@ -1180,11 +1180,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         }
     }
 
-    // The following test conditions no longer include tests for some encodings
-    // but this will clash with another recent change:
-    // PR #2134 - BugFix: fixup some code omissions for Big5 character encoding
-    // To resolve the merge clash it will be necessary to remove those encoding
-    // checks in this if (...) {...}:
     if (isFromServer && !mIncompleteSequenceBytes.empty()) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
         qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
