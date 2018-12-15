@@ -736,7 +736,7 @@ void cTelnet::processTelnetCommand(const string& command)
             output += TN_SB;
             output += OPT_GMCP;
             // APP_BUILD could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(R"(Core.Hello { "client": "Mudlet", "version": )" APP_VERSION APP_BUILD R"(})");
+            output += encodeAndCookBytes(R"(Core.Hello { "client": "Mudlet", "version": ")" APP_VERSION APP_BUILD R"("})");
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
