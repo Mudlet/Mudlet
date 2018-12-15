@@ -1167,16 +1167,27 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     QString usedEncoding = mpHost->mTelnet.getEncoding();
     if (mEncoding != usedEncoding) {
         encodingChanged(usedEncoding);
+        // Will have to dump any stored bytes as they will be in the old
+        // encoding and the following code block to prepend them is used for
+        // both bytes that are held over as part of a multi-byte encoding that
+        // was incomplete at the end of the last packet AND ALSO for ANSI code
+        // sequences that were not complete at the end of the last packet:
+        if (!mIncompleteSequenceBytes.empty()) {
+#if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
+            qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no longer be usable!";
+#endif
+            mIncompleteSequenceBytes.clear();;
+        }
     }
 
-// clang-format off
-    if (isFromServer
-        && !mIncompleteSequenceBytes.empty()
-        && (mEncoding == QLatin1String("UTF-8") || mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030"))) {
-
-// clang-format on
-#if defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING)
-        qDebug() << "TBuffer::translateToPlainText(...) Prepending residual UTF-8 bytes onto incoming data!";
+    // The following test conditions no longer include tests for some encodings
+    // but this will clash with another recent change:
+    // PR #2134 - BugFix: fixup some code omissions for Big5 character encoding
+    // To resolve the merge clash it will be necessary to remove those encoding
+    // checks in this if (...) {...}:
+    if (isFromServer && !mIncompleteSequenceBytes.empty()) {
+#if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
+        qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
         localBuffer = mIncompleteSequenceBytes + incoming;
         mIncompleteSequenceBytes.clear();
@@ -1185,7 +1196,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     }
 
     const QVector<QChar> encodingLookupTable = csmEncodingTable.value(mEncoding).second;
-    // If the encoding is "ASCII", "ISO 8859-1", "UTF-8", "GBK" or "GB18030"
+    // If the encoding is "ASCII", "ISO 8859-1", "UTF-8", "GBK", "GB18030" or "Big5"
     // (which are not in the table) encodingLookupTable will be empty otherwise
     // the 128 values in the returned table will be used for all the text data
     // that gets through the following ANSI code and other out-of-band data
@@ -5458,8 +5469,7 @@ void TBuffer::encodingChanged(const QString& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
-        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030")
-                || mEncoding == QLatin1String("Big5")) {
+        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030") || mEncoding == QLatin1String("Big5")) {
             mMainIncomingCodec = QTextCodec::codecForName(mEncoding.toLatin1().constData());
             if (!mMainIncomingCodec) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
