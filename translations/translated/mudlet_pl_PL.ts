@@ -6690,7 +6690,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1468"/>
       <location filename="../src/ui/profile_preferences.ui" line="2144"/>
       <source>Light red:</source>
-      <translation>Jasnoczerwony:</translation>
+      <translation>Rozjaśniony czerwony:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1475"/>
@@ -6712,7 +6712,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1508"/>
       <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Light green:</source>
-      <translation>Jasnozielony:</translation>
+      <translation>Rozjaśniony zielony:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1515"/>
@@ -6734,7 +6734,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1548"/>
       <location filename="../src/ui/profile_preferences.ui" line="2212"/>
       <source>Light yellow:</source>
-      <translation>Jasnożółty:</translation>
+      <translation>Rozjaśniony żółty:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1555"/>
@@ -6756,7 +6756,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1588"/>
       <location filename="../src/ui/profile_preferences.ui" line="2246"/>
       <source>Light blue:</source>
-      <translation>Jasnoniebieski:</translation>
+      <translation>Rozjaśniony niebieski:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1595"/>
