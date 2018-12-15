@@ -3308,7 +3308,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="133"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$ Wpisz &lt;b&gt;/help&lt;/b&gt; aby uzyskać listę poleceń lub &lt;b&gt;/help [polecenie]&lt;/b&gt; aby zobaczyć pomoc dla konkretnego polecenia.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="192"/>
@@ -6621,12 +6621,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1282"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Domyślnie używany kolor znaków na głównej konsoli (o ile nie został zmieniony przez skrypt LUA lub serwer gry).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1305"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Domyślnie używany kolor tła znaków na głównej konsoli (o ile nie został zmieniony przez skrypt LUA lub serwer gry).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1325"/>
@@ -7041,12 +7041,13 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2415"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
-      <translation type="unfinished"/>
+      <translation>Ta opcja dodaje znak nowej linii &lt;LF&gt; lub &quot;
+&quot; do wpisanego polecenia w przypadku pustych poleceń. Ta opcja rzadko jest potrzebna.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2419"/>
       <source>Force new line on empty commands</source>
-      <translation type="unfinished"/>
+      <translation>Wymuś znak nowej linii przy pustych poleceniach</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2426"/>
@@ -7669,7 +7670,7 @@ Locked</source>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie lub skrypt LUA</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
