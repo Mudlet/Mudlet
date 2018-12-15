@@ -6550,7 +6550,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="518"/>
       <source>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Sprawdź wszystkie przypisania klawiszy podczas naciskania ich.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Wersje Mudleta przed &lt;b&gt;3.9.0&lt;/b&gt; przestają sprawdzać po znalezieniu pierwszej pasującej kombinacji &lt;/i&gt; KeyCode &lt;i&gt;oraz&lt;/i&gt; KeyModifier &lt;i&gt;, po czym wysyłają komendę i/lub uruchamiają skrypt LUA przypisany do znalezionej kombinacji. Ta opcja,&lt;/i&gt; ustawiana osobna dla każdego profilu, &lt;i&gt;sprawia że zostaną sprawdzone wszystkie pozostałe dopasowania klawiszy. Dla zachowania kompatybilności ze starszymi wersjami, ta opcja domyślnie jest &lt;b&gt;od&lt;/b&gt;znaczona.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="708"/>
