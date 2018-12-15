@@ -2356,7 +2356,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
       <source>Push down button</source>
-      <translation>Przycisk</translation>
+      <translation>Przełącznik wciskany</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
@@ -4266,7 +4266,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="322"/>
       <source>Show Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż przyciski</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="326"/>
@@ -5750,7 +5750,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="303"/>
       <source>Show and edit easy buttons</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż i edytuj przyciski</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="308"/>
