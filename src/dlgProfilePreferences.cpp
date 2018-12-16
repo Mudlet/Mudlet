@@ -195,10 +195,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                             "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
                                                             "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
                                                             "full support for languages other than English.</i></p>"));
-    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Check this option to activate a context (right click) menu action on any "
-                                               "console/user window that, when the mouse cursor is hovered over it, will "
-                                               "display the UTF-16 and UTF-8 items that make up each Unicode codepoint on "
-                                               "the <b>first</b> line of any selection.</p>"
+    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
+                                               "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
+                                               "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
                                                "<p>This utility feature is intended to help the user identify any grapheme "
                                                "(visual equivalent to a <i>character</i>) that a Game server may send even "
                                                "if it is composed of multiple bytes as any non-ASCII character will be in the "

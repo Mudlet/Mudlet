@@ -26,24 +26,24 @@
 
 #include "TTextEdit.h"
 
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "mudlet.h"
 #include "wcwidth.h"
 
 #include "pre_guard.h"
-#include <QtGlobal>
 #include <QtEvents>
+#include <QtGlobal>
 #include <QApplication>
 #include <QChar>
 #include <QClipboard>
 #include <QDesktopServices>
 #include <QPainter>
 #include <QScrollBar>
-#include <QToolTip>
 #include <QTextBoundaryFinder>
-#include <chrono>
+#include <QToolTip>
 #include "post_guard.h"
+#include <chrono>
 
 
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane)
@@ -320,7 +320,6 @@ void TTextEdit::showNewLines()
             // If not in tail mode the upper pane is frozen
             return;
         }
-
     }
 
     mCursorY = mpBuffer->size();
@@ -350,7 +349,7 @@ void TTextEdit::scrollTo(int line)
 {
     // Protect against modifying mIsTailMode on the lower pane where it would
     // be wrong:
-    Q_ASSERT_X(!mIsLowerPane, "Inappropriate use of method on lower pane which should only be used for the upper one" , "TTextEdit::scrollTo()");
+    Q_ASSERT_X(!mIsLowerPane, "Inappropriate use of method on lower pane which should only be used for the upper one", "TTextEdit::scrollTo()");
 
     if ((line > -1) && (line < mpBuffer->size())) {
         if ((line < (mpBuffer->getLastLineNumber() - mScreenHeight) && mIsTailMode)) {
@@ -557,7 +556,6 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
 
 void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
 {
-
     QPoint cursor(0, lineOfScreen);
     QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
@@ -580,7 +578,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
     for (int indexOfChar = 0; indexOfChar < lineText.size();) {
         int nextBoundary = boundaryFinder.toNextBoundary();
 
-        TChar &charStyle = mpBuffer->buffer[lineNumber][indexOfChar];
+        TChar& charStyle = mpBuffer->buffer[lineNumber][indexOfChar];
         int graphemeWidth = drawGrapheme(painter, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
         cursor.setX(cursor.x() + graphemeWidth);
         indexOfChar = nextBoundary;
@@ -597,7 +595,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
  * @param charStyle
  * @return Return the display width of the grapheme
  */
-int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &grapheme, int column, TChar &charStyle) const
+int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
 {
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
@@ -636,8 +634,7 @@ int TTextEdit::drawGrapheme(QPainter &painter, const QPoint &cursor, const QStri
         bgColor = QColor(charStyle.bgR, charStyle.bgG, charStyle.bgB);
     }
 
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(),
-                          mFontWidth * charWidth, mFontHeight);
+    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     drawBackground(painter, textRect, bgColor);
 
     if (painter.pen().color() != fgColor) {
@@ -1053,7 +1050,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 
 void TTextEdit::slot_popupMenu()
 {
-    auto * pA = qobject_cast<QAction*>(sender());
+    auto* pA = qobject_cast<QAction*>(sender());
     if (!pA) {
         return;
     }
@@ -1292,13 +1289,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         if (!mudlet::self()->isControlsVisible()) {
             QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
             connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
-            actionRestoreMainMenu->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                              .arg(tr("Use this to restore the Main menu to get access to controls.")));
+            actionRestoreMainMenu->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("Use this to restore the Main menu to get access to controls.")));
 
             QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
             connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
-            actionRestoreMainToolBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                                 .arg(tr("Use this to restore the Main Toolbar to get access to controls.")));
+            actionRestoreMainToolBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("Use this to restore the Main Toolbar to get access to controls.")));
 
             popup->addSeparator();
             popup->addAction(actionRestoreMainMenu);
@@ -1731,7 +1726,6 @@ int TTextEdit::bufferScrollUp(int lines)
 
         } else {
             return 0;
-
         }
     }
 }
@@ -1750,7 +1744,6 @@ int TTextEdit::bufferScrollDown(int lines)
         } else {
             mpBuffer->mCursorY += lines;
             mIsTailMode = false;
-
         }
         return lines;
 
@@ -1772,7 +1765,6 @@ int TTextEdit::bufferScrollDown(int lines)
         } else {
             mpBuffer->mCursorY += lines;
             mIsTailMode = false;
-
         }
 
         return lines;
@@ -1937,8 +1929,8 @@ void TTextEdit::slot_analyseSelection()
     // If we get here we must at least have a line 0!
 
     // Get the smallest of the two lines in the range, but clamp it to the first
-    // line which is zero and then the maximum line in existance:
-    int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size()-1));
+    // line which is zero and then the maximum line in existence:
+    int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));
 
     int startColumn = -1;
     int endColumn = -1;
@@ -1947,13 +1939,16 @@ void TTextEdit::slot_analyseSelection()
     const int lineLength = mpBuffer->lineBuffer.at(line).size();
 
     // Display the indexes as +1 so that the first character is at 1 not 0
-    QString indexes; // UTF-16 index
-    QString vals; // UTF-16 values
-    QString elements; // grapheme
-    QString utf8Indexes; // UTF-8 indexes
-    QString utf8Vals; // UTF-8 bytes
+    QString utf16indexes;
+    QString utf16Vals;
+    QString graphemes;
+    QString utf8Indexes;
+    QString utf8Vals;
     // utf8Vals converted from hex to decimal for non printable ASCII shown as
-    // `\###` decimal codes or ASCII if it is in range:
+    // `\###` decimal codes or ASCII if it is in range - this is to match the
+    // decimal numeric codes that lua uses for non-printable characters which
+    // the user will need if they wish to enter a multi-byte character
+    // (non-ASCII) into a literal string:
     QString luaCodes;
     QString completedRows;
     quint8 rowItems = 0;
@@ -1988,11 +1983,11 @@ void TTextEdit::slot_analyseSelection()
     // We do not want more than around 16 code-points per row, but we also do
     // not want orphans (a few odd code-points) on the last row so deduce a
     // number of items to include in a row:
-    quint8 rowsCount = qMax(1, qRound((total+8.5)/16.0));
-    quint8 rowLimit = qMax(8, qRound(total*1.0/rowsCount));
+    quint8 rowsCount = qMax(1, qRound((total + 8.5) / 16.0));
+    quint8 rowLimit = qMax(8, qRound(total * 1.0 / rowsCount));
     bool isFirstRow = true;
 
-    for(int index = 0; index < lineLength; ++index) {
+    for (int index = 0; index < lineLength; ++index) {
         bool includeThisCodePoint = false;
         if (index >= startColumn && index <= endColumn) {
             includeThisCodePoint = true;
@@ -2004,71 +1999,60 @@ void TTextEdit::slot_analyseSelection()
             quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
 
             if (includeThisCodePoint) {
-                indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2 & %3</center></th>")
-                               .arg(QString::number(columnsToUse), QString::number(index+1), QString::number(index+2)));
+                utf16indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
 
                 // The use of one QStringLiteral inside another is because it is
                 // impossible to force an upper-case alphabet to Hex digits otherwise
                 // just for that number (and not the rest of the resultant String):
                 // &#8232; is the Unicode Line Separator
-                vals.append(QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</centre>&#8232;<center>(0x%3:0x%4)</center></td>")
-                            .arg(QString::number(columnsToUse))
-                            .arg(QStringLiteral("%1")
-                                 .arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index+1)), 4, 16, zero)
-                                 .toUpper())
-                            .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
-                            .arg(mpBuffer->lineBuffer.at(line).at(index+1).unicode(), 4, 16, zero));
+                utf16Vals.append(
+                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</centre>&#8232;<center>(0x%3:0x%4)</center></td>")
+                                .arg(QString::number(columnsToUse))
+                                .arg(QStringLiteral("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
+                                .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
+                                .arg(mpBuffer->lineBuffer.at(line).at(index + 1).unicode(), 4, 16, zero));
 
                 // Note the addition to the index here to jump over the low-surrogate:
-                elements.append(QStringLiteral("<td colspan=\"%1\">%2</td>")
-                                .arg(QString::number(columnsToUse))
-                                .arg(convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
-                                                               mpBuffer->lineBuffer.at(line).at(index+1))));
+                graphemes.append(QStringLiteral("<td colspan=\"%1\">%2</td>")
+                                         .arg(QString::number(columnsToUse))
+                                         .arg(convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))));
             }
 
             switch (utf8Width) {
             case 4:
                 if (includeThisCodePoint) {
                     utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td></b>")
-                                       .arg(QString::number(utf8Index), QString::number(utf8Index+1), QString::number(utf8Index+2), QString::number(utf8Index+3)));
+                                               .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(utf8Index + 2), QString::number(utf8Index + 3)));
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td><td><center>0x%4</center></td>")
-                                    .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
-                                    .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
-                                    .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero)
-                                    .arg(static_cast<quint8>(utf8Bytes[3]), 2, 16, zero));
+                                            .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[3]), 2, 16, zero));
                     luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td>")
-                                    .arg(byteToLuaCodeOrChar(&utf8Bytes[0]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[1]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[2]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[3])));
+                                            .arg(byteToLuaCodeOrChar(&utf8Bytes[0]), byteToLuaCodeOrChar(&utf8Bytes[1]), byteToLuaCodeOrChar(&utf8Bytes[2]), byteToLuaCodeOrChar(&utf8Bytes[3])));
                 }
                 utf8Index += 4;
                 break;
             case 3:
                 if (includeThisCodePoint) {
                     utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td>")
-                                       .arg(QString::number(utf8Index), QString::number(utf8Index+1), QString::number(++utf8Index+2)));
+                                               .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(++utf8Index + 2)));
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td>")
-                                    .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero));
+                                            .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero));
                     luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td><td><center>%3</center></td>")
-                                    .arg(byteToLuaCodeOrChar(&utf8Bytes[0]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[1]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[2])));
+                                            .arg(byteToLuaCodeOrChar(&utf8Bytes[0]), byteToLuaCodeOrChar(&utf8Bytes[1]), byteToLuaCodeOrChar(&utf8Bytes[2])));
                 }
                 utf8Index += 3;
                 break;
             case 2:
                 if (includeThisCodePoint) {
-                    utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td>")
-                                       .arg(QString::number(utf8Index), QString::number(utf8Index+1)));
+                    utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td>").arg(QString::number(utf8Index), QString::number(utf8Index + 1)));
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td>")
-                                    .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero));
-                    luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td>")
-                                    .arg(byteToLuaCodeOrChar(&utf8Bytes[0]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[1])));
+                                            .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero));
+                    luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td>").arg(byteToLuaCodeOrChar(&utf8Bytes[0]), byteToLuaCodeOrChar(&utf8Bytes[1])));
                 }
                 utf8Index += 2;
                 break;
@@ -2094,67 +2078,68 @@ void TTextEdit::slot_analyseSelection()
             quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
 
             if (includeThisCodePoint) {
-                indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index+1)));
+                utf16indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1)));
 
+                utf16Vals.append(QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center></td>")
+                                         .arg(QString::number(columnsToUse))
+                                         .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, QChar('0'))
+                                         .toUpper());
 
-                vals.append(QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center></td>")
-                            .arg(QString::number(columnsToUse))
-                            .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, QChar('0')).toUpper());
-
-                elements.append(QStringLiteral("<td colspan=\"%1\">%2</td>")
-                                .arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index))));
+                graphemes.append(QStringLiteral("<td colspan=\"%1\">%2</td>").arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index))));
             }
 
             switch (utf8Width) {
             case 4: // Maybe a BMP character cannot use 4 utf-8 bytes?
                 if (includeThisCodePoint) {
                     utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td>")
-                                       .arg(QString::number(utf8Index), QString::number(utf8Index+1), QString::number(utf8Index+2), QString::number(utf8Index+3)));
+                                               .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(utf8Index + 2), QString::number(utf8Index + 3)));
+
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td><td><center>0x%4</center></td>")
-                                    .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[3]), 2, 16, zero));
+                                            .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[3]), 2, 16, zero));
+
                     luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td>")
-                                    .arg(byteToLuaCodeOrChar(&utf8Bytes[0]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[1]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[2]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[3])));
+                                            .arg(byteToLuaCodeOrChar(&utf8Bytes[0]), byteToLuaCodeOrChar(&utf8Bytes[1]), byteToLuaCodeOrChar(&utf8Bytes[2]), byteToLuaCodeOrChar(&utf8Bytes[3])));
                 }
                 utf8Index += 4;
                 break;
             case 3:
                 if (includeThisCodePoint) {
                     utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td>")
-                                       .arg(QString::number(utf8Index), QString::number(utf8Index+1), QString::number(utf8Index+2)));
+                                               .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(utf8Index + 2)));
+
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td>")
-                                    .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero));
+                                            .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[2]), 2, 16, zero));
+
                     luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td><td><center>%3</center></td>")
-                                    .arg(byteToLuaCodeOrChar(&utf8Bytes[0]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[1]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[2])));
+                                            .arg(byteToLuaCodeOrChar(&utf8Bytes[0]), byteToLuaCodeOrChar(&utf8Bytes[1]), byteToLuaCodeOrChar(&utf8Bytes[2])));
                 }
                 utf8Index += 3;
                 break;
+
             case 2:
                 if (includeThisCodePoint) {
-                    utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td>")
-                                       .arg(QString::number(utf8Index), QString::number(utf8Index+1)));
+                    utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td>").arg(QString::number(utf8Index), QString::number(utf8Index + 1)));
+
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td>")
-                                    .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
-                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero));
-                    luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td>")
-                                    .arg(byteToLuaCodeOrChar(&utf8Bytes[0]),
-                                         byteToLuaCodeOrChar(&utf8Bytes[1])));
+                                            .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
+                                            .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero));
+
+                    luaCodes.append(QStringLiteral("<td><center>%1</center></td><td><center>%2</center></td>").arg(byteToLuaCodeOrChar(&utf8Bytes[0]), byteToLuaCodeOrChar(&utf8Bytes[1])));
                 }
                 utf8Index += 2;
                 break;
+
             default:
                 if (includeThisCodePoint) {
                     utf8Indexes.append(QStringLiteral("<th><center>%1</center></th>").arg(QString::number(utf8Index)));
+
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td>").arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero));
+
                     luaCodes.append(QStringLiteral("<td><center>%1</center></td>").arg(byteToLuaCodeOrChar(&utf8Bytes[0])));
                 }
                 ++utf8Index;
@@ -2167,36 +2152,56 @@ void TTextEdit::slot_analyseSelection()
 
         if (rowItems > rowLimit) {
             if (isFirstRow) {
-                completedRows = QStringLiteral("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                               "<tr><th>%1</th>%2</tr>"
-                                               "<tr><th>%3</th>%4</tr>"
-                                               "<tr><th>%5</th>%6</tr>"
-                                               "<tr><th>%7</th>%8</tr>"
-                                               "<tr><th>%9</th>%10</tr>"
-                                               "<tr><th>%11</th>%12</tr>"
-                                               "</table></small><br>")
-                        .arg(tr("Index (UTF-16)", "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"), indexes)
-                        .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>", "2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}"), vals)
-                        .arg(tr("Visual", "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}"), elements)
-                        .arg(tr("Index (UTF-8)", "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Indexes)
-                        .arg(tr("Byte", "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Vals)
-                        .arg(tr("Lua character or code", "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}"), luaCodes);
+                completedRows =
+                        QStringLiteral("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                       "<tr><th>%1</th>%2</tr>"
+                                       "<tr><th>%3</th>%4</tr>"
+                                       "<tr><th>%5</th>%6</tr>"
+                                       "<tr><th>%7</th>%8</tr>"
+                                       "<tr><th>%9</th>%10</tr>"
+                                       "<tr><th>%11</th>%12</tr>"
+                                       "</table></small><br>")
+                                .arg(tr("Index (UTF-16)",
+                                        "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"),
+                                     utf16indexes)
+                                .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>",
+                                        "2nd Row heading for Text analyser output, table item is the unicode code point (will be "
+                                        "between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}"),
+                                     utf16Vals)
+                                .arg(tr("Visual",
+                                        "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped "
+                                        "letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}"),
+                                     graphemes)
+                                .arg(tr("Index (UTF-8)",
+                                        "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system "
+                                        "uses {this translation used 2 times}"),
+                                     utf8Indexes)
+                                .arg(tr("Byte",
+                                        "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua "
+                                        "system uses {this translation used 2 times}"),
+                                     utf8Vals)
+                                .arg(tr("Lua character or code",
+                                        "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about "
+                                        "this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used "
+                                        "2 times}"),
+                                     luaCodes);
                 isFirstRow = false;
             } else {
-                completedRows.append(QStringLiteral("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                                    "<tr>%1</tr>"
-                                                    "<tr>%2</tr>"
-                                                    "<tr>%3</tr>"
-                                                    "<tr>%4</tr>"
-                                                    "<tr>%5</tr>"
-                                                    "<tr>%6</tr>"
-                                                    "</table></small><br>")
-                                     .arg(indexes, vals, elements, utf8Indexes, utf8Vals, luaCodes));
+                completedRows.append(
+                        QStringLiteral("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                       "<tr>%1</tr>"
+                                       "<tr>%2</tr>"
+                                       "<tr>%3</tr>"
+                                       "<tr>%4</tr>"
+                                       "<tr>%5</tr>"
+                                       "<tr>%6</tr>"
+                                       "</table></small><br>")
+                                .arg(utf16indexes, utf16Vals, graphemes, utf8Indexes, utf8Vals, luaCodes));
             }
             rowItems = 0;
-            indexes.clear();
-            vals.clear();
-            elements.clear();
+            utf16indexes.clear();
+            utf16Vals.clear();
+            graphemes.clear();
             utf8Indexes.clear();
             utf8Vals.clear();
             luaCodes.clear();
@@ -2207,34 +2212,52 @@ void TTextEdit::slot_analyseSelection()
         if (isFirstRow) {
             // if this is still true then we only have a short, single line of
             // less than 16 codepoints
-            mpContextMenuAnalyser->setToolTip(QStringLiteral("<html><head/><body>%1"
-                                                             "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                                             "<tr><th>%2</th>%3</tr>"
-                                                             "<tr><th>%4</th>%5</tr>"
-                                                             "<tr><th>%6</th>%7</tr>"
-                                                             "<tr><th>%8</th>%9</tr>"
-                                                             "<tr><th>%10</th>%11</tr>"
-                                                             "<tr><th>%12</th>%13</tr>"
-                                                             "</table></small></body></html>")
-                                              .arg(completedRows)
-                                              .arg(tr("Index (UTF-16)", "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"), indexes)
-                                              .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>", "2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}"), vals)
-                                              .arg(tr("Visual", "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}"), elements)
-                                              .arg(tr("Index (UTF-8)", "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Indexes)
-                                              .arg(tr("Byte", "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}"), utf8Vals)
-                                              .arg(tr("Lua character or code", "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}"), luaCodes));
+            mpContextMenuAnalyser->setToolTip(
+                    QStringLiteral("<html><head/><body>%1"
+                                   "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                   "<tr><th>%2</th>%3</tr>"
+                                   "<tr><th>%4</th>%5</tr>"
+                                   "<tr><th>%6</th>%7</tr>"
+                                   "<tr><th>%8</th>%9</tr>"
+                                   "<tr><th>%10</th>%11</tr>"
+                                   "<tr><th>%12</th>%13</tr>"
+                                   "</table></small></body></html>")
+                            .arg(completedRows)
+                            .arg(tr("Index (UTF-16)", "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"),
+                                 utf16indexes)
+                            .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>",
+                                    "2nd Row heading for Text analyser output, table item is the unicode code point (will be between "
+                                    "000001 and 10FFFF in hexadecimal) {this translation used 2 times}"),
+                                 utf16Vals)
+                            .arg(tr("Visual",
+                                    "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter "
+                                    "code if the character is whitespace or otherwise unshowable {this translation used 2 times}"),
+                                 graphemes)
+                            .arg(tr("Index (UTF-8)",
+                                    "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system "
+                                    "uses {this translation used 2 times}"),
+                                 utf8Indexes)
+                            .arg(tr("Byte",
+                                    "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua "
+                                    "system uses {this translation used 2 times}"),
+                                 utf8Vals)
+                            .arg(tr("Lua character or code",
+                                    "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about "
+                                    "this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 "
+                                    "times}"),
+                                 luaCodes));
         } else {
-            mpContextMenuAnalyser->setToolTip(QStringLiteral("<html><head/><body>%1"
-                                                             "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                                             "<tr>%2</tr>"
-                                                             "<tr>%3</tr>"
-                                                             "<tr>%4</tr>"
-                                                             "<tr>%5</tr>"
-                                                             "<tr>%6</tr>"
-                                                             "<tr>%7</tr>"
-                                                             "</table></small></body></html>")
-                                              .arg(completedRows, indexes, vals, elements, utf8Indexes, utf8Vals, luaCodes));
-
+            mpContextMenuAnalyser->setToolTip(
+                    QStringLiteral("<html><head/><body>%1"
+                                   "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                                   "<tr>%2</tr>"
+                                   "<tr>%3</tr>"
+                                   "<tr>%4</tr>"
+                                   "<tr>%5</tr>"
+                                   "<tr>%6</tr>"
+                                   "<tr>%7</tr>"
+                                   "</table></small></body></html>")
+                            .arg(completedRows, utf16indexes, utf16Vals, graphemes, utf8Indexes, utf8Vals, luaCodes));
         }
     }
 }
