@@ -1061,7 +1061,7 @@ void TTextEdit::slot_popupMenu()
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
-    if (!mpConsole->mIsSubConsole && !mpConsole->mIsDebugConsole) {
+    if (mpConsole->getType() & (TConsole::MainConsole|TConsole::Buffer)) {
         TEvent mudletEvent;
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowMousePressEvent"));
         switch (event->button()) {
@@ -1610,7 +1610,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         mCtrlSelecting = false;
     }
 
-    if (!mpConsole->mIsSubConsole && !mpConsole->mIsDebugConsole) {
+    if (mpConsole->getType() & (TConsole::MainConsole|TConsole::Buffer)) {
         TEvent mudletEvent;
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowMouseReleaseEvent"));
         switch (event->button()) {
