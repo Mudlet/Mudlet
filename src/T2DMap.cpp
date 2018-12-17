@@ -215,6 +215,21 @@ QColor T2DMap::getColor(int id)
         break;
     default: //user defined room color
         if (!mpMap->customEnvColors.contains(env)) {
+            if (16 < env < 232)
+            {
+                int base = env - 16;
+                int r = base / 36;
+                int g = (base - (r * 36)) / 6;
+                int b = (base - (r * 36)) - (g * 6);
+
+                r = r * 51;
+                g = g * 51;
+                b = b * 51;
+                color = QColor(r, g, b, 255);
+            } elseif (231 < env < 256) {
+                int k = ((env - 232) * 10) + 8;
+                color = QColor(k, k, k, 255);
+            }
             break;
         }
         color = mpMap->customEnvColors[env];
