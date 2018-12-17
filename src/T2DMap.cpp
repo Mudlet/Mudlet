@@ -1454,7 +1454,23 @@ void T2DMap::paintEvent(QPaintEvent* e)
         default: //user defined room color
             if (mpMap->customEnvColors.contains(roomEnvironment)) {
                 roomColor = mpMap->customEnvColors[roomEnvironment];
-            }
+            } else {
+                if (16 < roomEnvironment < 232)
+                {
+                    int base = roomEnvironment - 16;
+                    int r = base / 36;
+                    int g = (base - (r * 36)) / 6;
+                    int b = (base - (r * 36)) - (g * 6);
+
+                    r = r * 51;
+                    g = g * 51;
+                    b = b * 51;
+                    roomColor = QColor(r, g, b, 255);
+                } else if (231 < roomEnvironment < 256) {
+                    int k = ((roomEnvironment - 232) * 10) + 8;
+                    roomColor = QColor(k, k, k, 255);
+                }
+	    }
         }
 
         if (((mPick || __Pick) && mPHighlight.x() >= roomRectangle.x() - (mRoomWidth * rSize) && mPHighlight.x() <= roomRectangle.x() + (mRoomWidth * rSize)
