@@ -405,7 +405,7 @@ mudlet::mudlet()
     // We DO NOT emit a signal_hostCreated for THIS case:
     mHostManager.addHost(defaultHost, QString(), QString(), QString());
     mpDefaultHost = mHostManager.getHost(defaultHost);
-    mpDebugConsole = new TConsole(mpDefaultHost, true);
+    mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
     mpDebugConsole->setSizePolicy(sizePolicy);
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget(mpDebugConsole);
@@ -1217,7 +1217,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mLogStatus = mAutolog;
-    auto pConsole = new TConsole(pH, false);
+    auto pConsole = new TConsole(pH, TConsole::MainConsole);
     if (!pConsole) {
         return;
     }
@@ -1618,13 +1618,12 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
         pD->setWindowTitle(QString("%1 - %2").arg(name, pHost->getName()));
         dockWindowMap[name] = pD;
-        auto pC = new TConsole(pHost, false, pD);
+        auto pC = new TConsole(pHost, TConsole::UserWindow, pD);
         pC->setContentsMargins(0, 0, 0, 0);
         pD->setWidget(pC);
         pC->show();
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
-        pC->setUserWindow();
         pC->mUpperPane->setIsMiniConsole();
         pC->mLowerPane->setIsMiniConsole();
         dockWindowConsoleMap[name] = pC;

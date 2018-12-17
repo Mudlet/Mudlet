@@ -236,7 +236,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     auto pHB2 = new QHBoxLayout(popupArea);
     popupArea->setMinimumSize(200, 60);
     pHB2->setSizeConstraint(QLayout::SetMaximumSize);
-    mpErrorConsole = new TConsole(mpHost, false, popupArea);
+    mpErrorConsole = new TConsole(mpHost, TConsole::ErrorConsole, popupArea);
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps();
     mpErrorConsole->print("*** starting new session ***\n");
