@@ -226,7 +226,7 @@ QColor T2DMap::getColor(int id)
                 g = g * 51;
                 b = b * 51;
                 color = QColor(r, g, b, 255);
-            } elseif (231 < env < 256) {
+            } else if (231 < env < 256) {
                 int k = ((env - 232) * 10) + 8;
                 color = QColor(k, k, k, 255);
             }
