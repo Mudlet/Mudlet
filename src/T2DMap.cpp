@@ -1458,7 +1458,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 if (16 < roomEnvironment && roomEnvironment < 232)
                 {
                     quint8 base = roomEnvironment - 16;
-                    quint8 r = 51 * (base / 36);
+                    quint8 r = base / 36;
                     quint8 g = (base - (r * 36)) / 6;
                     quint8 b = (base - (r * 36)) - (g * 6);
 
