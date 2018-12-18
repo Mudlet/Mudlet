@@ -217,7 +217,7 @@ QColor T2DMap::getColor(int id)
         if (!mpMap->customEnvColors.contains(env)) {
             if (16 < env && env < 232)
             {
-                quint8 base = env - 16;
+                quint8 base = env - 15;
                 quint8 r = 51 * (base / 36);
                 quint8 g = 51 * ((base - (r * 36)) / 6);
                 quint8 b = 51 * ((base - (r * 36)) - (g * 6));
@@ -1454,7 +1454,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             } else {
                 if (16 < roomEnvironment && roomEnvironment < 232)
                 {
-                    quint8 base = roomEnvironment - 16;
+                    quint8 base = roomEnvironment - 15;
                     quint8 r = 51 * (base / 36);
                     quint8 g = 51 * ((base - (r * 36)) / 6);
                     quint8 b = 51 * ((base - (r * 36)) - (g * 6));
