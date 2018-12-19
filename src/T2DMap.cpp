@@ -3437,9 +3437,12 @@ void T2DMap::slot_setSymbol()
                 while (itSymbolUsed.hasNext()) {
                     itSymbolUsed.next();
                     if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                        displayStrings.append(tr("%1 {count:%2}")
-                                              .arg(itSymbolUsed.key())
-                                              .arg(QString::number(itSymbolUsed.value())));
+                        displayStrings.append(tr("%1 {count:%2}",
+                                                 "Everything after the first parameter (the '%1') will be removed by processing it as a QRegularExpression programmatically, ensure "
+                                                 "the translated text has ` {` immediately after the '%1', and '}' as the very last character, so that the right portion can be "
+                                                 "extracted if the user clicks on this item when it is shown in the QComboBox it is put in.")
+                                                      .arg(itSymbolUsed.key())
+                                                      .arg(QString::number(itSymbolUsed.value())));
                     }
                 }
             }
@@ -3458,6 +3461,19 @@ void T2DMap::slot_setSymbol()
                                               true,                                                             // bool editable = true
                                               &isOk,                                                            // bool * ok = 0
                                               Qt::Dialog);
+            if (isOk && displayStrings.contains(newSymbol)) {
+                // The user has selected one of the existing items in the form
+                // "XXXX {count:##}" and we need to chop off the stuff after the
+                // "XXXX" to get what is needed:
+
+                QRegularExpression countStripper(QStringLiteral("^(.*) {.*}$"));
+                QRegularExpressionMatch match = countStripper.match(newSymbol);
+                if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+                    // captured(0) is the whole string that matched, which is
+                    // not what we want:
+                    newSymbol = match.captured(1);
+                }
+            }
         }
 
         if (!isOk) {
@@ -3470,7 +3486,7 @@ void T2DMap::slot_setSymbol()
                 itRoomPtr.next()->mSymbol = QString();
             }
         } else {
-            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+            // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
             // handle/use/allow - by normalising the symbol we can ensure that
             // all the entered ones are decomposed and recomposed in a
             // "standard" way and will have the same sequence of codepoints:
