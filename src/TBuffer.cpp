@@ -1165,7 +1165,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 // clang-format off
     if (isFromServer
         && !mIncompleteSequenceBytes.empty()
-        && (mEncoding == QLatin1String("UTF-8") || mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030"))) {
+        && (mEncoding == QLatin1String("UTF-8") || mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030") || mEncoding == QLatin1String("Big5"))) {
 
 // clang-format on
 #if defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING)
@@ -1178,7 +1178,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     }
 
     const QVector<QChar> encodingLookupTable = csmEncodingTable.value(mEncoding).second;
-    // If the encoding is "ASCII", "ISO 8859-1", "UTF-8", "GBK" or "GB18030"
+    // If the encoding is "ASCII", "ISO 8859-1", "UTF-8", "GBK", "GB18030" or "Big5"
     // (which are not in the table) encodingLookupTable will be empty otherwise
     // the 128 values in the returned table will be used for all the text data
     // that gets through the following ANSI code and other out-of-band data
@@ -4562,8 +4562,7 @@ void TBuffer::encodingChanged(const QString& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
-        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030")
-                || mEncoding == QLatin1String("Big5")) {
+        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030") || mEncoding == QLatin1String("Big5")) {
             mMainIncomingCodec = QTextCodec::codecForName(mEncoding.toLatin1().constData());
             if (!mMainIncomingCodec) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";

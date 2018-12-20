@@ -852,6 +852,7 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
+    pHost->mEnableTextAnalyzer = (attributes().value("enableTextAnalyzer") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
         // The value is a float/double and the prior code using "== 0" is a BAD

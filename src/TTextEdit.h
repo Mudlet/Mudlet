@@ -118,6 +118,7 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
+    void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
 
 private slots:
@@ -126,6 +127,9 @@ private slots:
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
+    static QString htmlCenter(const QString&);
+    static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
+    static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
 
     int mFontHeight;
@@ -162,6 +166,7 @@ private:
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
+    QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
 };
