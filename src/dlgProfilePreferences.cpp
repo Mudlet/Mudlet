@@ -164,38 +164,45 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                           "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
 
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
-                                                                 "map and whether they can be drawn using just the specifed font, any other "
-                                                                 "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                                                 "that make up that symbol, so that they can be identified even if they "
-                                                                 "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                                 "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+                                             "map and whether they can be drawn using just the specifed font, any other "
+                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                             "that make up that symbol, so that they can be identified even if they "
+                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                             "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
     fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                                               "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+                                           "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
-                                                                            "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                                            "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                                            "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                            "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                        "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
     checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
-                                                                  "(combination of key and modifiers) even if more than one of them is set to be "
-                                                                  "active. This means that a temporary keybinding (not visible in the Editor) "
-                                                                  "created by a script or package may be used in preference to a permanent one "
-                                                                  "that is shown and is set to be active. If checked then all matching keybindings "
-                                                                  "will be run.</p>"
-                                                                  "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                                                  "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+                                              "(combination of key and modifiers) even if more than one of them is set to be "
+                                              "active. This means that a temporary keybinding (not visible in the Editor) "
+                                              "created by a script or package may be used in preference to a permanent one "
+                                              "that is shown and is set to be active. If checked then all matching keybindings "
+                                              "will be run.</p>"
+                                              "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
+                                              "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
     checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                                                "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                                                "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                                                "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                                                "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                                                "<p>This control has three settings:"
-                                                                                "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                                                "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                                                "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                                                "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
-                                                                                "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
-                                                                                "full support for languages other than English.</i></p>"));
+                                                            "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                            "<p>This control has three settings:"
+                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                            "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
+                                                            "full support for languages other than English.</i></p>"));
+    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
+                                               "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
+                                               "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
+                                               "<p>This utility feature is intended to help the user identify any grapheme "
+                                               "(visual equivalent to a <i>character</i>) that a Game server may send even "
+                                               "if it is composed of multiple bytes as any non-ASCII character will be in the "
+                                               "Lua sub-system which uses the UTF-8 encoding system.<p>"));
     checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
                                              "shown icons on menus, others, however do not. This control allows the user to override "
                                              "the setting, if needed, as follows:"
@@ -273,6 +280,7 @@ void dlgProfilePreferences::disableHostDetails()
     // Some of groupBox_displayOptions are usable, so must pick out and
     // disable the others:
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
+    checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
@@ -350,6 +358,7 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_doubleClick->setEnabled(true);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
+    checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
@@ -518,6 +527,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
+    checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
@@ -1002,6 +1012,7 @@ void dlgProfilePreferences::clearHostDetails()
     command_separator_lineedit->clear();
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
+    checkBox_enableTextAnalyzer->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
     topBorderHeight->clear();
@@ -2115,6 +2126,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
+        pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
         pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();
@@ -2227,7 +2239,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             dlgIRC::writeIrcNickName(pHost, newIrcNick);
 
             // if the client is active, update our client nickname.
-            if (pMudlet->mpIrcClientMap[pHost]) {
+            if (pMudlet->mpIrcClientMap.contains(pHost)) {
                 pMudlet->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
             }
         }
@@ -2247,7 +2259,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pMudlet->mpIrcClientMap[pHost]) {
+        if (restartIrcClient && pMudlet->mpIrcClientMap.contains(pHost)) {
             pMudlet->mpIrcClientMap[pHost]->ircRestart();
         }
 

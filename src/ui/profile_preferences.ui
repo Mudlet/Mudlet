@@ -1005,7 +1005,7 @@
              <string>'&quot;</string>
             </property>
             <property name="placeholderText">
-             <string>&lt;characters to ignore in selection, for example ' or &quot;&gt;</string>
+             <string>(characters to ignore in selection, for example ' or &quot;)</string>
             </property>
            </widget>
           </item>
@@ -1078,7 +1078,14 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_enableTextAnalyzer">
+            <property name="text">
+             <string>Enable text analyzer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
            <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_timerDebugOutputMinimumInterval" stretch="0,1">
              <property name="leftMargin">
@@ -1225,6 +1232,9 @@
            <widget class="QComboBox" name="script_preview_combobox">
             <property name="editable">
              <bool>true</bool>
+            </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
             </property>
            </widget>
           </item>

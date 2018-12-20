@@ -12,7 +12,7 @@
   <context>
     <name>Host</name>
     <message>
-      <location filename="../src/Host.cpp" line="876"/>
+      <location filename="../src/Host.cpp" line="881"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -21,7 +21,7 @@ please wait...</source>
 请稍候...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="878"/>
+      <location filename="../src/Host.cpp" line="883"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -30,18 +30,18 @@ please wait...</source>
 请稍候...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="882"/>
+      <location filename="../src/Host.cpp" line="887"/>
       <source>Unpacking</source>
       <translation>正在解压缩</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1413"/>
+      <location filename="../src/Host.cpp" line="1418"/>
       <source>Playing %1</source>
       <translation>正在玩 %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1415"/>
-      <location filename="../src/Host.cpp" line="1421"/>
+      <location filename="../src/Host.cpp" line="1420"/>
+      <location filename="../src/Host.cpp" line="1426"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%2:%3 上的 %1</translation>
@@ -2164,7 +2164,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1198"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 在地图文件中检测到重复的区域名称!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1199"/>
@@ -2180,12 +2180,23 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
+地图中存在多个具有相同名字的区域.
+这会让事情变得混乱, 现在已经不允许这么做了.
+  重复的区域名称将导致除了第一个被处理的区域之外所有的
+区域名称都以 &quot;_###&quot; 式的后缀结尾, 其中 &quot;###&quot; 是一个递增
+数字; 或许你想改变这些后缀, 试试把后缀改成
+一 &quot;(子区域名称)&quot; 至于具体怎么做, 完全取决于你,
+只是之后你就不能把一个区域的名称设置成
+与另一个已存在的区域相同的名称了.
+  如果有多个没有名字的区域, 除了第一个区域之外所有的
+区域名称也都以这样的后缀结尾.
+%1)</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1214"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 在地图文件中检测到空的区域名称!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1217"/>
@@ -2200,13 +2211,23 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
+地图中存在未命名区域.
+这会让事情变得混乱, 现在已经不允许这么做了.
+  为了解决这个问题, 如果一个区域没有名字(或者等以后
+再命名)系统将自动分配名称 &quot;%1&quot;.
+  如果这样的未命名区域有很多个, 那么除了第一个被处理的区域之外所有的
+区域名称都以 &quot;_###&quot; 式的后缀结尾, 其中 &quot;###&quot; 是一个递增
+数字; 或许你想改变这些后缀, 试试把后缀改成
+一 &quot;(子区域名称)&quot; 至于具体怎么做, 完全取决于你,
+只是之后你就不能把一个区域的名称设置成
+与另一个已存在的区域相同的名称了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1241"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 将区域 &quot;%1&quot; 编号设置为保留区域号-1.</translation>
     </message>
   </context>
   <context>
@@ -2244,7 +2265,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1275"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>点此恢复主菜单以获取对控件的访问.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1277"/>
@@ -2254,22 +2275,22 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1280"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>点此恢复主工具栏以获取对控件的访问.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1338"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, 调试控制台提取内容</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1343"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 迷你控制台提取内容, 来自 %2 配置文件</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1349"/>
       <source>Mudlet, %1 console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 控制台提取内容, 来自 %2 配置文件</translation>
     </message>
   </context>
   <context>
@@ -2278,13 +2299,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1009"/>
       <source>Trigger name=%1 expired.
 </source>
-      <translation type="unfinished"/>
+      <translation>触发器名称=%1 过期了.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1012"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>触发器名称=%1 将被触发 %n 次.
+</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -2310,7 +2335,10 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 对不起, 正在读取的文件：
+&quot;%1&quot;
+的版本号(%2) 表明它来自更高的Mudlet版本，
+当前版本的Mudlet无法读取它, 你需要更新Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="352"/>
@@ -2371,47 +2399,47 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;为你的按钮, 菜单或工具栏选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在按钮树上. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
       <source>Button Bar Properties</source>
-      <translation type="unfinished"/>
+      <translation>按钮栏属性</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>列数/行数(按排列方向):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>水平方向</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="155"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>垂直方向</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation>停靠区域顶部</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="175"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>停靠区域左侧</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
       <source>Dock Area Right</source>
-      <translation type="unfinished"/>
+      <translation>停靠区域右侧</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
       <source>Floating Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>浮动工具栏</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
@@ -2421,12 +2449,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>按钮旋转:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
       <source>no rotation</source>
-      <translation type="unfinished"/>
+      <translation>不旋转</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
@@ -2441,7 +2469,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
       <source>Push down button</source>
-      <translation type="unfinished"/>
+      <translation>下拉按钮</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
@@ -2451,22 +2479,22 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;输入在按下按钮后你想直接发送到游戏的一个或多个命令. (可选) &lt;/p&gt;&lt;p&gt;如果这是一个 &lt;i&gt;下推&lt;/i&gt; 按钮, 命令只会在按钮状态从 &lt;i&gt;弹起&lt;/i&gt; 变成 &lt;i&gt;按下&lt;/i&gt; 时发送. &lt;/p&gt;&lt;p&gt;要发送更复杂的命令, 比如可能依赖或需要改变当前配置文件的变量的命令, 你应该输入Lua脚本, &lt;i&gt;而不是&lt;/i&gt; 在下面的编辑区输入命令. 输入编辑区的内容会原封不动地发送到游戏服务器. &lt;/p&gt;&lt;p&gt;你可以同时使用此区域 &lt;i&gt;和&lt;/i&gt; Lua脚本, 此区域中的内容会在Lua脚本运行 &lt;b&gt;之前&lt;/b&gt; 发送. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="283"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;输入在按下按钮后你想直接发送到游戏的一个或多个命令, 这些命令会在按钮状态从 &lt;i&gt;弹起&lt;/i&gt; 变成 &lt;i&gt;按下&lt;/i&gt; 时发送. &lt;/p&gt;&lt;p&gt;要发送更复杂的命令, 比如可能依赖或需要改变当前配置文件的变量的命令, 你应该输入Lua脚本, &lt;i&gt;而不是&lt;/i&gt; 在下面的编辑区输入命令. 输入编辑区的内容会原封不动地发送到游戏服务器. &lt;/p&gt;&lt;p&gt;你可以同时使用此区域 &lt;i&gt;和&lt;/i&gt; Lua脚本, 此区域中的内容会在Lua脚本运行 &lt;b&gt;之前&lt;/b&gt; 发送. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="273"/>
       <source>Command (up):</source>
-      <translation type="unfinished"/>
+      <translation>命令 (向上):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
       <source>Stylesheet:</source>
-      <translation type="unfinished"/>
+      <translation>样式表:</translation>
     </message>
   </context>
   <context>
@@ -2479,22 +2507,22 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation type="unfinished"/>
+      <translation>为你的别名选择一个唯一的名字; 它会用在脚本中并显示在树状列表上.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
       <source>Pattern:</source>
-      <translation type="unfinished"/>
+      <translation>匹配:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>为您的别名输入一个 perl 正则表达式; 别名是针对你输入内容的触发器.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>类型:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="124"/>
@@ -2504,7 +2532,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="129"/>
       <source>Plain</source>
-      <translation type="unfinished"/>
+      <translation>普通文本</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
@@ -2514,7 +2542,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;输入在触发别名时你想直接发送到游戏的一个或多个命令 (可选), 这些命令会在输入的按键匹配到别名时触发. &lt;/p&gt;&lt;p&gt; 要发送更复杂的命令, 比如可能依赖或需要改变当前配置文件的变量的命令, 你应该输入Lua脚本, &lt;i&gt;而不是&lt;/i&gt; 在下面的编辑区输入命令. 在这里输入的任何内容,只会原封不动地发送到游戏服务器. &lt;/p&gt;&lt;p&gt;你可以同时使用此区域 &lt;i&gt;和&lt;/i&gt; Lua脚本, 此区域中的内容会在Lua脚本运行 &lt;b&gt;之前&lt;/b&gt; 发送. &lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -2523,13 +2551,15 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="376"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation type="unfinished"/>
+      <translation>[信息] - IP地址 %1 已经找到. 它是: %2
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="377"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 尝试连接到 %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="381"/>
@@ -2537,79 +2567,86 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation type="unfinished"/>
+      <translation>[错误] - 主机名称查找失败!
+无法建立连接.
+服务器名称不正确, 不能正常工作,
+或者你的域名服务器没有正常工作.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="401"/>
       <source>[ WARN ] - Invalid characters in outgoing data, one or more characters cannot
 be encoded into the range that is acceptable for the character
 encoding that is currently set {&quot;%1&quot;} for the game server.It may not understand what is sent to it.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 即将发送的数据中包含无效字符, 一个或多个字符的编码
+超出了针对当前游戏服务器设置的字符集 {&quot;%1&quot;} 可以接受的范围, 服务器可能无法理解发送给它的这些字符.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="986"/>
       <location filename="../src/ctelnet.cpp" line="1207"/>
       <source>&lt;The server wants to upgrade the GUI to new version &apos;%1&apos;. Uninstalling old version &apos;%2&apos;&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;服务器想把GUI升级到新版本 &apos;%1&apos;. 正在删除旧版本 &apos;%2&apos;&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1356"/>
+      <location filename="../src/ctelnet.cpp" line="1359"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>错误</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1368"/>
+      <location filename="../src/ctelnet.cpp" line="1371"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1379"/>
+      <location filename="../src/ctelnet.cpp" line="1382"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>警告</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1390"/>
+      <location filename="../src/ctelnet.cpp" line="1393"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>警告</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1401"/>
+      <location filename="../src/ctelnet.cpp" line="1404"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>信息</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1412"/>
+      <location filename="../src/ctelnet.cpp" line="1415"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>好</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1601"/>
+      <location filename="../src/ctelnet.cpp" line="1604"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 正在加载重播文件:
+&quot;%1&quot;。</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1619"/>
+      <location filename="../src/ctelnet.cpp" line="1622"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 不能执行重播, 另一个重播可能已经在进行中，
+请等它完成后再次尝试.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1630"/>
+      <location filename="../src/ctelnet.cpp" line="1633"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[错误] - 无法读取文件 &quot;%1&quot;,
+错误信息是： &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1658"/>
+      <location filename="../src/ctelnet.cpp" line="1661"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[好] - 重播已结束.</translation>
     </message>
   </context>
   <context>
@@ -2622,7 +2659,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="42"/>
       <source>choose color to trigger on</source>
-      <translation type="unfinished"/>
+      <translation>选择要触发的颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="50"/>
@@ -2657,7 +2694,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="92"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>白色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="179"/>
@@ -2667,42 +2704,42 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="190"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>浅黑色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="197"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>浅红色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="204"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>浅绿色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="211"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>淡黄色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="218"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>浅蓝色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="225"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>浅洋红色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="232"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>浅青色:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="309"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>浅白色:</translation>
     </message>
   </context>
   <context>
@@ -2710,7 +2747,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation type="unfinished"/>
+      <translation>新闻和信息编写器</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
@@ -2720,7 +2757,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;保存 (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -2778,12 +2815,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2336"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>加载最新配置文件</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>加载最早的配置文件</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2364"/>
@@ -2798,17 +2835,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2394"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>人物名字</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2431"/>
       <source>Connect automatically</source>
-      <translation type="unfinished"/>
+      <translation>自动连接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2441"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>启用Discord整合 (不被游戏支持)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2370"/>
@@ -2818,12 +2855,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2377"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>角色密码. 注意, 密码以明文存储存.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2425"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>激活后, Mudlet在启动时会自动加载此配置文件并连接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2479"/>
@@ -2838,7 +2875,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2550"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>游戏介绍</translation>
     </message>
   </context>
   <context>
@@ -2846,17 +2883,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="27"/>
       <source>Custom Line Properties [*]</source>
-      <translation type="unfinished"/>
+      <translation>自定义路径线属性 [*]</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>Select Style, Color and whether to end the line with an arrow head.</source>
-      <translation type="unfinished"/>
+      <translation>选择样式, 颜色和是否在一条路径线结尾显示箭头.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>路径线设置:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -2866,22 +2903,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="77"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>样式:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="105"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>以箭头结尾:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="138"/>
       <source>Exit Details:</source>
-      <translation type="unfinished"/>
+      <translation>出口细节:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="153"/>
       <source>Origin:</source>
-      <translation type="unfinished"/>
+      <translation>起点:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="194"/>
@@ -2899,37 +2936,37 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="14"/>
       <source>Custom Line selection</source>
-      <translation type="unfinished"/>
+      <translation>自定义路径线选区:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>选择路径线的格式, 颜色和箭头选项然后选择出口开始绘图</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.</source>
-      <translation type="unfinished"/>
+      <translation>选择一个出口会立即从房间中心绘制出第一条线段.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...</source>
-      <translation type="unfinished"/>
+      <translation>选择样式, 颜色以及是否在线条结尾前显示箭头, 然后选择退出以绘制线条...</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>路径线设置:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
       <source>Ends with an arrow:</source>
-      <translation type="unfinished"/>
+      <translation>以箭头结尾:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>样式:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
@@ -2939,77 +2976,77 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
       <source>Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.</source>
-      <translation type="unfinished"/>
+      <translation>选择一个出口开始为它绘制一条路径, 如果这些出口已经有这样的自定义路径了, 按钮会显示为按下状态, 如果该方向没有出口, 按钮会显示为不可用状态.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
       <source>Normal Exits:</source>
-      <translation type="unfinished"/>
+      <translation>普通出口:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
       <source>NW</source>
-      <translation type="unfinished"/>
+      <translation>西北</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="235"/>
       <source>N</source>
-      <translation type="unfinished"/>
+      <translation>北</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="258"/>
       <source>NE</source>
-      <translation type="unfinished"/>
+      <translation>东北</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="297"/>
       <source>UP</source>
-      <translation type="unfinished"/>
+      <translation>上</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="336"/>
       <source>W</source>
-      <translation type="unfinished"/>
+      <translation>西</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="346"/>
       <source>E</source>
-      <translation type="unfinished"/>
+      <translation>东</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="356"/>
       <source>IN</source>
-      <translation type="unfinished"/>
+      <translation>进入</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="382"/>
       <source>OUT</source>
-      <translation type="unfinished"/>
+      <translation>出去</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="392"/>
       <source>SW</source>
-      <translation type="unfinished"/>
+      <translation>西南</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="402"/>
       <source>S</source>
-      <translation type="unfinished"/>
+      <translation>南</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="412"/>
       <source>SE</source>
-      <translation type="unfinished"/>
+      <translation>东南</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="422"/>
       <source>DOWN</source>
-      <translation type="unfinished"/>
+      <translation>下</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.</source>
-      <translation type="unfinished"/>
+      <translation>选择一个特殊的出口开始绘制一条路径, 如果一个出口已经拥有了这样一条自定义路径, 第一列会显示为勾选状态.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -3020,12 +3057,13 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
       <source>Has
 custom line?</source>
-      <translation type="unfinished"/>
+      <translation>已有
+自定义路径?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.</source>
-      <translation type="unfinished"/>
+      <translation>显示了该特殊出口是否已经拥有一条自定义路径, 选择该出口后自定义路径会被替换.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
@@ -3035,7 +3073,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>The room this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>该自定义出口通向的房间.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
@@ -3045,13 +3083,14 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>The command or LUA script that goes to the given room.</source>
-      <translation type="unfinished"/>
+      <translation>通往指定房间的命令或LUA脚本.</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>To remove a custom line, cancel this dialog,
 select the line and right-click to obtain a &quot;delete&quot; option.</source>
-      <translation type="unfinished"/>
+      <translation>若要删除自定义路径线, 请取消此对话框, 
+选择要删除的路径线并右键单击以获取 "删除" 选项。</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="568"/>
@@ -3064,14 +3103,16 @@ select the line and right-click to obtain a &quot;delete&quot; option.</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="14"/>
       <source>Confirm permanent profile deletion</source>
-      <translation type="unfinished"/>
+      <translation>确认永久删除配置文件</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="26"/>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>你确定要删除这个配置文件吗? 一切都会消失(别名，触发器、备份等等)。
+
+如果是，请型中档案名称为一确认：</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
@@ -3556,143 +3597,153 @@ Count</source>
       <translation>日志文件</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="156"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="159"/>
+      <source>&lt;p&gt;A timer will a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="165"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specifed font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="162"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="171"/>
       <source>&lt;p&gt;Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="177"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="186"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambigous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;GBK&lt;/b&gt; or &lt;b&gt;GBK18030&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will likely to change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="536"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="198"/>
+      <source>&lt;p&gt;Some Desktop Environments tell Qt applications like Mudlet whether they should shown icons on menus, others, however do not. This control allows the user to override the setting, if needed, as follows:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Prevent menus from being drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Allow menus to be drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use the setting that the system provides.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This setting is only processed when individual menus are created and changes may not propogate everywhere until Mudlet is restarted.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="557"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="538"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="559"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="539"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="560"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="542"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="563"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="543"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="564"/>
       <source>Named file (concatenate logs in one file)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="575"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="596"/>
       <source>Other profiles to Map to:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="613"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="634"/>
       <source>%1 {Default, recommended}</source>
       <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="624"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="645"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="626"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="647"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="635"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="656"/>
       <source>2D Map Room Symbol scaling factor:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="691"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="713"/>
       <source>Profile preferences - %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="938"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="960"/>
       <source>Profile preferences</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1594"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1616"/>
       <source>Load Mudlet map</source>
       <translation>载入 Mudlet 地图</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1609"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1631"/>
       <source>Importing map - please wait...</source>
       <translation>导入地图 - 请稍等...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1613"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1635"/>
       <source>Imported map from %1.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1615"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1637"/>
       <source>Could not import map from %1.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1618"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1640"/>
       <source>Loading map - please wait...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1623"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1645"/>
       <source>Loaded map from %1.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1625"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1647"/>
       <source>Could not load map from %1.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1642"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1664"/>
       <source>Save Mudlet map</source>
       <translation>保存 Mudlet 地图</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1642"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1664"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1652"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1674"/>
       <source>Saving map - please wait...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1666"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1688"/>
       <source>Saved map to %1.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1668"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1690"/>
       <source>Could not save map to %1.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1706"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1728"/>
       <source>[ ERROR ] - Unable to use or create directory to store map for other profile &quot;%1&quot;.
 Please check that you have permissions/access to:
 &quot;%2&quot;
@@ -3700,102 +3751,102 @@ and there is enough space. The copying operation has failed.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1713"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1735"/>
       <source>Creating a destination directory failed...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1800"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1822"/>
       <source>Backing up current map - please wait...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1810"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1832"/>
       <source>Could not backup the map - saving it failed.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1835"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1857"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1847"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1869"/>
       <source>Copying over map to %1 - please wait...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1853"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1875"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1857"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1879"/>
       <source>Map copied successfully to other profile %1.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1869"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1891"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1905"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1927"/>
       <source>Where should Mudlet save log files?</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2247"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2259"/>
       <source>%1 selected - press to change</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2250"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2262"/>
       <source>Press to pick destination(s)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2486"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2498"/>
       <source>Could not update themes: %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2489"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2501"/>
       <source>Updating themes from colorsublime.github.io...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2606"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2618"/>
       <source>{missing, possibly recently deleted trigger item}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2609"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2621"/>
       <source>{missing, possibly recently deleted alias item}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2612"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2624"/>
       <source>{missing, possibly recently deleted script item}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2615"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2627"/>
       <source>{missing, possibly recently deleted timer item}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2618"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2630"/>
       <source>{missing, possibly recently deleted key item}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2621"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2633"/>
       <source>{missing, possibly recently deleted button item}</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="164"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="173"/>
       <source>&lt;p&gt;Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
@@ -3825,145 +3876,145 @@ and there is enough space. The copying operation has failed.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="169"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="178"/>
       <source>&lt;p&gt;If &lt;b&gt;not&lt;/b&gt; checked Mudlet will only react to the first matching keybinding (combination of key and modifiers) even if more than one of them is set to be active. This means that a temporary keybinding (not visible in the Editor) created by a script or package may be used in preference to a permanent one that is shown and is set to be active. If checked then all matching keybindings will be run.&lt;/p&gt;&lt;p&gt;&lt;i&gt;It is recommended to not enable this option if you need to maintain compatibility with scripts or packages for Mudlet versions prior to &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1596"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1618"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet 地图 (*.dat);;Xml 地图数据 (*.xml);;所有文件 (*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2749"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2761"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2755"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2767"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2784"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2796"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2797"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2809"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2809"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2821"/>
       <source>more - not shown...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2816"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2828"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2825"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2837"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2835"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2847"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2845"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2857"/>
       <source>&lt;p&gt;The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2934"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2946"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2935"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2947"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2937"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2949"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2938"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2950"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2940"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2952"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2941"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2953"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2942"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2954"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2977"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2989"/>
       <source>Map symbol usage - %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3054"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3066"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3055"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3067"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3056"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3068"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3057"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3069"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3060"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3072"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3061"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3073"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3062"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3074"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3063"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3075"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
       <translation type="unfinished"/>
     </message>
@@ -4666,7 +4717,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1963"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1968"/>
       <source>Pattern</source>
-      <translation type="unfinished"/>
+      <translation>匹配</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1371"/>
@@ -4945,12 +4996,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>无法保存用户配置文件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
@@ -5674,25 +5725,25 @@ less likely to be useful for normal use of this application:
     <name>mudlet</name>
     <message>
       <location filename="../src/mudlet.cpp" line="134"/>
-      <source>English</source>
+      <source>English [American]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="135"/>
-      <source>English (British)</source>
+      <source>English [British]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="136"/>
-      <source>Chinese</source>
+      <source>Chinese [Simplified]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>
-      <source>Chinese (Traditional)</source>
+      <source>Chinese [Traditional]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
       <translation type="unfinished"/>
     </message>
@@ -5745,401 +5796,408 @@ less likely to be useful for normal use of this application:
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="172"/>
+      <location filename="../src/mudlet.cpp" line="146"/>
+      <source>Portuguese</source>
+      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="173"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="209"/>
+      <location filename="../src/mudlet.cpp" line="210"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="237"/>
+      <location filename="../src/mudlet.cpp" line="238"/>
       <source>Main Toolbar</source>
       <translation>主工具栏</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="274"/>
-      <location filename="../src/mudlet.cpp" line="457"/>
+      <location filename="../src/mudlet.cpp" line="275"/>
+      <location filename="../src/mudlet.cpp" line="458"/>
       <source>Connect</source>
       <translation>连接</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="275"/>
+      <location filename="../src/mudlet.cpp" line="276"/>
       <source>Connect to a game</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="283"/>
-      <location filename="../src/mudlet.cpp" line="458"/>
+      <location filename="../src/mudlet.cpp" line="284"/>
+      <location filename="../src/mudlet.cpp" line="459"/>
       <source>Triggers</source>
       <translation>触发器</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="284"/>
+      <location filename="../src/mudlet.cpp" line="285"/>
       <source>Show and edit triggers</source>
       <translation>显示并编辑触发器</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="289"/>
-      <location filename="../src/mudlet.cpp" line="459"/>
+      <location filename="../src/mudlet.cpp" line="290"/>
+      <location filename="../src/mudlet.cpp" line="460"/>
       <source>Aliases</source>
       <translation>别名</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="290"/>
+      <location filename="../src/mudlet.cpp" line="291"/>
       <source>Show and edit aliases</source>
       <translation>显示并编辑别名</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="295"/>
-      <location filename="../src/mudlet.cpp" line="460"/>
+      <location filename="../src/mudlet.cpp" line="296"/>
+      <location filename="../src/mudlet.cpp" line="461"/>
       <source>Timers</source>
       <translation>定时器</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="296"/>
+      <location filename="../src/mudlet.cpp" line="297"/>
       <source>Show and edit timers</source>
       <translation>显示并编辑定时器</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="301"/>
+      <location filename="../src/mudlet.cpp" line="302"/>
       <source>Buttons</source>
       <translation>按钮</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="302"/>
+      <location filename="../src/mudlet.cpp" line="303"/>
       <source>Show and edit easy buttons</source>
       <translation>显示和编辑快捷按钮</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="307"/>
-      <location filename="../src/mudlet.cpp" line="462"/>
+      <location filename="../src/mudlet.cpp" line="308"/>
+      <location filename="../src/mudlet.cpp" line="463"/>
       <source>Scripts</source>
       <translation>脚本</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="308"/>
+      <location filename="../src/mudlet.cpp" line="309"/>
       <source>Show and edit scripts</source>
       <translation>显示并编辑脚本</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="313"/>
-      <location filename="../src/mudlet.cpp" line="463"/>
+      <location filename="../src/mudlet.cpp" line="314"/>
+      <location filename="../src/mudlet.cpp" line="464"/>
       <source>Keys</source>
       <translation>按键</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="314"/>
+      <location filename="../src/mudlet.cpp" line="315"/>
       <source>Show and edit keys</source>
       <translation>显示并编辑按键</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="319"/>
+      <location filename="../src/mudlet.cpp" line="320"/>
       <source>Variables</source>
       <translation>变量</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="320"/>
+      <location filename="../src/mudlet.cpp" line="321"/>
       <source>Show and edit Lua variables</source>
       <translation>显示并编辑 Lua 变量</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="325"/>
+      <location filename="../src/mudlet.cpp" line="326"/>
       <source>IRC</source>
       <translation>IRC</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="326"/>
+      <location filename="../src/mudlet.cpp" line="327"/>
       <source>Open the Mudlet IRC client</source>
       <translation>打开 Mudlet IRC 客户端</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="331"/>
-      <location filename="../src/mudlet.cpp" line="464"/>
+      <location filename="../src/mudlet.cpp" line="332"/>
+      <location filename="../src/mudlet.cpp" line="465"/>
       <source>Map</source>
       <translation>地图</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="332"/>
+      <location filename="../src/mudlet.cpp" line="333"/>
       <source>Show/hide the map</source>
       <translation>显示/隐藏地图</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="337"/>
+      <location filename="../src/mudlet.cpp" line="338"/>
       <source>Manual</source>
       <translation>手册</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="338"/>
+      <location filename="../src/mudlet.cpp" line="339"/>
       <source>Browse reference material and documentation</source>
       <translation>浏览参考资料和文档</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="343"/>
+      <location filename="../src/mudlet.cpp" line="344"/>
       <source>Settings</source>
       <translation>设置</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="344"/>
+      <location filename="../src/mudlet.cpp" line="345"/>
       <source>See and edit profile preferences</source>
       <translation>查看并编辑配置文件首选项</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="352"/>
+      <location filename="../src/mudlet.cpp" line="353"/>
       <source>Notepad</source>
       <translation>记事本</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="353"/>
+      <location filename="../src/mudlet.cpp" line="354"/>
       <source>Open a notepad that you can store your notes in</source>
       <translation>打开记事本保存笔记</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="358"/>
-      <location filename="../src/mudlet.cpp" line="932"/>
+      <location filename="../src/mudlet.cpp" line="359"/>
+      <location filename="../src/mudlet.cpp" line="933"/>
       <source>Package Manager</source>
       <translation>包管理器</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="359"/>
+      <location filename="../src/mudlet.cpp" line="360"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
       <translation>包管理器 - 允许你从xml、mpackage文件安装软件包</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="364"/>
+      <location filename="../src/mudlet.cpp" line="365"/>
       <source>Module Manager</source>
       <translation>模块管理器</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="365"/>
+      <location filename="../src/mudlet.cpp" line="366"/>
       <source>Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="370"/>
+      <location filename="../src/mudlet.cpp" line="371"/>
       <source>Replay</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="375"/>
+      <location filename="../src/mudlet.cpp" line="376"/>
       <source>Reconnect</source>
       <translation>重新连接</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="376"/>
+      <location filename="../src/mudlet.cpp" line="377"/>
       <source>Disconnects you from the game and connects once again</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="381"/>
-      <location filename="../src/mudlet.cpp" line="467"/>
+      <location filename="../src/mudlet.cpp" line="382"/>
+      <location filename="../src/mudlet.cpp" line="468"/>
       <source>MultiView</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="382"/>
+      <location filename="../src/mudlet.cpp" line="383"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="387"/>
-      <location filename="../src/mudlet.cpp" line="468"/>
+      <location filename="../src/mudlet.cpp" line="388"/>
+      <location filename="../src/mudlet.cpp" line="469"/>
       <source>About</source>
       <translation>关于</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="388"/>
+      <location filename="../src/mudlet.cpp" line="389"/>
       <source>About Mudlet</source>
       <translation>关于 Mudlet</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="405"/>
+      <location filename="../src/mudlet.cpp" line="406"/>
       <source>Central Debug Console</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="418"/>
       <location filename="../src/mudlet.cpp" line="419"/>
+      <location filename="../src/mudlet.cpp" line="420"/>
       <source>Toggle Full Screen View</source>
       <translation>切换全屏显示</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="461"/>
+      <location filename="../src/mudlet.cpp" line="462"/>
       <source>Actions</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="465"/>
+      <location filename="../src/mudlet.cpp" line="466"/>
       <source>Help</source>
       <translation>帮助</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="466"/>
+      <location filename="../src/mudlet.cpp" line="467"/>
       <source>Preferences</source>
       <translation>首选项</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="469"/>
+      <location filename="../src/mudlet.cpp" line="470"/>
       <source>Close</source>
       <translation>关闭</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="656"/>
+      <location filename="../src/mudlet.cpp" line="657"/>
       <source>Module Name</source>
       <translation>模块名称</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="656"/>
+      <location filename="../src/mudlet.cpp" line="657"/>
       <source>Priority</source>
       <translation>优先级</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="656"/>
+      <location filename="../src/mudlet.cpp" line="657"/>
       <source>Sync</source>
       <translation>同步</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="656"/>
+      <location filename="../src/mudlet.cpp" line="657"/>
       <source>Module Location</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="698"/>
+      <location filename="../src/mudlet.cpp" line="699"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="758"/>
+      <location filename="../src/mudlet.cpp" line="759"/>
       <source>Module Manager - %1</source>
       <translation>模块管理器 - %1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="867"/>
+      <location filename="../src/mudlet.cpp" line="868"/>
       <source>Load Mudlet Module</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="874"/>
+      <location filename="../src/mudlet.cpp" line="875"/>
       <source>Load Mudlet Module:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="874"/>
-      <location filename="../src/mudlet.cpp" line="949"/>
+      <location filename="../src/mudlet.cpp" line="875"/>
+      <location filename="../src/mudlet.cpp" line="950"/>
       <source>Cannot read file %1:
 %2.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="942"/>
+      <location filename="../src/mudlet.cpp" line="943"/>
       <source>Import Mudlet Package</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="949"/>
+      <location filename="../src/mudlet.cpp" line="950"/>
       <source>Import Mudlet Package:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1326"/>
+      <location filename="../src/mudlet.cpp" line="1344"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1360"/>
-      <location filename="../src/mudlet.cpp" line="3346"/>
+      <location filename="../src/mudlet.cpp" line="1378"/>
+      <location filename="../src/mudlet.cpp" line="3364"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2820"/>
+      <location filename="../src/mudlet.cpp" line="2838"/>
       <source>Map - %1</source>
       <translation>地图 - %1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2828"/>
+      <location filename="../src/mudlet.cpp" line="2846"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>加载地图前 (3) 的报告</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2838"/>
+      <location filename="../src/mudlet.cpp" line="2856"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>加载地图中 (3) 的报告，时间：%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2910"/>
+      <location filename="../src/mudlet.cpp" line="2928"/>
       <source>%1 - notes</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2960"/>
+      <location filename="../src/mudlet.cpp" line="2978"/>
       <source>Select Replay</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2962"/>
+      <location filename="../src/mudlet.cpp" line="2980"/>
       <source>*.dat</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3186"/>
-      <location filename="../src/mudlet.cpp" line="3205"/>
+      <location filename="../src/mudlet.cpp" line="3204"/>
+      <location filename="../src/mudlet.cpp" line="3223"/>
       <source>Compact input line</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3190"/>
       <location filename="../src/mudlet.cpp" line="3208"/>
+      <location filename="../src/mudlet.cpp" line="3226"/>
       <source>Standard input line</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3248"/>
+      <location filename="../src/mudlet.cpp" line="3266"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3265"/>
+      <location filename="../src/mudlet.cpp" line="3283"/>
       <source>Faster</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3268"/>
+      <location filename="../src/mudlet.cpp" line="3286"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3272"/>
+      <location filename="../src/mudlet.cpp" line="3290"/>
       <source>Slower</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3275"/>
+      <location filename="../src/mudlet.cpp" line="3293"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3285"/>
-      <location filename="../src/mudlet.cpp" line="3354"/>
-      <location filename="../src/mudlet.cpp" line="3367"/>
+      <location filename="../src/mudlet.cpp" line="3303"/>
+      <location filename="../src/mudlet.cpp" line="3372"/>
+      <location filename="../src/mudlet.cpp" line="3385"/>
       <source>Speed: X%1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3292"/>
-      <location filename="../src/mudlet.cpp" line="3309"/>
+      <location filename="../src/mudlet.cpp" line="3310"/>
+      <location filename="../src/mudlet.cpp" line="3327"/>
       <source>Time: %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3885"/>
+      <location filename="../src/mudlet.cpp" line="3903"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 不能执行重播, 另一个重播可能已经在进行中，
+请等它完成后再次尝试.</translation>
     </message>
   </context>
   <context>
@@ -6255,7 +6313,7 @@ try again when it has finished.</source>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="140"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2379"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2444"/>
       <source>Please reconnect to your game for the change to take effect</source>
       <translation type="unfinished"/>
     </message>
@@ -6506,57 +6564,57 @@ try again when it has finished.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1101"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1166"/>
       <source>Editor</source>
       <translation>编辑器</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1107"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1172"/>
       <source>Theme</source>
       <translation>主题</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1174"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1239"/>
       <source>Updating themes from colorsublime.github.io...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1198"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1263"/>
       <source>Color view</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1204"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1269"/>
       <source>Select your color preferences</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1210"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1275"/>
       <source>Foreground:</source>
       <translation>前景：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1233"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1298"/>
       <source>Background:</source>
       <translation>背景：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1253"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1318"/>
       <source>Command line foreground:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1270"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1335"/>
       <source>Command line background:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1287"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1352"/>
       <source>Command foreground:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1307"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1372"/>
       <source>Command background:</source>
       <translation type="unfinished"/>
     </message>
@@ -6670,600 +6728,612 @@ try again when it has finished.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1217"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1105"/>
+      <source>Show &apos;LUA OK&apos; messages for Timers with minimum interval of (h:mm:ss.zzz):</source>
+      <comment>The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="1139"/>
+      <source>h:mm:ss.zzz</source>
+      <comment>Used to set a time interval only</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="1282"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1240"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1305"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1260"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1325"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1277"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1342"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1294"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1359"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1314"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1379"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1333"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1398"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1343"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2028"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1408"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2093"/>
       <source>Black:</source>
       <translation>黑色：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1350"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1415"/>
       <source>ANSI Color Number 0</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1363"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2045"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1428"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2110"/>
       <source>Light black:</source>
-      <translation type="unfinished"/>
+      <translation>浅黑色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1370"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1435"/>
       <source>ANSI Color Number 8</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1383"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2062"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1448"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2127"/>
       <source>Red:</source>
       <translation>红色：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1390"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1455"/>
       <source>ANSI Color Number 1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1403"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2079"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1468"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2144"/>
       <source>Light red:</source>
-      <translation type="unfinished"/>
+      <translation>浅红色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1410"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1475"/>
       <source>ANSI Color Number 9</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1423"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2096"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1488"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2161"/>
       <source>Green:</source>
       <translation>绿色：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1430"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1495"/>
       <source>ANSI Color Number 2</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1443"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2113"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1508"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Light green:</source>
-      <translation type="unfinished"/>
+      <translation>浅绿色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1450"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1515"/>
       <source>ANSI Color Number 10</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1463"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2130"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1528"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2195"/>
       <source>Yellow:</source>
       <translation>黄色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1470"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1535"/>
       <source>ANSI Color Number 3</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1483"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2147"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1548"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2212"/>
       <source>Light yellow:</source>
-      <translation type="unfinished"/>
+      <translation>淡黄色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1490"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1555"/>
       <source>ANSI Color Number 11</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1503"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2164"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1568"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2229"/>
       <source>Blue:</source>
       <translation>蓝色：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1510"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1575"/>
       <source>ANSI Color Number 4</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1523"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2181"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1588"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2246"/>
       <source>Light blue:</source>
-      <translation type="unfinished"/>
+      <translation>浅蓝色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1530"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1595"/>
       <source>ANSI Color Number 12</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1543"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2198"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1608"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2263"/>
       <source>Magenta:</source>
       <translation>品红：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1550"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1615"/>
       <source>ANSI Color Number 5</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1563"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2215"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1628"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2280"/>
       <source>Light magenta:</source>
-      <translation type="unfinished"/>
+      <translation>浅洋红色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1570"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1635"/>
       <source>ANSI Color Number 13</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1583"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2232"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1648"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2297"/>
       <source>Cyan:</source>
       <translation>青色：</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1590"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1655"/>
       <source>ANSI Color Number 6</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1603"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2249"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1668"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2314"/>
       <source>Light cyan:</source>
-      <translation type="unfinished"/>
+      <translation>浅青色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1610"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1675"/>
       <source>ANSI Color Number 14</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1623"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2266"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1688"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2331"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>白色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1630"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1695"/>
       <source>ANSI Color Number 7</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1643"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2283"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1708"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2348"/>
       <source>Light white:</source>
-      <translation type="unfinished"/>
+      <translation>浅白色:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1650"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1715"/>
       <source>ANSI Color Number 15</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1663"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2300"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1728"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2365"/>
       <source>Reset all colors to default</source>
       <translation>重置所有颜色为默认值</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1687"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1752"/>
       <source>Mapper</source>
       <translation>地图器</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1693"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1758"/>
       <source>Map files</source>
       <translation>地图文件</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1699"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1764"/>
       <source>Save your current map:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1709"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1774"/>
       <source>Press to choose location and save</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1716"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1781"/>
       <source>Load another map file in:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1726"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1791"/>
       <source>Press to choose file and load</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1733"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1798"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the &apos;&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;&apos; file in the specific profile&apos;s directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1763"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1828"/>
       <source>&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1776"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1841"/>
       <source>&lt;p&gt;Use this button to make the copy of the current map in &lt;b&gt;this profile&lt;/b&gt; to each of the &lt;i&gt;profiles&lt;/i&gt; selected via the control to the left. Those profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently located is noted. All of the room numbers for those locations are then included in the saved data of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then they should replace the player in the location noted automatically - if it still exists; (this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!)&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1817"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1882"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1844"/>
-      <location filename="../src/ui/profile_preferences.ui" line="1857"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1909"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1922"/>
       <source>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1847"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1912"/>
       <source>Download latest map provided by your game:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1922"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1987"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1935"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2000"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2330"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2395"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1736"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1801"/>
       <source>Report map issues on screen</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1750"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1815"/>
       <source>Copy map to other profile(s):</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1766"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1831"/>
       <source>Press to pick destination(s)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1779"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1844"/>
       <source>Copy to destination(s)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1791"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1856"/>
       <source>An action above happened</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1798"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1863"/>
       <source>Map format version:</source>
       <translation>地图格式版本:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1823"/>
-      <location filename="../src/ui/profile_preferences.ui" line="1827"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1888"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1892"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {default version}</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1838"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1903"/>
       <source>Map download</source>
       <translation>地图下载</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1860"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1925"/>
       <source>Download</source>
       <translation>下载</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1873"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1938"/>
       <source>Map backups</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1879"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1944"/>
       <source>Delete map backups older than:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1896"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1961"/>
       <source>days since today, keeping newer and monthly backups</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1909"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1974"/>
       <source>Map view</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1915"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1980"/>
       <source>2D Map Room Symbol Font</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1925"/>
+      <location filename="../src/ui/profile_preferences.ui" line="1990"/>
       <source>Use high quality graphics in 2D view</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1938"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2003"/>
       <source>Show the default area in map area selection</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1948"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2013"/>
       <source>Only use symbols (glyphs) from chosen font</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1955"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2020"/>
       <source>Show symbol usage...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1979"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2044"/>
       <source>Mapper colors</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1985"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2050"/>
       <source>Select your color preferences for the map display</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="1991"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2056"/>
       <source>Link color</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2011"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2076"/>
       <source>Background color:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2324"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2389"/>
       <source>Special Options</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2336"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2401"/>
       <source>Force compression off</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2343"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2408"/>
       <source>Force telnet GA signal interpretation off</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2350"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2415"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2354"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2419"/>
       <source>Force new line on empty commands</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2361"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2426"/>
       <source>Force MXP negotiation off</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2395"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2460"/>
       <source>Discord privacy</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2402"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2467"/>
       <source>Don&apos;t hide small icon or tooltip</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2407"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2472"/>
       <source>Hide small icon tooltip</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2412"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2477"/>
       <source>Hide small icon and tooltip</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2420"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2485"/>
       <source>Hide timer</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2430"/>
       <location filename="../src/ui/profile_preferences.ui" line="2495"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2511"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2527"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2560"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2576"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2592"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2448"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2513"/>
       <source>Restrict to:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2459"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2524"/>
       <source>Don&apos;t hide large icon or tooltip</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2464"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2529"/>
       <source>Hide large icon tooltip</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2469"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2534"/>
       <source>Hide large icon and tooltip</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2477"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2542"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2480"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2545"/>
       <source>Enable Lua API</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2501"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2566"/>
       <source>specific Discord username</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2514"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2579"/>
       <source> # </source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2533"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2598"/>
       <source>9999;#</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2548"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2613"/>
       <source>Hide state</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2555"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2620"/>
       <source>Hide party details</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2562"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2627"/>
       <source>Hide detail</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2572"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2637"/>
       <source>IRC client options</source>
       <translation>IRC 客户端选项</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2581"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2646"/>
       <source>irc.example.net</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2588"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2653"/>
       <source>Port:</source>
       <translation>端口:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2595"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2660"/>
       <source>#channel1 #channel2 #etc...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2602"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2667"/>
       <source>MudletUser123</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2609"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2674"/>
       <source>Server address:</source>
       <translation>服务器地址:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2616"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2681"/>
       <source>Auto-join channels: </source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2623"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2688"/>
       <source>Nickname:</source>
       <translation>昵称:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2633"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2698"/>
       <source>6667</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2659"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2724"/>
       <source>Search Engine</source>
       <translation>搜索引擎</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2643"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2708"/>
       <source>Mudlet updates</source>
       <translation>Mudlet 更新</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2649"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2714"/>
       <source>Disable automatic updates</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2671"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2736"/>
       <source>Other Special options</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2677"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2742"/>
       <source>Show icons on menus</source>
       <translation type="unfinished"/>
     </message>
