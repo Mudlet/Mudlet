@@ -866,6 +866,29 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->customEnvColors.contains(env)) {
+                                if (16 < env && env < 232)
+                                {
+                                    quint8 base = env - 16;
+                                    quint8 r = base / 36;
+                                    quint8 g = (base - (r * 36)) / 6;
+                                    quint8 b = (base - (r * 36)) - (g * 6);
+
+                                    r = r * 51;
+                                    g = g * 51;
+                                    b = b * 51;
+                                    glColor4ub(r, g, b, 200);
+                                    mc3[0] = r / 255.0;
+                                    mc3[1] = g / 255.0;
+                                    mc3[2] = b / 255.0;
+                                    mc3[3] = 0.2;
+                                } else if (231 < env && env < 256) {
+                                    quint8 k = ((env - 232) * 10) + 8;
+                                    glColor4ub(k, k, k, 200);
+                                    mc3[0] = k / 255.0;
+                                    mc3[1] = k / 255.0;
+                                    mc3[2] = k / 255.0;
+                                    mc3[3] = 0.2;
+                                }
                                 break;
                             }
                             QColor& _c = mpMap->customEnvColors[env];
@@ -1253,6 +1276,29 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->customEnvColors.contains(env)) {
+                                if (16 < env && env < 232)
+                                {
+                                    quint8 base = env - 16;
+                                    quint8 r = base / 36;
+                                    quint8 g = (base - (r * 36)) / 6;
+                                    quint8 b = (base - (r * 36)) - (g * 6);
+
+                                    r = r * 51;
+                                    g = g * 51;
+                                    b = b * 51;
+                                    glColor4ub(r, g, b, 200);
+                                    mc3[0] = r / 255.0;
+                                    mc3[1] = g / 255.0;
+                                    mc3[2] = b / 255.0;
+                                    mc3[3] = 0.2;
+                                } else if (231 < env && env < 256) {
+                                    quint8 k = ((env - 232) * 10) + 8;
+                                    glColor4ub(k, k, k, 200);
+                                    mc3[0] = k / 255.0;
+                                    mc3[1] = k / 255.0;
+                                    mc3[2] = k / 255.0;
+                                    mc3[3] = 0.2;
+                                }
                                 break;
                             }
                             QColor& _c = mpMap->customEnvColors[env];
@@ -1624,6 +1670,29 @@ void GLWidget::paintGL()
                     break;
                 default: //user defined room color
                     if (!mpMap->customEnvColors.contains(env)) {
+                        if (16 < env && env < 232)
+                        {
+                            quint8 base = env - 16;
+                            quint8 r = base / 36;
+                            quint8 g = (base - (r * 36)) / 6;
+                            quint8 b = (base - (r * 36)) - (g * 6);
+
+                            r = r * 51;
+                            g = g * 51;
+                            b = b * 51;
+                            glColor4ub(r, g, b, 200);
+                            mc3[0] = r / 255.0;
+                            mc3[1] = g / 255.0;
+                            mc3[2] = b / 255.0;
+                            mc3[3] = 0.2;
+                        } else if (231 < env && env < 256) {
+                            quint8 k = ((env - 232) * 10) + 8;
+                            glColor4ub(k, k, k, 200);
+                            mc3[0] = k / 255.0;
+                            mc3[1] = k / 255.0;
+                            mc3[2] = k / 255.0;
+                            mc3[3] = 0.2;
+                        }
                         break;
                     }
                     QColor& _c = mpMap->customEnvColors[env];
@@ -1904,6 +1973,29 @@ void GLWidget::paintGL()
                 break;
             default: //user defined room color
                 if (!mpMap->customEnvColors.contains(env)) {
+                    if (16 < env && env < 232)
+                    {
+                        quint8 base = env - 16;
+                        quint8 r = base / 36;
+                        quint8 g = (base - (r * 36)) / 6;
+                        quint8 b = (base - (r * 36)) - (g * 6);
+
+                        r = r * 51;
+                        g = g * 51;
+                        b = b * 51;
+                        glColor4ub(r, g, b, 200);
+                        mc3[0] = r / 255.0;
+                        mc3[1] = g / 255.0;
+                        mc3[2] = b / 255.0;
+                        mc3[3] = 0.2;
+                    } else if (231 < env && env < 256) {
+                        quint8 k = ((env - 232) * 10) + 8;
+                        glColor4ub(k, k, k, 200);
+                        mc3[0] = k / 255.0;
+                        mc3[1] = k / 255.0;
+                        mc3[2] = k / 255.0;
+                        mc3[3] = 0.2;
+                    }
                     break;
                 }
                 QColor& _c = mpMap->customEnvColors[env];
