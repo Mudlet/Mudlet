@@ -215,6 +215,21 @@ QColor T2DMap::getColor(int id)
         break;
     default: //user defined room color
         if (!mpMap->customEnvColors.contains(env)) {
+            if (16 < env && env < 232)
+            {
+                quint8 base = env - 16;
+                quint8 r = base / 36;
+                quint8 g = (base - (r * 36)) / 6;
+                quint8 b = (base - (r * 36)) - (g * 6);
+
+		r = r * 51;
+		g = g * 51;
+		b = b * 51;
+                color = QColor(r, g, b, 255);
+            } else if (231 < env && env < 256) {
+                quint8 k = ((env - 232) * 10) + 8;
+                color = QColor(k, k, k, 255);
+            }
             break;
         }
         color = mpMap->customEnvColors[env];
@@ -1439,7 +1454,23 @@ void T2DMap::paintEvent(QPaintEvent* e)
         default: //user defined room color
             if (mpMap->customEnvColors.contains(roomEnvironment)) {
                 roomColor = mpMap->customEnvColors[roomEnvironment];
-            }
+            } else {
+                if (16 < roomEnvironment && roomEnvironment < 232)
+                {
+                    quint8 base = roomEnvironment - 16;
+                    quint8 r = base / 36;
+                    quint8 g = (base - (r * 36)) / 6;
+                    quint8 b = (base - (r * 36)) - (g * 6);
+
+		    r = r * 51;
+		    g = g * 51;
+		    b = b * 51;
+                    roomColor = QColor(r, g, b, 255);
+                } else if (231 < roomEnvironment && roomEnvironment < 256) {
+                    quint8 k = ((roomEnvironment - 232) * 10) + 8;
+                    roomColor = QColor(k, k, k, 255);
+                }
+	    }
         }
 
         if (((mPick || __Pick) && mPHighlight.x() >= roomRectangle.x() - (mRoomWidth * rSize) && mPHighlight.x() <= roomRectangle.x() + (mRoomWidth * rSize)
