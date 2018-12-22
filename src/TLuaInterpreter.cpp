@@ -11638,7 +11638,7 @@ int TLuaInterpreter::expandAlias(lua_State* L)
         // because expandAlias("command") should be the same as expandAlias("command", nil)
         if (lua_isnil(L, 2)) {
             wantPrint = false;
-        } else if (!lua_toboolean(L, 2)) {
+        } else if (!lua_isboolean(L, 2)) {
             lua_pushfstring(L, "expandAlias: bad argument #2 type (echo as boolean is optional, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
