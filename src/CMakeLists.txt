@@ -238,8 +238,6 @@ set(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
 set(YAJL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "YAJL install directory.")
 
-set(HUNSPELL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "HUNSPELL install directory.")
-
 set(ZIP_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "ZIP install directory.")
 
 if(EXISTS "${PROJECT_SOURCE_DIR}/../include/lua.h")
@@ -317,23 +315,6 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-if((APPLE) AND (PKG_CONFIG_FOUND))
-  PKG_SEARCH_MODULE(PC_HUNSPELL hunspell libhunspell)
-  if(PC_HUNSPELL_FOUND)
-    if(PC_HUNSPELL_hunspell_FOUND)
-      message(STATUS "Using pkg_config, found \"hunspell\" version: ${PC_HUNSPELL_hunspell_VERSION} with:")
-    elseif(PC_HUNSPELL_libhunspell_FOUND)
-      message(STATUS "Using pkg_config, found \"libhunspell\" version: ${PC_HUNSPELL_libhunspell_VERSION} with:")
-    else()
-      message(STATUS "Using pkg_config, found Hunspell version: ${PC_HUNSPELL_VERSION} with:")
-    endif()
-    message(STATUS "  include directory(ies), HUNSPELL_INCLUDE_DIRS: ${PC_HUNSPELL_INCLUDE_DIRS} .")
-    message(STATUS "  library(ies): HUNSPELL_LIBRARY_DIRS: ${PC_HUNSPELL_LIBRARY_DIRS}; HUNSPELL_LIBRARY_DIR: ${PC_HUNSPELL_LIBRARY_DIR}. ")
-  elseif()
-    message(WARNING "Using pkg_config, failed to find any version of Hunspell library!")
-  endif()
-endif()
-
 find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 
 # This is not present before Qt 5.7:
@@ -391,17 +372,7 @@ find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
-
-# Fall back on original FIND_PACKAGE process on Apple if Package Config failed
-# Originally we did use that but it started to fail on Travis C.I. in June 2016
-# So we now try to use PackageConfig for MacOs platform
-if(APPLE)
-  if(NOT(PC_HUNSPELL_FOUND))
-    find_package(HUNSPELL REQUIRED)
-  endif()
-else()
-  find_package(HUNSPELL REQUIRED)
-endif()
+find_package(HUNSPELL REQUIRED)
 
 find_package(Boost 1.44 COMPONENTS graph)
 
@@ -504,6 +475,7 @@ target_link_libraries(mudlet
     ${PUGIXML_LIBRARIES}
     communi
     edbee-lib
+    HUNSPELL::SHARED
 )
 
 if(Qt5TextToSpeech_FOUND)
@@ -539,12 +511,6 @@ if(APPLE)
       "-framework AppKit"
       "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
   endif(USE_UPDATER)
-endif()
-
-if(PC_HUNSPELL_FOUND)
-  target_link_libraries(mudlet ${PC_HUNSPELL_LIBRARIES})
-else()
-  target_link_libraries(mudlet ${HUNSPELL_LIBRARIES})
 endif()
 
 # *nix "make install" provision:
