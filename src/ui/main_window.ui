@@ -240,7 +240,7 @@
   </action>
   <action name="dactionUpdate">
    <property name="text">
-    <string>&lt;p&gt;Check for updates...</string>
+    <string>Check for updates...</string>
    </property>
   </action>
   <action name="dactionLiveHelpChat">
