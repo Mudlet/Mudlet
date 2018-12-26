@@ -1635,19 +1635,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     if ((!canRestore || entries.empty()) && downloadIfNotFound) {
         QMessageBox msgBox;
 
-        if (mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
-            || !getMmpMapLocation().isEmpty()) {
+        if (!getMmpMapLocation().isEmpty()) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
             msgBox.exec();
             if (msgBox.clickedButton() == yesButton) {
-                // no https support
-                if (mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
-                    downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
-                } else {
-                    downloadMap();
-                }
+                downloadMap();
             } else if (msgBox.clickedButton() == noButton) {
                 ; //No-op to avoid unused "noButton"
             }

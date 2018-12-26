@@ -455,8 +455,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
 
-    const QString url(pHost->getUrl());
-    if (url.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive) || !pHost->getMmpMapLocation().isEmpty()) {
+    if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
     } else {
@@ -1603,11 +1602,7 @@ void dlgProfilePreferences::downloadMap()
         mudlet::self()->createMapper(false);
     }
 
-    if (pHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
-        pHost->mpMap->downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
-    } else {
-        pHost->mpMap->downloadMap();
-    }
+    pHost->mpMap->downloadMap();
 }
 
 void dlgProfilePreferences::loadMap()
