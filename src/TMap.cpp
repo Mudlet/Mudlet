@@ -1635,22 +1635,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     if ((!canRestore || entries.empty()) && downloadIfNotFound) {
         QMessageBox msgBox;
 
-        if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
-            || !getMmpMapLocation().isEmpty()) {
+        if (!getMmpMapLocation().isEmpty()) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
             msgBox.exec();
             if (msgBox.clickedButton() == yesButton) {
-                // no https support
-                if (mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
-                    downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
-                } else {
-                    downloadMap();
-                }
+                downloadMap();
             } else if (msgBox.clickedButton() == noButton) {
                 ; //No-op to avoid unused "noButton"
             }
@@ -2239,19 +2230,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 #endif
 
-    // Unfortunately we do not seem to get a file size from the IRE servers so
-    // estimate it from current figures + 10% as of now (2016/10) - using previous
-    // 4M that was used before for other cases:
     mExpectedFileSize = 4000000;
-    if (url.toString().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4706442);
-    } else if (url.toString().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 5695407);
-    } else if (url.toString().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4997166);
-    } else if (url.toString().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4842063);
-    }
 
     QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
