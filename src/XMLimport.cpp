@@ -902,7 +902,7 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "serverPackageName") {
                 pHost->mServerGUI_Package_name = readElementText();
             } else if (name() == "serverPackageVersion") {
-                pHost->mServerGUI_Package_version = readElementText().toInt();
+                pHost->mServerGUI_Package_version = readElementText();
             } else if (name() == "port") {
                 pHost->mPort = readElementText().toInt();
             } else if (name() == "borderTopHeight") {
