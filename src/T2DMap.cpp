@@ -215,6 +215,21 @@ QColor T2DMap::getColor(int id)
         break;
     default: //user defined room color
         if (!mpMap->customEnvColors.contains(env)) {
+            if (16 < env && env < 232)
+            {
+                quint8 base = env - 16;
+                quint8 r = base / 36;
+                quint8 g = (base - (r * 36)) / 6;
+                quint8 b = (base - (r * 36)) - (g * 6);
+
+		r = r * 51;
+		g = g * 51;
+		b = b * 51;
+                color = QColor(r, g, b, 255);
+            } else if (231 < env && env < 256) {
+                quint8 k = ((env - 232) * 10) + 8;
+                color = QColor(k, k, k, 255);
+            }
             break;
         }
         color = mpMap->customEnvColors[env];
@@ -1439,7 +1454,23 @@ void T2DMap::paintEvent(QPaintEvent* e)
         default: //user defined room color
             if (mpMap->customEnvColors.contains(roomEnvironment)) {
                 roomColor = mpMap->customEnvColors[roomEnvironment];
-            }
+            } else {
+                if (16 < roomEnvironment && roomEnvironment < 232)
+                {
+                    quint8 base = roomEnvironment - 16;
+                    quint8 r = base / 36;
+                    quint8 g = (base - (r * 36)) / 6;
+                    quint8 b = (base - (r * 36)) - (g * 6);
+
+		    r = r * 51;
+		    g = g * 51;
+		    b = b * 51;
+                    roomColor = QColor(r, g, b, 255);
+                } else if (231 < roomEnvironment && roomEnvironment < 256) {
+                    quint8 k = ((roomEnvironment - 232) * 10) + 8;
+                    roomColor = QColor(k, k, k, 255);
+                }
+	    }
         }
 
         if (((mPick || __Pick) && mPHighlight.x() >= roomRectangle.x() - (mRoomWidth * rSize) && mPHighlight.x() <= roomRectangle.x() + (mRoomWidth * rSize)
@@ -3437,9 +3468,12 @@ void T2DMap::slot_setSymbol()
                 while (itSymbolUsed.hasNext()) {
                     itSymbolUsed.next();
                     if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                        displayStrings.append(tr("%1 {count:%2}")
-                                              .arg(itSymbolUsed.key())
-                                              .arg(QString::number(itSymbolUsed.value())));
+                        displayStrings.append(tr("%1 {count:%2}",
+                                                 "Everything after the first parameter (the '%1') will be removed by processing it as a QRegularExpression programmatically, ensure "
+                                                 "the translated text has ` {` immediately after the '%1', and '}' as the very last character, so that the right portion can be "
+                                                 "extracted if the user clicks on this item when it is shown in the QComboBox it is put in.")
+                                                      .arg(itSymbolUsed.key())
+                                                      .arg(QString::number(itSymbolUsed.value())));
                     }
                 }
             }
@@ -3458,6 +3492,19 @@ void T2DMap::slot_setSymbol()
                                               true,                                                             // bool editable = true
                                               &isOk,                                                            // bool * ok = 0
                                               Qt::Dialog);
+            if (isOk && displayStrings.contains(newSymbol)) {
+                // The user has selected one of the existing items in the form
+                // "XXXX {count:##}" and we need to chop off the stuff after the
+                // "XXXX" to get what is needed:
+
+                QRegularExpression countStripper(QStringLiteral("^(.*) {.*}$"));
+                QRegularExpressionMatch match = countStripper.match(newSymbol);
+                if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+                    // captured(0) is the whole string that matched, which is
+                    // not what we want:
+                    newSymbol = match.captured(1);
+                }
+            }
         }
 
         if (!isOk) {
@@ -3470,7 +3517,7 @@ void T2DMap::slot_setSymbol()
                 itRoomPtr.next()->mSymbol = QString();
             }
         } else {
-            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+            // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
             // handle/use/allow - by normalising the symbol we can ensure that
             // all the entered ones are decomposed and recomposed in a
             // "standard" way and will have the same sequence of codepoints:

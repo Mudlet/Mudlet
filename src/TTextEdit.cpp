@@ -2067,7 +2067,7 @@ void TTextEdit::slot_analyseSelection()
             case 3:
                 if (includeThisCodePoint) {
                     utf8Indexes.append(QStringLiteral("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td>")
-                                               .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(++utf8Index + 2)));
+                                               .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(utf8Index + 2)));
                     utf8Vals.append(QStringLiteral("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td>")
                                             .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
                                             .arg(static_cast<quint8>(utf8Bytes[1]), 2, 16, zero)
