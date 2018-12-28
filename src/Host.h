@@ -367,7 +367,7 @@ public:
     bool mBubbleMode;
     bool mShowRoomID;
     bool mShowPanel;
-    int mServerGUI_Package_version;
+    QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;
     QColor mCommandLineFgColor;

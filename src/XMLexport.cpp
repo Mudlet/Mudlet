@@ -428,7 +428,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("url").text().set(pHost->mUrl.toUtf8().constData());
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
-        host.append_child("serverPackageVersion").text().set(QString::number(pHost->mServerGUI_Package_version).toUtf8().constData());
+        host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
         host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
         host.append_child("borderTopHeight").text().set(QString::number(pHost->mBorderTopHeight).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(pHost->mBorderBottomHeight).toUtf8().constData());
