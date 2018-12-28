@@ -132,9 +132,9 @@ cTelnet::cTelnet(Host* pH)
         }
         connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
         connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
-    #if !defined(QT_NO_SSL)
+#if !defined(QT_NO_SSL)
         connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
-    #endif
+#endif
     });
 
 
@@ -448,7 +448,7 @@ void cTelnet::handle_socket_signal_disconnected()
             mDontReconnect = true;
 
             for (int a = 0; a < sslErrors.count(); a++) {
-                reason.append(QString("        %1\n").arg(QString(sslErrors.at(a).errorString())));
+                reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
             QString err = "[ ALERT ] - Socket got disconnected.\nReason: \n" % reason;
             postMessage(err);
@@ -456,9 +456,12 @@ void cTelnet::handle_socket_signal_disconnected()
 #endif
         {
             if (mDontReconnect) {
-                reason = "User Disconnected";
+                reason = QStringLiteral("User Disconnected");
             } else {
                 reason = socket.errorString();
+            }
+            if (reason == QStringLiteral("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
+                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
             }
             QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % reason;
             postMessage(err);
