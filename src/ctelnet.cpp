@@ -122,13 +122,21 @@ cTelnet::cTelnet(Host* pH)
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
 
-    // initialize the socket
-    connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
-    connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
-    connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
- #if !defined(QT_NO_SSL)
-    connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
-#endif
+    // initialize the socket after the Host initialisation is complete so we can access mSslTsl
+    QTimer::singleShot(0, this, [this]() {
+        qDebug() << mpHost->getName();
+        if (mpHost->mSslTsl) {
+            connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
+        } else {
+            connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+        }
+        connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
+        connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
+    #if !defined(QT_NO_SSL)
+        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+    #endif
+    });
+
 
     // initialize telnet session
     reset();
@@ -366,6 +374,8 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     QString msg;
+
+    qDebug() << "MODE:" << socket.mode();
 
     reset();
     setKeepAlive(socket.socketDescriptor());
