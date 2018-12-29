@@ -396,15 +396,11 @@ void dlgProfilePreferences::enableHostDetails()
     // groupBox_ircOptions enabled...
     groupbox_searchEngineSelection->setEnabled(true);
 
-    // tab security
-#ifndef QT_NO_SSL
-    if (QSslSocket::supportsSsl()) {
-        groupBox_ssl->setEnabled(true);
-    } else
+#if defined(QT_NO_SSL)
+    groupBox_ssl->setEnabled(false);
+#else
+    groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
 #endif
-    {
-        groupBox_ssl->setEnabled(false);
-    }
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -755,16 +751,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 //auto test = sslErrors.at(a);
                 //auto tes2 = QSslError(QSslError::SelfSignedCertificate);
 
-                QString thisError = QString("%1)\t%2").arg(QString::number(a + 1), sslErrors.at(a).errorString());
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
+                QString thisError = QStringLiteral("<li>%1</li>").arg(sslErrors.at(a).errorString());
+                notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
 
                 if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
-                    checkBox_self_signed->setStyleSheet("font-weight: bold; background: yellow");
-                    ssl_issuer_label->setStyleSheet("font-weight: bold; color: red; background: yellow");
+                    checkBox_self_signed->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                    ssl_issuer_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
                 }
                 if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
-                    checkBox_expired->setStyleSheet("font-weight: bold; background: yellow");
-                    ssl_expires_label->setStyleSheet("font-weight: bold; color: red; background: yellow");
+                    checkBox_expired->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                    ssl_expires_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
                 }
                 if (sslErrors.at(a).error() == pHost->mTelnet.error()) {
                     socketErrorHandled = true;
@@ -777,7 +773,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             notificationArea->show();
             notificationAreaMessageBox->show();
             notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-            checkBox_ssl->setStyleSheet("font-weight: bold; background: yellow");
+            checkBox_ssl->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
         }
         if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
             // handle ssl library error
