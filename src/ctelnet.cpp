@@ -172,9 +172,21 @@ cTelnet::~cTelnet()
     }
 
     if (!messageStack.empty()) {
+#if defined (Q_OS_WIN32)
+        // Windows does not seem to accept line-feeds in these strings:
+        qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,");
+        qWarning("messages are:");
+        qWarning("------------");
+#else
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
+#endif
         foreach (QString message, messageStack) {
+#if defined (Q_OS_WIN32)
+            qWarning("%s", qPrintable(message));
+            qWarning("------------");
+#else
             qWarning("%s\n------------", qPrintable(message));
+#endif
         }
     }
     socket.deleteLater();
