@@ -5794,7 +5794,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="136"/>
       <source>Chinese [Simplified]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Chinesisch [vereinfacht]</translation>
+      <translation>Chinesisch [simpel]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>
