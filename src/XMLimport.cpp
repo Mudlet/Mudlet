@@ -850,14 +850,14 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
-    if (attributes().hasAttribute(QLatin1String("SemiColonOnlySGRColorCodesHaveColorSpaceId"))) {
-        pHost->setHaveColorSpaceId(attributes().value(QLatin1String("SemiColonOnlySGRColorCodesHaveColorSpaceId")).toString() == QLatin1String("yes"));
+    if (attributes().hasAttribute(QLatin1String("mSGRCodeHasColSpaceId"))) {
+        pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
     } else {
         pHost->setHaveColorSpaceId(false);
     }
 
-    if (attributes().hasAttribute(QLatin1String("ServerMayRedefineColors"))) {
-        pHost->setMayRedefineColors(attributes().value(QLatin1String("ServerMayRedefineColors")).toString() == QLatin1String("yes"));
+    if (attributes().hasAttribute(QLatin1String("mServerMayRedefineColors"))) {
+        pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
     } else {
         pHost->setMayRedefineColors(false);
     }
