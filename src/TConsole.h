@@ -189,7 +189,7 @@ public:
     static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane;
     TTextEdit* mLowerPane;
-    int currentFgColorProperty;
+
     QToolButton* emergencyStop;
     bool isUserScrollBack;
     QWidget* layer;

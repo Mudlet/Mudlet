@@ -111,6 +111,10 @@ public:
                                                                        return mAutoAmbigousWidthGlyphsSetting
                                                                                ? Qt::PartiallyChecked
                                                                                : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+    void               setHaveColorSpaceId(const bool state) { QMutexLocker locker(& mLock); mSGRCodeHasColSpaceId = state; }
+    bool               getHaveColorSpaceId() { QMutexLocker locker(& mLock); return mSGRCodeHasColSpaceId; }
+    void               setMayRedefineColors(const bool state) { QMutexLocker locker(& mLock); mServerMayRedefineColors = state; }
+    bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
     void               setDiscordApplicationID(const QString& s);
     const QString&     getDiscordApplicationID();
 
@@ -410,9 +414,7 @@ private:
     KeyUnit mKeyUnit;
 
     QString mBufferIncomingData;
-    bool mCodeCompletion;
 
-    bool mDisableAutoCompletion;
     QFile mErrorLogFile;
 
     QMap<QString, TEvent*> mEventMap;
@@ -425,9 +427,6 @@ private:
     QString mLine;
     QMutex mLock;
     QString mLogin;
-
-    int mMXPMode;
-
     QString mPass;
 
     int mPort;
@@ -474,6 +473,15 @@ private:
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
+
+    // Handles whether to treat 16M-Colour ANSI SGR codes which only use
+    // semi-colons as separator have the initial Colour Space Id parameter
+    // (true) or not (false):
+    bool mSGRCodeHasColSpaceId;
+
+    // Flag whether the Server can use ANSI OSC "P#RRGGBB\" to redefine the
+    // 16 basic colors (and OSC "R\" to reset them).
+    bool mServerMayRedefineColors;
 
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
