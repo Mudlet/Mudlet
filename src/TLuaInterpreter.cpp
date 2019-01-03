@@ -13789,6 +13789,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDiscordParty", TLuaInterpreter::getDiscordParty);
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
+    lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -14592,4 +14593,40 @@ int TLuaInterpreter::getRowCount(lua_State* L)
 // i.e. Unrefing tables passed into TLabel's event parameters.
 void TLuaInterpreter::freeLuaRegistryIndex(int index) {
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Mapper_Functions#getMapSelection
+int TLuaInterpreter::getMapSelection(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        lua_pushnil(L);
+        lua_pushstring(L, "getMapSelection: no map present or loaded!");
+        return 2;
+    }
+
+    lua_newtable(L);
+    QList<int> selectionRoomsList = pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList();
+    if (!selectionRoomsList.isEmpty()) {
+        if (selectionRoomsList.count() > 1) {
+            std::sort(selectionRoomsList.begin(), selectionRoomsList.end());
+        }
+
+        lua_pushstring(L, "center");
+        lua_pushnumber(L, pHost->mpMap->mpMapper->mp2dMap->getCenterSelectedRoomId());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "rooms");
+        lua_newtable(L);
+        for (int i = 0, total = selectionRoomsList.size(); i < total; ++i) {
+            lua_pushnumber(L, i + 1);
+            lua_pushnumber(L, selectionRoomsList.at(i));
+            lua_settable(L, -3);
+        }
+
+        lua_settable(L, -3);
+
+    }
+
+    return 1;
 }
