@@ -14606,15 +14606,11 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     lua_newtable(L);
-    lua_pushstring(L, "type");
     QList<int> selectionRoomsList = pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList();
     if (!selectionRoomsList.isEmpty()) {
         if (selectionRoomsList.count() > 1) {
             std::sort(selectionRoomsList.begin(), selectionRoomsList.end());
         }
-
-        lua_pushstring(L, "rooms");
-        lua_settable(L, -3);
 
         lua_pushstring(L, "center");
         lua_pushnumber(L, pHost->mpMap->mpMapper->mp2dMap->getCenterSelectedRoomId());
@@ -14628,11 +14624,6 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
             lua_settable(L, -3);
         }
 
-        lua_settable(L, -3);
-
-    } else {
-
-        lua_pushstring(L, "none");
         lua_settable(L, -3);
 
     }
