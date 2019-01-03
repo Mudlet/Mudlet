@@ -647,8 +647,10 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
 
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
+    qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
-    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth, mScreenHeight * mFontHeight);
+    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
+    pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(palette().base().color());
 
     QPainter p(&pixmap);
