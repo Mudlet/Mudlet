@@ -14595,7 +14595,7 @@ void TLuaInterpreter::freeLuaRegistryIndex(int index) {
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
 }
 
-// Documentation PENDING: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapSelection
+// Documentation: https://wiki.mudlet.org/w/Manual:Mapper_Functions#getMapSelection
 int TLuaInterpreter::getMapSelection(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
