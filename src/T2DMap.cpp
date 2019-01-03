@@ -91,7 +91,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mSizeLabel()
 , isCenterViewCall()
 , mDialogLock()
-, mMultiSelectionHighlightRoomId(-1)
+, mMultiSelectionHighlightRoomId(0)
 , mIsSelectionSorting(true)
 , mIsSelectionSortByNames()
 , mIsSelectionUsingNames(false)
@@ -2517,7 +2517,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
             switch (mMultiSelectionSet.size()) {
             case 0:
-                mMultiSelectionHighlightRoomId = -1;
+                mMultiSelectionHighlightRoomId = 0;
                 break;
             case 1:
                 mMultiSelection = false; // OK, found one room so stop
@@ -4203,7 +4203,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             }
             switch (mMultiSelectionSet.size()) {
             case 0:
-                mMultiSelectionHighlightRoomId = -1;
+                mMultiSelectionHighlightRoomId = 0;
                 break;
             case 1:
                 mMultiSelectionHighlightRoomId = mMultiSelectionSet.toList().first();
@@ -4314,7 +4314,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 // such a room
 bool T2DMap::getCenterSelection()
 {
-    mMultiSelectionHighlightRoomId = -1;
+    mMultiSelectionHighlightRoomId = 0;
     if (mMultiSelectionSet.isEmpty()) {
         return false;
     }
@@ -4838,7 +4838,7 @@ void T2DMap::slot_roomSelectionChanged()
     }
     switch (mMultiSelectionSet.size()) {
     case 0:
-        mMultiSelectionHighlightRoomId = -1;
+        mMultiSelectionHighlightRoomId = 0;
         break;
     case 1:
         mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.constBegin());

@@ -327,6 +327,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
+
     // it is possible to connect using the IRC client off of the
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
@@ -501,7 +502,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
-    //disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
@@ -585,7 +585,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-    //mMXPMode->setCurrentIndex( pHost->mMXPMode );
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
@@ -707,6 +706,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
+
+    checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
+    checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1139,6 +1141,7 @@ void dlgProfilePreferences::resetColors()
     pHost->mCommandBgColor = Qt::black;
     pHost->mFgColor = Qt::lightGray;
     pHost->mBgColor = Qt::black;
+    // If these get changed, ensure TBuffer::resetColors() is updated to match
     pHost->mBlack = Qt::black;
     pHost->mLightBlack = Qt::darkGray;
     pHost->mRed = Qt::darkRed;
@@ -2204,6 +2207,9 @@ void dlgProfilePreferences::slot_save_and_exit()
         } else {
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
+
+        pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
+        pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
     }
 
 #if defined(INCLUDE_UPDATER)
