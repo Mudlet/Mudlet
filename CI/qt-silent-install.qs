@@ -2,11 +2,11 @@ function Controller() {
     installer.autoRejectMessageBoxes();
     installer.installationFinished.connect(function() {
         gui.clickButton(buttons.NextButton);
-    })
+    });
 }
 
 Controller.prototype.WelcomePageCallback = function() {
-    gui.clickButton(buttons.NextButton);
+    gui.clickButton(buttons.NextButton, 2000);
 }
 
 Controller.prototype.CredentialsPageCallback = function() {
@@ -27,8 +27,8 @@ Controller.prototype.ComponentSelectionPageCallback = function() {
     var widget = gui.currentPageWidget();
 
     widget.deselectAll();
-    widget.selectComponent("qt.563.win32_mingw49");
-    widget.selectComponent("qt.tools.win32_mingw492");
+    widget.selectComponent("qt.qt5.5110.win32_mingw53");
+    widget.selectComponent("qt.tools.win32_mingw530");
 
     gui.clickButton(buttons.NextButton);
 }

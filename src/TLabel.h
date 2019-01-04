@@ -41,7 +41,7 @@ class TLabel : public QLabel
 
 public:
     Q_DISABLE_COPY(TLabel)
-    TLabel(QWidget* pW = 0);
+    TLabel(QWidget* pW = nullptr);
     void setClick(Host* pHost, const QString& func, const TEvent& args);
     void setDoubleClick(Host* pHost, const QString& func, const TEvent& args);
     void setRelease(Host* pHost, const QString& func, const TEvent& args);

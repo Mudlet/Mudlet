@@ -6,13 +6,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      if(Test-Path "C:\Qt\5.6.3\mingw49_32\bin\qmake.exe"){
-        $Env:QT_BASE_DIR = "C:\Qt\5.6.3\mingw49_32"
-      }
-      else
-      {
-        $Env:QT_BASE_DIR = "C:\Qt\5.6.3\mingw49_32"
-      }
+      $Env:QT_BASE_DIR = "C:\Qt\5.11.0\mingw53_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
@@ -34,4 +28,9 @@ function SetMingwBaseDir([string] $logFile) {
   if(!(Test-Path Env:MINGW_BASE_DIR_BASH)){
     $Env:MINGW_BASE_DIR_BASH = $Env:MINGW_BASE_DIR -replace "\\", "/" -replace "C:", "/c"
   }
+}
+
+function SetLuarocksPath([string] $logFile) {
+  $Env:LUA_CPATH = "$Env:MINGW_BASE_DIR\lib\lua\5.1\?.dll;$Env:LUA_CPATH"
+  Write-Output "Using $Env:LUA_CPATH as LuaRocks path." | Tee-Object -File "$logFile" -Append
 }

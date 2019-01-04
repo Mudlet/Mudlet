@@ -1,9 +1,8 @@
-#ifndef MUDLET_THIGHLIGHTER_H
-#define MUDLET_THIGHLIGHTER_H
+#ifndef WCWIDTH_H
+#define WCWIDTH_H
 
 /***************************************************************************
- *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,49 +20,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QtGlobal>
 
-#include "pre_guard.h"
-#include <QSyntaxHighlighter>
-#include <QTextCharFormat>
-#include <QRegularExpression>
-#include "post_guard.h"
+int mk_wcwidth_cjk(uint ucs);
+int mk_wcwidth(uint ucs);
 
-class QTextDocument;
-
-
-class THighlighter : public QSyntaxHighlighter
-{
-    Q_OBJECT
-
-public:
-    Q_DISABLE_COPY(THighlighter)
-    THighlighter(QTextDocument* parent = 0);
-    void setSearchPattern(QString p);
-
-
-protected:
-    void highlightBlock(const QString& text) override;
-
-private:
-    struct HighlightingRule
-    {
-        QRegularExpression pattern;
-        QTextCharFormat format;
-    };
-    QString mSearchPattern;
-    QVector<HighlightingRule> highlightingRules;
-    QRegularExpression commentStartExpression;
-    QRegularExpression commentEndExpression;
-    QRegularExpression stringStart;
-    QRegularExpression stringEnd;
-    QTextCharFormat keywordFormat;
-    QTextCharFormat searchFormat;
-    QTextCharFormat classFormat;
-    QTextCharFormat singleLineCommentFormat;
-    QTextCharFormat multiLineCommentFormat;
-    QTextCharFormat quotationFormat;
-    QTextCharFormat functionFormat;
-    //bool isString;
-};
-
-#endif // MUDLET_THIGHLIGHTER_H
+#endif // WCWIDTH_H

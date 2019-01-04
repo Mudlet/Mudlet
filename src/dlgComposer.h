@@ -38,7 +38,7 @@ public:
     Q_DISABLE_COPY(dlgComposer)
     dlgComposer(Host*);
 
-    void init(QString title, QString txt);
+    void init(const QString &title, const QString &newText);
 
 public slots:
     void save();

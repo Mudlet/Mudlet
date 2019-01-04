@@ -246,7 +246,9 @@ void TTimer::execute()
                 return;
             }
         }
-        if (!mpHost->mLuaInterpreter.call(mFuncName, mName)) {
+
+        if (!mpHost->mLuaInterpreter.call(mFuncName, mName, (mTime < mpHost->mTimerDebugOutputSuppressionInterval))) {
+
             mpTimer->stop();
         }
     }

@@ -7,7 +7,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2015-2016, 2018 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,22 +27,31 @@
 
 
 #include "HostManager.h"
+#include "FontManager.h"
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
 #endif
+
+#include "discord.h"
+
 #include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
+#include <QProxyStyle>
 #include <QQueue>
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
+#include <QTimer>
+#include "edbee/models/textautocompleteprovider.h"
+#include <QShortcut>
+#include <QKeySequence>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
@@ -66,12 +75,12 @@ class TConsole;
 class TDockWidget;
 class TEvent;
 class TLabel;
+class TTabBar;
 class TTimer;
 class TToolBar;
 class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
-
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -85,10 +94,12 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
+    FontManager mFontManager;
+    Discord mDiscord;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
-    int getLineNumber(Host* pHost, QString& name);
+    std::pair<bool, int> getLineNumber(Host* pHost, QString& windowName);
     void printSystemMessage(Host* pH, const QString& s);
     void print(Host*, const QString&);
     void addConsoleForNewHost(Host* pH);
@@ -103,8 +114,11 @@ public:
     void setDockLayoutUpdated(Host*, const QString&);
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
-    bool setFontSize(Host*, const QString&, int);
+    bool setWindowFont(Host*, const QString&, const QString&);
+    QString getWindowFont(Host*, const QString&);
+    bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
+    QSize calcFontSize(Host* pHost, const QString& windowName);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);
@@ -132,10 +146,11 @@ public:
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
     void deleteLine(Host*, const QString& name);
-    void insertText(Host*, const QString& name, const QString&);
+    bool insertText(Host*, const QString& windowName, const QString&);
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
     int selectSection(Host*, const QString& name, int, int);
+    std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
     void setBold(Host*, const QString& name, bool);
     void setLink(Host* pHost, const QString& name, const QString& linkText, QStringList& linkFunction, QStringList&);
     void setItalics(Host*, const QString& name, bool);
@@ -150,7 +165,8 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings(const QSettings&);
+    void readEarlySettings(const QSettings&);
+    void readLateSettings(const QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
@@ -166,8 +182,8 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
-    void setToolBarIconSize(const int);
-    void setEditorTreeWidgetIconSize(const int);
+    void setToolBarIconSize(int);
+    void setEditorTreeWidgetIconSize(int);
     enum controlsVisibilityFlag {
         visibleNever = 0,
         visibleOnlyWithoutLoadedProfile = 0x1,
@@ -175,8 +191,8 @@ public:
         visibleAlways = 0x3
     };
     Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-    void setToolBarVisibility(const controlsVisibility);
-    void setMenuBarVisibility(const controlsVisibility);
+    void setToolBarVisibility(controlsVisibility);
+    void setMenuBarVisibility(controlsVisibility);
     void adjustToolBarVisibility();
     void adjustMenuBarVisibility();
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
@@ -196,6 +212,7 @@ public:
     void playSound(QString s, int);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
+    QStringList getAvailableFonts();
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -207,23 +224,42 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
     QList<QMediaPlayer*> mMusicBoxList;
-    QTabBar* mpTabBar;
+    TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
+    static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
     QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
     QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
-    QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
+    QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
+    // More modern Desktop styles no longer include icons on the buttons in
+    // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
+    // does use them - use this flag to determine whether we should apply our
+    // icons to override some of them:
+    bool mShowIconsOnDialogs;
+    // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
+    // startup which the user may leave as is or force on or off:
+    bool mShowIconsOnMenuOriginally;
+    // This is the state for the tri-state control on the preferences and
+    // means:
+    // Qt::PartiallyChecked = use the previous state set on application start
+    //    (set AA_DontShowIconsInMenus to inverse of mShowIconsOnMenuOriginally)
+    // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
+    //    to false ourselves)
+    // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
+    //    true ourselves)
+    Qt::CheckState mShowIconsOnMenuCheckedState;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
+    static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
 
     // Used by a profile to tell the mudlet class
@@ -234,12 +270,16 @@ public:
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
-    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    void setShowMapAuditErrors(const bool);
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
+    void setShowIconsOnMenu(const Qt::CheckState);
 
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
+    // From https://stackoverflow.com/a/14678964/4805858 an answer to:
+    // "How to find and replace string?" by "Czarek Tomczak":
+    static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'
@@ -304,17 +344,44 @@ public:
         editorWidgetThemeJsonFile,
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
-        moduleBackupsPath
+        moduleBackupsPath,
+        // Returns path to Qt's own translation files
+        qtTranslationsPath
     };
-    static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+    static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
+    void setInterfaceLanguage(const QString &languageCode);
+    QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
+
+    void setEnableFullScreenMode(const bool);
+
+    // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
+    // may eventually migrate solely to the "EnableFullScreenMode" in the main
+    // QSetting file - it is only stored as a file now to maintain backwards
+    // compatibility...
+    bool mEnableFullScreenMode;
+
+    // approximate max duration that 'Copy as image' is allowed to take (seconds)
+    int mCopyAsImageTimeout;
+
+    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    QString mInterfaceLanguage;
+
+    // ISO language code, translated human-readable name w/ English, and percent translated
+    // ie: ru_RU, Русский (Russian), 75
+    QHash<QString, std::pair<QString, int>> mLanguageCodeMap;
+    // translations done high enough will get a gold star to hide the last few percent
+    // as well as encourage translators to maintain it;
+    const int mTranslationStar = 95;
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -359,6 +426,8 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
+    void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
+
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -366,10 +435,18 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
-    void signal_setToolBarIconSize(const int);
-    void signal_setTreeIconSize(const int);
-    void signal_hostCreated(Host*, const quint8);
-    void signal_hostDestroyed(Host*, const quint8);
+    void signal_tabChanged(const QString& hostName);
+    void signal_setToolBarIconSize(int);
+    void signal_setTreeIconSize(int);
+    void signal_hostCreated(Host*, quint8);
+    void signal_hostDestroyed(Host*, quint8);
+    void signal_enableFulScreenModeChanged(bool);
+    void signal_showMapAuditErrorsChanged(bool);
+    void signal_menuBarVisibilityChanged(const controlsVisibility);
+    void signal_toolBarVisibilityChanged(const controlsVisibility);
+    void signal_showIconsOnMenusChanged(const Qt::CheckState);
+    void signal_updateAvailable();
+
 
 private slots:
     void slot_close_profile();
@@ -384,6 +461,7 @@ private slots:
     void show_key_dialog();
     void show_variable_dialog();
     void show_options_dialog();
+    void slot_update_shortcuts();
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -399,8 +477,9 @@ private slots:
 
 private:
     void initEdbee();
-
     void goingDown() { mIsGoingDown = true; }
+    void loadTranslators();
+
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
@@ -424,12 +503,53 @@ private:
     QPointer<QTimer> mpTimerReplay;
     QPointer<QToolBar> mpToolBarReplay;
 
-    QAction* actionAbout;
-    QAction* actionReconnect;
+    QPointer<QShortcut> triggersShortcut;
+    QPointer<QShortcut> showMapShortcut;
+    QPointer<QShortcut> inputLineShortcut;
+    QPointer<QShortcut> optionsShortcut;
+    QPointer<QShortcut> notepadShortcut;
+    QPointer<QShortcut> packagesShortcut;
+    QPointer<QShortcut> modulesShortcut;
+    QPointer<QShortcut> multiViewShortcut;
+    QPointer<QShortcut> connectShortcut;
+    QPointer<QShortcut> disconnectShortcut;
+    QPointer<QShortcut> reconnectShortcut;
+    QKeySequence triggersKeySequence;
+    QKeySequence showMapKeySequence;
+    QKeySequence inputLineKeySequence;
+    QKeySequence optionsKeySequence;
+    QKeySequence notepadKeySequence;
+    QKeySequence packagesKeySequence;
+    QKeySequence modulesKeySequence;
+    QKeySequence multiViewKeySequence;
+    QKeySequence connectKeySequence;
+    QKeySequence disconnectKeySequence;
+    QKeySequence reconnectKeySequence;
 
     void check_for_mappingscript();
 
     QPointer<QAction> mpActionReplay;
+
+    QPointer<QAction> mpActionAbout;
+    QPointer<QAction> mpActionAliases;
+    QPointer<QAction> mpActionButtons;
+    QPointer<QAction> mpActionConnect;
+    QPointer<QAction> mpActionDisconnect;
+    QPointer<QAction> mpActionFullScreenView;
+    QPointer<QAction> mpActionHelp;
+    QPointer<QAction> mpActionIRC;
+    QPointer<QAction> mpActionKeys;
+    QPointer<QAction> mpActionMapper;
+    QPointer<QAction> mpActionModuleManager;
+    QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionNotes;
+    QPointer<QAction> mpActionOptions;
+    QPointer<QAction> mpActionPackageManager;
+    QPointer<QAction> mpActionReconnect;
+    QPointer<QAction> mpActionScripts;
+    QPointer<QAction> mpActionTimers;
+    QPointer<QAction> mpActionTriggers;
+    QPointer<QAction> mpActionVariables;
 
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;
@@ -454,6 +574,16 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+
+    // QMap has key of interface languages (in format of mInterfaceLanguage)
+    // value: a QList of QPointers to all the translators needed (mudlet + Qt)
+    // for the specific GUI Language, on language change to remove
+    // the translators for the old settings and add the ones for
+    // the new language
+    QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
+    QList<QPointer<QTranslator>> mTranslatorsLoadedList;
+    void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
+    void loadLanguagesMap();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

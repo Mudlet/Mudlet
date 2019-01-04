@@ -27,7 +27,7 @@ dlgTimersMainArea::dlgTimersMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_timer_name, SIGNAL(editingFinished()), this, SLOT(slot_editing_name_finished()));
+    connect(lineEdit_timer_name, &QLineEdit::editingFinished, this, &dlgTimersMainArea::slot_editing_name_finished);
 }
 
 void dlgTimersMainArea::trimName()

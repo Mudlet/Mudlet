@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>744</width>
-    <height>668</height>
+    <width>755</width>
+    <height>768</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -23,8 +23,50 @@
    <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
-   <item>
+  <layout class="QGridLayout" name="gridLayout_19">
+   <item row="1" column="0">
+    <widget class="QWidget" name="widget_bottom" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer_bottom">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>444</width>
+          <height>21</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="closeButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Save</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="enabled">
       <bool>true</bool>
@@ -54,15 +96,252 @@
       <attribute name="title">
        <string>General</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_19">
+      <layout class="QGridLayout" name="gridLayout_16">
+       <item row="3" column="0">
+        <widget class="QGroupBox" name="groupBox_protocols">
+         <property name="title">
+          <string>Game protocols</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_13">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="mEnableGMCP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable GMCP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="mEnableMSDP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MSDP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="need_reconnect_for_data_protocol">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="mouseTracking">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Please reconnect to your game for the change to take effect</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::AutoText</enum>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QGroupBox" name="groupBox_miscellaneous">
+         <property name="title">
+          <string>Misc</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QCheckBox" name="mAlertOnNewData">
+            <property name="text">
+             <string>Toolbar notification if Mudlet is minimized and new data arrives</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
+            <property name="text">
+             <string>Force auto save on exit</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="acceptServerGUI">
+            <property name="text">
+             <string>Allow server to install script packages</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QGroupBox" name="groupBox_logOptions">
+         <property name="title">
+          <string>Log options</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_6">
+          <item row="0" column="0" colspan="4">
+           <widget class="QCheckBox" name="mIsToLogInHtml">
+            <property name="toolTip">
+             <string>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Save log files in HTML format instead of plain text</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="4">
+           <widget class="QCheckBox" name="mIsLoggingTimestamps">
+            <property name="text">
+             <string>Add timestamps at the beginning of log lines</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_whereToLog">
+            <property name="text">
+             <string>Save log files in:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_whereToLog</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEdit_logFileFolder">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QPushButton" name="pushButton_whereToLog">
+            <property name="text">
+             <string>Browse...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="pushButton_resetLogDir">
+            <property name="text">
+             <string>Reset</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileNameFormat">
+            <property name="text">
+             <string>Log format:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_logFileNameFormat</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="3">
+           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
+          </item>
+          <item row="4" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileName">
+            <property name="text">
+             <string>Log name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">
+           <widget class="QLineEdit" name="lineEdit_logFileName">
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QLabel" name="label_logFileNameExtension">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>.txt</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_encoding">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="title">
+          <string>Language &amp;&amp; data encoding</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_20">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_guiLanguage">
+            <property name="text">
+             <string>Interface language:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_guiLanguage">
+            <property name="toolTip">
+             <string>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>English</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_encoding">
+            <property name="text">
+             <string>Server data encoding:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QComboBox" name="comboBox_encoding">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="4">
+           <widget class="QLabel" name="label_languageChangeWarning">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Please restart Mudlet to apply the new language</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_iconsAndToolbars">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="title">
           <string>Icon sizes</string>
          </property>
@@ -171,130 +450,8 @@
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_encoding">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="title">
-          <string>Server data encoding</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
-           <widget class="QComboBox" name="comboBox_encoding">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If you are playing a non-English MUD and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your MUD.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_miscellaneous">
-         <property name="title">
-          <string>Misc</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="text">
-             <string>Toolbar notification if Mudlet is minimized and new data arrives</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
-            <property name="text">
-             <string>Force auto save on exit</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="mIsToLogInHtml">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Save log files in HTML format instead of plain text</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="mIsLoggingTimestamps">
-            <property name="text">
-             <string>Add timestamps at the beginning of log lines</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="acceptServerGUI">
-            <property name="text">
-             <string>Allow server to install script packages</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QGroupBox" name="groupBox_protocols">
-         <property name="title">
-          <string>Game protocols</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_13">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="mEnableGMCP">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enable GMCP</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="mEnableMSDP">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enable MSDP</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="need_reconnect_for_data_protocol">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="mouseTracking">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Please reconnect to your game for the change to take effect</string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::AutoText</enum>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <spacer name="verticalSpacer_general">
+       <item row="5" column="0">
+        <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -327,15 +484,9 @@
          <property name="title">
           <string>Input</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_5">
+         <layout class="QGridLayout" name="gridLayout_5" columnstretch="1,1,1,1">
           <item row="0" column="0" colspan="2">
            <widget class="QCheckBox" name="USE_UNIX_EOL">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
             <property name="toolTip">
              <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
             </property>
@@ -344,11 +495,15 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
+            <property name="text">
+             <string>Auto clear the input line after you sent text</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="show_sent_text_checkbox">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="toolTip">
              <string>Echo the text you send in the display box</string>
             </property>
@@ -357,18 +512,18 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="3">
-           <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
-            <property name="enabled">
-             <bool>true</bool>
+          <item row="1" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
+            <property name="toolTip">
+             <string>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Auto clear the input line after you sent text</string>
+             <string>React to all keybindings on the same key</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_18">
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_commandSeparator">
             <property name="toolTip">
              <string/>
             </property>
@@ -380,21 +535,15 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">
+          <item row="2" column="1" colspan="3">
            <widget class="QLineEdit" name="command_separator_lineedit">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="placeholderText">
              <string>Enter text to separate commands with or leave blank to disable</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_38">
-            <property name="toolTip">
-             <string/>
-            </property>
+          <item row="3" column="0" colspan="3" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
             </property>
@@ -403,8 +552,11 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1" colspan="2">
+          <item row="3" column="3">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
             <property name="maximum">
              <number>300</number>
             </property>
@@ -553,7 +705,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Top border height:</string>
@@ -569,7 +721,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -597,7 +749,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Left border width:</string>
@@ -613,7 +765,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -641,7 +793,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Bottom border height:</string>
@@ -657,7 +809,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -685,7 +837,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Right border width:</string>
@@ -701,7 +853,7 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</string>
             </property>
             <property name="minimum">
              <number>-1000000</number>
@@ -847,13 +999,13 @@
           <item>
            <widget class="QLineEdit" name="doubleclick_ignore_lineedit">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the characters you'd like double-clicking to stop selecting text on here. If you don't enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Enter the characters you'd like double-clicking to stop selecting text on here. If you don't enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>'&quot;</string>
             </property>
             <property name="placeholderText">
-             <string>&lt;characters to ignore in selection, for example ' or &quot;&gt;</string>
+             <string>(characters to ignore in selection, for example ' or &quot;)</string>
             </property>
            </widget>
           </item>
@@ -869,7 +1021,7 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some MUDs (notably all IRE ones) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don't properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Fix unnecessary linebreaks on GA servers</string>
@@ -879,7 +1031,7 @@
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Show Spaces/Tabs</string>
@@ -889,7 +1041,7 @@
           <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Use Mudlet on a netbook with a small screen</string>
@@ -899,7 +1051,7 @@
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Show Line/Paragraphs</string>
@@ -909,11 +1061,93 @@
           <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_echoLuaErrors">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Echo Lua errors to the main console</string>
             </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
+            <property name="text">
+             <string>Make 'Ambiguous' E. Asian width characters wide</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_enableTextAnalyzer">
+            <property name="text">
+             <string>Enable text analyzer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_timerDebugOutputMinimumInterval" stretch="0,1">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_timerDebugOutputMinimumInterval">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string comment="The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!">Show 'LUA OK' messages for Timers with minimum interval of (h:mm:ss.zzz):</string>
+               </property>
+               <property name="buddy">
+                <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QTimeEdit" name="timeEdit_timerDebugOutputMinimumInterval">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="wrapping">
+                <bool>true</bool>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+               <property name="buttonSymbols">
+                <enum>QAbstractSpinBox::PlusMinus</enum>
+               </property>
+               <property name="accelerated">
+                <bool>true</bool>
+               </property>
+               <property name="showGroupSeparator" stdset="0">
+                <bool>true</bool>
+               </property>
+               <property name="currentSection">
+                <enum>QDateTimeEdit::HourSection</enum>
+               </property>
+               <property name="displayFormat">
+                <string comment="Used to set a time interval only">h:mm:ss.zzz</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -999,6 +1233,9 @@
             <property name="editable">
              <bool>true</bool>
             </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+            </property>
            </widget>
           </item>
           <item row="2" column="0" colspan="2">
@@ -1009,7 +1246,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Updating themes from colorsublime.com...</string>
+             <string>Updating themes from colorsublime.github.io...</string>
             </property>
            </widget>
           </item>
@@ -1043,7 +1280,7 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_21">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_22">
+           <widget class="QLabel" name="label_foreground_color">
             <property name="text">
              <string>Foreground:</string>
             </property>
@@ -1051,6 +1288,9 @@
           </item>
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_foreground_color">
+            <property name="toolTip">
+             <string>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1063,7 +1303,7 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QLabel" name="label_21">
+           <widget class="QLabel" name="label_background_color">
             <property name="text">
              <string>Background:</string>
             </property>
@@ -1071,6 +1311,9 @@
           </item>
           <item row="0" column="3">
            <widget class="QPushButton" name="pushButton_background_color">
+            <property name="toolTip">
+             <string>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1080,7 +1323,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_31">
+           <widget class="QLabel" name="label_command_line_foreground_color">
             <property name="text">
              <string>Command line foreground:</string>
             </property>
@@ -1088,13 +1331,16 @@
           </item>
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_command_line_foreground_color">
+            <property name="toolTip">
+             <string>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</string>
+            </property>
             <property name="text">
              <string/>
             </property>
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QLabel" name="label_59">
+           <widget class="QLabel" name="label_command_line_background_color">
             <property name="text">
              <string>Command line background:</string>
             </property>
@@ -1102,13 +1348,16 @@
           </item>
           <item row="1" column="3">
            <widget class="QPushButton" name="pushButton_command_line_background_color">
+            <property name="toolTip">
+             <string>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</string>
+            </property>
             <property name="text">
              <string/>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="label_32">
+           <widget class="QLabel" name="label_command_foreground_color">
             <property name="text">
              <string>Command foreground:</string>
             </property>
@@ -1116,6 +1365,9 @@
           </item>
           <item row="2" column="1">
            <widget class="QPushButton" name="pushButton_command_foreground_color">
+            <property name="toolTip">
+             <string>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1125,7 +1377,7 @@
            </widget>
           </item>
           <item row="2" column="2">
-           <widget class="QLabel" name="label_37">
+           <widget class="QLabel" name="label_command_background_color">
             <property name="text">
              <string>Command background:</string>
             </property>
@@ -1133,6 +1385,9 @@
           </item>
           <item row="2" column="3">
            <widget class="QPushButton" name="pushButton_command_background_color">
+            <property name="toolTip">
+             <string>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1142,7 +1397,7 @@
            </widget>
           </item>
           <item row="3" column="0" colspan="4">
-           <widget class="QLabel" name="label_19">
+           <widget class="QLabel" name="label_ANSI_color_buttons_introduction">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -1158,7 +1413,7 @@
            </widget>
           </item>
           <item row="4" column="0">
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="label_black">
             <property name="text">
              <string>Black:</string>
             </property>
@@ -1166,6 +1421,9 @@
           </item>
           <item row="4" column="1">
            <widget class="QPushButton" name="pushButton_black">
+            <property name="toolTip">
+             <string>ANSI Color Number 0</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1175,14 +1433,17 @@
            </widget>
           </item>
           <item row="4" column="2">
-           <widget class="QLabel" name="label_68">
+           <widget class="QLabel" name="label_lBlack">
             <property name="text">
              <string>Light black:</string>
             </property>
            </widget>
           </item>
           <item row="4" column="3">
-           <widget class="QPushButton" name="pushButton_Lblack">
+           <widget class="QPushButton" name="pushButton_lBlack">
+            <property name="toolTip">
+             <string>ANSI Color Number 8</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1192,7 +1453,7 @@
            </widget>
           </item>
           <item row="5" column="0">
-           <widget class="QLabel" name="label_2">
+           <widget class="QLabel" name="label_red">
             <property name="text">
              <string>Red:</string>
             </property>
@@ -1200,6 +1461,9 @@
           </item>
           <item row="5" column="1">
            <widget class="QPushButton" name="pushButton_red">
+            <property name="toolTip">
+             <string>ANSI Color Number 1</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1209,14 +1473,17 @@
            </widget>
           </item>
           <item row="5" column="2">
-           <widget class="QLabel" name="label_69">
+           <widget class="QLabel" name="label_lRed">
             <property name="text">
              <string>Light red:</string>
             </property>
            </widget>
           </item>
           <item row="5" column="3">
-           <widget class="QPushButton" name="pushButton_Lred">
+           <widget class="QPushButton" name="pushButton_lRed">
+            <property name="toolTip">
+             <string>ANSI Color Number 9</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1226,7 +1493,7 @@
            </widget>
           </item>
           <item row="6" column="0">
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="label_green">
             <property name="text">
              <string>Green:</string>
             </property>
@@ -1234,6 +1501,9 @@
           </item>
           <item row="6" column="1">
            <widget class="QPushButton" name="pushButton_green">
+            <property name="toolTip">
+             <string>ANSI Color Number 2</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1243,14 +1513,17 @@
            </widget>
           </item>
           <item row="6" column="2">
-           <widget class="QLabel" name="label_70">
+           <widget class="QLabel" name="label_lGreen">
             <property name="text">
              <string>Light green:</string>
             </property>
            </widget>
           </item>
           <item row="6" column="3">
-           <widget class="QPushButton" name="pushButton_Lgreen">
+           <widget class="QPushButton" name="pushButton_lGreen">
+            <property name="toolTip">
+             <string>ANSI Color Number 10</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1260,7 +1533,7 @@
            </widget>
           </item>
           <item row="7" column="0">
-           <widget class="QLabel" name="label_4">
+           <widget class="QLabel" name="label_yellow">
             <property name="text">
              <string>Yellow:</string>
             </property>
@@ -1268,6 +1541,9 @@
           </item>
           <item row="7" column="1">
            <widget class="QPushButton" name="pushButton_yellow">
+            <property name="toolTip">
+             <string>ANSI Color Number 3</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1277,14 +1553,17 @@
            </widget>
           </item>
           <item row="7" column="2">
-           <widget class="QLabel" name="label_71">
+           <widget class="QLabel" name="label_lYellow">
             <property name="text">
              <string>Light yellow:</string>
             </property>
            </widget>
           </item>
           <item row="7" column="3">
-           <widget class="QPushButton" name="pushButton_Lyellow">
+           <widget class="QPushButton" name="pushButton_lYellow">
+            <property name="toolTip">
+             <string>ANSI Color Number 11</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1294,7 +1573,7 @@
            </widget>
           </item>
           <item row="8" column="0">
-           <widget class="QLabel" name="label_5">
+           <widget class="QLabel" name="label_blue">
             <property name="text">
              <string>Blue:</string>
             </property>
@@ -1302,6 +1581,9 @@
           </item>
           <item row="8" column="1">
            <widget class="QPushButton" name="pushButton_blue">
+            <property name="toolTip">
+             <string>ANSI Color Number 4</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1311,14 +1593,17 @@
            </widget>
           </item>
           <item row="8" column="2">
-           <widget class="QLabel" name="label_72">
+           <widget class="QLabel" name="label_lBlue">
             <property name="text">
              <string>Light blue:</string>
             </property>
            </widget>
           </item>
           <item row="8" column="3">
-           <widget class="QPushButton" name="pushButton_Lblue">
+           <widget class="QPushButton" name="pushButton_lBlue">
+            <property name="toolTip">
+             <string>ANSI Color Number 12</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1328,7 +1613,7 @@
            </widget>
           </item>
           <item row="9" column="0">
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="label_magenta">
             <property name="text">
              <string>Magenta:</string>
             </property>
@@ -1336,6 +1621,9 @@
           </item>
           <item row="9" column="1">
            <widget class="QPushButton" name="pushButton_magenta">
+            <property name="toolTip">
+             <string>ANSI Color Number 5</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1345,14 +1633,17 @@
            </widget>
           </item>
           <item row="9" column="2">
-           <widget class="QLabel" name="label_73">
+           <widget class="QLabel" name="label_lMagenta">
             <property name="text">
              <string>Light magenta:</string>
             </property>
            </widget>
           </item>
           <item row="9" column="3">
-           <widget class="QPushButton" name="pushButton_Lmagenta">
+           <widget class="QPushButton" name="pushButton_lMagenta">
+            <property name="toolTip">
+             <string>ANSI Color Number 13</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1362,7 +1653,7 @@
            </widget>
           </item>
           <item row="10" column="0">
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="label_cyan">
             <property name="text">
              <string>Cyan:</string>
             </property>
@@ -1370,6 +1661,9 @@
           </item>
           <item row="10" column="1">
            <widget class="QPushButton" name="pushButton_cyan">
+            <property name="toolTip">
+             <string>ANSI Color Number 6</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1379,14 +1673,17 @@
            </widget>
           </item>
           <item row="10" column="2">
-           <widget class="QLabel" name="label_74">
+           <widget class="QLabel" name="label_lCyan">
             <property name="text">
              <string>Light cyan:</string>
             </property>
            </widget>
           </item>
           <item row="10" column="3">
-           <widget class="QPushButton" name="pushButton_Lcyan">
+           <widget class="QPushButton" name="pushButton_lCyan">
+            <property name="toolTip">
+             <string>ANSI Color Number 14</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1396,7 +1693,7 @@
            </widget>
           </item>
           <item row="11" column="0">
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="label_white">
             <property name="text">
              <string>White:</string>
             </property>
@@ -1404,6 +1701,9 @@
           </item>
           <item row="11" column="1">
            <widget class="QPushButton" name="pushButton_white">
+            <property name="toolTip">
+             <string>ANSI Color Number 7</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1413,14 +1713,17 @@
            </widget>
           </item>
           <item row="11" column="2">
-           <widget class="QLabel" name="label_75">
+           <widget class="QLabel" name="label_lWhite">
             <property name="text">
              <string>Light white:</string>
             </property>
            </widget>
           </item>
           <item row="11" column="3">
-           <widget class="QPushButton" name="pushButton_Lwhite">
+           <widget class="QPushButton" name="pushButton_lWhite">
+            <property name="toolTip">
+             <string>ANSI Color Number 15</string>
+            </property>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
@@ -1430,9 +1733,19 @@
            </widget>
           </item>
           <item row="12" column="2" colspan="2">
-           <widget class="QPushButton" name="reset_colors_button">
+           <widget class="QPushButton" name="pushButton_resetColors">
             <property name="text">
              <string>Reset all colors to default</string>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_allowServerToRedefineColors">
+            <property name="toolTip">
+             <string>&lt;p&gt;If this option is checked the Mud Server may send codes to change the above 16 colors or to reset them to their defaults by using standard ANSI &lt;tt&gt;OSC&lt;/tt&gt; Escape codes.&lt;/p&gt;&lt;p&gt;Specifically &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; will set the color with index &lt;i&gt;i&lt;/i&gt; to have the color with the given &lt;i&gt;rr&lt;/i&gt; red, &lt;i&gt;gg&lt;/i&gt; green and &lt;i&gt;bb&lt;/i&gt;  blue components where i is a single hex-digit ('0' to '9' or 'a' to 'f' or 'A' to 'F' to give a number between 0 an d15) and rr, gg and bb are two digit hex-digits numbers (between 0 to 255); &amp;lt;OSC&amp;gt; is &lt;i&gt;Operating System Command&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;[&lt;/tt&gt; and &amp;lt;ST&amp;gt; is the &lt;i&gt;String Terminator&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Conversely &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; will reset the colors to the defaults like the button to the right does.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Server allowed to redefine these colors</string>
             </property>
            </widget>
           </item>
@@ -1465,41 +1778,13 @@
           <string>Map files</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="4" column="0" colspan="3">
-           <widget class="QLabel" name="label_mapFileActionResult">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_saveMap">
             <property name="text">
-             <string>An action above happened</string>
+             <string>Save your current map:</string>
             </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QPushButton" name="pushButton_chooseProfiles">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Press to pick destination(s)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="2">
-           <widget class="QPushButton" name="pushButton_copyMap">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to make the copy of the current map in &lt;b&gt;this profile&lt;/b&gt; to each of the &lt;i&gt;profiles&lt;/i&gt; selected via the control to the left. Those profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently located is noted. All of the room numbers for those locations are then included in the saved data of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then they should replace the player in the location noted automatically - if it still exists; (this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!)&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="text">
-             <string>Copy to destination(s)</string>
+            <property name="buddy">
+             <cstring>pushButton_saveMap</cstring>
             </property>
            </widget>
           </item>
@@ -1520,20 +1805,27 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_saveMap">
-            <property name="text">
-             <string>Save your current map:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_saveMap</cstring>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_loadMap">
             <property name="text">
              <string>Press to choose file and load</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
+            <property name="toolTip">
+             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Report map issues on screen</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">
+           <widget class="Line" name="line_aboveCopyMap">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -1547,20 +1839,41 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1" colspan="2">
-           <widget class="Line" name="line_aboveCopyMap">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="pushButton_chooseProfiles">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Press to pick destination(s)</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
-           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
+          <item row="3" column="2">
+           <widget class="QPushButton" name="pushButton_copyMap">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Use this button to make the copy of the current map in &lt;b&gt;this profile&lt;/b&gt; to each of the &lt;i&gt;profiles&lt;/i&gt; selected via the control to the left. Those profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently located is noted. All of the room numbers for those locations are then included in the saved data of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then they should replace the player in the location noted automatically - if it still exists; (this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!)&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Report map issues on screen</string>
+             <string>Copy to destination(s)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="3">
+           <widget class="QLabel" name="label_mapFileActionResult">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>An action above happened</string>
             </property>
            </widget>
           </item>
@@ -1571,7 +1884,7 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
+          <item row="5" column="1" colspan="2">
            <widget class="QComboBox" name="comboBox_mapFileSaveFormatVersion">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -1581,12 +1894,12 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>250</width>
+              <width>16777215</width>
               <height>16777215</height>
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</string>
             </property>
             <property name="editable">
              <bool>false</bool>
@@ -1613,10 +1926,10 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_11">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Download latest map provided by your MUD:</string>
+             <string>Download latest map provided by your game:</string>
             </property>
             <property name="buddy">
              <cstring>buttonDownloadMap</cstring>
@@ -1626,7 +1939,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="buttonDownloadMap">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;On games that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Download</string>
@@ -1681,26 +1994,50 @@
           <string>Map view</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_22">
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mapSymbolsFont">
+            <property name="text">
+             <string>2D Map Room Symbol Font</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="mMapperUseAntiAlias">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Use high quality graphics in 2D view</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="1" alignment="Qt::AlignLeft">
+           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          </item>
+          <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Show the default area in map area selection</string>
             </property>
             <property name="checked">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
+            <property name="text">
+             <string>Only use symbols (glyphs) from chosen font</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="pushButton_showGlyphUsage">
+            <property name="text">
+             <string>Show symbol usage...</string>
             </property>
            </widget>
           </item>
@@ -2071,11 +2408,11 @@
       <attribute name="title">
        <string>Special Options</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_7">
-       <item row="0" column="0">
+      <layout class="QGridLayout" name="gridLayout_30">
+       <item row="0" column="0" colspan="2">
         <widget class="QGroupBox" name="groupBox_specialOptions">
          <property name="title">
-          <string>Special options needed for some older MUD drivers (needs client restart to take effect)</string>
+          <string>Special options needed for some older game drivers (needs client restart to take effect)</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
@@ -2137,7 +2474,165 @@
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item row="1" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox_discordPrivacy">
+         <property name="title">
+          <string>Discord privacy</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_7" columnstretch="2,1,1,1">
+          <item row="1" column="0" colspan="2">
+           <widget class="QComboBox" name="comboBox_discordSmallIconPrivacy">
+            <item>
+             <property name="text">
+              <string>Don't hide small icon or tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide small icon tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide small icon and tooltip</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="2" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
+            <property name="text">
+             <string>Hide timer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="4">
+           <widget class="QWidget" name="widget_discordUser" native="true">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QLabel" name="label_discordUserName">
+               <property name="text">
+                <string>Restrict to:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEdit_discordUserName">
+               <property name="toolTip">
+                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="placeholderText">
+                <string>specific Discord username</string>
+               </property>
+               <property name="clearButtonEnabled">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_discordUserDiscriminator">
+               <property name="toolTip">
+                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                <string> # </string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEdit_discordUserDiscriminator">
+               <property name="maximumSize">
+                <size>
+                 <width>75</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+               </property>
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
+               <property name="inputMask">
+                <string>9999;#</string>
+               </property>
+               <property name="maxLength">
+                <number>4</number>
+               </property>
+               <property name="clearButtonEnabled">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
+            <item>
+             <property name="text">
+              <string>Don't hide large icon or tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide large icon tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide large icon and tooltip</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="3">
+           <widget class="QCheckBox" name="checkBox_discordLuaAPI">
+            <property name="toolTip">
+             <string>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable Lua API</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
+            <property name="text">
+             <string>Hide state</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
+            <property name="text">
+             <string>Hide party details</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
+            <property name="text">
+             <string>Hide detail</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
         <widget class="QGroupBox" name="groupBox_ircOptions">
          <property name="title">
           <string>IRC client options</string>
@@ -2209,6 +2704,22 @@
         </widget>
        </item>
        <item row="3" column="0">
+        <widget class="QGroupBox" name="groupBox_updates">
+         <property name="title">
+          <string>Mudlet updates</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_29">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkbox_noAutomaticUpdates">
+            <property name="text">
+             <string>Disable automatic updates</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="3" column="1">
         <widget class="QGroupBox" name="groupbox_searchEngineSelection">
          <property name="title">
           <string>Search Engine</string>
@@ -2220,15 +2731,38 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="4" column="0" colspan="2">
         <widget class="QGroupBox" name="groupBox_debug">
          <property name="title">
           <string>Other Special options</string>
          </property>
-         <layout class="QFormLayout" name="formLayout_Debug">
-          <property name="labelAlignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
+         <layout class="QGridLayout" name="gridLayout_15">
+          <item row="0" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_showIconsOnMenus">
+            <property name="text">
+             <string>Show icons on menus</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
+            <property name="toolTip">
+             <string>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Expect Color Space Id in SGR...(3|4)8;2;...m codes</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -2245,66 +2779,8 @@
          </property>
         </spacer>
        </item>
-       <item row="4" column="0">
-        <widget class="QGroupBox" name="groupBox_updates">
-         <property name="title">
-          <string>Mudlet updates</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_29">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkbox_noAutomaticUpdates">
-            <property name="text">
-             <string>Disable automatic updates</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
       </layout>
      </widget>
-    </widget>
-   </item>
-   <item>
-    <widget class="QWidget" name="widget_bottom" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <spacer name="horizontalSpacer_bottom">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>447</width>
-          <height>17</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="closeButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Save</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
   </layout>

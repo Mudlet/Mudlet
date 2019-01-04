@@ -23,11 +23,6 @@
 #include "TForkedProcess.h"
 
 
-#include "pre_guard.h"
-#include <QPointer>
-#include "post_guard.h"
-
-
 TForkedProcess::~TForkedProcess()
 {
     if (callBackFunctionRef != -1) {
@@ -61,9 +56,11 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
         args << ((char*)luaL_checkstring(L, i));
     }
 
-    connect(this, SIGNAL(finished(int)), interpreter, SLOT(slotDeleteSender()));
-    connect(this, SIGNAL(finished(int)), this, SLOT(slotFinish()));
-    connect(this, SIGNAL(readyReadStandardOutput()), this, SLOT(slotReceivedData()));
+    // QProcess::finished is overloaded so we have to say which form we are
+    // connecting here
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), interpreter, &TLuaInterpreter::slotDeleteSender);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slotFinish);
+    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slotReceivedData);
 
     setReadChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
@@ -71,8 +68,11 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
     running = true;
 }
 
-void TForkedProcess::slotFinish()
+void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
 {
+    Q_UNUSED(exitCode);
+    Q_UNUSED(exitStatus);
+
     running = false;
 }
 
@@ -149,7 +149,7 @@ int TForkedProcess::startProcess(TLuaInterpreter* interpreter, lua_State* L)
     auto process = new TForkedProcess(interpreter, L);
 
     // The userdata for the closures.
-    QPointer<TForkedProcess>** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));
+    auto ** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));
     int userDataIndex = lua_gettop(L);
     if (lua_getmetatable(L, userDataIndex) != 0) {
         lua_pushstring(L, "Error: new user data should not have any metatable.");

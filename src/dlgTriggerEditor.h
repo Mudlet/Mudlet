@@ -166,12 +166,13 @@ public:
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void enterEvent(QEvent* pE) override;
+    bool eventFilter(QObject*, QEvent* event) override;
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
     void doCleanReset();
     void addVar(bool);
-    int canRecast(QTreeWidgetItem*, int, int);
+    int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
     void repopulateVars();
     void changeView(int);
@@ -257,7 +258,7 @@ public slots:
     void slot_copy_xml();
     void slot_paste_xml();
     void slot_chose_action_icon();
-    void slot_showSearchAreaResults(const bool);
+    void slot_showSearchAreaResults(bool);
     void slot_script_main_area_delete_handler();
     void slot_script_main_area_add_handler();
     void slot_script_main_area_edit_handler(QListWidgetItem*);
@@ -266,17 +267,18 @@ public slots:
     void grab_key_callback(int key, int modifier);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
-    void slot_setToolBarIconSize(const int);
-    void slot_setTreeWidgetIconSize(const int);
+    void slot_setToolBarIconSize(int);
+    void slot_setTreeWidgetIconSize(int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
-
-    void slot_updateStatusBar( const QString statusText); // For the source code editor
+    void slot_updateStatusBar(QString statusText); // For the source code editor
+    void slot_profileSaveStarted();
+    void slot_profileSaveFinished();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
-    void slot_toggle_isPushDownButton(const int);
-    void slot_toggleSearchCaseSensitivity(const bool);
+    void slot_toggle_isPushDownButton(int);
+    void slot_toggleSearchCaseSensitivity(bool);
     void slot_clearSearchResults();
     void slot_editorContextMenu();
 
@@ -300,6 +302,7 @@ private:
     void addTrigger(bool isFolder);
     void addAction(bool isFolder);
     void addKey(bool);
+    void timerEvent(QTimerEvent *event) override;
 
     void selectTriggerByID(int id);
     void selectTimerByID(int id);
@@ -315,12 +318,12 @@ private:
     void expand_child_action(TAction*, QTreeWidgetItem*);
     void expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
 
-    void exportTrigger(QFile&);
-    void exportTimer(QFile&);
-    void exportAlias(QFile&);
-    void exportAction(QFile&);
-    void exportScript(QFile&);
-    void exportKey(QFile&);
+    void exportTrigger(const QString &fileName);
+    void exportTimer(const QString &fileName);
+    void exportAlias(const QString &fileName);
+    void exportAction(const QString &fileName);
+    void exportScript(const QString &fileName);
+    void exportKey(const QString &fileName);
 
     void exportTriggerToClipboard();
     void exportTimerToClipboard();
@@ -444,6 +447,24 @@ private:
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
     void clearEditorNotification() const;
+
+    QAction* mProfileSaveAction;
+    QAction* mProfileSaveAsAction;
+
+    // tracks the duration of the "Save Profile As" action so
+    // autosave doesn't kick in
+    bool mSavingAs;
+
+    // keeps track of the dialog reset being queued
+    bool mCleanResetQueued;
+    void runScheduledCleanReset();
+    void autoSave();
+
+    // profile autosave interval in minutes
+    int mAutosaveInterval;
+
+    // approximate max duration "Copy as image" can take in seconds
+    int mCopyAsImageMax;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

@@ -33,6 +33,9 @@
 
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.1)
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
+endif()
 
 project(mudlet)
 
@@ -72,7 +75,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.7.1)
+set(APP_VERSION 3.16.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -224,10 +227,10 @@ if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
   file(GLOB_RECURSE lcf_files RELATIVE "${CMAKE_HOME_DIRECTORY}/3rdparty/" "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/*")
   list(REMOVE_ITEM lcf_files "lcf/.git")
   list(LENGTH lcf_files lcf_file_count)
-  if(lcf_file_count EQUAL 288)
+  if(lcf_file_count EQUAL 275)
     message(STATUS "Found Lua Code Formatter files")
   else()
-    message(WARNING "Found ${lcf_file_count} Lua Code Formatter files but 288 were expected:")
+    message(WARNING "Found ${lcf_file_count} Lua Code Formatter files but 275 were expected:")
     foreach(lcf_file ${lcf_files})
       message(STATUS "    ${lcf_file}")
     endforeach(lcf_file)
@@ -269,4 +272,4 @@ endif(CCACHE_FOUND)
 
 add_subdirectory(src)
 add_subdirectory(3rdparty/communi)
-add_subdirectory(3rdparty/lua_yajl)
+add_subdirectory(translations/translated)
