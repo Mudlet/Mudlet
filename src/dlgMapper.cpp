@@ -1,23 +1,24 @@
 /***************************************************************************
-*   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
-*   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-*   This program is distributed in the hope that it will be useful,       *
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
-*   GNU General Public License for more details.                          *
-*                                                                         *
-*   You should have received a copy of the GNU General Public License     *
-*   along with this program; if not, write to the                         *
-*   Free Software Foundation, Inc.,                                       *
-*   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
-***************************************************************************/
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015-2016, 2019 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 
 
 #include "dlgMapper.h"
@@ -72,8 +73,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
     panel->setVisible(mpHost->mShowPanel);
-    //searchList->setSelectionMode( QAbstractItemView::SingleSelection );
-    //connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
     connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
     connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
@@ -82,7 +81,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
     connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
     connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
-    //connect(searchList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(choseRoom(QListWidgetItem*)));
     connect(shiftZup, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZup);
     connect(shiftZdown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZdown);
     connect(shiftLeft, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftLeft);
