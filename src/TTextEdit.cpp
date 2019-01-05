@@ -1657,7 +1657,8 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         // for a profile instance
 
         qDebug() << "TTextEdit::mouseReleaseEvent() INFO - considering which TConsole (and pane) is involved:" << mpConsole->mConsoleName << (mIsLowerPane ? "(lower pane)" : "(upper pane)");
-        if (mpConsole->mConsoleName.startsWith("Miniconsole - ") || mpConsole->mConsoleName.startsWith("User window - ")) {
+        if (mpConsole->getType() & (TConsole::SubConsole|TConsole::UserWindow)) {
+
             qDebug() << "   This seems to be a miniConsole or a userWindow so better return the focus to the main TConsole instance...";
             // The central debug console has a null Host::mpConsole
             if (mpHost->mpConsole) {
