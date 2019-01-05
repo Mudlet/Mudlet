@@ -1065,9 +1065,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                              "experimental features needing a revised format that could be\n"
                              "incompatible with existing release code versions.  Conversely\n"
                              "a release version may allow you to downgrade to save a map in\n"
-                             "a format compatible with others using older versions of MUDLET\n"
+                             "a format compatible with others using older versions of Mudlet\n"
                              "however some features may be crippled or non-operational for\n"
-                             "this version of MUDLET.")
+                             "this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
         appendErrorMsgWithNoLf(message, false);
