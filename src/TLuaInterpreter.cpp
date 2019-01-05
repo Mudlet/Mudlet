@@ -1926,14 +1926,16 @@ int TLuaInterpreter::saveMap(lua_State* L)
         } else {
             location = QString::fromUtf8(lua_tostring(L, 1));
         }
-        if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L,
-                            "saveMap: bad argument #2 type (map format version as "
-                            "integer expected, got %s!)",
-                            luaL_typename(L, 2));
-            return lua_error(L);
-        } else {
-            saveVersion = lua_tointeger(L, 2);
+        if (lua_gettop(L) > 1) {
+            if (!lua_isnumber(L, 2)) {
+                lua_pushfstring(L,
+                                "saveMap: bad argument #2 type (map format version as "
+                                "integer expected, got %s!)",
+                                luaL_typename(L, 2));
+                return lua_error(L);
+            } else {
+                saveVersion = lua_tointeger(L, 2);
+            }
         }
     }
 

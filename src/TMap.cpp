@@ -1060,7 +1060,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
     if (mSaveVersion != mDefaultVersion) {
         QString message = tr("[ WARN ]  - Saving map in a format {%1} that is different than the one\n"
-                             "recommended {%2} baring in mind the build status of the source\n"
+                             "recommended {%2} bearing in mind the build status of the source\n"
                              "code.  Development code versions may offer the chance to try\n"
                              "experimental features needing a revised format that could be\n"
                              "incompatible with existing release code versions.  Conversely\n"
