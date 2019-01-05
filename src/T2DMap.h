@@ -70,6 +70,7 @@ public:
     // mMultiSelectionHighlightRoomId and returns a (bool) on success or failure
     // to do so.
     bool getCenterSelection();
+    int getCenterSelectedRoomId() const { return mMultiSelectionHighlightRoomId; }
 
     void setRoomSize(double);
     void setExitSize(double);
@@ -135,12 +136,17 @@ public:
     int mCustomLinesRoomFrom;
     int mCustomLinesRoomTo;
     QString mCustomLinesRoomExit;
-    QComboBox* mpCurrentLineStyle;
-    QString mCurrentLineStyle;
-    QPushButton* mpCurrentLineColor;
+
+    // Pointers to controls that hold the settings
+    QPointer<QComboBox> mpCurrentLineStyle;
+    QPointer<QPushButton> mpCurrentLineColor;
+    QPointer<QCheckBox> mpCurrentLineArrow;
+
+    // Variables that hold the current or last used setting:
+    Qt::PenStyle mCurrentLineStyle;
     QColor mCurrentLineColor;
-    QCheckBox* mpCurrentLineArrow;
     bool mCurrentLineArrow;
+
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
     bool mLabelHighlighted;
@@ -215,7 +221,8 @@ private:
     // modifications. {for slot_spread(),
     // slot_shrink(), slot_setUserData() - if ever
     // implemented, slot_setExits(),
-    // slot_movePosition(), etc.}
+    // slot_movePosition(), etc.} - previously have
+    // used -1 but is now reset to 0 if it is not valid.
     int mMultiSelectionHighlightRoomId;
 
     bool mIsSelectionSorting;

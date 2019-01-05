@@ -78,7 +78,7 @@ CONFIG += c++14
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.11
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
 
 QT += network opengl uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
@@ -147,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.15.0
+VERSION = 3.16.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment

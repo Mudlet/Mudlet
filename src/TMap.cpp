@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -57,7 +57,7 @@ TMap::TMap(Host* pH)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(19)
+, mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
@@ -1066,7 +1066,7 @@ bool TMap::serialize(QDataStream& ofs)
         }
         ofs << mUserData;
         if (mSaveVersion >= 19) {
-            // Save the data directly in supported format versions
+            // Save the data directly in supported format versions (19 and above)
             ofs << mMapSymbolFont;
             ofs << mMapSymbolFontFudgeFactor;
             ofs << mIsOnlyMapSymbolFontToBeUsed;
@@ -1254,10 +1254,113 @@ bool TMap::serialize(QDataStream& ofs)
             ofs << oldCharacterCode;
         }
         ofs << pR->userData;
-        ofs << pR->customLines;
-        ofs << pR->customLinesArrow;
-        ofs << pR->customLinesColor;
-        ofs << pR->customLinesStyle;
+        if (mSaveVersion >= 20) {
+            // Before version 20 stored the style as an Latin1 string, the color
+            // as a QList<int> for the RGB components and used UPPER case for
+            // the NORMAL exit direction keys...
+            ofs << pR->customLines;
+            ofs << pR->customLinesArrow;
+            ofs << pR->customLinesColor;
+            ofs << pR->customLinesStyle;
+        } else {
+            QMap<QString, QList<QPointF>> oldLinesData;
+            QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+            while (itCustomLine.hasNext()) {
+                itCustomLine.next();
+                QString direction(itCustomLine.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesData.insert(itCustomLine.key().toUpper(), itCustomLine.value());
+                } else {
+                    oldLinesData.insert(itCustomLine.key(), itCustomLine.value());
+                }
+            }
+            ofs << oldLinesData;
+
+            QMap<QString, bool> oldLinesArrowData;
+            QMapIterator<QString, bool> itCustomLineArrow(pR->customLinesArrow);
+            while (itCustomLineArrow.hasNext()) {
+                itCustomLineArrow.next();
+                QString direction(itCustomLineArrow.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesArrowData.insert(itCustomLineArrow.key().toUpper(), itCustomLineArrow.value());
+                } else {
+                    oldLinesArrowData.insert(itCustomLineArrow.key(), itCustomLineArrow.value());
+                }
+            }
+            ofs << oldLinesArrowData;
+
+            QMap<QString, QList<int>> oldLinesColorData;
+            QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
+            while (itCustomLine.hasNext()) {
+                itCustomLineColor.next();
+                QString direction(itCustomLineColor.key());
+                QList<int> colorComponents;
+                colorComponents << itCustomLineColor.value().red() << itCustomLineColor.value().green() << itCustomLineColor.value().blue();
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesColorData.insert(itCustomLineColor.key().toUpper(), colorComponents);
+                } else {
+                    oldLinesColorData.insert(itCustomLineColor.key(), colorComponents);
+                }
+            }
+            ofs << oldLinesColorData;
+
+            QMap<QString, QString> oldLineStyleData;
+            QMapIterator<QString, Qt::PenStyle> itCustomLineStyle(pR->customLinesStyle);
+            while (itCustomLineStyle.hasNext()) {
+                itCustomLineStyle.next();
+                QString direction(itCustomLineStyle.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    direction = direction.toUpper();
+                }
+                switch (itCustomLineStyle.value()) {
+                case Qt::DotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dot line"));
+                    break;
+                case Qt::DashLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash line"));
+                    break;
+                case Qt::DashDotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash dot line"));
+                    break;
+                case Qt::DashDotDotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash dot dot line"));
+                    break;
+                case Qt::SolidLine:
+                    [[clang::fallthrough]];
+                default:
+                    oldLineStyleData.insert(direction, QLatin1String("solid line"));
+                }
+            }
+            ofs << oldLineStyleData;
+        }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
         ofs << pR->getExitWeights();
@@ -1532,22 +1635,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     if ((!canRestore || entries.empty()) && downloadIfNotFound) {
         QMessageBox msgBox;
 
-        if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
-            || !getMmpMapLocation().isEmpty()) {
+        if (!getMmpMapLocation().isEmpty()) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
             msgBox.exec();
             if (msgBox.clickedButton() == yesButton) {
-                // no https support
-                if (mpHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
-                    downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
-                } else {
-                    downloadMap();
-                }
+                downloadMap();
             } else if (msgBox.clickedButton() == noButton) {
                 ; //No-op to avoid unused "noButton"
             }
@@ -2136,19 +2230,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 #endif
 
-    // Unfortunately we do not seem to get a file size from the IRE servers so
-    // estimate it from current figures + 10% as of now (2016/10) - using previous
-    // 4M that was used before for other cases:
     mExpectedFileSize = 4000000;
-    if (url.toString().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4706442);
-    } else if (url.toString().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 5695407);
-    } else if (url.toString().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4997166);
-    } else if (url.toString().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4842063);
-    }
 
     QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
@@ -2167,9 +2249,9 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
-    // Not used:    connect(mpNetworkReply, SIGNAL( readyRead() ), this, SLOT( slot_readyRead() ) );
+    // Not used:    connect(mpNetworkReply, &QNetworkReply::readyRead, this, &TMap::slot_readyRead);
     connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
-    // Not used:    connect(mpNetworkReply, SIGNAL( sslErrors( QList<QSslError> ) ), this, SLOT( slot_sslErrors( QList<QSslError> ) ) );
+    // Not used:    connect(mpNetworkReply, &QNetworkReply::sslErrors, this, &TMap::slot_sslErrors);
     connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
     mpProgressDialog->show();

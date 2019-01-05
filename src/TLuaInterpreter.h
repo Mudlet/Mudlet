@@ -131,6 +131,7 @@ public:
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
+    static int removeCustomLine(lua_State*);
     static int noop(lua_State*);
     static int sendMSDP(lua_State*);
     static int auditAreas(lua_State*);
@@ -482,8 +483,9 @@ public:
     static int getDiscordSmallIconText(lua_State*);
     static int getDiscordTimeStamps(lua_State*);
     static int getDiscordParty(lua_State*);
-    static int setDiscordGame(lua_State *L);
-    static int getPlayerRoom(lua_State* L);
+    static int setDiscordGame(lua_State*);
+    static int getPlayerRoom(lua_State*);
+    static int getMapSelection(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

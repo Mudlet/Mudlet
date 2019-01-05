@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2018 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2016-2019 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -188,6 +188,10 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
+#ifdef Q_OS_UNIX
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
     auto * app = qobject_cast<QApplication*>(initApp.data());
 
@@ -327,7 +331,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2019");
         QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
