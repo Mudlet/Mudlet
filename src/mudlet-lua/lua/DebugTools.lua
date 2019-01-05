@@ -215,6 +215,14 @@ function prettywrite (tbl, space, not_clever)
   return table.concat(lines, #space > 0 and '\n' or '')
 end
 
-function display(what)
-  echo((prettywrite(what, '  ') or 'nil') .. '\n')
+function display(...)
+  local arg = {...}
+  arg.n = table.maxn(arg)
+  if arg.n > 1 then
+    for i = 1, arg.n do
+      display(arg[i])
+    end
+  else
+    echo((prettywrite(arg[1], '  ') or 'nil') .. '\n')
+  end
 end

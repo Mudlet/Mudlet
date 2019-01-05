@@ -30,6 +30,7 @@ set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
     ctelnet.cpp
+    discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
     dlgAliasMainArea.cpp
@@ -127,6 +128,7 @@ set(mudlet_UIS
 
 set(mudlet_MOC_HDRS
     ctelnet.h
+    discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
     dlgAliasMainArea.h
@@ -149,9 +151,9 @@ set(mudlet_MOC_HDRS
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
-    Host.h
     exitstreewidget.h
     glwidget.h
+    Host.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
@@ -172,13 +174,14 @@ set(mudlet_MOC_HDRS
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
+    discord.h
     FontManager.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
-    pre_guard.h
     post_guard.h
+    pre_guard.h
     ScriptUnit.h
     TAction.h
     TAlias.h
@@ -333,19 +336,15 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
+find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 
 # This is not present before Qt 5.7:
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.6)
-  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+if (Qt5Core_VERSION VERSION_LESS 5.7)
+  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later, yours is ${Qt5Core_VERSION}")
 else()
-  if (Qt5Core_VERSION VERSION_LESS 5.7)
-    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.7 at a minimum")
-  else()
-      message(STATUS "Qt version: ${Qt5Core_VERSION}")
-  endif()
+    message(STATUS "Qt version: ${Qt5Core_VERSION}")
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -489,7 +488,6 @@ target_link_libraries(mudlet
     ${ZLIB_LIBRARIES}
     ${PUGIXML_LIBRARIES}
     communi
-    lua_yajl
     edbee-lib
 )
 
@@ -506,6 +504,11 @@ if(PC_ZIP_FOUND)
     target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
 else()
     target_link_libraries(mudlet ${ZIP_LIBRARIES})
+endif()
+
+if(WIN32)
+    target_link_libraries(mudlet ws2_32
+    )
 endif()
 
 if(APPLE)

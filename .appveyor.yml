@@ -2,6 +2,16 @@ version: 1.0.{build}
 init:
 - cmd: mkdir C:\src\
 environment:
+  signing_password:
+    secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
+  DEPLOY_KEY_PASS:
+    secure: 81sr0SJzuWG+mgH3X6fJTh4rfX5/O1qa3MsItNvFukQ=
+  DEPLOY_PATH:
+    secure: XQhASAJJm4Owpu74K4jgL0gszN59XJnCAS27NG7CW5G1LSRSWRh/EhKiTD36DvSr
+  DBLSQD_USER:
+    secure: MzfNcBLZRfswzBQufoW4EV+9/tcG5vW+G6EVTyN6Glc=
+  DBLSQD_PASS:
+    secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
   - QT_BASE_DIR: C:\Qt\5.11\mingw53_32
 install:

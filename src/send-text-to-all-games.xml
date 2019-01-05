@@ -8,8 +8,9 @@
             <name>Send text to all games with :</name>
             <script>-- prefix with : to send text or run an alias in all open profiles that have this script installed
 -- for example - :hi or :follow bob
-expandAlias(matches[2])
-raiseGlobalEvent(&quot;sysSendAllProfiles&quot;, matches[2])
+local matchedText = matches[2]
+expandAlias(matchedText)
+raiseGlobalEvent(&quot;sysSendAllProfiles&quot;, matchedText)
 </script>
             <command></command>
             <packageName></packageName>

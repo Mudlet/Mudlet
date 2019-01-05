@@ -33,14 +33,14 @@
 void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
 {
     if (element == QStyle::CE_TabBarTab) {
-        QString tabText = mpTabBar->tabText(mpTabBar->tabAt(option->rect.center()));
+        QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
-        if (mBoldTabsSet.contains(tabText)||mItalicTabsSet.contains(tabText)||mUnderlineTabsSet.contains(tabText)) {
+        if (mBoldTabsSet.contains(tabName)||mItalicTabsSet.contains(tabName)||mUnderlineTabsSet.contains(tabName)) {
             painter->save();
-            font.setBold(mBoldTabsSet.contains(tabText));
-            font.setItalic(mItalicTabsSet.contains(tabText));
-            font.setUnderline(mUnderlineTabsSet.contains(tabText));
+            font.setBold(mBoldTabsSet.contains(tabName));
+            font.setItalic(mItalicTabsSet.contains(tabName));
+            font.setUnderline(mUnderlineTabsSet.contains(tabName));
             isStyleChanged = true;
             painter->setFont(font);
         }
@@ -60,7 +60,7 @@ void TStyle::setNamedTabState(const QString& text, const bool state, QSet<QStrin
 {
     bool textIsInATab = false;
     for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
-        if (mpTabBar->tabText(i) == text) {
+        if (mpTabBar->tabData(i).toString() == text) {
             textIsInATab = true;
             break;
         }
@@ -84,9 +84,9 @@ void TStyle::setIndexedTabState(const int index, const bool state, QSet<QString>
     }
 
     if (state) {
-        effect.insert(mpTabBar->tabText(index));
+        effect.insert(mpTabBar->tabData(index).toString());
     } else {
-        effect.remove(mpTabBar->tabText(index));
+        effect.remove(mpTabBar->tabData(index).toString());
     }
 }
 
@@ -94,7 +94,7 @@ bool TStyle::namedTabState(const QString& text, const QSet<QString>& effect) con
 {
     bool textIsInATab = false;
     for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
-        if (mpTabBar->tabText(i) == text) {
+        if (mpTabBar->tabData(i).toString() == text) {
             textIsInATab = true;
             break;
         }
@@ -113,7 +113,7 @@ bool TStyle::indexedTabState(const int index, const QSet<QString>& effect) const
         return false;
     }
 
-    return effect.contains(mpTabBar->tabText(index));
+    return effect.contains(mpTabBar->tabData(index).toString());
 }
 
 QSize TTabBar::tabSizeHint(int index) const
@@ -121,6 +121,10 @@ QSize TTabBar::tabSizeHint(int index) const
     if (mStyle.tabBold(index)||mStyle.tabItalic(index)||mStyle.tabUnderline(index)) {
         const QSize s = QTabBar::tabSizeHint(index);
         const QFontMetrics fm(font());
+        // Note that this method must use (because it is associated with sizing
+        // the text to show) the (possibly Qt modified to include an
+        // accelarator) actual tabText and not the profile name that we have
+        // stored in the tabData:
         const int w = fm.width(tabText(index));
 
         QFont f = font();
@@ -131,7 +135,7 @@ QSize TTabBar::tabSizeHint(int index) const
 
         const int bw = bfm.width(tabText(index));
 
-        return QSize(s.width() - w + bw, s.height());
+        return {s.width() - w + bw, s.height()};
     } else {
         return QTabBar::tabSizeHint(index);
     }
