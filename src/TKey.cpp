@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -71,23 +72,33 @@ void TKey::setName(const QString& name)
     mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
 }
 
-bool TKey::match(int key, int modifier)
+bool TKey::match(int key, int modifier, const bool isToMatchAll)
 {
+    bool isAMatch = false;
     if (isActive()) {
         if (!isFolder()) {
             if ((mKeyCode == key) && (mKeyModifier == modifier)) {
                 execute();
-                return true;
+                if (isToMatchAll) {
+                    isAMatch = true;
+                } else {
+                    return true;
+                }
             }
         }
 
         for (auto childKey : *mpMyChildrenList) {
-            if (childKey->match(key, modifier)) {
-                return true;
+            if (childKey->match(key, modifier, isToMatchAll)) {
+                if (isToMatchAll) {
+                    isAMatch = true;
+                } else {
+                    return true;
+                }
             }
         }
     }
-    return false;
+
+    return isAMatch;
 }
 
 

@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -20,10 +21,16 @@
 
 set(mudlet_RCCS mudlet.qrc)
 
+if(USE_FONTS)
+    set(mudlet_fonts_RCCS mudlet_fonts.qrc)
+    add_definitions(-DINCLUDE_FONTS)
+endif()
+
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
     ctelnet.cpp
+    discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
     dlgAliasMainArea.cpp
@@ -51,6 +58,7 @@ set(mudlet_SRCS
     glwidget.cpp
     Host.cpp
     HostManager.cpp
+    ircmessageformatter.cpp
     KeyUnit.cpp
     LuaInterface.cpp
     main.cpp
@@ -68,7 +76,6 @@ set(mudlet_SRCS
     TEasyButtonBar.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
-    THighlighter.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
@@ -80,6 +87,7 @@ set(mudlet_SRCS
     TScript.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
+    TTabBar.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -87,9 +95,9 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
+    wcwidth.cpp
     XMLexport.cpp
     XMLimport.cpp
-    ircmessageformatter.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -120,6 +128,7 @@ set(mudlet_UIS
 
 set(mudlet_MOC_HDRS
     ctelnet.h
+    discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
     dlgAliasMainArea.h
@@ -144,13 +153,13 @@ set(mudlet_MOC_HDRS
     EAction.h
     exitstreewidget.h
     glwidget.h
+    Host.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
     TConsole.h
     TEasyButtonBar.h
     TForkedProcess.h
-    THighlighter.h
     TLabel.h
     TLuaInterpreter.h
     TMap.h
@@ -159,19 +168,20 @@ set(mudlet_MOC_HDRS
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
+    XMLexport.h
 )
 
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
+    discord.h
     FontManager.h
-    Host.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
-    pre_guard.h
     post_guard.h
+    pre_guard.h
     ScriptUnit.h
     TAction.h
     TAlias.h
@@ -192,11 +202,12 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TSplitterHandle.h
+    TTabBar.h
     TTimer.h
     TTrigger.h
     TVar.h
     VarUnit.h
-    XMLexport.h
+    wcwidth.h
     XMLimport.h
 )
 
@@ -221,7 +232,7 @@ else()
   endif()
 endif()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -325,28 +336,35 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
+find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 
-# This is not present before Qt 5.8:
+# This is not present before Qt 5.7:
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.6)
-  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+if (Qt5Core_VERSION VERSION_LESS 5.7)
+  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later, yours is ${Qt5Core_VERSION}")
 else()
-  if (Qt5Core_VERSION VERSION_LESS 5.8)
-    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.8 at a minimum")
-  else()
-      message(STATUS "Qt version: ${Qt5Core_VERSION}")
-  endif()
+    message(STATUS "Qt version: ${Qt5Core_VERSION}")
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
-if(USE_UPDATER)
-  message(STATUS "Updater code is enabled in this configuration")
-else(USE_UPDATER)
-  message(STATUS "Updater code is not enabled or not available in this configuration")
-endif(USE_UPDATER)
+if(USE_FONTS)
+  message(STATUS "Including additional font resources within the Mudlet executable")
+else()
+  message(STATUS "No font resources are to be included within the Mudlet executable")
+endif()
+
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+  if(USE_UPDATER)
+    message(STATUS "The updater code is included in this configuration")
+  else(USE_UPDATER)
+    message(STATUS "The updater code is excluded from this configuration")
+  endif(USE_UPDATER)
+else()
+  message(STATUS "The Updater code is excluded as on-line updating is not available on this platform")
+endif()
+
 
 if(WIN32)
   set(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -361,6 +379,7 @@ find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(YAJL REQUIRED)
+find_package(PUGIXML REQUIRED)
 
 # Fall back on original FIND_PACKAGE process on Apple if Package Config failed
 # Originally we did use that but it started to fail on Travis C.I. in June 2016
@@ -405,6 +424,7 @@ include_directories(
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
+    ${PUGIXML_INCLUDE_DIR}
 )
 
 if(Qt5Gamepad_FOUND)
@@ -424,7 +444,11 @@ include_directories( ${ZLIB_INCLUDE_DIR} )
 
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+if(USE_FONTS)
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
+else()
+    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+endif()
 
 if(WIN32)
     add_executable(mudlet WIN32
@@ -462,8 +486,8 @@ target_link_libraries(mudlet
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    ${PUGIXML_LIBRARIES}
     communi
-    lua_yajl
     edbee-lib
 )
 
@@ -480,6 +504,11 @@ if(PC_ZIP_FOUND)
     target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
 else()
     target_link_libraries(mudlet ${ZIP_LIBRARIES})
+endif()
+
+if(WIN32)
+    target_link_libraries(mudlet ws2_32
+    )
 endif()
 
 if(APPLE)

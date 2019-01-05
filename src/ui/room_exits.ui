@@ -64,7 +64,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -80,7 +80,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -90,7 +90,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="nw">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>NW exit...</string>
@@ -103,7 +103,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -116,7 +116,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -135,7 +135,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -151,7 +151,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -167,7 +167,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -204,7 +204,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -220,7 +220,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -230,7 +230,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="n">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>N exit...</string>
@@ -243,7 +243,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -256,7 +256,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -275,7 +275,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -291,7 +291,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -307,7 +307,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -344,7 +344,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -360,7 +360,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -370,7 +370,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="ne">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>NE exit...</string>
@@ -383,7 +383,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -396,7 +396,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -415,7 +415,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -431,7 +431,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -447,7 +447,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -484,7 +484,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -500,7 +500,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -510,7 +510,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="up">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>Up exit...</string>
@@ -523,7 +523,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -536,7 +536,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -555,7 +555,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -571,7 +571,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -587,7 +587,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -624,7 +624,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -640,7 +640,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -650,7 +650,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="w">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -666,7 +666,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -679,7 +679,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -698,7 +698,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -714,7 +714,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -730,7 +730,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -777,7 +777,7 @@
             <cursorShape>ForbiddenCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</string>
+            <string>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</string>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -800,7 +800,7 @@
             <cursorShape>ForbiddenCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</string>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -834,7 +834,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -850,7 +850,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -860,7 +860,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="e">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>E exit...</string>
@@ -873,7 +873,7 @@
             <number>9999</number>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
           </widget>
          </item>
@@ -883,7 +883,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -902,7 +902,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -918,7 +918,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -934,7 +934,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -971,7 +971,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -987,7 +987,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -997,7 +997,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="down">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>Down exit...</string>
@@ -1010,7 +1010,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1023,7 +1023,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1042,7 +1042,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1058,7 +1058,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1074,7 +1074,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1117,7 +1117,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1139,7 +1139,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1149,7 +1149,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="sw">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>SW exit...</string>
@@ -1168,7 +1168,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1181,7 +1181,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1200,7 +1200,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1216,7 +1216,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1232,7 +1232,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1269,7 +1269,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1285,7 +1285,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1295,7 +1295,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="s">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>S exit...</string>
@@ -1308,7 +1308,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1321,7 +1321,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1340,7 +1340,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1356,7 +1356,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1372,7 +1372,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1409,7 +1409,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1425,7 +1425,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1435,7 +1435,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="se">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>SE exit...</string>
@@ -1448,7 +1448,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1461,7 +1461,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1480,7 +1480,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1496,7 +1496,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1512,7 +1512,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1549,7 +1549,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1565,7 +1565,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1575,7 +1575,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="in">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>In exit...</string>
@@ -1588,7 +1588,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1601,7 +1601,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1620,7 +1620,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1636,7 +1636,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1652,7 +1652,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1689,7 +1689,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1705,7 +1705,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1715,7 +1715,7 @@
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="out">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>Out exit...</string>
@@ -1728,7 +1728,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1741,7 +1741,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1760,7 +1760,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1776,7 +1776,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1792,7 +1792,7 @@
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</string>
            </property>
            <property name="text">
             <string/>
@@ -1868,7 +1868,7 @@
             </font>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room that's to the southwest here.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;p&gt;Set the number of the room that's to the southwest here.&lt;/p&gt;</string>
            </property>
            <property name="placeholderText">
             <string>Exit RoomID number</string>
@@ -1972,7 +1972,7 @@
       </size>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</string>
      </property>
      <property name="text">
       <string>&amp;Save</string>
@@ -1988,7 +1988,7 @@
       </size>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</string>
      </property>
      <property name="text">
       <string>&amp;Cancel</string>
@@ -2007,7 +2007,7 @@
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</string>
         </property>
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
@@ -2045,7 +2045,7 @@
 Room ID</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2054,7 +2054,7 @@ Room ID</string>
 Route</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2063,7 +2063,7 @@ Route</string>
 Weight</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive integer value to overide the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;Set to a positive integer value to overide the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2072,7 +2072,7 @@ Weight</string>
 None</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2081,7 +2081,7 @@ None</string>
 Open</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2090,7 +2090,7 @@ Open</string>
 Closed</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2099,7 +2099,7 @@ Closed</string>
 Locked</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2108,7 +2108,7 @@ Locked</string>
 or LUA script</string>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
          </property>
         </column>
        </widget>
@@ -2125,7 +2125,7 @@ or LUA script</string>
       </size>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</string>
      </property>
      <property name="text">
       <string>&amp;Add special exit</string>
@@ -2144,7 +2144,7 @@ or LUA script</string>
       </size>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</string>
      </property>
      <property name="text">
       <string>&amp;End S. Exits editing</string>

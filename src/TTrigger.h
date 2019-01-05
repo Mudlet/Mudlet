@@ -75,7 +75,7 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host* pHost); //throws exeption ExObjNoCreate
+    TTrigger(const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
     QString getCommand() { return mCommand; }
     void compileAll();
     void setCommand(const QString& b) { mCommand = b; }
@@ -149,8 +149,12 @@ public:
     // or a function
     bool mRegisteredAnonymousLuaFunction;
 
+    int getExpiryCount() const;
+    void setExpiryCount(int expiryCount);
+
 private:
-    TTrigger() {}
+    TTrigger() = default;
+
     void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList);
     void filter(std::string&, int&);
 
@@ -180,6 +184,8 @@ private:
     QColor mBgColor;
     bool mIsColorizerTrigger;
     bool mModuleMember;
+    // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
+    int mExpiryCount;
 };
 
 #endif // MUDLET_TTRIGGER_H

@@ -25,12 +25,9 @@
 
 #include "Host.h"
 #include "TConsole.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
-#include <QApplication>
-#include <QDebug>
 #include <QElapsedTimer>
 #include "post_guard.h"
 
@@ -384,7 +381,7 @@ void TArea::calcSpan()
     yminEbene.clear();
     xmaxEbene.clear();
     ymaxEbene.clear();
-    ebenen.clear();
+    zLevels.clear();
 
     bool isFirstDone = false;
     QSetIterator<int> itRoom(rooms);
@@ -403,7 +400,7 @@ void TArea::calcSpan()
             max_y = min_y;
             min_z = pR->z;
             max_z = min_z;
-            ebenen.push_back(pR->z);
+            zLevels.push_back(pR->z);
             xminEbene.insert(pR->z, pR->x);
             xmaxEbene.insert(pR->z, pR->x);
             yminEbene.insert(pR->z, pR->y);
@@ -413,8 +410,8 @@ void TArea::calcSpan()
         } else {
             // Already had one valid room so now must check more things
 
-            if (!ebenen.contains(pR->z)) {
-                ebenen.push_back(pR->z);
+            if (!zLevels.contains(pR->z)) {
+                zLevels.push_back(pR->z);
             }
 
             if (!xminEbene.contains(pR->z)) {
@@ -467,10 +464,10 @@ void TArea::calcSpan()
         }
     }
 
-    if (ebenen.size() > 1) {
+    if (zLevels.size() > 1) {
         // Not essential but it makes debugging a bit clearer if they are sorted
         // The {x|y}{min|max}Ebene are, by definition!
-        std::sort(ebenen.begin(), ebenen.end());
+        std::sort(zLevels.begin(), zLevels.end());
     }
 }
 

@@ -48,14 +48,14 @@ public:
 private:
     dblsqd::Feed* feed;
     dblsqd::UpdateDialog* updateDialog;
-    QPushButton* installOrRestartButton;
+    QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
     QSettings* settings;
 
 #if defined(Q_OS_LINUX)
     void setupOnLinux();
     void untarOnLinux(const QString& fileName);
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
 #elif defined(Q_OS_MACOS)
@@ -63,6 +63,8 @@ private:
 #endif
 
     void recordUpdateTime() const;
+    void recordUpdatedVersion() const;
+    QString getPreviousVersion() const;
     void finishSetup();
 
 #if defined(Q_OS_LINUX)
@@ -74,9 +76,10 @@ private:
 
 signals:
     void updateInstalled();
+    void signal_automaticUpdatesChanged(const bool);
 
 public slots:
-    void installOrRestartClicked(QAbstractButton* button, QString filePath);
+    void installOrRestartClicked(QAbstractButton* button, const QString& filePath);
 #if defined(Q_OS_LINUX)
     // might want to make these private
     void updateBinaryOnLinux();

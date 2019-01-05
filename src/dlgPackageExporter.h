@@ -42,7 +42,7 @@ class dlgPackageExporter : public QDialog
 
 public:
     Q_DISABLE_COPY(dlgPackageExporter)
-    explicit dlgPackageExporter(QWidget* parent = 0);
+    explicit dlgPackageExporter(QWidget* parent = nullptr);
     explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
     void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
@@ -82,9 +82,16 @@ private:
     QTreeWidget* treeWidget;
     QPushButton* exportButton;
     QPushButton* closeButton;
+    QTreeWidgetItem* mpTriggers;
+    QTreeWidgetItem* mpAliases;
+    QTreeWidgetItem* mpTimers;
+    QTreeWidgetItem* mpScripts;
+    QTreeWidgetItem* mpKeys;
+    QTreeWidgetItem* mpButtons;
     QString tempDir;
     QString packageName;
     QString zipFile;
+    void showUploadNudge();
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

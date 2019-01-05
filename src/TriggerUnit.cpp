@@ -24,11 +24,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
-#include "TLuaInterpreter.h"
 #include "TTrigger.h"
-
-#include <iostream>
-#include <ostream>
 
 
 using namespace std;
@@ -222,7 +218,7 @@ void TriggerUnit::removeTrigger(TTrigger* pT)
     mTriggerMap.remove(pT->getID());
 }
 
-// trigger matching order is permantent trigger objects first, temporary objects second
+// trigger matching order is permanent trigger objects first, temporary objects second
 // after package import or module sync this order needs to be reset
 void TriggerUnit::reorderTriggersAfterPackageImport()
 {
@@ -247,10 +243,14 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (data.size() > 0) {
-        char* subject = (char*)malloc(strlen(data.toLocal8Bit().data()) + 1);
-        strcpy(subject, data.toLocal8Bit().data());
-
+    if (!data.isEmpty()) {
+#if defined(Q_OS_WIN32)
+        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+        char* subject = (char*)malloc(strlen(data.toUtf8().data()) + 1);
+        strcpy(subject, data.toUtf8().data());
+#else
+        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
         for (auto trigger : mTriggerRootNodeList) {
             trigger->match(subject, data, line);
         }
@@ -275,7 +275,6 @@ void TriggerUnit::compileAll()
 void TriggerUnit::stopAllTriggers()
 {
     for (auto trigger : mTriggerRootNodeList) {
-        QString name = trigger->getName();
         trigger->disableFamily();
     }
 }

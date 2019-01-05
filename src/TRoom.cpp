@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,13 +29,36 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
-#include <QDataStream>
-#include <QDebug>
-#include <QElapsedTimer>
+#include <QString>
 #include <QStringBuilder>
+#include <QRegularExpression>
 #include "post_guard.h"
 
+// Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
+// in Qt5 - the compilation errors that result in not having this are really
+// confusing!
+QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
+{
+    int temporary;
+    ds >> temporary;
+    switch(temporary) {
+    case Qt::DotLine:
+        [[clang::fallthrough]];
+    case Qt::DashLine:
+        [[clang::fallthrough]];
+    case Qt::DashDotLine:
+        [[clang::fallthrough]];
+    case Qt::DashDotDotLine:
+        value = static_cast<Qt::PenStyle>(temporary);
+        break;
+    case Qt::SolidLine:
+        [[clang::fallthrough]];
+    default:
+    // Force anything else to be a solidline
+        value = Qt::SolidLine;
+    }
+    return ds;
+}
 
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)
@@ -46,7 +70,7 @@ TRoom::TRoom(TRoomDB* pRDB)
 , min_y(0)
 , max_x(0)
 , max_y(0)
-, c(0)
+, mSymbol(QString())
 , highlight(false)
 , highlightColor(QColor(255, 150, 0))
 , rendered(false)
@@ -157,7 +181,7 @@ void TRoom::setWeight(int w)
     weight = w;
 }
 
-// Previous implimentations did not allow for REMOVAL of an exit weight (by
+// Previous implementations did not allow for REMOVAL of an exit weight (by
 // setting it to zero)
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
@@ -295,7 +319,7 @@ bool TRoom::setExit(int to, int direction)
     return true;
 }
 
-bool TRoom::hasExit(int direction)
+bool TRoom::hasExit(int direction) const
 {
     switch (direction) {
     case DIR_NORTH:     if (north     != -1) { return true; } break;
@@ -311,6 +335,56 @@ bool TRoom::hasExit(int direction)
     case DIR_IN:        if (in        != -1) { return true; } break;
     case DIR_OUT:       if (out       != -1) { return true; } break;
     }
+    return false;
+}
+
+// Confirms whether the text identifies a valid exit, given the context in which
+// it is called it does not have to worry about the casing of "text" as that has
+// already been handled in the current usages:
+bool TRoom::hasExitOrSpecialExit(const QString& text) const
+{
+    // First check the normal ones:
+    if (text == QLatin1String("n")) {
+        return hasExit(DIR_NORTH);
+    } else if (text == QLatin1String("ne")) {
+        return hasExit(DIR_NORTHEAST);
+    } else if (text == QLatin1String("e")) {
+        return hasExit(DIR_EAST);
+    } else if (text == QLatin1String("se")) {
+        return hasExit(DIR_SOUTHEAST);
+    } else if (text == QLatin1String("s")) {
+        return hasExit(DIR_SOUTH);
+    } else if (text == QLatin1String("sw")) {
+        return hasExit(DIR_SOUTHWEST);
+    } else if (text == QLatin1String("w")) {
+        return hasExit(DIR_WEST);
+    } else if (text == QLatin1String("nw")) {
+        return hasExit(DIR_NORTHWEST);
+    } else if (text == QLatin1String("up")) {
+        return hasExit(DIR_UP);
+    } else if (text == QLatin1String("down")) {
+        return hasExit(DIR_DOWN);
+    } else if (text == QLatin1String("in")) {
+        return hasExit(DIR_IN);
+    } else if (text == QLatin1String("out")) {
+        return hasExit(DIR_OUT);
+    } else {
+        // Then check the special exits:
+        QMapIterator<int, QString> itSpecialExit(other);
+        while (itSpecialExit.hasNext()) {
+            itSpecialExit.next();
+            QString exitCmd(itSpecialExit.value());
+            if (exitCmd.startsWith(QLatin1Char('0')) || exitCmd.startsWith(QLatin1Char('1'))) {
+                exitCmd.remove(0, 1);
+            }
+
+            if (exitCmd == text) {
+                // We have a special exit which matches the given text
+                return true;
+            }
+        }
+    }
+
     return false;
 }
 
@@ -404,7 +478,7 @@ void TRoom::setExitLock(int exit, bool state)
     }
 }
 
-// The need for "to" seems superflous here, cmd is the decisive factor
+// The need for "to" seems superfluous here, cmd is the decisive factor
 void TRoom::setSpecialExitLock(int to, const QString& cmd, bool doLock)
 {
     QMapIterator<int, QString> it(other);
@@ -552,7 +626,7 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
             }
         }
     }
-    // Have definately removed the existing case of this command
+    // Have definitely removed the existing case of this command
     // Now add it to map if wanted
 
     if (to > 1) {
@@ -607,7 +681,7 @@ void TRoom::removeAllSpecialExitsToRoom(int _id)
 
 void TRoom::calcRoomDimensions()
 {
-    if (customLines.size() < 1) {
+    if (customLines.empty()) {
         return;
     }
     min_x = 0.0;
@@ -620,7 +694,7 @@ void TRoom::calcRoomDimensions()
     while (it.hasNext()) {
         it.next();
         const QList<QPointF>& _pL = it.value();
-        if (_pL.size() < 1) {
+        if (_pL.empty()) {
             continue;
         }
         if (needInit) {
@@ -649,7 +723,6 @@ void TRoom::calcRoomDimensions()
     }
 }
 
-/* bool - N/U: no return value created or used */
 void TRoom::restore(QDataStream& ifs, int roomID, int version)
 {
     id = roomID;
@@ -691,17 +764,133 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     if (version >= 6) {
         ifs >> other;
     }
-    if (version >= 9) {
-        ifs >> c;
+
+    qint8 oldCharacterCode = 0;
+    if (version >= 19) {
+        // From version 19 we use a QString for one or more (Unicode) Graphemes
+        ifs >> mSymbol;
+    } else if (version >= 9 && version < 19) {
+        // For older versions we note the prior unsigned short in case
+        // there is no fallback carried in the room user data
+        ifs >> oldCharacterCode;
     }
+
     if (version >= 10) {
         ifs >> userData;
+        if (version < 19) {
+            // Recover and remove backup values from the user data
+            QString symbolString = userData.take(QLatin1String("system.fallback_symbol"));
+            if (!symbolString.isEmpty()) {
+                // There is a fallback in the user data
+                mSymbol = symbolString;
+            } else if (oldCharacterCode > 32) {
+                // There is an old format unsigned short represeting a printable
+                // ASCII or ISO 8859-1 (Latin1) character:
+                mSymbol = QChar(oldCharacterCode);
+            }
+        }
     }
+
     if (version >= 11) {
-        ifs >> customLines;
-        ifs >> customLinesArrow;
-        ifs >> customLinesColor;
-        ifs >> customLinesStyle;
+        if (version >= 20) {
+            // In version 20 we stopped storing a QString form for the line
+            // style - and we also switched to lower case for the normal exit
+            // direction keys and using a QColor to store the color:
+            ifs >> customLines;
+            ifs >> customLinesArrow;
+            ifs >> customLinesColor;
+            ifs >> customLinesStyle;
+        } else {
+            QMap<QString, QList<QPointF>> oldLinesData;
+            ifs >> oldLinesData;
+            QMapIterator<QString, QList<QPointF>> itCustomLine(oldLinesData);
+            while (itCustomLine.hasNext()) {
+                itCustomLine.next();
+                QString direction(itCustomLine.key());
+                if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
+                    || direction == QLatin1String("DOWN")
+                    || direction == QLatin1String("NE")
+                    || direction == QLatin1String("SE")
+                    || direction == QLatin1String("SW")
+                    || direction == QLatin1String("NW")
+                    || direction == QLatin1String("IN")
+                    || direction == QLatin1String("OUT")) {
+                    customLines.insert(itCustomLine.key().toLower(), itCustomLine.value());
+                } else {
+                    customLines.insert(itCustomLine.key(), itCustomLine.value());
+                }
+            }
+
+            QMap<QString, bool> oldLinesArrowData;
+            ifs >> oldLinesArrowData;
+            QMapIterator<QString, bool> itCustomLineArrow(oldLinesArrowData);
+            while (itCustomLineArrow.hasNext()) {
+                itCustomLineArrow.next();
+                QString direction(itCustomLineArrow.key());
+                if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
+                    || direction == QLatin1String("DOWN")
+                    || direction == QLatin1String("NE")
+                    || direction == QLatin1String("SE")
+                    || direction == QLatin1String("SW")
+                    || direction == QLatin1String("NW")
+                    || direction == QLatin1String("IN")
+                    || direction == QLatin1String("OUT")) {
+                    customLinesArrow.insert(itCustomLineArrow.key().toLower(), itCustomLineArrow.value());
+                } else {
+                    customLinesArrow.insert(itCustomLineArrow.key(), itCustomLineArrow.value());
+                }
+            }
+
+            QMap<QString, QList<int>> oldLinesColorData;
+            ifs >> oldLinesColorData;
+            QMapIterator<QString, QList<int>> itCustomLineColor(oldLinesColorData);
+            while (itCustomLine.hasNext()) {
+                itCustomLineColor.next();
+                QString direction(itCustomLineColor.key());
+                if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
+                    || direction == QLatin1String("DOWN")
+                    || direction == QLatin1String("NE")
+                    || direction == QLatin1String("SE")
+                    || direction == QLatin1String("SW")
+                    || direction == QLatin1String("NW")
+                    || direction == QLatin1String("IN")
+                    || direction == QLatin1String("OUT")) {
+                    customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                } else {
+                    customLinesColor.insert(itCustomLineColor.key(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                }
+            }
+
+            QMap<QString, QString> oldLineStyleData;
+            ifs >> oldLineStyleData;
+            QMapIterator<QString, QString> itCustomLineStyle(oldLineStyleData);
+            while (itCustomLineStyle.hasNext()) {
+                itCustomLineStyle.next();
+                QString direction(itCustomLineStyle.key());
+                if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
+                    || direction == QLatin1String("DOWN")
+                    || direction == QLatin1String("NE")
+                    || direction == QLatin1String("SE")
+                    || direction == QLatin1String("SW")
+                    || direction == QLatin1String("NW")
+                    || direction == QLatin1String("IN")
+                    || direction == QLatin1String("OUT")) {
+                    direction = direction.toLower();
+                }
+
+                if (itCustomLineStyle.value() == QLatin1String("dot line")) {
+                    customLinesStyle.insert(direction, Qt::DotLine);
+                } else if (itCustomLineStyle.value() == QLatin1String("dash line")) {
+                    customLinesStyle.insert(direction, Qt::DashLine);
+                } else if (itCustomLineStyle.value() == QLatin1String("dash dot line")) {
+                    customLinesStyle.insert(direction, Qt::DashDotLine);
+                } else if (itCustomLineStyle.value() == QLatin1String("dash dot dot line")) {
+                    customLinesStyle.insert(direction, Qt::DashDotDotLine);
+                } else {
+                    customLinesStyle.insert(direction, Qt::SolidLine);
+                }
+            }
+        }
         ifs >> exitLocks;
     }
     if (version >= 13) {
@@ -734,8 +923,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
     QSet<int> exitLocksCopy = exitLocks.toSet();
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
-    QMap<QString, QList<int>> customLinesColorCopy = customLinesColor;
-    QMap<QString, QString> customLinesStyleCopy = customLinesStyle;
+    QMap<QString, QColor> customLinesColorCopy = customLinesColor;
+    QMap<QString, Qt::PenStyle> customLinesStyleCopy = customLinesStyle;
     QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
 
     exitWeightsCopy.detach(); // Make deep copies now, this will happen anyhow once we start to remove valid members
@@ -751,7 +940,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_NORTH,
               tr("North"),
               QStringLiteral("n"),
-              QStringLiteral("N"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -766,7 +954,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_NORTHEAST,
               tr("Northeast"),
               QStringLiteral("ne"),
-              QStringLiteral("NE"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -781,7 +968,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_NORTHWEST,
               tr("Northwest"),
               QStringLiteral("nw"),
-              QStringLiteral("NW"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -796,7 +982,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_SOUTH,
               tr("South"),
               QStringLiteral("s"),
-              QStringLiteral("S"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -811,7 +996,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_SOUTHEAST,
               tr("Southeast"),
               QStringLiteral("se"),
-              QStringLiteral("SE"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -826,7 +1010,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_SOUTHWEST,
               tr("Southwest"),
               QStringLiteral("sw"),
-              QStringLiteral("SW"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -841,7 +1024,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_EAST,
               tr("East"),
               QStringLiteral("e"),
-              QStringLiteral("E"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -856,7 +1038,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_WEST,
               tr("West"),
               QStringLiteral("w"),
-              QStringLiteral("W"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -871,7 +1052,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_UP,
               tr("Up"),
               QStringLiteral("up"),
-              QStringLiteral("UP"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -886,7 +1066,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_DOWN,
               tr("Down"),
               QStringLiteral("down"),
-              QStringLiteral("DOWN"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -901,7 +1080,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_IN,
               tr("In"),
               QStringLiteral("in"),
-              QStringLiteral("IN"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -916,7 +1094,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
               DIR_OUT,
               tr("Out"),
               QStringLiteral("out"),
-              QStringLiteral("OUT"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -938,9 +1115,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 if (mudlet::self()->showMapAuditErrors()) {
                     QString warnMsg = tr("[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}").arg(id, 6, QLatin1Char('0')).arg(it.key(), 6, QLatin1Char('0'));
                     // If size is less than or equal to 0 then there is nothing to print!!!
-                    /* This is wrong, must modify thing being iterated over via iterator:
-					 * other.remove( it.key(), it.value() );
-					 */
                     mpRoomDB->mpMap->postMessage(warnMsg);
                 }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, tr("[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.").arg(it.key(), 6, QLatin1Char('0')));
@@ -950,11 +1124,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 int _nk = it.key();
                 _nc.prepend('0');
                 // Old, prepatched special exit could not have a lock
-                /*
-				 * This is wrong, must modify thing being iterated over via iterator:
-				 * other.remove( it.key(), it.value() );
-				 * other.insertMulti( _nk, _nc );
-				 */
                 replacements.insert(_nk, _nc);
                 it.remove();
                 if (mudlet::self()->showMapAuditErrors()) {
@@ -1104,7 +1273,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                                 .arg(auditKey),
                         true);
                 it.remove();
-                // We cannot have a door or anything else on a non-existant special exit
+                // We cannot have a door or anything else on a non-existent special exit
                 doors.remove(exitName);
                 exitWeights.remove(exitName);
                 customLines.remove(exitName);
@@ -1231,7 +1400,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
         // Custom Lines - colors
         if (!customLinesColorCopy.isEmpty()) {
-            QMapIterator<QString, QList<int>> itSpareCustomLine(customLinesColorCopy);
+            QMapIterator<QString, QColor> itSpareCustomLine(customLinesColorCopy);
             while (itSpareCustomLine.hasNext()) {
                 itSpareCustomLine.next();
                 customLinesColor.remove(itSpareCustomLine.key());
@@ -1249,7 +1418,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
         // Custom Lines - styles
         if (!customLinesStyleCopy.isEmpty()) {
-            QMapIterator<QString, QString> itSpareCustomLine(customLinesStyleCopy);
+            QMapIterator<QString, Qt::PenStyle> itSpareCustomLine(customLinesStyleCopy);
             while (itSpareCustomLine.hasNext()) {
                 itSpareCustomLine.next();
                 customLinesStyle.remove(itSpareCustomLine.key());
@@ -1293,15 +1462,14 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to
                       const int dirCode,                   // DIR_xxx code for this exit - to access stubs & locks
                       const QString displayName,           // What to present as the name of the exit
-                      const QString doorAndWeight,         // To access doors and weights
-                      const QString customLine,            // To access custom exit line elements
+                      const QString exitKey,               // To access doors, weights and custom exit line elements
                       QMap<QString, int>& exitWeightsPool, // References to working copies of things - valid ones will be removed
                       QSet<int>& exitStubsPool,
                       QSet<int>& exitLocksPool,
                       QMap<QString, int>& doorsPool,
                       QMap<QString, QList<QPointF>>& customLinesPool,
-                      QMap<QString, QList<int>>& customLinesColorPool,
-                      QMap<QString, QString>& customLinesStylePool,
+                      QMap<QString, QColor>& customLinesColorPool,
+                      QMap<QString, Qt::PenStyle>& customLinesStylePool,
                       QMap<QString, bool>& customLinesArrowPool,
                       const QHash<int, int> roomRemapping)
 {
@@ -1364,22 +1532,22 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             exitLocks.removeAll(dirCode);
             exitLocksPool.remove(dirCode);
 
-            exitWeights.remove(doorAndWeight);
-            exitWeightsPool.remove(doorAndWeight);
+            exitWeights.remove(exitKey);
+            exitWeightsPool.remove(exitKey);
 
-            doorsPool.remove(doorAndWeight); // we now have a stub exit and that can take a door so clear the door from the check pool
+            doorsPool.remove(exitKey); // we now have a stub exit and that can take a door so clear the door from the check pool
 
-            customLines.remove(customLine);
-            customLinesPool.remove(customLine);
+            customLines.remove(exitKey);
+            customLinesPool.remove(exitKey);
 
-            customLinesColor.remove(customLine);
-            customLinesColorPool.remove(customLine);
+            customLinesColor.remove(exitKey);
+            customLinesColorPool.remove(exitKey);
 
-            customLinesStyle.remove(customLine);
-            customLinesStylePool.remove(customLine);
+            customLinesStyle.remove(exitKey);
+            customLinesStylePool.remove(exitKey);
 
-            customLinesArrow.remove(customLine);
-            customLinesArrowPool.remove(customLine);
+            customLinesArrow.remove(exitKey);
+            customLinesArrowPool.remove(exitKey);
         } else {
             // we do have a valid exit destination room
 
@@ -1408,12 +1576,12 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             // So remove from the pools of things to check all the things CAN be
             // associated with this exit direction:
             exitLocksPool.remove(dirCode);
-            exitWeightsPool.remove(doorAndWeight);
-            doorsPool.remove(doorAndWeight);
-            customLinesPool.remove(customLine);
-            customLinesColorPool.remove(customLine);
-            customLinesStylePool.remove(customLine);
-            customLinesArrowPool.remove(customLine);
+            exitWeightsPool.remove(exitKey);
+            doorsPool.remove(exitKey);
+            customLinesPool.remove(exitKey);
+            customLinesColorPool.remove(exitKey);
+            customLinesStylePool.remove(exitKey);
+            customLinesArrowPool.remove(exitKey);
         }
     } else if (exitRoomId == -1) {
         // No exit - so do we have a stub?
@@ -1421,29 +1589,29 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             exitStubsPool.remove(dirCode); // Remove the stub in this direction from check pool as we have handled it
         } else {
             // If NOT we cannot have a door
-            doors.remove(doorAndWeight);
+            doors.remove(exitKey);
         }
         // We have handled whether we can have a door (if there IS a stub) or not (if not)
         // so remove it from the check pool as we have handled it
-        doorsPool.remove(doorAndWeight);
+        doorsPool.remove(exitKey);
 
         // Whether we do or not have a stub exit we cannot have a lock, custom
         // line or a weight - so remove them if they exist:
         exitLocks.removeAll(dirCode);
-        exitWeights.remove(doorAndWeight);
-        customLines.remove(customLine);
-        customLinesColor.remove(customLine);
-        customLinesStyle.remove(customLine);
-        customLinesArrow.remove(customLine);
+        exitWeights.remove(exitKey);
+        customLines.remove(exitKey);
+        customLinesColor.remove(exitKey);
+        customLinesStyle.remove(exitKey);
+        customLinesArrow.remove(exitKey);
         // Whether we have a stub or not we have handled all the things that we
-        // want to check the existance of so take them out of the pools of
+        // want to check the existence of so take them out of the pools of
         // things left to check after all the exits have been looked at
         exitLocksPool.remove(dirCode);
-        exitWeightsPool.remove(doorAndWeight);
-        customLinesPool.remove(customLine);
-        customLinesColorPool.remove(customLine);
-        customLinesStylePool.remove(customLine);
-        customLinesArrowPool.remove(customLine);
+        exitWeightsPool.remove(exitKey);
+        customLinesPool.remove(exitKey);
+        customLinesColorPool.remove(exitKey);
+        customLinesStylePool.remove(exitKey);
+        customLinesArrowPool.remove(exitKey);
     } else {
         // either 0 or < -1 and not renumbered because the bad room Id DID NOT
         // exist, there could be a "double fault" in that there is also a stub
@@ -1487,16 +1655,16 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             exitLocks.removeAll(dirCode);
         }
 
-        if (exitWeights.contains(doorAndWeight)) {
+        if (exitWeights.contains(exitKey)) {
             QString auditKeyWeight = QStringLiteral("audit.invalid_exit.%1.weight").arg(dirCode);
-            userData.insert(auditKeyWeight, QString::number(exitWeights.value(doorAndWeight)));
+            userData.insert(auditKeyWeight, QString::number(exitWeights.value(exitKey)));
             if (mudlet::self()->showMapAuditErrors()) {
                 infoMsg.append(tr("\nIt had a weight, this is recorded as user data with key:\n"
                                   "\"%1\".")
                                        .arg(auditKeyWeight));
             }
             logMsg.append(tr(R"(  It had a weight, this is recorded as user data with key: "%1".)").arg(auditKeyWeight));
-            exitWeights.remove(doorAndWeight);
+            exitWeights.remove(exitKey);
         }
         if (mudlet::self()->showMapAuditErrors()) {
             mpRoomDB->mpMap->postMessage(infoMsg);
@@ -1504,7 +1672,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         mpRoomDB->mpMap->appendRoomErrorMsg(id, logMsg, true);
 
 
-        if (customLines.contains(customLine)) {
+        if (customLines.contains(exitKey)) {
             if (mudlet::self()->showMapAuditErrors()) {
                 QString warnMsg = tr("[ WARN ]  - There was a custom exit line associated with the invalid exit but\n"
                                      "it has not been possible to salvage this, it has been lost!");
@@ -1512,21 +1680,21 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             }
             mpRoomDB->mpMap->appendRoomErrorMsg(
                     id, tr("[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!"), true);
-            customLines.remove(customLine);
+            customLines.remove(exitKey);
         }
-        customLinesColor.remove(customLine);
-        customLinesStyle.remove(customLine);
-        customLinesArrow.remove(customLine);
+        customLinesColor.remove(exitKey);
+        customLinesStyle.remove(exitKey);
+        customLinesArrow.remove(exitKey);
         // Whether we have a stub or not we have handled all the things that we
-        // want to check the existance of so take them out of the pools of
+        // want to check the existence of so take them out of the pools of
         // things left to check after all the exits have been looked at
 
-        doorsPool.remove(doorAndWeight); // Can still have a door on a stub
+        doorsPool.remove(exitKey); // Can still have a door on a stub
         exitLocksPool.remove(dirCode);
-        exitWeightsPool.remove(doorAndWeight);
-        customLinesPool.remove(customLine);
-        customLinesColorPool.remove(customLine);
-        customLinesStylePool.remove(customLine);
-        customLinesArrowPool.remove(customLine);
+        exitWeightsPool.remove(exitKey);
+        customLinesPool.remove(exitKey);
+        customLinesColorPool.remove(exitKey);
+        customLinesStylePool.remove(exitKey);
+        customLinesArrowPool.remove(exitKey);
     }
 }

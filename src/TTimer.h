@@ -80,7 +80,7 @@ public:
     bool mModuleMasterFolder;
 
 private:
-    TTimer(){};
+    TTimer() = default;
     QString mName;
     QString mScript;
     QTime mTime;

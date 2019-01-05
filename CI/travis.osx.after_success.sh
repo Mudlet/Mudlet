@@ -2,6 +2,11 @@
 
 set -e
 
+if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+  echo Job not executed under cron run
+  exit
+fi
+
 # we deploy only qmake and clang combination for macOS
 if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
@@ -17,7 +22,11 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
     security unlock-keychain -p travis $KEYCHAIN
     security set-keychain-settings -t 3600 -u $KEYCHAIN
     security import Certificates.p12 -k $KEYCHAIN -P "$CERT_PW" -T /usr/bin/codesign
-    security set-key-partition-list -S apple-tool:,apple: -s -k travis $KEYCHAIN
+    OSX_VERSION=$(sw_vers -productVersion | cut -d '.' -f 1,2)
+    if [ "${OSX_VERSION}" != "10.11" ]; then
+      # This is a new command on 10.12 and above, so don't run it on 10.11 (lowest supported version)
+      security set-key-partition-list -S apple-tool:,apple: -s -k travis $KEYCHAIN
+    fi
     export IDENTITY="Developer ID Application"
     echo "Imported identity:"
     security find-identity
@@ -38,6 +47,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
     fi
 
     DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://transfer.sh/${appBaseName}.dmg" -O - -q)
+
   else # release build
 
     # add ssh-key to ssh-agent for deployment
@@ -59,6 +69,11 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
 
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+
+    # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
+    npm install -g dblsqd-cli
+    dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
+    dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
   fi
 
   # delete keychain just in case

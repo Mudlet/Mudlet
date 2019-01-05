@@ -217,31 +217,6 @@ function xor(a, b)
 end
 
 
-
---- Determine operating system.
----
---- @usage
----   <pre>
----   if "linux" == getOS() then
----       echo("We are using GNU/Linux!")
----   end
----   </pre>
----
---- @return "linux", "mac" or "windows" string
-function getOS()
-  if string.char(getMudletHomeDir():byte()) == "/" then
-    if io.exists("/Applications") then
-      return "mac"
-    else
-      return "linux"
-    end
-  else
-    return "windows"
-  end
-end
-
-
-
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
 --- Variables are automatically unpacked into the global namespace when the profile is loaded.
 --- They are saved to "SavedVariables.lua" when the profile is closed or saved.
@@ -320,7 +295,8 @@ function table.save( sfile, t )
   local tables = {}
   table.insert( tables, t )
   local lookup = { [t] = 1 }
-  local file = io.open( sfile, "w" )
+  local file, msg = io.open( sfile, "w" )
+  if not file then return nil, msg end
   file:write( "return {" )
   for i, v in ipairs( tables ) do
     table.pickle( v, file, tables, lookup )
@@ -424,23 +400,28 @@ end
 
 
 --- <b><u>TODO</u></b> speedwalktimer()
-function speedwalktimer(walklist, walkdelay)
-  send(walklist[1])
+function speedwalktimer(walklist, walkdelay, show)
+  send(walklist[1], show)
   table.remove(walklist, 1)
   if #walklist > 0 then
     tempTimer(walkdelay, function()
-      speedwalktimer(walklist, walkdelay)
+      speedwalktimer(walklist, walkdelay, show)
     end)
   end
 end
 
 
 
---- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
-function speedwalk(dirString, backwards, delay)
+--- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
+function speedwalk(dirString, backwards, delay, show)
   local dirString = dirString:lower()
   local walkdelay = delay
+  if show ~= false then show = true end
   local walklist = {}
+  local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
+  for k,v in pairs(long_dir) do
+    dirString = dirString:gsub(k,v)
+  end
   local reversedir = {
     n = "s",
     en = "sw",
@@ -461,7 +442,7 @@ function speedwalk(dirString, backwards, delay)
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = direction
-        else send(direction)
+        else send(direction, show)
         end
       end
     end
@@ -471,13 +452,13 @@ function speedwalk(dirString, backwards, delay)
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = reversedir[direction]
-        else send(reversedir[direction])
+        else send(reversedir[direction], show)
         end
       end
     end
   end
   if walkdelay then
-    speedwalktimer(walklist, walkdelay)
+    speedwalktimer(walklist, walkdelay, show)
   end
 end
 
@@ -915,4 +896,11 @@ function killtimeframe(vname)
     end
     timeframetable[vname] = nil
   end
+end
+
+-- replace line from MUD with colour-tagged string
+creplaceLine = function(str)
+	selectString(line,1)
+	replace("")
+	cinsertText(str)
 end

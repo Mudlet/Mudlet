@@ -25,7 +25,6 @@
 #include "edbee/models/textdocument.h"
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/views/textrenderer.h"
 #include "edbee/views/texttheme.h"
@@ -49,7 +48,7 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 
     config->endChanges();
 
-    edbeeEditorWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    edbeeEditorWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
 
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeeEditorWidget->textScrollArea()->enableShadowWidget(false);

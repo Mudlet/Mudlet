@@ -27,7 +27,6 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
-#include <QProcessEnvironment>
 #include "post_guard.h"
 
 // update flows:
@@ -38,7 +37,7 @@
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false)
+Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false), mpInstallOrRestart(new QPushButton(tr("Update")))
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
@@ -55,7 +54,7 @@ void Updater::checkUpdatesOnStart()
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
     setupOnLinux();
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
     setupOnWindows();
 #endif
 }
@@ -67,6 +66,9 @@ void Updater::setAutomaticUpdates(const bool state)
 #else
     dblsqd::UpdateDialog::enableAutoDownload(state, settings);
 #endif
+    // The sense of this control is inverted on the dlgProfilePreferences - so
+    // must be inverted here:
+    emit signal_automaticUpdatesChanged(!state);
 }
 
 bool Updater::updateAutomatically() const
@@ -90,17 +92,19 @@ void Updater::manuallyCheckUpdates()
 void Updater::showChangelog() const
 {
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->setPreviousVersion(getPreviousVersion());
     changelogDialog->show();
 }
 
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
-#elif defined(Q_OS_WIN)
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().constFirst().getVersion();
+#elif defined(Q_OS_WIN32)
     qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
+    recordUpdatedVersion();
     mUpdateInstalled = true;
     emit updateInstalled();
 }
@@ -114,7 +118,7 @@ void Updater::setupOnMacOS()
 }
 #endif // Q_OS_MACOS
 
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WIN32)
 void Updater::setupOnWindows()
 {
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
@@ -149,8 +153,8 @@ void Updater::setupOnWindows()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
-    installOrRestartButton = new QPushButton(tr("Update"));
-    updateDialog->addInstallButton(installOrRestartButton);
+    mpInstallOrRestart->setText(tr("Update"));
+    updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
 }
 
@@ -211,8 +215,8 @@ void Updater::setupOnLinux()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
-    installOrRestartButton = new QPushButton(tr("Update"));
-    updateDialog->addInstallButton(installOrRestartButton);
+    mpInstallOrRestart->setText(tr("Update"));
+    updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
 }
 
@@ -224,7 +228,7 @@ void Updater::untarOnLinux(const QString& fileName)
     tar.setProcessChannelMode(QProcess::MergedChannels);
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
     // tar output folder has to end with a slash
-    tar.start("tar", QStringList() << "-xvf" << fileName << "-C" << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QStringLiteral("/"));
+    tar.start(QStringLiteral("tar"), QStringList() << QStringLiteral("-xvf") << fileName << QStringLiteral("-C") << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QStringLiteral("/"));
     if (!tar.waitForFinished()) {
         qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
@@ -263,17 +267,18 @@ void Updater::updateBinaryOnLinux()
 }
 #endif // Q_OS_LINUX
 
-void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
+void Updater::installOrRestartClicked(QAbstractButton* button, const QString& filePath)
 {
+    Q_UNUSED(button)
+
     // moc, when used with cmake on macos bugs out if the entire function declaration and definition is entirely
     // commented out so we leave a stub in
 #if !defined(Q_OS_MACOS)
-    Q_UNUSED(button)
 
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
         // timer is necessary as calling close right way doesn't seem to do the trick
-        QTimer::singleShot(0, [=]() {
+        QTimer::singleShot(0, this, [=]() {
             updateDialog->close();
             updateDialog->done(0);
         });
@@ -290,7 +295,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
     QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
     QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, filePath);
 #endif
 
@@ -299,11 +304,11 @@ void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
 #if defined(Q_OS_LINUX)
         updateBinaryOnLinux();
-#elif defined(Q_OS_WIN)
+#elif defined(Q_OS_WIN32)
         finishSetup();
 #endif
-        installOrRestartButton->setText(tr("Restart to apply update"));
-        installOrRestartButton->setEnabled(true);
+        mpInstallOrRestart->setText(tr("Restart to apply update"));
+        mpInstallOrRestart->setEnabled(true);
     });
     watcher->setFuture(future);
 #endif // !Q_OS_MACOS
@@ -328,13 +333,29 @@ void Updater::recordUpdateTime() const
     file.close();
 }
 
+// records the previous version of Mudlet that we updated from, so we can show
+// the changelog on next startup for the latest version only
+void Updater::recordUpdatedVersion() const
+{
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_from")));
+    bool opened = file.open(QIODevice::WriteOnly);
+    if (!opened) {
+        qWarning() << "Couldn't open update version file for writing.";
+        return;
+    }
+
+    QDataStream ifs(&file);
+    ifs << APP_VERSION;
+    file.close();
+}
+
 // returns true if Mudlet was updated automatically and a changelog should be shown
 // now that the user is on the new version. If the user updated manually, then there
 // is no need as they would have seen the changelog while updating
 bool Updater::shouldShowChangelog()
 {
 // Don't show changelog for automatic updates on Sparkle - Sparkle doesn't support it
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     return false;
 #endif
 
@@ -361,4 +382,23 @@ bool Updater::shouldShowChangelog()
     file.remove();
 
     return minsSinceUpdate >= 5;
+}
+
+// return the previous version of Mudlet that we updated from
+// return a null QString on failure
+QString Updater::getPreviousVersion() const
+{
+    QFile file(mudlet::self()->getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_from")));
+    bool opened = file.open(QIODevice::ReadOnly);
+    QString previousVersion;
+    if (!opened) {
+        file.remove();
+        return QString();
+    }
+    QDataStream ifs(&file);
+    ifs >> previousVersion;
+    file.close();
+    file.remove();
+
+    return previousVersion;
 }

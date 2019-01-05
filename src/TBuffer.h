@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -64,6 +65,7 @@
 
 class Host;
 
+class QTextCodec;
 
 class TChar
 {
@@ -104,6 +106,8 @@ class TBuffer
     // values are a pair of human-friendly name + encoding data
     static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
 
+    static const QMap<QString, QVector<QString>> mSupportedMxpElements;
+
 
 public:
     TBuffer(Host* pH);
@@ -137,9 +141,8 @@ public:
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
-    void resetFontSpecs();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s, const bool isFromServer=false);
+    void translateToPlainText(std::string& s, bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void appendLine(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void setWrapAt(int i) { mWrapAt = i; }
@@ -149,10 +152,13 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
-    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); };
+    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
     void logRemainingOutput();
+    // It would have been nice to do this with Qt's signals and slots but that
+    // is apparently incompatible with using a default constructor - sigh!
+    void encodingChanged(const QString &);
 
 
     std::deque<TChar> bufferLine;
@@ -175,14 +181,46 @@ public:
     int speedAppend;
 
     int mCursorY;
+
+    /*
+     * The documentation at https://www.zuggsoft.com/zmud/mxp.htm says: "
+     * * 0 - OPEN LINE - initial default mode: only MXP commands in the 'open'
+     *     category are allowed.  When a newline is received from the MUD, the
+     *     mode reverts back to the Default mode.  OPEN mode starts as the
+     *     default mode until changes with one of the 'lock mode' tags listed
+     *     below.
+     * * 1 - SECURE LINE (until next newline) all tags and commands in MXP are
+     *     allowed within the line.  When a newline is received from the MUD,
+     *     the mode reverts back to the Default mode.
+     * * 2 - LOCKED LINE (until next newline) no MXP or HTML commands are
+     *     allowed in the line.  The line is not parsed for any tags at all.
+     *     This is useful for "verbatim" text output from the MUD.  When a
+     *     newline is received from the MUD, the mode reverts back to the
+     *     Default mode.
+     * The following additional modes were added to the v0.4 MXP spec:
+     * * 3 - RESET close all open tags.  Set mode to Open.  Set text color and
+     *     properties to default.
+     * * 4 - TEMP SECURE MODE set secure mode for the next tag only.  Must be
+     *     immediately followed by a < character to start a tag.  Remember to
+     *     set secure mode when closing the tag also.
+     * * 5 - LOCK OPEN MODE set open mode.  Mode remains in effect until
+     *     changed.  OPEN mode becomes the new default mode.
+     * * 6 - LOCK SECURE MODE set secure mode.  Mode remains in effect until
+     *     changed.  Secure mode becomes the new default mode.
+     * * 7 - LOCK LOCKED MODE set locked mode.  Mode remains in effect until
+     *     changed.  Locked mode becomes the new default mode."
+     */
+
+    // State of MXP systen:
     bool mMXP;
 
     bool mAssemblingToken;
     std::string currentToken;
     int openT;
     int closeT;
+
     QMap<QString, TMxpElement> mMXP_Elements;
-    TMxpElement mCurrentElement;
+
     bool mMXP_LINK_MODE;
     bool mIgnoreTag;
     std::string mSkip;
@@ -197,20 +235,31 @@ private:
     void shrinkBuffer();
     int calcWrapPos(int line, int begin, int end);
     void handleNewLine();
+    bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
+    bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
+    bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
+    QString processSupportsRequest(const QString &attributes);
+    void decodeSGR(const QString&);
+    void decodeSGR38(QStringList, bool isColonSeparated = true);
+    void decodeSGR48(QStringList, bool isColonSeparated = true);
+    void decodeOSC(const QString&);
+    void resetColors();
 
-
-    bool gotESC;
-    bool gotHeader;
-    QString code;
-    int codeRet;
-    std::string tempLine;
-    bool mWaitingForHighColorCode;
-    bool mHighColorModeForeground;
-    bool mHighColorModeBackground;
-    bool mIsHighColorMode;
+    // First stage in decoding SGR/OCS sequences - set true when we see the
+    // ASCII ESC character:
+    bool mGotESC;
+    // Second stage in decoding SGR sequences - set true when we see the ASCII
+    // ESC character followed by the '[' one:
+    bool mGotCSI;
+    // Second stage in decoding OSC sequences - set true when we see the ASCII
+    // ESC character followed by the ']' one:
+    bool mGotOSC;
+    // This was called code but has been renamed to mCode as that member had
+    // be refactored out and the name was available:
+    QString mCode;
     bool mIsDefaultColor;
     bool isUserScrollBack;
-    int currentFgColorProperty;
+
 
     QColor mBlack;
     int mBlackR;
@@ -276,17 +325,16 @@ private:
     int mWhiteR;
     int mWhiteG;
     int mWhiteB;
-    QColor mFgColor;
-    int fgColorR;
-    int fgColorLightR;
-    int fgColorG;
-    int fgColorLightG;
-    int fgColorB;
-    int fgColorLightB;
-    int bgColorR;
-    int bgColorG;
-    int bgColorB;
-    QColor mBgColor;
+
+    int mCurrentFgColorR;
+    int mCurrentFgColorG;
+    int mCurrentFgColorB;
+    int mCurrentFgColorLightR;
+    int mCurrentFgColorLightG;
+    int mCurrentFgColorLightB;
+    int mCurrentBgColorR;
+    int mCurrentBgColorG;
+    int mCurrentBgColorB;
 
     QPointer<Host> mpHost;
     int maxx;
@@ -301,26 +349,31 @@ private:
     bool mItalics;
     bool mUnderline;
     bool mStrikeOut;
-    bool mFgColorCode;
-    bool mBgColorCode;
-    int mFgColorR;
-    int mFgColorG;
-    int mFgColorB;
-    int mBgColorR;
-    int mBgColorG;
-    int mBgColorB;
+
+
+
+
+
+
+
+
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
-    int mCode[1024]; //FIXME: potential overflow bug
-    // Used to hold the incomplete bytes (1-3) that could be left at the end of
-    // a packet:
-    std::string mIncompleteUtf8SequenceBytes;
+    // Used to hold the unprocessed bytes that could be left at the end of a
+    // packet if we detect that there should be more - will be prepended to the
+    // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
+    // and is not generated locally {because both pass through
+    // translateToPlainText()}:
+    std::string mIncompleteSequenceBytes;
 
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
     int lastLoggedFromLine;
     int lastloggedToLine;
     QString lastTextToLog;
+
+    QString mEncoding;
+    QTextCodec* mMainIncomingCodec;
 };
 
 #endif // MUDLET_TBUFFER_H

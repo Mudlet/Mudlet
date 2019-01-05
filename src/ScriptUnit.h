@@ -62,7 +62,8 @@ public:
     QList<TScript*> uninstallList;
 
 private:
-    ScriptUnit() {}
+    ScriptUnit() = default;
+
     TScript* getScriptPrivate(int id);
     void addScriptRootNode(TScript* pT, int parentPosition = -1, int childPosition = -1);
     void addScript(TScript* pT);

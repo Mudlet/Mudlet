@@ -85,10 +85,11 @@ public:
 
 
 private:
-    TRoomDB() {}
+    TRoomDB() = default;
+
     int createNewAreaID();
     bool __removeRoom(int id);
-    void setAreaRooms(const int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
+    void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
 
     QHash<int, TRoom*> rooms;
     QMultiHash<int, int> entranceMap; // key is exit target, value is exit source

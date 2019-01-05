@@ -59,7 +59,7 @@ typedef float cost;
 // Used to record edge details and to deduplicate parallel ones:
 struct route
 {
-    float cost;              // Needed during establising the best parallel edge
+    float cost;              // Needed during establishing the best parallel edge
     quint8 direction;        // Use DIR_xxx values to code exit direction
     QString specialExitName; // If direction is DIR_OTHER then this is needed
 };

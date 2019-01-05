@@ -70,7 +70,7 @@ public:
     int max_x;
     int max_y;
     int max_z;
-    // Key = z-level, Value = the relevent x or y extreme:
+    // Key = z-level, Value = the relevant x or y extreme:
     QMap<int, int> xminEbene;
     QMap<int, int> xmaxEbene;
     QMap<int, int> yminEbene;
@@ -78,7 +78,7 @@ public:
 // Pointless:
 //    QMap<int, int> zminEbene;
 //    QMap<int, int> zmaxEbene;
-    QList<int> ebenen; // The z-levels that ARE used, not guarenteed to be in order
+    QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
     bool gridMode;
     bool isZone;
     int zoneAreaRef;
@@ -95,7 +95,7 @@ private:
     QMultiMap<int, QPair<int, int>> exits;
     // rooms that border on this area:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction
-    // Made private as we may change implimentation detail
+    // Made private as we may change implementation detail
 };
 
 // - gezeichnet werden erstmal die areas

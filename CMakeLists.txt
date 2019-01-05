@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -18,8 +18,24 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
+############################################################################
+#                                                                          #
+#    NOTICE: FreeBSD is not an officially supported platform as such;      #
+#    the work on getting it working has been done by myself, and other     #
+#    developers, unless they have explicitly said so, are not able to      #
+#    address issues relating specifically to that Operating System.        #
+#    Nevertheless users of FreeBSD are equally welcome to contribute       #
+#    to the development of Mudlet - bugfixes and enhancements are          #
+#    welcome from all!                                                     #
+#                                           Stephen Lyons, February 2018   #
+#                                                                          #
+############################################################################
+
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.1)
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
+endif()
 
 project(mudlet)
 
@@ -59,7 +75,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.7.1)
+set(APP_VERSION 3.16.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -69,17 +85,14 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # Enable the built-in updater by default on the three main supported OS
-# unless environmental variable WITH_UPDATER is already defined and set to "NO"
-# (case insensitive).
-# Linux packagers will find it useful to do this since package managers are
-# responsible for updates there. Automatically exclude the update stuff from
-# other OSs such as FreeBSD and Cygwin because if they ever get finished they
-# have their own packaging system - and we do not support updating them.
-# Note: WITH_UPDATER is an environmental value/variable (could be a number, a
-#           string, something else or not even exist).
-#       UPDATER_TEST and USE_UPDATER are cmake variables (possibly a string and
-#           NO(false) or YES(true) respectively).
-#       INCLUDE_UPDATER is a C preprocessor symbol.
+# unless environmental variable WITH_UPDATER is defined and set to "NO" (case
+# insensitive). Linux packagers will find it useful to do this since they are
+# likely to be responsible for updates there. Automatically exclude the
+# update stuff from other OSs such as FreeBSD and Cygwin because if they ever
+# get finished they have their own packaging system - and we do not support
+# updating them.
+# WITH_UPDATER is an environmental value/variable (so could be a number, a
+# string, something else or not even exist).
 set(UPDATER_TEST $ENV{WITH_UPDATER})
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
   # We are on one of the supported platforms
@@ -100,6 +113,36 @@ if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows"
 else()
   # Option not available for other platforms
   set(USE_UPDATER NO)
+endif()
+
+# Enable the inclusion of fonts currently carried in the source code by default
+# unless the environmental variable WITH_FONTS is defined AND is set to a
+# (case insensitive) value of "NO". Linux packagers will find it useful to do
+# this since package managers may already package the relevant fonts - or are
+# not willing or able to include them.
+# WITH_FONTS is an environmental value/variable (so could be a number, a string,
+# something else or not even exist).
+set(FONT_TEST $ENV{WITH_FONTS})
+if(DEFINED FONT_TEST)
+    string(TOUPPER ${FONT_TEST} FONT_TEST)
+else()
+    # Set the CMake variable to the default if it (as a result of WITH_FONTS not
+    # existing) has not been defined, without the if(DEFINED ...) string(...)
+    # errors out - and so may further tests on the variable...
+    set(FONT_TEST "YES")
+endif()
+if(FONT_TEST STREQUAL "NO")
+  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" OFF)
+else()
+  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" ON)
+  # Can download and extract latest Unbuntu font files (currently X.YY is
+  # 0.83) from:
+  # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
+  # It would be nice if we could automate the download and extraction of all
+  # the font and associate documentation (but NOT the "sources" sub-directory)
+  # contents into the ./src/fonts/ directory structure only if this option is
+  # set to ON; however that would be plaform specific and add more complexity
+  # and it is not obvious that there is a demand to do this currenly.
 endif()
 
 if(APPLE)
@@ -184,10 +227,10 @@ if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
   file(GLOB_RECURSE lcf_files RELATIVE "${CMAKE_HOME_DIRECTORY}/3rdparty/" "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/*")
   list(REMOVE_ITEM lcf_files "lcf/.git")
   list(LENGTH lcf_files lcf_file_count)
-  if(lcf_file_count EQUAL 288)
+  if(lcf_file_count EQUAL 275)
     message(STATUS "Found Lua Code Formatter files")
   else()
-    message(WARNING "Found ${lcf_file_count} Lua Code Formatter files but 288 were expected:")
+    message(WARNING "Found ${lcf_file_count} Lua Code Formatter files but 275 were expected:")
     foreach(lcf_file ${lcf_files})
       message(STATUS "    ${lcf_file}")
     endforeach(lcf_file)
@@ -229,4 +272,4 @@ endif(CCACHE_FOUND)
 
 add_subdirectory(src)
 add_subdirectory(3rdparty/communi)
-add_subdirectory(3rdparty/lua_yajl)
+add_subdirectory(translations/translated)

@@ -4,9 +4,10 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,12 +25,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "pre_guard.h"
 #include <QMap>
 #include <QPointer>
 #include <QTime>
 #include <QWidget>
+#include <chrono>
 #include "post_guard.h"
 
 #include <string>
@@ -37,6 +38,7 @@
 class Host;
 class TBuffer;
 class TConsole;
+class TChar;
 
 class QScrollBar;
 class QString;
@@ -48,13 +50,16 @@ class TTextEdit : public QWidget
 
 public:
     Q_DISABLE_COPY(TTextEdit)
-    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isSplitScreen);
+    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
     void drawFrame(QPainter&, const QRect&);
-    void drawBackground(QPainter&, const QRect&, const QColor&);
+    void drawBackground(QPainter&, const QRect&, const QColor&) const;
     void updateLastLine();
+    uint getGraphemeBaseCharacter(const QString& str) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
+    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
     void showNewLines();
     void forceUpdate();
@@ -76,23 +81,26 @@ public:
     int imageTopLine();
     int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
-    bool isTailMode();
-    void copySelectionToClipboard();
-    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
+// Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
-    void copySelectionToClipboardHTML();
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
 
     QColor mBgColor;
+    // position of cursor, in characters, across the entire buffer
     int mCursorY;
     QFont mDisplayFont;
     QColor mFgColor;
     int mFontAscent;
     int mFontDescent;
     bool mIsCommandPopup;
+    // If true, this TTextEdit is to display the last lines in
+    // mpConsole.mpBuffer. This is always true for the lower main window panel
+    // but it is RESET when the upper one is scrolled upwards. The name appears
+    // to be related to the file monitoring feature in the *nix tail command.
+    // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
     QMap<QString, QString> mPopupCommands;
     int mScrollVector;
@@ -110,10 +118,19 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
+    void slot_analyseSelection();
+    void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+
+private slots:
+    void slot_copySelectionToClipboardImage();
 
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
+    static QString htmlCenter(const QString&);
+    static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
+    static QString byteToLuaCodeOrChar(const char*);
+    std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
 
     int mFontHeight;
     int mFontWidth;
@@ -125,7 +142,12 @@ private:
     bool mInversOn;
     bool mIsDebugConsole;
     bool mIsMiniConsole;
-    bool mIsSplitScreen;
+    // Each TConsole instance uses two instances of this class, one above the
+    // other but they need to behave differently in some ways; this flag is set
+    // or reset on creation and is used to adjust the behaviour depending on
+    // which one this instance is:
+    const bool mIsLowerPane;
+    // last line offset rendered
     int mLastRenderBottom;
     int mLeftMargin;
     bool mMouseTracking;
@@ -138,10 +160,15 @@ private:
     TConsole* mpConsole;
     QPointer<Host> mpHost;
     QScrollBar* mpScrollBar;
+    // screen height in characters
     int mScreenHeight;
+    // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
+    QPointer<QAction> mpContextMenuAnalyser;
+    bool mWideAmbigousWidthGlyphs;
+    std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

@@ -48,7 +48,7 @@
       <item row="0" column="1">
        <widget class="QLineEdit" name="lineEdit_var_name">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</string>
         </property>
         <property name="placeholderText">
          <string>Variable name...</string>
@@ -125,7 +125,7 @@
       </palette>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If this variable is a key of a table, then you can select it to either be an &lt;i&gt;indexed key&lt;/i&gt; (unique positive integer with no gaps between it and the first item which has a key of 1) or an &lt;i&gt;associative key&lt;/i&gt; (a string or any other number or combination) type.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;p&gt;If this variable is a key of a table, then you can select it to either be an &lt;i&gt;indexed key&lt;/i&gt; (unique positive integer with no gaps between it and the first item which has a key of 1) or an &lt;i&gt;associative key&lt;/i&gt; (a string or any other number or combination) type.&lt;/p&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
@@ -144,7 +144,7 @@
       <item row="0" column="1">
        <widget class="QComboBox" name="comboBox_variable_key_type">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</string>
         </property>
         <property name="sizeAdjustPolicy">
          <enum>QComboBox::AdjustToMinimumContentsLength</enum>
@@ -260,7 +260,7 @@ from GUI)</string>
       </palette>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Hides this variable (and its children if it is a table) from the Variables view, if the &lt;i&gt;Display All Variables&lt;/i&gt; control is off.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You might want to use this to hide variables that are not related to your scipts, so you can focus only on your own system and not be distrated by some of the Mudlet defaults - or, alternatively, to use this to not mess them by up accident!&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;p&gt;Hides this variable (and its children if it is a table) from the Variables view, if the &lt;i&gt;Display All Variables&lt;/i&gt; control is off.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You might want to use this to hide variables that are not related to your scipts, so you can focus only on your own system and not be distrated by some of the Mudlet defaults - or, alternatively, to use this to not mess them by up accident!&lt;/i&gt;&lt;/p&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
@@ -269,7 +269,7 @@ from GUI)</string>
       <item row="0" column="0">
        <widget class="QCheckBox" name="checkBox_variable_hidden">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</string>
         </property>
         <property name="text">
          <string>hidden variable</string>
@@ -349,7 +349,7 @@ from GUI)</string>
       </palette>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Value type the variable data (in the editor box below) should be&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:6px; margin-bottom:6px; margin-left:6px; margin-right:6px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;2&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;string&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is text (can contain numbers)&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;number&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is numbers only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;boolean&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is a true or false value only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;table&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;this is a table (group), and can have other values in it&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;p&gt;Value type the variable data (in the editor box below) should be&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:6px; margin-bottom:6px; margin-left:6px; margin-right:6px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;2&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;string&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is text (can contain numbers)&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;number&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is numbers only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;boolean&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;it is a true or false value only&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;&lt;i&gt;table&lt;/i&gt;&lt;/p&gt;&lt;/td&gt;&lt;td&gt;&lt;p&gt;this is a table (group), and can have other values in it&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>

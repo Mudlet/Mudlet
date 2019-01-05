@@ -33,10 +33,6 @@
 
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QDebug>
-#include "post_guard.h"
-
 
 bool HostManager::deleteHost(QString hostname)
 {
@@ -129,7 +125,7 @@ void HostManager::postIrcMessage(QString a, QString b, QString c)
 }
 
 // The slightly convoluted way we step through the list of hosts is so that we
-// send out the events to the other hosts in a predictable and consistant order
+// send out the events to the other hosts in a predictable and consistent order
 // and so that no one host gets an unfair advantage when emitting events. The
 // sending profile host does NOT get the event!
 void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)

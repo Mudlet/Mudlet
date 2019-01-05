@@ -25,16 +25,12 @@
 
 #include "Host.h"
 #include "TArea.h"
-#include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
 #include "post_guard.h"
-
-#include <math.h>
 
 #ifdef Q_OS_MACOS
 #include <OpenGL/glu.h>
@@ -116,9 +112,7 @@ GLWidget::GLWidget(TMap* pM, QWidget* parent)
 }
 
 
-GLWidget::~GLWidget()
-{
-}
+GLWidget::~GLWidget() = default;
 
 QSize GLWidget::minimumSizeHint() const
 {
@@ -346,7 +340,7 @@ void GLWidget::initializeGL()
     is2DView = false;
 }
 
-// Replaces setArea() - now fed the coordinates of the room choosen as the
+// Replaces setArea() - now fed the coordinates of the room chosen as the
 // view center in the area given from the set operation in the 2D Map
 void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {
@@ -530,9 +524,9 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            float rx = static_cast<float>(pR->x);
-            float ry = static_cast<float>(pR->y);
-            float rz = static_cast<float>(pR->z);
+            auto rx = static_cast<float>(pR->x);
+            auto ry = static_cast<float>(pR->y);
+            auto rz = static_cast<float>(pR->z);
             if (rz != zEbene) {
                 continue;
             }
@@ -594,9 +588,9 @@ void GLWidget::paintGL()
                     } else {
                         areaExit = false;
                     }
-                    float ex = static_cast<float>(pExit->x);
-                    float ey = static_cast<float>(pExit->y);
-                    float ez = static_cast<float>(pExit->z);
+                    auto ex = static_cast<float>(pExit->x);
+                    auto ey = static_cast<float>(pExit->y);
+                    auto ez = static_cast<float>(pExit->z);
                     QVector3D p1(ex, ey, ez);
                     QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
@@ -872,6 +866,29 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->customEnvColors.contains(env)) {
+                                if (16 < env && env < 232)
+                                {
+                                    quint8 base = env - 16;
+                                    quint8 r = base / 36;
+                                    quint8 g = (base - (r * 36)) / 6;
+                                    quint8 b = (base - (r * 36)) - (g * 6);
+
+                                    r = r * 51;
+                                    g = g * 51;
+                                    b = b * 51;
+                                    glColor4ub(r, g, b, 200);
+                                    mc3[0] = r / 255.0;
+                                    mc3[1] = g / 255.0;
+                                    mc3[2] = b / 255.0;
+                                    mc3[3] = 0.2;
+                                } else if (231 < env && env < 256) {
+                                    quint8 k = ((env - 232) * 10) + 8;
+                                    glColor4ub(k, k, k, 200);
+                                    mc3[0] = k / 255.0;
+                                    mc3[1] = k / 255.0;
+                                    mc3[2] = k / 255.0;
+                                    mc3[3] = 0.2;
+                                }
                                 break;
                             }
                             QColor& _c = mpMap->customEnvColors[env];
@@ -982,9 +999,9 @@ void GLWidget::paintGL()
                         areaExit = false;
                     }
 
-                    float ex = static_cast<float>(pExit->x);
-                    float ey = static_cast<float>(pExit->y);
-                    float ez = static_cast<float>(pExit->z);
+                    auto ex = static_cast<float>(pExit->x);
+                    auto ey = static_cast<float>(pExit->y);
+                    auto ez = static_cast<float>(pExit->z);
                     QVector3D p1(ex, ey, ez);
                     QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
@@ -1259,6 +1276,29 @@ void GLWidget::paintGL()
                             break;
                         default: //user defined room color
                             if (!mpMap->customEnvColors.contains(env)) {
+                                if (16 < env && env < 232)
+                                {
+                                    quint8 base = env - 16;
+                                    quint8 r = base / 36;
+                                    quint8 g = (base - (r * 36)) / 6;
+                                    quint8 b = (base - (r * 36)) - (g * 6);
+
+                                    r = r * 51;
+                                    g = g * 51;
+                                    b = b * 51;
+                                    glColor4ub(r, g, b, 200);
+                                    mc3[0] = r / 255.0;
+                                    mc3[1] = g / 255.0;
+                                    mc3[2] = b / 255.0;
+                                    mc3[3] = 0.2;
+                                } else if (231 < env && env < 256) {
+                                    quint8 k = ((env - 232) * 10) + 8;
+                                    glColor4ub(k, k, k, 200);
+                                    mc3[0] = k / 255.0;
+                                    mc3[1] = k / 255.0;
+                                    mc3[2] = k / 255.0;
+                                    mc3[3] = 0.2;
+                                }
                                 break;
                             }
                             QColor& _c = mpMap->customEnvColors[env];
@@ -1382,9 +1422,9 @@ void GLWidget::paintGL()
             if (!pR) {
                 continue;
             }
-            float rx = static_cast<float>(pR->x);
-            float ry = static_cast<float>(pR->y);
-            float rz = static_cast<float>(pR->z);
+            auto rx = static_cast<float>(pR->x);
+            auto ry = static_cast<float>(pR->y);
+            auto rz = static_cast<float>(pR->z);
             if (rz != zEbene) {
                 continue;
             }
@@ -1630,6 +1670,29 @@ void GLWidget::paintGL()
                     break;
                 default: //user defined room color
                     if (!mpMap->customEnvColors.contains(env)) {
+                        if (16 < env && env < 232)
+                        {
+                            quint8 base = env - 16;
+                            quint8 r = base / 36;
+                            quint8 g = (base - (r * 36)) / 6;
+                            quint8 b = (base - (r * 36)) - (g * 6);
+
+                            r = r * 51;
+                            g = g * 51;
+                            b = b * 51;
+                            glColor4ub(r, g, b, 200);
+                            mc3[0] = r / 255.0;
+                            mc3[1] = g / 255.0;
+                            mc3[2] = b / 255.0;
+                            mc3[3] = 0.2;
+                        } else if (231 < env && env < 256) {
+                            quint8 k = ((env - 232) * 10) + 8;
+                            glColor4ub(k, k, k, 200);
+                            mc3[0] = k / 255.0;
+                            mc3[1] = k / 255.0;
+                            mc3[2] = k / 255.0;
+                            mc3[3] = 0.2;
+                        }
                         break;
                     }
                     QColor& _c = mpMap->customEnvColors[env];
@@ -1910,6 +1973,29 @@ void GLWidget::paintGL()
                 break;
             default: //user defined room color
                 if (!mpMap->customEnvColors.contains(env)) {
+                    if (16 < env && env < 232)
+                    {
+                        quint8 base = env - 16;
+                        quint8 r = base / 36;
+                        quint8 g = (base - (r * 36)) / 6;
+                        quint8 b = (base - (r * 36)) - (g * 6);
+
+                        r = r * 51;
+                        g = g * 51;
+                        b = b * 51;
+                        glColor4ub(r, g, b, 200);
+                        mc3[0] = r / 255.0;
+                        mc3[1] = g / 255.0;
+                        mc3[2] = b / 255.0;
+                        mc3[3] = 0.2;
+                    } else if (231 < env && env < 256) {
+                        quint8 k = ((env - 232) * 10) + 8;
+                        glColor4ub(k, k, k, 200);
+                        mc3[0] = k / 255.0;
+                        mc3[1] = k / 255.0;
+                        mc3[2] = k / 255.0;
+                        mc3[3] = 0.2;
+                    }
                     break;
                 }
                 QColor& _c = mpMap->customEnvColors[env];

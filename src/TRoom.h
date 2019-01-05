@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2015, 2018 by Stephen Lyons                        *
+ *                                            - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -63,7 +64,7 @@ public:
     bool setExit(int to, int direction);
     int getExit(int direction);
     QHash<int, int> getExits();
-    bool hasExit(int direction);
+    bool hasExit(int direction) const;
     void setWeight(int);
     void setExitLock(int, bool);
     void setSpecialExitLock(int to, const QString& cmd, bool doLock);
@@ -77,7 +78,7 @@ public:
     const QMap<QString, int>& getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w);
     bool hasExitWeight(const QString& cmd);
-    const bool setDoor(const QString& cmd, const int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
+    const bool setDoor(const QString& cmd, int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
     int getDoor(const QString& cmd);
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
@@ -112,24 +113,24 @@ public:
     void setOut(int id) { out = id; }
     int getId() { return id; }
     int getArea() { return area; }
-    void audit(const QHash<int, int>, const QHash<int, int>);
-    void auditExits(const QHash<int, int>);
+    void audit(QHash<int, int>, QHash<int, int>);
+    void auditExits(QHash<int, int>);
     /*bool*/ void restore(QDataStream& ifs, int roomID, int version);
     void auditExit(int&,
-                   const int,
-                   const QString,
-                   const QString,
-                   const QString,
+                   int,
+                   QString,
+                   QString,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QSet<int>&,
                    QMap<QString, int>&,
                    QMap<QString, QList<QPointF>>&,
-                   QMap<QString, QList<int>>&,
-                   QMap<QString, QString>&,
+                   QMap<QString, QColor>&,
+                   QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
-                   const QHash<int, int>);
-    const QString dirCodeToDisplayName(const int dirCode);
+                   QHash<int, int>);
+    const QString dirCodeToDisplayName(int dirCode);
+    bool hasExitOrSpecialExit(const QString&) const;
 
 
     int x;
@@ -142,15 +143,15 @@ public:
     qreal min_y;
     qreal max_x;
     qreal max_y;
-    qint8 c;
+    QString mSymbol;
     QString name;
     QVector3D v;
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;
     QList<int> exitLocks;
     QMap<QString, QList<QPointF>> customLines;
-    QMap<QString, QList<int>> customLinesColor;
-    QMap<QString, QString> customLinesStyle;
+    QMap<QString, QColor> customLinesColor;
+    QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
     bool highlight;
     QColor highlightColor;
@@ -179,6 +180,8 @@ private:
     int out;
 
     // FIXME: This should be a map of String->room id because there can be multiple special exits to the same room
+    // Also, move the special exit being locked OUT of being a prefix on the
+    // QString part:
     QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
                                    //verbotene exits werden mit 0 geprefixed, offene mit 1
 

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,19 +23,29 @@
 #include "dlgNotepad.h"
 
 #include "mudlet.h"
-#include "Host.h"
 
 #include "pre_guard.h"
 #include <QDir>
 #include "post_guard.h"
 
-
-dlgNotepad::dlgNotepad(Host* pH) : mpHost(pH)
-
+dlgNotepad::dlgNotepad(Host* pH)
+: mpHost(pH)
 {
     setupUi(this);
+
+    if (mpHost) {
+        restore();
+    }
 }
 
+dlgNotepad::~dlgNotepad()
+{
+    // Safety step, just in case:
+    if (mpHost && mpHost->mpNotePad) {
+        save();
+        mpHost->mpNotePad = nullptr;
+    }
+}
 
 void dlgNotepad::save()
 {
