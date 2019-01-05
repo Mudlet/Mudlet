@@ -1913,21 +1913,33 @@ int TLuaInterpreter::deleteLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveMap
 int TLuaInterpreter::saveMap(lua_State* L)
 {
-    string location = "";
-    if (lua_gettop(L) == 1) {
+    QString location;
+    int saveVersion = 0;
+
+    if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "saveMap: where do you want to save to?");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L,
+                            "saveMap: bad argument #1 type (save location path and file name "
+                            "as string expected, got %s!)",
+                            luaL_typename(L, 1));
+            return lua_error(L);
         } else {
-            location = lua_tostring(L, 1);
+            location = QString::fromUtf8(lua_tostring(L, 1));
+        }
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L,
+                            "saveMap: bad argument #2 type (map format version as "
+                            "integer expected, got %s!)",
+                            luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            saveVersion = lua_tointeger(L, 2);
         }
     }
 
-    QString _location(location.c_str());
     Host& host = getHostFromLua(L);
 
-    bool error = host.mpConsole->saveMap(_location);
+    bool error = host.mpConsole->saveMap(location, saveVersion);
     lua_pushboolean(L, error);
     return 1;
 }
