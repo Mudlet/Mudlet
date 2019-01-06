@@ -2350,6 +2350,10 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->setFocusPolicy(Qt::NoFocus);
         pC->mUpperPane->setIsMiniConsole();
         pC->mLowerPane->setIsMiniConsole();
+        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
+        pC->setFocusProxy(hostCommandLine);
+        pC->mUpperPane->setFocusProxy(hostCommandLine);
+        pC->mLowerPane->setFocusProxy(hostCommandLine);
         pC->resize(width, height);
         pC->mOldX = x;
         pC->mOldY = y;
