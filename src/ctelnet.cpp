@@ -42,6 +42,7 @@
 #include <QProgressDialog>
 #include <QTextCodec>
 #include <QTextEncoder>
+#include <QSslError>
 #include "post_guard.h"
 
 #define DEBUG
@@ -86,6 +87,7 @@ cTelnet::cTelnet(Host* pH)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
+    mDontReconnect  = false;
 
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -120,10 +122,21 @@ cTelnet::cTelnet(Host* pH)
         mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
 
-    // initialize the socket
-    connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
-    connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
-    connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
+    // initialize the socket after the Host initialisation is complete so we can access mSslTsl
+    QTimer::singleShot(0, this, [this]() {
+        qDebug() << mpHost->getName();
+        if (mpHost->mSslTsl) {
+            connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
+        } else {
+            connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+        }
+        connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
+        connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
+#if !defined(QT_NO_SSL)
+        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+#endif
+    });
+
 
     // initialize telnet session
     reset();
@@ -237,6 +250,28 @@ const QString& cTelnet::getComputerEncoding(const QString& encoding)
     return TBuffer::getComputerEncoding(encoding);
 }
 
+#if !defined(QT_NO_SSL)
+QSslCertificate cTelnet::getPeerCertificate()
+{
+    return socket.peerCertificate();
+}
+
+QList<QSslError> cTelnet::getSslErrors()
+{
+    return socket.sslErrors();
+}
+#endif
+
+QAbstractSocket::SocketError cTelnet::error()
+{
+    return socket.error();
+}
+
+QString cTelnet::errorString()
+{
+    return socket.errorString();
+}
+
 // returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
 const QString& cTelnet::getFriendlyEncoding()
 {
@@ -334,7 +369,9 @@ void cTelnet::connectIt(const QString& address, int port)
 
 void cTelnet::disconnect()
 {
+    mDontReconnect = true;
     socket.disconnectFromHost();
+
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -355,11 +392,20 @@ void cTelnet::slot_send_pass()
 
 void cTelnet::handle_socket_signal_connected()
 {
-    reset();
+    QString msg;
 
+    qDebug() << "MODE:" << socket.mode();
+
+    reset();
     setKeepAlive(socket.socketDescriptor());
 
-    QString msg = tr("[ INFO ]  - A connection has been established successfully.") + "\n    \n    ";
+    if (mpHost->mSslTsl)
+    {
+        msg = tr("[ INFO ]  - A secure connection has been established successfully.");
+    } else {
+        msg = tr("[ INFO ]  - A connection has been established successfully.");
+    }
+    msg.append(QStringLiteral("\n    \n    "));
     postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
@@ -380,31 +426,110 @@ void cTelnet::handle_socket_signal_connected()
 
 void cTelnet::handle_socket_signal_disconnected()
 {
+    QString msg;
+    TEvent event;
+    QString reason;
+    QString spacer = "    ";
+    bool sslerr = false;
+
     postData();
 
     emit signal_disconnected(mpHost);
 
-    TEvent event;
     event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
-    QString msg;
     QTime timeDiff(0, 0, 0, 0);
     msg = QString(tr("[ INFO ]  - Connection time: %1\n    ")).arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
     reset();
-    QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % socket.errorString();
-    QString spacer = "    ";
+
     if (!mpHost->mIsGoingDown) {
         postMessage(spacer);
-        postMessage(err);
+
+#if !defined(QT_NO_SSL)
+
+        QList<QSslError> sslErrors = getSslErrors();
+        QSslCertificate cert = socket.peerCertificate();
+
+        if (mpHost->mSslIgnoreExpired) {
+            sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
+        }
+
+        if (mpHost->mSslIgnoreSelfSigned) {
+            sslErrors.removeAll(QSslError(QSslError::SelfSignedCertificate, cert));
+        }
+
+        sslerr = (sslErrors.count() > 0 && !mpHost->mSslIgnoreAll && mpHost->mSslTsl);
+
+        if (sslerr) {
+            mDontReconnect = true;
+
+            for (int a = 0; a < sslErrors.count(); a++) {
+                reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
+            }
+            QString err = "[ ALERT ] - Socket got disconnected.\nReason: \n" % reason;
+            postMessage(err);
+        } else
+#endif
+        {
+            if (mDontReconnect) {
+                reason = QStringLiteral("User Disconnected");
+            } else {
+                reason = socket.errorString();
+            }
+            if (reason == QStringLiteral("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
+                reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
+            }
+            QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % reason;
+            postMessage(err);
+        }
         postMessage(msg);
     }
+
+#if !defined(QT_NO_SSL)
+    if (sslerr) {
+        mudlet::self()->show_options_dialog(QStringLiteral("Security"));
+    }
+#endif
+
+    if (mAutoReconnect && !mDontReconnect) {
+        connectIt(hostName, hostPort);
+    }
+    mDontReconnect = false;
 }
+
+#if !defined(QT_NO_SSL)
+void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
+{
+    QSslCertificate cert = socket.peerCertificate();
+    QList<QSslError> ignoreErrorList;
+
+    if (mpHost->mSslIgnoreExpired) {
+        ignoreErrorList << QSslError(QSslError::CertificateExpired, cert);
+    }
+    if (mpHost->mSslIgnoreSelfSigned) {
+        ignoreErrorList << QSslError(QSslError::SelfSignedCertificate, cert);
+    }
+
+    if (mpHost->mSslIgnoreAll) {
+        socket.ignoreSslErrors(errors);
+    } else {
+        socket.ignoreSslErrors(ignoreErrorList);
+    }
+}
+#endif
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
+#if !defined(QT_NO_SSL)
+    if (mpHost->mSslTsl) {
+        postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
+        socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
+
+    } else
+#endif
     if (!hostInfo.addresses().isEmpty()) {
         mHostAddress = hostInfo.addresses().constFirst();
         postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
@@ -1432,6 +1557,11 @@ void cTelnet::setChannel102Variables(const QString& msg)
         int _a = msg.at(1).toLatin1();
         mpHost->mLuaInterpreter.setChannel102Table(_m, _a);
     }
+}
+
+void cTelnet::setAutoReconnect(bool status)
+{
+    mAutoReconnect = status;
 }
 
 void cTelnet::atcpComposerCancel()

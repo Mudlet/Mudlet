@@ -41,6 +41,7 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
+#include <QString>
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
@@ -333,7 +334,11 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_ircOptions enabled...
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
+
     groupBox_discordPrivacy->hide();
+
+    // tab security
+    groupBox_ssl->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -391,6 +396,12 @@ void dlgProfilePreferences::enableHostDetails()
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
     groupbox_searchEngineSelection->setEnabled(true);
+
+#if defined(QT_NO_SSL)
+    groupBox_ssl->setEnabled(false);
+#else
+    groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
+#endif
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -706,6 +717,84 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
+    bool socketErrorHandled = false;
+    notificationArea->hide();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->hide();
+
+#if !defined(QT_NO_SSL)
+    if (QSslSocket::supportsSsl() && pHost->mSslTsl == true) {
+        QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
+        ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
+        ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
+        ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
+        ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
+        checkBox_self_signed->setStyleSheet("");
+        checkBox_expired->setStyleSheet("");
+        ssl_issuer_label->setStyleSheet("");
+        ssl_expires_label->setStyleSheet("");
+        checkBox_ssl->setStyleSheet("");
+
+        if (!pHost->mTelnet.getSslErrors().empty()) {
+            // handle ssl errors
+            notificationAreaIconLabelWarning->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+
+            QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
+
+            for (int a = 0; a < sslErrors.count(); a++) {
+                //auto test = sslErrors.at(a);
+                //auto tes2 = QSslError(QSslError::SelfSignedCertificate);
+
+                QString thisError = QStringLiteral("<li>%1</li>").arg(sslErrors.at(a).errorString());
+                notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
+
+                if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
+                    checkBox_self_signed->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                    ssl_issuer_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                }
+                if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
+                    checkBox_expired->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                    ssl_expires_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                }
+                if (sslErrors.at(a).error() == pHost->mTelnet.error()) {
+                    socketErrorHandled = true;
+                }
+            }
+
+        } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
+            // handle failed handshake, likely not ssl socket
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            checkBox_ssl->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+        }
+        if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
+            // handle ssl library error
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+        if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
+            // handle Invalid data (certificate, key, cypher, etc.)
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+    }
+#endif
+
+    checkBox_ssl->setChecked(pHost->mSslTsl);
+    checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
+    checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
+    checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
@@ -787,6 +876,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
+
+    //Security tab
+
+
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1126,6 +1219,19 @@ void dlgProfilePreferences::setColors2()
         pushButton_foreground_color_2->setStyleSheet(QString());
         pushButton_background_color_2->setStyleSheet(QString());
     }
+}
+
+void dlgProfilePreferences::setTab(QString tab)
+{
+    foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
+    {
+        if (child->objectName().contains(tab,Qt::CaseInsensitive))
+        {
+            tabWidget->setCurrentIndex(tabWidget->indexOf(child));
+            return;
+        }
+    }
+    tabWidget->setCurrentIndex(0);
 }
 
 void dlgProfilePreferences::resetColors()
@@ -2053,6 +2159,13 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
+
+        //tab security
+        pHost->mSslTsl = checkBox_ssl->isChecked();
+        pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
+        pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
+        pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
+
 
         if (pMudlet->mConsoleMap.contains(pHost)) {
             pMudlet->mConsoleMap[pHost]->changeColors();
