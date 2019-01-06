@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2018 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2017-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
@@ -185,9 +185,21 @@ cTelnet::~cTelnet()
     }
 
     if (!messageStack.empty()) {
+#if defined (Q_OS_WIN32)
+        // Windows does not seem to accept line-feeds in these strings:
+        qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,");
+        qWarning("messages are:");
+        qWarning("------------");
+#else
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
+#endif
         foreach (QString message, messageStack) {
+#if defined (Q_OS_WIN32)
+            qWarning("%s", qPrintable(message));
+            qWarning("------------");
+#else
             qWarning("%s\n------------", qPrintable(message));
+#endif
         }
     }
     socket.deleteLater();
@@ -344,7 +356,14 @@ void cTelnet::connectIt(const QString& address, int port)
     hostPort = port;
     QString server = tr("[ INFO ]  - Looking up the IP address of server:") + address + ":" + QString::number(port) + " ...";
     postMessage(server);
+#if QT_VERSION >= 0x050900
+    QHostInfo::lookupHost(address, this, &cTelnet::handle_socket_signal_hostFound);
+#else
+    // The ability to use the overloaded forms where a functor or
+    // pointerToMember is used as the signal receiver was only introduced in
+    // Qt 5.9.0 LTS:
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
+#endif
 }
 
 
@@ -1196,14 +1215,13 @@ void cTelnet::processTelnetCommand(const string& command)
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
-                int newVersion = version.toInt();
                 QString _smsg;
-                if (mpHost->mServerGUI_Package_version != newVersion) {
+                if (mpHost->mServerGUI_Package_version != version) {
                     postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                                    "Uninstalling old version '%2'.")
-                                .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version)));
+                                .arg(version, mpHost->mServerGUI_Package_version));
                     mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-                    mpHost->mServerGUI_Package_version = newVersion;
+                    mpHost->mServerGUI_Package_version = version;
                 }
                 QString url = msg.section(QChar::LineFeed, 1);
                 QString packageName = url.section(QLatin1Char('/'), -1);
@@ -1476,14 +1494,13 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         version.replace(QChar::LineFeed, QChar::Space);
         version = version.section(QChar::Space, 0, 0);
 
-        int newVersion = version.toInt();
         QString _smsg;
-        if (mpHost->mServerGUI_Package_version != newVersion) {
+        if (mpHost->mServerGUI_Package_version != version) {
             postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                            "Uninstalling old version '%2'.")
-                        .arg(QString::number(newVersion), QString::number(mpHost->mServerGUI_Package_version)));
+                        .arg(version, mpHost->mServerGUI_Package_version));
             mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-            mpHost->mServerGUI_Package_version = newVersion;
+            mpHost->mServerGUI_Package_version = version;
         }
         QString url = transcodedMsg.section(QChar::LineFeed, 1);
         QString packageName = url.section(QLatin1Char('/'), -1);

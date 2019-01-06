@@ -460,8 +460,9 @@ public:
     static int getDiscordSmallIconText(lua_State*);
     static int getDiscordTimeStamps(lua_State*);
     static int getDiscordParty(lua_State*);
-    static int setDiscordGame(lua_State *L);
-    static int getPlayerRoom(lua_State* L);
+    static int setDiscordGame(lua_State*);
+    static int getPlayerRoom(lua_State*);
+    static int getMapSelection(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
