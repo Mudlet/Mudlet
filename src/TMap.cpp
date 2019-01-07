@@ -1031,9 +1031,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-        QString errMsg = tr("[ ERROR ] -  The format {%1} you are trying to save the map with is too new\n"
-                            "for this version of mudlet that only supports formats up to version {%2}.")
-                                .arg(saveVersion).arg(mMaxVersion);
+         QString errMsg = tr("[ ERROR ] -  The format {%1} you are trying to save the map with is too new\n"
+                             "for this version of mudlet that only supports formats up to version {%2}.")
+                                 .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsg(errMsg);
         postMessage(errMsg);
         return false;
