@@ -356,14 +356,8 @@ void cTelnet::connectIt(const QString& address, int port)
     hostPort = port;
     QString server = tr("[ INFO ]  - Looking up the IP address of server:") + address + ":" + QString::number(port) + " ...";
     postMessage(server);
-//#if QT_VERSION >= 0x050900
-//    QHostInfo::lookupHost(address, this, &cTelnet::handle_socket_signal_hostFound);
-//#else
-    // The ability to use the overloaded forms where a functor or
-    // pointerToMember is used as the signal receiver was only introduced in
-    // Qt 5.9.0 LTS:
+    // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
-//#endif
 }
 
 
