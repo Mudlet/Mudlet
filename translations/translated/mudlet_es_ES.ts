@@ -443,23 +443,23 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2632"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>crear un nuevo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2635"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>cargar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>crear habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Crear una nueva habitación aquí</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
@@ -660,7 +660,7 @@ selected rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3592"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Separar habitaciones</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3593"/>
