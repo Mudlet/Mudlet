@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -2698,51 +2698,51 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             auto moveRoom = new QAction(tr("Move", "Menu option to move a room in the mapper"), this);
             moveRoom->setToolTip(tr("Move room"));
-            connect(moveRoom, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
+            connect(moveRoom, &QAction::triggered, this, &T2DMap::slot_moveRoom);
 
             auto deleteRoom = new QAction(tr("Delete", "Menu option to delete a room in the mapper"), this);
             deleteRoom->setToolTip(tr("Delete room"));
-            connect(deleteRoom, SIGNAL(triggered()), this, SLOT(slot_deleteRoom()));
+            connect(deleteRoom, &QAction::triggered, this, &T2DMap::slot_deleteRoom);
 
             auto recolorRoom = new QAction(tr("Color", "Menu option to change a room color in the mapper"), this);
             recolorRoom->setToolTip(tr("Change room color"));
-            connect(recolorRoom, SIGNAL(triggered()), this, SLOT(slot_changeColor()));
+            connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
 
             auto spreadRooms = new QAction(tr("Spread", "Menu option to space out rooms in the mapper"), this);
             spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms"));
-            connect(spreadRooms, SIGNAL(triggered()), this, SLOT(slot_spread()));
+            connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
 
             auto shrinkRooms = new QAction(tr("Shrink", "Menu option to move rooms closer in the mapper"), this);
             shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms"));
-            connect(shrinkRooms, SIGNAL(triggered()), this, SLOT(slot_shrink()));
+            connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
 
             auto lockRoom = new QAction(tr("Lock", "Menu option to lock a room for speed walks in the mapper"), this);
             lockRoom->setToolTip(tr("Lock room for speed walks"));
-            connect(lockRoom, SIGNAL(triggered()), this, SLOT(slot_lockRoom()));
+            connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
 
             auto unlockRoom = new QAction(tr("Unlock", "Menu option to unlock a room for speed walks in the mapper"), this);
             unlockRoom->setToolTip(tr("Unlock room for speed walks"));
-            connect(unlockRoom, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
+            connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_unlockRoom);
 
             auto weightRoom = new QAction(tr("Weight", "Menu option to set a room weight in the mapper"), this);
             weightRoom->setToolTip(tr("Set room weight"));
-            connect(weightRoom, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
+            connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);
 
             auto roomExits = new QAction(tr("Exits", "Menu option to set exits for a room in the mapper"), this);
             roomExits->setToolTip(tr("Set room exits"));
-            connect(roomExits, SIGNAL(triggered()), this, SLOT(slot_setExits()));
+            connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
 
             auto roomSymbol = new QAction(tr("Symbol", "Menu option to set symbol(s) to mark rooms in the mapper"), this);
             roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms"));
-            connect(roomSymbol, SIGNAL(triggered()), this, SLOT(slot_setSymbol()));
+            connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_setSymbol);
 
             auto moveRoomXY = new QAction(tr("Move to", "Menu option to move rooms elsewhere in the mapper"), this);
             moveRoomXY->setToolTip(tr("Move selected group to a given position"));
-            connect(moveRoomXY, SIGNAL(triggered()), this, SLOT(slot_movePosition()));
+            connect(moveRoomXY, &QAction::triggered, this, &T2DMap::slot_movePosition);
 
             auto roomArea = new QAction(tr("Area", "Menu option to set the area ID of a room in the mapper"), this);
             roomArea->setToolTip(tr("Set room area ID"));
-            connect(roomArea, SIGNAL(triggered()), this, SLOT(slot_setArea()));
+            connect(roomArea, &QAction::triggered, this, &T2DMap::slot_setArea);
 
             auto customExitLine = new QAction(tr("Custom exit lines", "Menu option to create custom exit lines in the mapper"), this);
             if (!pArea) {
@@ -2755,12 +2755,12 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 customExitLine->setEnabled(false);
             } else {
                 customExitLine->setToolTip(tr("Replace an exit line with a custom line"));
-                connect(customExitLine, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
+                connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
             }
 
             auto createLabel = new QAction(tr("Create label", "Menu option to add text or image to the mapper"), this);
             createLabel->setToolTip(tr("Create labels to show text or images."));
-            connect(createLabel, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
+            connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
 
             auto setPlayerLocation = new QAction(tr("Set location", "Menu option to assign player location in the mapper"), this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
@@ -2797,10 +2797,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         } else if (mLabelHighlighted) {
             auto moveLabel = new QAction(tr("Move", "Menu option to move a label in the mapper"), this);
             moveLabel->setToolTip(tr("Move label"));
-            connect(moveLabel, SIGNAL(triggered()), this, SLOT(slot_moveLabel()));
+            connect(moveLabel, &QAction::triggered, this, &T2DMap::slot_moveLabel);
             auto deleteLabel = new QAction(tr("Delete", "Menu option to delete a label in the mapper"), this);
             deleteLabel->setToolTip(tr("Delete label"));
-            connect(deleteLabel, SIGNAL(triggered()), this, SLOT(slot_deleteLabel()));
+            connect(deleteLabel, &QAction::triggered, this, &T2DMap::slot_deleteLabel);
             mPopupMenu = true;
             popup->addAction(moveLabel);
             popup->addAction(deleteLabel);
@@ -2821,7 +2821,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     // drawn to it from a point around room symbol dependent
                     // on the exit direction - and we can now add even to it
                     {
-                        connect(addPoint, SIGNAL(triggered()), this, SLOT(slot_customLineAddPoint()));
+                        connect(addPoint, &QAction::triggered, this, &T2DMap::slot_customLineAddPoint);
                         addPoint->setToolTip(tr("Divide segment by adding a new point mid-way along"));
                     } else {
                         addPoint->setEnabled(false);
@@ -2833,7 +2833,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     // greater, but not if there is no others
                     if (mCustomLineSelectedPoint > -1) {
                         if (room->customLines.value(mCustomLineSelectedExit).count() > 1) {
-                            connect(removePoint, SIGNAL(triggered()), this, SLOT(slot_customLineRemovePoint()));
+                            connect(removePoint, &QAction::triggered, this, &T2DMap::slot_customLineRemovePoint);
                             if ((mCustomLineSelectedPoint + 1) < room->customLines.value(mCustomLineSelectedExit).count()) {
                                 removePoint->setToolTip(tr("Merge pair of segments by removing this point"));
                             } else {
@@ -2852,11 +2852,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     lineProperties->setText("Properties...");  // Changed seperately, because the constructor silently copies the text elsewhere
                                                                // (tool-tip and/or object name IIRC) whereas the ellipsis is meant only for display
                     lineProperties->setToolTip(tr("Change the properties of this custom line"));
-                    connect(lineProperties, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
+                    connect(lineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
                     auto deleteLine = new QAction(tr("Delete line", "Menu option to delete a custom line in the mapper"), this);
                     deleteLine->setToolTip(tr("Delete all of this custom line"));
-                    connect(deleteLine, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
+                    connect(deleteLine, &QAction::triggered, this, &T2DMap::slot_deleteCustomExitLine);
 
                     mPopupMenu = true;
 
@@ -3060,7 +3060,7 @@ void T2DMap::slot_customLineProperties()
             mCurrentLineColor = room->customLinesColor.value(exit);
 
             mpCurrentLineColor->setStyleSheet(QStringLiteral("background-color: %1").arg(mCurrentLineColor.name()));
-            connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
+            connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
             if (dialog->exec() == QDialog::Accepted) {
@@ -3340,11 +3340,11 @@ void T2DMap::slot_movePosition()
     auto pB_ok = new QPushButton(pButtonBar);
     pB_ok->setText(tr("OK"));
     boxLayout->addWidget(pB_ok);
-    connect(pB_ok, SIGNAL(clicked()), dialog, SLOT(accept()));
+    connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
 
     auto pB_abort = new QPushButton(pButtonBar);
     pB_abort->setText(tr("Cancel"));
-    connect(pB_abort, SIGNAL(clicked()), dialog, SLOT(reject()));
+    connect(pB_abort, &QAbstractButton::clicked, dialog, &QDialog::reject);
     boxLayout->addWidget(pB_abort);
     gridLayout->addWidget(pButtonBar, 4, 0, 1, 2, Qt::AlignCenter);
 
@@ -4486,7 +4486,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("nw")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("n");
@@ -4499,7 +4499,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("n")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("ne");
@@ -4512,7 +4512,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("ne")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("up");
@@ -4525,7 +4525,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("up")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("w");
@@ -4538,7 +4538,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("w")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("e");
@@ -4551,7 +4551,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("e")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("down");
@@ -4564,7 +4564,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("down")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("sw");
@@ -4577,7 +4577,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("sw")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("s");
@@ -4590,7 +4590,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("s")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("se");
@@ -4603,7 +4603,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("se")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("in");
@@ -4616,7 +4616,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("in")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     button = dialog->findChild<QPushButton*>("out");
@@ -4629,7 +4629,7 @@ void T2DMap::slot_setCustomLine()
     } else {
         button->setCheckable(true);
         button->setChecked(room->customLines.contains(QStringLiteral("out")));
-        connect(button, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
+        connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
     QMapIterator<int, QString> it(room->getOtherMap());
@@ -4660,8 +4660,8 @@ void T2DMap::slot_setCustomLine()
         qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "cancel" button!)");
         return;
     }
-    connect(button, SIGNAL(clicked()), dialog, SLOT(reject()));
-    connect(dialog, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
+    connect(button, &QAbstractButton::clicked, dialog, &QDialog::reject);
+    connect(dialog, &QDialog::rejected, this, &T2DMap::slot_cancelCustomLineDialog);
 
     mpCurrentLineStyle->setIconSize(QSize(48, 24));
     mpCurrentLineStyle->addItem(QIcon(QPixmap(QStringLiteral(":/icons/solid-line.png"))), tr("Solid line"), static_cast<int>(Qt::SolidLine));
@@ -4673,8 +4673,8 @@ void T2DMap::slot_setCustomLine()
 
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
     mpCurrentLineColor->setStyleSheet(QStringLiteral("background-color: %1").arg(mCurrentLineColor.name()));
-    connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
-    connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
+    connect(specialExits, &QTreeWidget::itemClicked, this, &T2DMap::slot_setCustomLine2B);
+    connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
     dialog->adjustSize();
     mpCustomLinesDialog = dialog; // Don't assign the pointer value to the class member until ready to go
     mpCustomLinesDialog->show();

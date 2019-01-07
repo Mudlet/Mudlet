@@ -882,6 +882,11 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
+    pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
+    pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
+    pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
+    pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
 
     while (!atEnd()) {
         readNext();
@@ -1041,6 +1046,8 @@ void XMLimport::readHostPackage(Host* pHost)
             }
         }
     }
+
+
 }
 
 // returns the ID of the root imported trigger/group

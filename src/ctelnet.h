@@ -31,7 +31,11 @@
 #include <QHostInfo>
 #include <QPointer>
 #include <QStringList>
+#if defined(QT_NO_SSL)
 #include <QTcpSocket>
+#else
+#include <QSslSocket>
+#endif
 #include <QTime>
 #include "post_guard.h"
 
@@ -133,6 +137,7 @@ public:
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
+    void setAutoReconnect(bool status);
     void encodingChanged(const QString&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
@@ -149,6 +154,12 @@ public:
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
     const QString& getFriendlyEncoding();
+    QAbstractSocket::SocketError error();
+    QString errorString();
+#if !defined(QT_NO_SSL)
+    QSslCertificate getPeerCertificate();
+    QList<QSslError> getSslErrors();
+#endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
     bool isATCPEnabled() const { return enableATCP; }
@@ -207,7 +218,11 @@ private:
 
 
     QPointer<Host> mpHost;
+#if defined(QT_NO_SSL)
     QTcpSocket socket;
+#else
+    QSslSocket socket;
+#endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
     QTextCodec* mpOutOfBandDataIncomingCodec;
@@ -216,6 +231,7 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
+    bool hostSslTsl;
     double networkLatencyMin;
     double networkLatencyMax;
     bool mWaitingForResponse;
@@ -261,6 +277,8 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableChannel102;
+    bool mDontReconnect;
+    bool mAutoReconnect;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
@@ -273,6 +291,12 @@ private:
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
     bool mEncodingWarningIssued;
+
+private slots:
+#if !defined(QT_NO_SSL)
+    void handle_socket_signal_sslError(const QList<QSslError> &errors);
+#endif
+
 };
 
 #endif // MUDLET_CTELNET_H
