@@ -737,7 +737,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3892"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Cargar mapa de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3894"/>
