@@ -7232,32 +7232,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2724"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Search Engine</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2708"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Updates</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2714"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Disable automatic updates</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2736"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>Other Special Options</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2742"/>
       <source>Show icons on menus</source>
-      <translation type="unfinished"/>
+      <translation>Show icons on menus</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="58"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Save</translation>
     </message>
   </context>
   <context>
@@ -7265,92 +7265,92 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>General exits:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
       <source>NW exit...</source>
-      <translation type="unfinished"/>
+      <translation>NW exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
       <source>N exit...</source>
-      <translation type="unfinished"/>
+      <translation>N exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="376"/>
       <source>NE exit...</source>
-      <translation type="unfinished"/>
+      <translation>NE exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="516"/>
       <source>Up exit...</source>
-      <translation type="unfinished"/>
+      <translation>Up exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="659"/>
       <source>W exit...</source>
-      <translation type="unfinished"/>
+      <translation>W exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Weight:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
       <source>E exit...</source>
-      <translation type="unfinished"/>
+      <translation>E exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1003"/>
       <source>Down exit...</source>
-      <translation type="unfinished"/>
+      <translation>Down exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1155"/>
       <source>SW exit...</source>
-      <translation type="unfinished"/>
+      <translation>SW exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1301"/>
       <source>S exit...</source>
-      <translation type="unfinished"/>
+      <translation>S exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1441"/>
       <source>SE exit...</source>
-      <translation type="unfinished"/>
+      <translation>SE exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1581"/>
       <source>In exit...</source>
-      <translation type="unfinished"/>
+      <translation>In exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1721"/>
       <source>Out exit...</source>
-      <translation type="unfinished"/>
+      <translation>Out exit...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
       <source>Key:</source>
-      <translation type="unfinished"/>
+      <translation>Key:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>No route</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
       <source>Stub Exit</source>
-      <translation type="unfinished"/>
+      <translation>Stub Exit</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="67"/>
@@ -7367,7 +7367,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1692"/>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="83"/>
@@ -7383,12 +7383,12 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1568"/>
       <location filename="../src/ui/room_exits.ui" line="1708"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
       <source>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="106"/>
@@ -7401,7 +7401,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="119"/>
@@ -7417,7 +7417,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1604"/>
       <location filename="../src/ui/room_exits.ui" line="1744"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="138"/>
@@ -7429,7 +7429,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1343"/>
       <location filename="../src/ui/room_exits.ui" line="1483"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="154"/>
@@ -7441,7 +7441,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1359"/>
       <location filename="../src/ui/room_exits.ui" line="1499"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="170"/>
@@ -7453,29 +7453,29 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1375"/>
       <location filename="../src/ui/room_exits.ui" line="1515"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
       <source>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="246"/>
       <location filename="../src/ui/room_exits.ui" line="386"/>
       <location filename="../src/ui/room_exits.ui" line="526"/>
       <source>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="373"/>
       <source>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="513"/>
       <source>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="558"/>
@@ -7504,42 +7504,42 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
       <source>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
       <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="863"/>
       <source>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1000"/>
       <source>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1152"/>
       <source>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1298"/>
       <source>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1438"/>
       <source>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
