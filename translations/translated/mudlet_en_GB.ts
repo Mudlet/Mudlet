@@ -7809,7 +7809,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Choose a good and ideally (though not necessarily) unique name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="73"/>
