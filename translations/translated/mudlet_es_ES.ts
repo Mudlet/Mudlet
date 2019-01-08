@@ -1513,7 +1513,7 @@ importado a petición del usuario.</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2222"/>
       <source>Map import</source>
-      <translation type="unfinished"/>
+      <translation>Importar mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2249"/>
