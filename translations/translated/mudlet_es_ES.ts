@@ -1524,7 +1524,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2284"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - La descarga de mapa ha sido cancelada, a petición del usuario.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2303"/>
