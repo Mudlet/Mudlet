@@ -381,17 +381,17 @@ please wait...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2165"/>
       <source>Type of label?</source>
-      <translation type="unfinished"/>
+      <translation>Type of label?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2166"/>
       <source>Text Label</source>
-      <translation type="unfinished"/>
+      <translation>Text Label</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2167"/>
       <source>Image Label</source>
-      <translation type="unfinished"/>
+      <translation>Image Label</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="107"/>
