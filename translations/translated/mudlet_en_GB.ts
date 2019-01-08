@@ -6550,7 +6550,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="192"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extension &apos;.html&apos;) which can convey colour, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
@@ -6656,32 +6656,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1282"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The foreground colour used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1305"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The background colour used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1325"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The foreground colour used for the main input area.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1342"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The background colour used for the main input area.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1359"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The foreground colour used for text sent to the game server.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1379"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;The background colour used for text sent to the game server.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1398"/>
@@ -6697,7 +6697,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1415"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1428"/>
@@ -6708,7 +6708,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1435"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1448"/>
@@ -6719,7 +6719,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1455"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1468"/>
@@ -6730,7 +6730,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1475"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1488"/>
@@ -6741,7 +6741,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1495"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1508"/>
@@ -6752,7 +6752,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1515"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1528"/>
@@ -6763,7 +6763,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1535"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1548"/>
@@ -6774,7 +6774,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1555"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1568"/>
@@ -6785,7 +6785,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1575"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1588"/>
@@ -6796,7 +6796,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1595"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1608"/>
@@ -6807,7 +6807,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1615"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1628"/>
@@ -6818,7 +6818,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1635"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1648"/>
@@ -6829,7 +6829,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1655"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1668"/>
@@ -6840,7 +6840,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1675"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1688"/>
@@ -6851,7 +6851,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1695"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1708"/>
@@ -6862,7 +6862,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1715"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>ANSI Colour Number 15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1728"/>
@@ -7480,7 +7480,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1623"/>
       <location filename="../src/ui/room_exits.ui" line="1763"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;A symbol is drawn with a green (Open) fill colour on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="574"/>
@@ -7488,7 +7488,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1639"/>
       <location filename="../src/ui/room_exits.ui" line="1779"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;A symbol is drawn with an orange (Closed) fill colour on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="590"/>
@@ -7496,7 +7496,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
       <location filename="../src/ui/room_exits.ui" line="1795"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;A symbol is drawn with a red (Locked) fill colour on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
