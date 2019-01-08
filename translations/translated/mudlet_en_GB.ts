@@ -328,35 +328,38 @@ please wait...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Id</source>
-      <translation type="unfinished"/>
+      <translation>Room ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="103"/>
       <source>Room Name</source>
-      <translation type="unfinished"/>
+      <translation>Room Name</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="627"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>No map or no valid position.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2007"/>
       <source>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
 </source>
-      <translation type="unfinished"/>
+      <translation>Area: %1 ID:%2 x:%3 &lt;-&gt; %4 y:%5 &lt;-&gt; %6 z:%7 &lt;-&gt; %8
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2021"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Room Name: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2035"/>
       <source>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
 </source>
-      <translation type="unfinished"/>
+      <translation>Room ID: %1 (Current) Position on Map: (%2,%3,%4)
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2044"/>
