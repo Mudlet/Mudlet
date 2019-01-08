@@ -7544,27 +7544,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
       <source>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1718"/>
       <source>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1871"/>
       <source>&lt;p&gt;Set the number of the room that&apos;s to the southwest here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
       <source>Exit RoomID number</source>
-      <translation type="unfinished"/>
+      <translation>Exit Room ID number</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No overide)</source>
-      <translation type="unfinished"/>
+      <translation>Exit Weight (0=No override)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
