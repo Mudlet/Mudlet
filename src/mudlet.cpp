@@ -449,7 +449,7 @@ mudlet::mudlet()
     connect(mpActionKeys.data(), &QAction::triggered, this, &mudlet::show_key_dialog);
     connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::show_variable_dialog);
     connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::show_action_dialog);
-    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::show_options_dialog);
+    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_show_options_dialog);
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -485,7 +485,7 @@ mudlet::mudlet()
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
-    connect(dactionOptions, &QAction::triggered, this, &mudlet::show_options_dialog);
+    connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     // PLACEMARKER: Save for later restoration (2 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
     // connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
@@ -2796,7 +2796,8 @@ void mudlet::show_action_dialog()
     pEditor->showNormal();
 }
 
-void mudlet::show_options_dialog()
+
+void mudlet::show_options_dialog(QString tab)
 {
     Host* pHost = getActiveHost();
 
@@ -2811,6 +2812,7 @@ void mudlet::show_options_dialog()
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
     }
+    mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
     mpProfilePreferencesDlgMap.value(pHost)->raise();
     mpProfilePreferencesDlgMap.value(pHost)->show();
 }
@@ -2831,7 +2833,7 @@ void mudlet::slot_update_shortcuts()
         dactionInputLine->setShortcut(QKeySequence());
 
         optionsShortcut = new QShortcut(optionsKeySequence, this);
-        connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::show_options_dialog);
+        connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
         dactionOptions->setShortcut(QKeySequence());
 
         notepadShortcut = new QShortcut(notepadKeySequence, this);
@@ -2839,7 +2841,7 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(QKeySequence());
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
-        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::show_options_dialog);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
         dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);
@@ -2895,6 +2897,11 @@ void mudlet::slot_update_shortcuts()
         reconnectShortcut.clear();
         dactionReconnect->setShortcut(reconnectKeySequence);
     }
+}
+
+void mudlet::slot_show_options_dialog()
+{
+    show_options_dialog("General");
 }
 
 void mudlet::show_help_dialog()

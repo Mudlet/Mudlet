@@ -413,6 +413,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
     host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
+    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
+    host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
+    host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
+    host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
+    host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
     host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();

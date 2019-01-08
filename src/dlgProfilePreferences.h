@@ -50,6 +50,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
     dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
+    void setTab(QString tab);
 
 public slots:
     // Fonts.
